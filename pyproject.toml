@@ -4,10 +4,14 @@ version = "0.1.0"
 description = "SegTraQ - A Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data."
 readme = "README.md"
 authors = [
-  {name = "Daria Lazic", email = "daria.lazic@embl.de"}
+  {name = "Daria Lazic", email = "daria.lazic@embl.de"},
+  {name = "Matthias Meyer-Bender", email = "matthias.meyerbender@embl.de"},
+  {name = "Martin Emons", email = "martin.emons@uzh.ch"}
 ]
 maintainers = [
-  {name = "Daria Lazic", email = "daria.lazic@embl.de"}
+  {name = "Daria Lazic", email = "daria.lazic@embl.de"},
+  {name = "Matthias Meyer-Bender", email = "matthias.meyerbender@embl.de"},
+  {name = "Martin Emons", email = "martin.emons@uzh.ch"}
 ]
 classifiers = [
 
