@@ -14,7 +14,7 @@ def num_cells(sdata: sd.SpatialData, shape_key: str = "cell_boundaries") -> int:
     sdata : sd.SpatialData
         The SpatialData object containing spatial information and cell boundaries.
     shape_key : str, optional
-        The key in the `shapes` attribute of `sdata` that corresponds to cell boundaries. 
+        The key in the `shapes` attribute of `sdata` that corresponds to cell boundaries.
         Default is "cell_boundaries".
     Returns
     -------
@@ -70,7 +70,8 @@ def transcripts_per_cell(
     Returns
     -------
     pd.DataFrame
-        A DataFrame with two columns: the cell identifier (`cell_key`) and the corresponding transcript count ("transcript_count").
+        A DataFrame with two columns: the cell identifier (`cell_key`) and the
+        corresponding transcript count ("transcript_count").
     """
     counts = sdata.points[transcript_key][cell_key].compute().value_counts()
     counts_df = counts.reset_index()
@@ -94,7 +95,8 @@ def genes_per_cell(sdata, transcript_key="transcripts", cell_key="cell_id", gene
     Returns
     -------
     pandas.DataFrame
-        A DataFrame with one row per cell, containing the cell identifier and the count of unique genes detected in that cell.
+        A DataFrame with one row per cell, containing the cell identifier and
+        the count of unique genes detected in that cell.
     """
     df = sdata.points[transcript_key].compute()
     # Group by cell and count unique genes
@@ -125,7 +127,9 @@ def transcript_density(
     Returns
     -------
     pd.DataFrame
-        A DataFrame with columns `[cell_key, "transcript_density"]`, where "transcript_density" is the number of transcripts per unit area for each cell. Rows with missing values are dropped.
+        A DataFrame with columns `[cell_key, "transcript_density"]`,
+        where "transcript_density" is the number of transcripts per unit area for
+        each cell. Rows with missing values are dropped.
     Notes
     -----
     Requires that the input AnnData table contains a "cell_area" column in `.obs`.

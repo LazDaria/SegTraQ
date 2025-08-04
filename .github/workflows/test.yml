@@ -1,4 +1,4 @@
-name: Test and Deploy Docs
+name: Test Python application
 
 on:
   push:
@@ -12,8 +12,6 @@ on:
 
 permissions:
   contents: read
-  pages: write          # needed to deploy pages
-  id-token: write       # for deployment authentication
 
 jobs:
   build:
@@ -39,32 +37,3 @@ jobs:
         ruff check --exit-zero --statistics
     - name: Run tests
       run: pytest
-
-  docs:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.12
-
-    - name: Install documentation dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install sphinx sphinx-rtd-theme  # adjust if you use other tools, e.g. pdoc or mkdocs
-
-    - name: Build documentation
-      run: |
-        cd docs
-        make html  # or sphinx-build -b html . _build/html
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
-        # Optional: configure cname, user_name, user_email here
