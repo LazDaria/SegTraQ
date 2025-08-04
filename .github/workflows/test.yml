@@ -29,7 +29,8 @@ jobs:
     - name: Install dependencies using uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        ~/.cargo/bin/uv pip install -e ".[test]"
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        uv pip install -e ".[test]"
 
     - name: Lint with ruff
       run: |
