@@ -5,9 +5,9 @@ name: Test Python application
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches-ignore: [ "gh-pages", "docs" ]  # skip CI on doc-only branches
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master" ]  # still run on PRs
 
 permissions:
   contents: read
