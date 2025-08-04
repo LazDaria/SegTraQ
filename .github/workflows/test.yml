@@ -2,8 +2,6 @@ name: Test and Deploy Docs
 
 on:
   push:
-    branches:
-      - main
     branches-ignore:
       - gh-pages
       - docs
