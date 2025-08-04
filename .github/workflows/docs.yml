@@ -2,7 +2,7 @@ name: Build and Deploy Docs
 
 on:
   push:
-    # TODO: should change this to only deploy on main branch
+    # TODO: should change this to only deploy on main branch!
     branches-ignore:
       - gh-pages
       - docs
