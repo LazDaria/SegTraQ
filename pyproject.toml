@@ -18,17 +18,24 @@ classifiers = [
 ]
 license = {text = "MIT"}
 dependencies = [
-  "typer"
+  "typer",
+  "spatialdata",
+  "joblib",
 ]
 requires-python = ">= 3.10"
 
 [project.optional-dependencies]
 test = [
-    "coverage",  # testing
-    "pytest",  # testing
-    "ruff",  # linting
-    "ty", # checking types
-    "ipdb"    
+    "coverage",
+    "pytest",
+    "ruff",
+    "ty",
+    "ipdb"
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",  # or another theme you prefer
+    "myst-parser"        # if you want to support markdown in Sphinx
 ]
 
 [project.urls]
