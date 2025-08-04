@@ -30,7 +30,8 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-        uv pip install -e ".[test]"
+        uv pip install -e ".[test]" --system
+
 
     - name: Lint with ruff
       run: |
