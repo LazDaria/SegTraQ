@@ -1,36 +1,36 @@
-# name: Build and Deploy Docs
+name: Build & deploy documentation
 
-# on:
-#   push:
-#     # TODO: should change this to only deploy on main branch!
-#     branches-ignore:
-#       - gh-pages
-#       - docs
+on:
+  push:
+    branches:
+      - main
 
-# permissions:
-#   contents: read
-#   pages: write
-#   id-token: write
+permissions:
+  contents: write
+  pages: write
 
-# jobs:
-#   docs:
-#     runs-on: ubuntu-latest
-#     steps:
-#     - uses: actions/checkout@v4
-#     - name: Set up Python
-#       uses: actions/setup-python@v5
-#       with:
-#         python-version: 3.12
-#     - name: Install documentation dependencies
-#       run: |
-#         python -m pip install --upgrade pip
-#         pip install sphinx sphinx-rtd-theme
-#     - name: Build documentation
-#       run: |
-#         cd docs
-#         make html
-#     - name: Deploy to GitHub Pages
-#       uses: peaceiris/actions-gh-pages@v4
-#       with:
-#         github_token: ${{ secrets.GITHUB_TOKEN }}
-#         publish_dir: ./docs/_build/html
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install documentation dependencies
+        run: |
+          pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme
+
+      - name: Build docs
+        working-directory: ./docs
+        run: make html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html
