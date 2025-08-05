@@ -34,7 +34,7 @@ test = [
 ]
 docs = [
     "sphinx",
-    "sphinx-rtd-theme",  # or another theme you prefer
+    "sphinx-book-theme",  # or another theme you prefer
     "myst-parser"        # if you want to support markdown in Sphinx
 ]
 
