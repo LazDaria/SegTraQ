@@ -2,8 +2,6 @@ name: Build & deploy documentation
 
 on:
   push:
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -20,10 +18,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install documentation dependencies
+      - name: Install dependencies using uv
         run: |
-          pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          uv pip install -e ".[docs]" --system
+
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
 
       - name: Build docs
         working-directory: ./docs
