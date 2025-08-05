@@ -9,7 +9,7 @@ SegTraQ documentation
 `SegTraQ` is a tool for the assessment of segmentation quality in spatial transcriptomics data.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    modules/baseline
@@ -19,11 +19,3 @@ SegTraQ documentation
    :caption: Tutorials:
    
    notebooks/baseline
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

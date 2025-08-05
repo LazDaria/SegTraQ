@@ -37,7 +37,10 @@ test = [
 docs = [
     "sphinx",
     "sphinx-book-theme",  # or another theme you prefer
-    "myst-parser"        # if you want to support markdown in Sphinx
+    "myst-parser",        # if you want to support markdown in Sphinx
+    "nbsphinx",          # for rendering Jupyter notebooks in Sphinx
+    "sphinx-autodoc-typehints",  # for better type hint rendering in
+    "sphinx-copybutton",  # for copy buttons in code blocks
 ]
 
 [project.urls]
