@@ -39,7 +39,7 @@ jobs:
       run: |
         pytest --cov=SegTraQ --cov-report=term-missing --cov-report=xml
     - name: Upload coverage report artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: coverage.xml
