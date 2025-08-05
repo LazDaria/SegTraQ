@@ -33,6 +33,7 @@ test = [
     "ty",
     "ipdb",
     "black[jupyter]",
+    "pytest-cov",
 ]
 docs = [
     "sphinx",
