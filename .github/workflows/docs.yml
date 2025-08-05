@@ -21,7 +21,7 @@ jobs:
       - name: Install documentation dependencies
         run: |
           pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme
+          pip install sphinx sphinx-book-theme
 
       - name: Build docs
         working-directory: ./docs
