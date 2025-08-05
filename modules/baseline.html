@@ -301,6 +301,8 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.genes_per_cell"><code class="docutils literal notranslate"><span class="pre">genes_per_cell()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.morphological_features"><code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_cells"><code class="docutils literal notranslate"><span class="pre">num_cells()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_genes"><code class="docutils literal notranslate"><span class="pre">num_genes()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_transcripts"><code class="docutils literal notranslate"><span class="pre">num_transcripts()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.perc_unassigned_transcripts"><code class="docutils literal notranslate"><span class="pre">perc_unassigned_transcripts()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcript_density"><code class="docutils literal notranslate"><span class="pre">transcript_density()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcripts_per_cell"><code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code></a></li>
@@ -389,6 +391,47 @@ Default is “cell_boundaries”.</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The number of cells found under the specified shape key.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.num_genes">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">num_genes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#segtraq.bl.baseline.num_genes" title="Link to this definition">#</a></dt>
+<dd><p>Counts the number of unique genes in the given SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing gene information.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access transcript data within the spatial data object. Default is “transcripts”.</p></li>
+<li><p><strong>gene_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access gene names within the transcript data. Default is “feature_name”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The number of unique genes found in the specified SpatialData object.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.num_transcripts">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">num_transcripts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.bl.baseline.num_transcripts" title="Link to this definition">#</a></dt>
+<dd><p>Counts the total number of transcripts in the given SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing transcript information.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access transcript data within the spatial data object. Default is “transcripts”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The total number of transcripts in the specified SpatialData object.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>int</p>
@@ -508,6 +551,8 @@ corresponding transcript count (“transcript_count”).</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.genes_per_cell"><code class="docutils literal notranslate"><span class="pre">genes_per_cell()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.morphological_features"><code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_cells"><code class="docutils literal notranslate"><span class="pre">num_cells()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_genes"><code class="docutils literal notranslate"><span class="pre">num_genes()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_transcripts"><code class="docutils literal notranslate"><span class="pre">num_transcripts()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.perc_unassigned_transcripts"><code class="docutils literal notranslate"><span class="pre">perc_unassigned_transcripts()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcript_density"><code class="docutils literal notranslate"><span class="pre">transcript_density()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcripts_per_cell"><code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code></a></li>
