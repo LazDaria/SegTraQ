@@ -6,12 +6,10 @@
 SegTraQ documentation
 =====================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+`SegTraQ` is a tool for the assessment of segmentation quality in spatial transcriptomics data.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   modules/baseline
