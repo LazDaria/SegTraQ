@@ -24,6 +24,9 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           uv pip install -e ".[docs]" --system
 
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
       - name: Build docs
         working-directory: ./docs
         run: make html
