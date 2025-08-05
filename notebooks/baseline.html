@@ -1,0 +1,1026 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Baseline metrics &#8212; SegTraQ  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/baseline';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="The baseline (bl) accessor" href="../modules/baseline.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SegTraQ  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Baseline metrics</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/baseline.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Baseline metrics</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Baseline-metrics">
+<h1>Baseline metrics<a class="headerlink" href="#Baseline-metrics" title="Link to this heading">#</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">baseline</span></code> module contains several metrics that can help you to assess the quality of your segmentation. This includes metrics to quantify the number of cells in your data, the number of transcripts/genes per cell, the percentage of unassigned transcripts, the transcript density, and a variety of morphological features</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+
+import math
+
+import matplotlib.pyplot as plt
+import spatialdata as sd
+
+import segtraq as st
+
+# this dataset was downloaded from https://spatialdata.scverse.org/en/latest/tutorials/notebooks/datasets/README.html#
+# it is the third dataset in the list
+sdata = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/spatialdata_xenium_breast_cancer_rep1.zarr&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
+  warnings.warn(
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
+  from pkg_resources import DistributionNotFound, get_distribution
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
+  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
+</pre></div></div>
+</div>
+<p>Let’s start by having a look at the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code> dataset.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object, with associated Zarr store: /g/huber/projects/CODEX/segtraq/data/spatialdata_xenium_breast_cancer_rep1.zarr
+├── Images
+│     ├── &#39;morphology_focus&#39;: DataTree[cyx] (1, 25778, 35416), (1, 12889, 17708), (1, 6444, 8854), (1, 3222, 4427), (1, 1611, 2213)
+│     └── &#39;morphology_mip&#39;: DataTree[cyx] (1, 25778, 35416), (1, 12889, 17708), (1, 6444, 8854), (1, 3222, 4427), (1, 1611, 2213)
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 8) (3D points)
+├── Shapes
+│     ├── &#39;cell_boundaries&#39;: GeoDataFrame shape: (167780, 1) (2D shapes)
+│     └── &#39;cell_circles&#39;: GeoDataFrame shape: (167780, 2) (2D shapes)
+└── Tables
+      └── &#39;table&#39;: AnnData (167780, 313)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        morphology_focus (Images), morphology_mip (Images), transcripts (Points), cell_boundaries (Shapes), cell_circles (Shapes)
+</pre></div></div>
+</div>
+<p>To get a first impression of the quality of the data, we can check how many cells there are in the data. We can also check how many transcripts were measured in total, how many genes they map to, and how many transcripts were not assigned to a cell.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.bl.num_cells(sdata)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+167780
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.bl.num_transcripts(sdata)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+42638083
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.bl.num_genes(sdata)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+541
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.bl.perc_unassigned_transcripts(sdata)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.06603498098167312
+</pre></div></div>
+</div>
+<p>Next, let’s see how many transcripts were detected per cell. We can do this using the <code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code> method.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>transcripts_per_cell = st.bl.transcripts_per_cell(sdata)
+# removing the background
+transcripts_per_cell = transcripts_per_cell[transcripts_per_cell[&quot;cell_id&quot;] != -1]
+transcripts_per_cell.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>transcript_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>82952</td>
+      <td>1703</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>11728</td>
+      <td>1652</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1359</td>
+      <td>1592</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>105998</td>
+      <td>1568</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>79034</td>
+      <td>1519</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the number of transcripts per cell
+plt.figure(figsize=(10, 6))
+plt.hist(transcripts_per_cell[&quot;transcript_count&quot;], bins=100)
+
+# adding a line for the median
+plt.axvline(
+    transcripts_per_cell[&quot;transcript_count&quot;].median(),
+    color=&quot;black&quot;,
+    linestyle=&quot;dashed&quot;,
+    linewidth=1,
+)
+plt.text(
+    transcripts_per_cell[&quot;transcript_count&quot;].median() + 5,
+    50,
+    f&quot;Median: {transcripts_per_cell[&#39;transcript_count&#39;].median():.2f}&quot;,
+    color=&quot;black&quot;,
+)
+
+# adding labels and title
+plt.xlabel(&quot;Number of Transcripts&quot;)
+plt.ylabel(&quot;Count&quot;)
+plt.title(&quot;Distribution of Transcripts per Cell&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_11_0.png" src="../_images/notebooks_baseline_11_0.png" />
+</div>
+</div>
+<p>We can also do the same thing for the number of genes per cell, since there are often multiple transcripts measured per gene.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>genes_per_cell = st.bl.genes_per_cell(sdata)
+# removing the background
+genes_per_cell = genes_per_cell[genes_per_cell[&quot;cell_id&quot;] != -1]
+genes_per_cell.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>gene_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>21</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>5</td>
+      <td>35</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the number of genes per cell
+plt.figure(figsize=(10, 6))
+plt.hist(genes_per_cell[&quot;gene_count&quot;], bins=100)
+
+# adding a line for the median
+plt.axvline(
+    genes_per_cell[&quot;gene_count&quot;].median(),
+    color=&quot;black&quot;,
+    linestyle=&quot;dashed&quot;,
+    linewidth=1,
+)
+plt.text(
+    genes_per_cell[&quot;gene_count&quot;].median() + 5,
+    50,
+    f&quot;Median: {genes_per_cell[&#39;gene_count&#39;].median():.2f}&quot;,
+    color=&quot;black&quot;,
+)
+
+# adding labels and title
+plt.xlabel(&quot;Number of Genes&quot;)
+plt.ylabel(&quot;Count&quot;)
+plt.title(&quot;Distribution of Genes per Cell&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_14_0.png" src="../_images/notebooks_baseline_14_0.png" />
+</div>
+</div>
+<p>Next to the number of transcripts per cell, we can also investigate the transcript density, which is computed as the number of transcripts divided by the cell area. Note that the background does not appear in this data frame.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>transcript_density = st.bl.transcript_density(sdata)
+transcript_density.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>transcript_density</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>82952</td>
+      <td>1.232467</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>11728</td>
+      <td>2.516099</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1359</td>
+      <td>2.559001</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>105998</td>
+      <td>3.072366</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>79034</td>
+      <td>3.110092</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the transcript density per cell
+plt.figure(figsize=(10, 6))
+plt.hist(transcript_density[&quot;transcript_density&quot;], bins=100)
+
+# adding a line for the median
+plt.axvline(
+    transcript_density[&quot;transcript_density&quot;].median(),
+    color=&quot;black&quot;,
+    linestyle=&quot;dashed&quot;,
+    linewidth=1,
+)
+plt.text(
+    transcript_density[&quot;transcript_density&quot;].median() + 0.05,
+    50,
+    f&quot;Median: {transcript_density[&#39;transcript_density&#39;].median():.2f}&quot;,
+    color=&quot;black&quot;,
+)
+
+# adding labels and title
+plt.xlabel(&quot;Transcript Density (transcripts per area)&quot;)
+plt.ylabel(&quot;Count&quot;)
+plt.title(&quot;Distribution of Transcript Density per Cell&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_17_0.png" src="../_images/notebooks_baseline_17_0.png" />
+</div>
+</div>
+<p>Finally, let’s look at some morphological features, such as the cell area, circularity, elongation, etc. We can get those with the function <code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code>. If you only want to compute certain features, you can select them with the <code class="docutils literal notranslate"><span class="pre">features_to_compute</span></code> argument. This can drastically reduce the runtime, as especially the features <code class="docutils literal notranslate"><span class="pre">elongation</span></code> and <code class="docutils literal notranslate"><span class="pre">eccentricity</span></code> can take a while to compute.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>morphological_features = st.bl.morphological_features(sdata)
+morphological_features.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>cell_area</th>
+      <th>perimeter</th>
+      <th>circularity</th>
+      <th>bbox_width</th>
+      <th>bbox_height</th>
+      <th>extent</th>
+      <th>solidity</th>
+      <th>convexity</th>
+      <th>elongation</th>
+      <th>eccentricity</th>
+      <th>compactness</th>
+      <th>sphericity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>56.919458</td>
+      <td>30.298952</td>
+      <td>0.779140</td>
+      <td>10.625000</td>
+      <td>8.500000</td>
+      <td>0.630250</td>
+      <td>0.965899</td>
+      <td>0.983011</td>
+      <td>1.190205</td>
+      <td>0.542289</td>
+      <td>16.128517</td>
+      <td>0.779140</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>188.324123</td>
+      <td>59.574355</td>
+      <td>0.666802</td>
+      <td>20.400024</td>
+      <td>14.024994</td>
+      <td>0.658222</td>
+      <td>0.899008</td>
+      <td>0.955540</td>
+      <td>1.659024</td>
+      <td>0.797919</td>
+      <td>18.845720</td>
+      <td>0.666802</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>14.495154</td>
+      <td>17.303524</td>
+      <td>0.608364</td>
+      <td>6.375000</td>
+      <td>4.462494</td>
+      <td>0.509524</td>
+      <td>0.822026</td>
+      <td>0.970329</td>
+      <td>1.278102</td>
+      <td>0.622764</td>
+      <td>20.656002</td>
+      <td>0.608364</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>40.347058</td>
+      <td>24.257933</td>
+      <td>0.861617</td>
+      <td>8.287476</td>
+      <td>7.437500</td>
+      <td>0.654580</td>
+      <td>0.981329</td>
+      <td>0.999023</td>
+      <td>1.050888</td>
+      <td>0.307414</td>
+      <td>14.584639</td>
+      <td>0.861617</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>102.527238</td>
+      <td>40.730717</td>
+      <td>0.776614</td>
+      <td>10.412476</td>
+      <td>15.087494</td>
+      <td>0.652632</td>
+      <td>0.953189</td>
+      <td>0.989881</td>
+      <td>1.675849</td>
+      <td>0.802455</td>
+      <td>16.180981</td>
+      <td>0.776614</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Let’s plot all of the distributions in one plot using subplots.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># exclude &#39;cell_id&#39; from the features to plot
+features = [f for f in morphological_features.columns if f != &quot;cell_id&quot;]
+
+# define grid layout
+num_features = len(features)
+cols = 5
+rows = math.ceil(num_features / cols)
+
+# create subplots
+fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 3))
+axes = axes.flatten()
+
+for i, feature in enumerate(features):
+    ax = axes[i]
+    data = morphological_features[feature]
+
+    ax.hist(data, bins=100)
+    median_val = data.median()
+    ax.axvline(median_val, color=&quot;black&quot;, linestyle=&quot;dashed&quot;, linewidth=1)
+    ax.text(
+        median_val + 0.05,
+        ax.get_ylim()[1] * 0.9,
+        f&quot;Median: {median_val:.2f}&quot;,
+        color=&quot;black&quot;,
+        fontsize=8,
+    )
+
+    ax.set_title(feature, fontsize=10)
+    ax.set_xlabel(&quot;Value&quot;, fontsize=8)
+    ax.set_ylabel(&quot;Count&quot;, fontsize=8)
+
+# hide unused subplots
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_21_0.png" src="../_images/notebooks_baseline_21_0.png" />
+</div>
+</div>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../modules/baseline.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

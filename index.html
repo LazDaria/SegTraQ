@@ -40,6 +40,7 @@
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -152,6 +153,10 @@
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 </ul>
 
     </div>
@@ -277,9 +282,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -295,18 +298,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">SegTraQ documentation</a><ul class="visible nav section-nav flex-column">
-</ul>
-</li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#indices-and-tables">Indices and tables</a></li>
-</ul>
-
-            </nav>
         </div>
     </div>
 </div>
@@ -322,29 +313,15 @@ document.write(`
 <div class="toctree-wrapper compound">
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.genes_per_cell"><code class="docutils literal notranslate"><span class="pre">genes_per_cell()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.morphological_features"><code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.num_cells"><code class="docutils literal notranslate"><span class="pre">num_cells()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.num_genes"><code class="docutils literal notranslate"><span class="pre">num_genes()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.num_transcripts"><code class="docutils literal notranslate"><span class="pre">num_transcripts()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.perc_unassigned_transcripts"><code class="docutils literal notranslate"><span class="pre">perc_unassigned_transcripts()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.transcript_density"><code class="docutils literal notranslate"><span class="pre">transcript_density()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/baseline.html#segtraq.bl.baseline.transcripts_per_cell"><code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">
-</div>
-</section>
-<section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">#</a></h1>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 </ul>
+</div>
 </section>
 
 
@@ -373,25 +350,6 @@ document.write(`
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">SegTraQ documentation</a><ul class="visible nav section-nav flex-column">
-</ul>
-</li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#indices-and-tables">Indices and tables</a></li>
-</ul>
-
-  </nav></div>
-
-</div></div>
               
             
           </div>
