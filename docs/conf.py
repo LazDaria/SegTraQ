@@ -21,6 +21,8 @@ author = "Daria Lazic, Matthias Meyer-Bender, Martin Emons"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",  # Optional but useful for Google/Numpy-style docstrings
+    "nbsphinx",
+    "myst_parser",
 ]
 
 templates_path = ["_templates"]
