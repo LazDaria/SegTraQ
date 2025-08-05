@@ -21,6 +21,7 @@ dependencies = [
   "typer",
   "spatialdata",
   "joblib",
+  "geopandas",
 ]
 requires-python = ">= 3.10"
 
