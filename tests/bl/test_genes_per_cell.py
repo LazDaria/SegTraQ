@@ -11,8 +11,8 @@ def test_genes_per_cell(sdata):
     assert "cell_id" in genes_per_cell.columns, "DataFrame should contain 'cell_id' column"
     assert "gene_count" in genes_per_cell.columns, "DataFrame should contain 'gene_count' column"
 
-    num_cells = st.bl.num_cells(sdata)
     # TODO: reactivate once the test data is updated
+    # num_cells = st.bl.num_cells(sdata)
     # assert genes_per_cell.shape[0] == num_cells, "Number of rows in DataFrame should match number of cells"
 
 
