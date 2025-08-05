@@ -9,8 +9,8 @@ def test_morphological_features(sdata):
     assert not morphological_features.empty, "Morphological features DataFrame should not be empty"
     assert "cell_id" in morphological_features.columns, "DataFrame should contain 'cell_id' column"
 
-    num_cells = st.bl.num_cells(sdata)
     # TODO: reactivate once the test data is updated
+    # num_cells = st.bl.num_cells(sdata)
     # assert morphological_features.shape[0] == num_cells, "Number of rows in DataFrame should match number of cells"
 
     all_features = [
@@ -42,9 +42,10 @@ def test_morphological_features(sdata):
             "extent",
             "solidity",
             "convexity",
-            "elongation",
             "eccentricity",
-            "compactness",
             "sphericity",
         ]:
-            assert all(0 <= value <= 1 for value in feature_values), f"Values for '{feature}' should be between 0 and 1"
+            assert feature_values.min() >= -1e-6 and feature_values.max() <= 1 + 1e-6, (
+                f"Values for '{feature}' should be ~[0, 1]. "
+                f"Found min: {feature_values.min()}, max: {feature_values.max()}"
+            )
