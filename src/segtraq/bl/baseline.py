@@ -9,6 +9,7 @@ from shapely.geometry import Polygon
 def num_cells(sdata: sd.SpatialData, shape_key: str = "cell_boundaries") -> int:
     """
     Counts the number of cells in the given SpatialData object based on the specified shape key.
+    
     Parameters
     ----------
     sdata : sd.SpatialData
@@ -16,6 +17,7 @@ def num_cells(sdata: sd.SpatialData, shape_key: str = "cell_boundaries") -> int:
     shape_key : str, optional
         The key in the `shapes` attribute of `sdata` that corresponds to cell boundaries.
         Default is "cell_boundaries".
+        
     Returns
     -------
     int
@@ -32,6 +34,7 @@ def perc_unassigned_transcripts(
 ) -> float:
     """
     Calculates the proportion of unassigned transcripts in a SpatialData object.
+    
     Parameters
     ----------
     sdata : sd.SpatialData
@@ -42,6 +45,7 @@ def perc_unassigned_transcripts(
         The key to access cell assignment information within the transcript data. Default is "cell_id".
     unassigned_key : int, optional
         The value indicating an unassigned transcript. Default is -1.
+        
     Returns
     -------
     float
@@ -59,6 +63,7 @@ def transcripts_per_cell(
 ) -> pd.DataFrame:
     """
     Counts the number of transcripts assigned to each cell.
+    
     Parameters
     ----------
     sdata : sd.SpatialData
@@ -67,6 +72,7 @@ def transcripts_per_cell(
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
     cell_key : str, optional
         The column name in the transcript data that contains cell assignment information. Default is "cell_id".
+        
     Returns
     -------
     pd.DataFrame
@@ -82,6 +88,7 @@ def transcripts_per_cell(
 def genes_per_cell(sdata, transcript_key="transcripts", cell_key="cell_id", gene_key="feature_name"):
     """
     Calculates the number of unique genes detected per cell.
+    
     Parameters
     ----------
     sdata : object
@@ -92,6 +99,7 @@ def genes_per_cell(sdata, transcript_key="transcripts", cell_key="cell_id", gene
         The column name in the transcript data representing cell identifiers (default is "cell_id").
     gene_key : str, optional
         The column name in the transcript data representing gene names (default is "feature_name").
+        
     Returns
     -------
     pandas.DataFrame
@@ -114,6 +122,7 @@ def transcript_density(
     """
     Calculates the transcript density for each cell in a SpatialData object.
     Transcript density is defined as the number of transcripts per unit area for each cell.
+    
     Parameters
     ----------
     sdata : sd.SpatialData
@@ -124,12 +133,14 @@ def transcript_density(
         The key in the transcript table indicating transcript identifiers. Default is "transcripts".
     cell_key : str, optional
         The key in the table indicating cell identifiers. Default is "cell_id".
+        
     Returns
     -------
     pd.DataFrame
         A DataFrame with columns `[cell_key, "transcript_density"]`,
         where "transcript_density" is the number of transcripts per unit area for
         each cell. Rows with missing values are dropped.
+        
     Notes
     -----
     Requires that the input AnnData table contains a "cell_area" column in `.obs`.
@@ -153,6 +164,7 @@ def morphological_features(
 ):
     """
     Compute morphological features for cell shapes in a spatial transcriptomics dataset.
+    
     Parameters
     ----------
     sdata : object
@@ -167,14 +179,17 @@ def morphological_features(
         "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "sphericity".
     n_jobs : int, optional
         Number of parallel jobs to use for computation. -1 uses all available CPUs (default is -1).
+        
     Returns
     -------
     features : pandas.DataFrame
         DataFrame containing the computed morphological features for each cell, indexed by `id_key`.
+        
     Raises
     ------
     ValueError
         If any requested feature in `features_to_compute` is not recognized.
+        
     Notes
     -----
     - Requires `geopandas`, `shapely`, `numpy`, `pandas`, and `joblib`.
