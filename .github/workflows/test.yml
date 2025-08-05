@@ -37,7 +37,7 @@ jobs:
         ruff check --exit-zero --statistics
     - name: Run tests with coverage
       run: |
-        pytest --cov=SegTraQ --cov-report=term-missing --cov-report=xml
+        pytest --cov=segtraq --cov-report=term-missing --cov-report=xml
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v4
       with:
