@@ -42,7 +42,7 @@ def num_transcripts(sdata: sd.SpatialData, transcript_key: str = "transcripts"):
     int
         The total number of transcripts in the specified SpatialData object.
     """
-    return sdata.points[transcript_key].shape[0].compute() if transcript_key in sdata.points else 0
+    return sdata.points[transcript_key].shape[0].compute()
 
 
 def num_genes(
@@ -67,11 +67,8 @@ def num_genes(
     int
         The number of unique genes found in the specified SpatialData object.
     """
-    if gene_key in sdata.points["transcripts"].columns:
-        # converting from np.int64 to int for consistency
-        return int(sdata.points["transcripts"][gene_key].nunique().compute())
-    else:
-        return 0
+    # converting from np.int64 to int for consistency
+    return int(sdata.points[transcript_key][gene_key].nunique().compute())
 
 
 def perc_unassigned_transcripts(
