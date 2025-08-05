@@ -275,7 +275,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -291,6 +293,19 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.genes_per_cell"><code class="docutils literal notranslate"><span class="pre">genes_per_cell()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.morphological_features"><code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_cells"><code class="docutils literal notranslate"><span class="pre">num_cells()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.perc_unassigned_transcripts"><code class="docutils literal notranslate"><span class="pre">perc_unassigned_transcripts()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcript_density"><code class="docutils literal notranslate"><span class="pre">transcript_density()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcripts_per_cell"><code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -303,6 +318,155 @@ document.write(`
   <section id="the-baseline-bl-accessor">
 <h1>The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor<a class="headerlink" href="#the-baseline-bl-accessor" title="Link to this heading">#</a></h1>
 <p>The baseline accessor provides basic quality control metrics such as the number of cells, the number of genes, and the number of detected genes per cell.</p>
+<dl class="py function" id="module-segtraq.bl.baseline">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.genes_per_cell">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">genes_per_cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'feature_name'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.bl.baseline.genes_per_cell" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the number of unique genes detected per cell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>object</em>) – An object containing spatial transcriptomics data with a <cite>points</cite> attribute.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access the transcript data within <cite>sdata.points</cite> (default is “transcripts”).</p></li>
+<li><p><strong>cell_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The column name in the transcript data representing cell identifiers (default is “cell_id”).</p></li>
+<li><p><strong>gene_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The column name in the transcript data representing gene names (default is “feature_name”).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame with one row per cell, containing the cell identifier and
+the count of unique genes detected in that cell.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.morphological_features">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">morphological_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features_to_compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.bl.baseline.morphological_features" title="Link to this definition">#</a></dt>
+<dd><p>Compute morphological features for cell shapes in a spatial transcriptomics dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>object</em>) – Spatial data object containing cell shape information. Must have a <cite>.shapes</cite> attribute with geometries.</p></li>
+<li><p><strong>shape_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key in <cite>sdata.shapes</cite> specifying the geometry column (default is “cell_boundaries”).</p></li>
+<li><p><strong>id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key in <cite>sdata.shapes</cite> specifying the unique cell identifier column (default is “cell_id”).</p></li>
+<li><p><strong>features_to_compute</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – List of morphological features to compute. If None, all available features are computed.
+Available features: “cell_area”, “perimeter”, “circularity”, “bbox_width”, “bbox_height”,
+“extent”, “solidity”, “convexity”, “elongation”, “eccentricity”, “compactness”, “sphericity”.</p></li>
+<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of parallel jobs to use for computation. -1 uses all available CPUs (default is -1).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>features</strong> – DataFrame containing the computed morphological features for each cell, indexed by <cite>id_key</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If any requested feature in <cite>features_to_compute</cite> is not recognized.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Requires <cite>geopandas</cite>, <cite>shapely</cite>, <cite>numpy</cite>, <cite>pandas</cite>, and <cite>joblib</cite>.</p></li>
+<li><p>Some features are proxies or approximations (e.g., “sphericity” uses “circularity”).</p></li>
+<li><p>Invalid or null geometries are filtered out before computation.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.num_cells">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">num_cells</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#segtraq.bl.baseline.num_cells" title="Link to this definition">#</a></dt>
+<dd><p>Counts the number of cells in the given SpatialData object based on the specified shape key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing spatial information and cell boundaries.</p></li>
+<li><p><strong>shape_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key in the <cite>shapes</cite> attribute of <cite>sdata</cite> that corresponds to cell boundaries.
+Default is “cell_boundaries”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The number of cells found under the specified shape key.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.perc_unassigned_transcripts">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">perc_unassigned_transcripts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unassigned_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#segtraq.bl.baseline.perc_unassigned_transcripts" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the proportion of unassigned transcripts in a SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The spatial data object containing transcript information.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access transcript data within the spatial data object. Default is “transcripts”.</p></li>
+<li><p><strong>cell_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access cell assignment information within the transcript data. Default is “cell_id”.</p></li>
+<li><p><strong>unassigned_key</strong> (<em>int</em><em>, </em><em>optional</em>) – The value indicating an unassigned transcript. Default is -1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The fraction of transcripts that are unassigned.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.transcript_density">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">transcript_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.bl.baseline.transcript_density" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the transcript density for each cell in a SpatialData object.
+Transcript density is defined as the number of transcripts per unit area for each cell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing spatial transcriptomics data.</p></li>
+<li><p><strong>table_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access the AnnData table from <cite>sdata.tables</cite>. Default is “table”.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key in the transcript table indicating transcript identifiers. Default is “transcripts”.</p></li>
+<li><p><strong>cell_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key in the table indicating cell identifiers. Default is “cell_id”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame with columns <cite>[cell_key, “transcript_density”]</cite>,
+where “transcript_density” is the number of transcripts per unit area for
+each cell. Rows with missing values are dropped.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Requires that the input AnnData table contains a “cell_area” column in <cite>.obs</cite>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.bl.baseline.transcripts_per_cell">
+<span class="sig-prename descclassname"><span class="pre">segtraq.bl.baseline.</span></span><span class="sig-name descname"><span class="pre">transcripts_per_cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.bl.baseline.transcripts_per_cell" title="Link to this definition">#</a></dt>
+<dd><p>Counts the number of transcripts assigned to each cell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – A SpatialData object containing transcript and cell assignment information.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key in <cite>sdata.points</cite> corresponding to transcript data. Default is “transcripts”.</p></li>
+<li><p><strong>cell_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The column name in the transcript data that contains cell assignment information. Default is “cell_id”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame with two columns: the cell identifier (<cite>cell_key</cite>) and the
+corresponding transcript count (“transcript_count”).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -331,6 +495,26 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.genes_per_cell"><code class="docutils literal notranslate"><span class="pre">genes_per_cell()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.morphological_features"><code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.num_cells"><code class="docutils literal notranslate"><span class="pre">num_cells()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.perc_unassigned_transcripts"><code class="docutils literal notranslate"><span class="pre">perc_unassigned_transcripts()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcript_density"><code class="docutils literal notranslate"><span class="pre">transcript_density()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.bl.baseline.transcripts_per_cell"><code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>
