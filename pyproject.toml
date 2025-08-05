@@ -31,7 +31,8 @@ test = [
     "pytest",
     "ruff",
     "ty",
-    "ipdb"
+    "ipdb",
+    "black[jupyter]",
 ]
 docs = [
     "sphinx",
