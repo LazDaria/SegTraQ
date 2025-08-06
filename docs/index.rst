@@ -13,9 +13,11 @@ SegTraQ documentation
    :caption: Contents:
 
    modules/baseline
+   modules/nuclear_correlation
 
 .. toctree::
    :maxdepth: 1
    :caption: Tutorials:
    
    notebooks/baseline
+   notebooks/nuclear_correlation

@@ -1,20 +1,15 @@
-import geopandas as gpd
-from geopandas import GeoDataFrame
-from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+from geopandas import GeoDataFrame
+from joblib import Parallel, delayed
 from pandas import DataFrame, Series
-from tqdm import tqdm
-from shapely.geometry.base import BaseGeometry
 from rtree.index import Index
+from shapely.geometry.base import BaseGeometry
+from tqdm import tqdm
 
 
-def _compute_iou(
-        poly1: BaseGeometry, 
-        poly2: BaseGeometry
-) -> float:
-    
+def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
     """Compute IoU between two shape polygons."""
 
     if not (poly1.is_valid and poly2.is_valid):  # TODO - make polygons valid later
@@ -29,7 +24,6 @@ def _process_cell(
     nuc_boundaries: GeoDataFrame,
     nuc_sindex: Index,
 ) -> dict[str, int | None | float]:
-    
     """For one cell polygon compute the IoU with the best-matching nucleus."""
 
     cell_geom = cell_row.geometry
@@ -101,8 +95,7 @@ def compute_cell_nuc_ious(
 
     # Parallel loop over cells
     results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
-        delayed(_process_cell)(cell_row, nuc_boundaries, nuc_sindex)
-        for _, cell_row in iterator
+        delayed(_process_cell)(cell_row, nuc_boundaries, nuc_sindex) for _, cell_row in iterator
     )
 
     return pd.DataFrame(results)
