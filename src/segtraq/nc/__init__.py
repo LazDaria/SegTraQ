@@ -1,8 +1,7 @@
-"""Top-level package for SegTraQ."""
+from .nuclear_correlation import (
+    compute_cell_nuc_ious
+)
 
-__author__ = """Daria Lazic, Matthias Meyer-Bender, Martin Emons"""
-__email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh.ch"
-
-from . import nc
-
-__all__ = ["nc"]
+__all__ = [
+    "compute_cell_nuc_ious"
+]
