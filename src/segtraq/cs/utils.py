@@ -230,3 +230,36 @@ def compute_mean_purity(purity_matrix: np.ndarray) -> float:
     """
     n = purity_matrix.shape[0]
     return np.mean(purity_matrix[np.triu_indices(n, k=1)])
+
+
+def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
+    """
+    Compute RMSD (root mean squared deviation) of clusters from their centroids.
+
+    Parameters
+    ----------
+    embeddings : np.ndarray
+        Data matrix (e.g., PCA coordinates), shape (n_samples, n_features).
+    labels : np.ndarray
+        Cluster labels for each sample.
+
+    Returns
+    -------
+    float
+        RMSD value (lower means tighter clusters).
+    """
+    unique_labels = np.unique(labels)
+    total_rmsd = 0.0
+    total_points = 0
+
+    for label in unique_labels:
+        mask = labels == label
+        cluster_points = embeddings[mask]
+        if len(cluster_points) < 2:
+            continue  # skip singletons, no spread
+        centroid = np.mean(cluster_points, axis=0)
+        rmsd = np.sqrt(np.mean(np.sum((cluster_points - centroid) ** 2, axis=1)))
+        total_rmsd += rmsd * len(cluster_points)
+        total_points += len(cluster_points)
+
+    return total_rmsd / total_points if total_points > 0 else np.nan

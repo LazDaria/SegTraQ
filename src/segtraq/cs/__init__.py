@@ -1,3 +1,8 @@
-from .clustering_stability import compute_ari, compute_purity, compute_silhouette_score
+from .clustering_stability import (
+    compute_ari,
+    compute_purity,
+    compute_rmsd,
+    compute_silhouette_score,
+)
 
-__all__ = ["compute_ari", "compute_silhouette_score", "compute_purity"]
+__all__ = ["compute_ari", "compute_silhouette_score", "compute_purity", "compute_rmsd"]
