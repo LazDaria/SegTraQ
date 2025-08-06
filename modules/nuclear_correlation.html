@@ -283,7 +283,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -299,6 +301,14 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -311,6 +321,29 @@ document.write(`
   <section id="the-nuclear-correlation-nc-accessor">
 <h1>The nuclear_correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor<a class="headerlink" href="#the-nuclear-correlation-nc-accessor" title="Link to this heading">#</a></h1>
 <p>The nuclear_correlation accessor provides metrics to evaluate the correlation between the cell and nuclear segmentation mask.</p>
+<dl class="py function" id="module-segtraq.nc.nuclear_correlation">
+<dt class="sig sig-object py" id="segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">
+<span class="sig-prename descclassname"><span class="pre">segtraq.nc.nuclear_correlation.</span></span><span class="sig-name descname"><span class="pre">compute_cell_nuc_ious</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nuc_shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_progress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious" title="Link to this definition">#</a></dt>
+<dd><p>Compute per-cell IoU between cell and nucleus boundaries in a SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>spatialdata.SpatialData</em>) – Must contain cell and nuclear shapes.</p></li>
+<li><p><strong>cell_shape_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key in the <cite>shapes</cite> attribute of <cite>sdata</cite> that corresponds to cell boundaries.</p></li>
+<li><p><strong>nuc_shape_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key in the <cite>shapes</cite> attribute of <cite>sdata</cite> that corresponds to nucleus boundaries.</p></li>
+<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of parallel jobs. Default=-1 uses all CPUs.</p></li>
+<li><p><strong>use_progress</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display a progress bar with tqdm.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Columns: [cell_id, best_nuc_id, IoU]</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -348,6 +381,21 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>
