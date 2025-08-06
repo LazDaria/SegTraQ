@@ -21,4 +21,5 @@ SegTraQ documentation
    :caption: Tutorials:
    
    notebooks/baseline
+   notebooks/clustering_stability
    notebooks/nuclear_correlation
