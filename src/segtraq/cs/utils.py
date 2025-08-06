@@ -5,14 +5,61 @@ import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
 
+def _run_pca(adata, force_run: bool = False):
+    # check if PCA has already been run
+    count_layer_exists = "counts" in adata.layers
+    x_is_int = np.issubdtype(adata.X.dtype, np.integer)
+    if not count_layer_exists and x_is_int:
+        adata.layers["counts"] = adata.X.copy()
+        sc.pp.normalize_total(adata, inplace=True)
+        sc.pp.log1p(adata)
+
+    # run PCA if not already done
+    if "X_pca" not in adata.obsm or force_run:
+        sc.pp.pca(adata)
+    return adata
+
+
+def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
+    """
+    Compute RMSD (root mean squared deviation) of clusters from their centroids.
+
+    Parameters
+    ----------
+    embeddings : np.ndarray
+        Data matrix (e.g., PCA coordinates), shape (n_samples, n_features).
+    labels : np.ndarray
+        Cluster labels for each sample.
+
+    Returns
+    -------
+    float
+        RMSD value (lower means tighter clusters).
+    """
+    unique_labels = np.unique(labels)
+    total_rmsd = 0.0
+    total_points = 0
+
+    for label in unique_labels:
+        mask = labels == label
+        cluster_points = embeddings[mask]
+        if len(cluster_points) < 2:
+            continue  # skip singletons, no spread
+        centroid = np.mean(cluster_points, axis=0)
+        rmsd = np.sqrt(np.mean(np.sum((cluster_points - centroid) ** 2, axis=1)))
+        total_rmsd += rmsd * len(cluster_points)
+        total_points += len(cluster_points)
+
+    return total_rmsd / total_points if total_points > 0 else np.nan
+
+
 def run_leiden_clustering_on_adata(
     adata_input,
     resolution: float = 1.0,
     key_added: str = "leiden",
-    preprocess: bool = True,
 ):
     """
-    Run Leiden clustering on a provided AnnData object.
+    Run Leiden clustering on a provided AnnData object. Leiden clustering is performed on the PCA-reduced data.
 
     Parameters
     ----------
@@ -22,8 +69,6 @@ def run_leiden_clustering_on_adata(
         Resolution parameter for Leiden.
     key_added : str
         Key under which to store clustering result in `.obs`.
-    preprocess : bool
-        Whether to run normalization, log1p, PCA, and neighbors.
 
     Returns
     -------
@@ -31,15 +76,8 @@ def run_leiden_clustering_on_adata(
         The Leiden cluster labels.
     """
     adata = adata_input.copy()
-
-    if preprocess:
-        if "counts" not in adata.layers:
-            adata.layers["counts"] = adata.X.copy()
-            sc.pp.normalize_total(adata, inplace=True)
-            sc.pp.log1p(adata)
-
-        sc.pp.pca(adata)
-        sc.pp.neighbors(adata)
+    adata = _run_pca(adata, force_run=True)
+    sc.pp.neighbors(adata)
 
     sc.tl.leiden(
         adata,
@@ -230,36 +268,3 @@ def compute_mean_purity(purity_matrix: np.ndarray) -> float:
     """
     n = purity_matrix.shape[0]
     return np.mean(purity_matrix[np.triu_indices(n, k=1)])
-
-
-def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
-    """
-    Compute RMSD (root mean squared deviation) of clusters from their centroids.
-
-    Parameters
-    ----------
-    embeddings : np.ndarray
-        Data matrix (e.g., PCA coordinates), shape (n_samples, n_features).
-    labels : np.ndarray
-        Cluster labels for each sample.
-
-    Returns
-    -------
-    float
-        RMSD value (lower means tighter clusters).
-    """
-    unique_labels = np.unique(labels)
-    total_rmsd = 0.0
-    total_points = 0
-
-    for label in unique_labels:
-        mask = labels == label
-        cluster_points = embeddings[mask]
-        if len(cluster_points) < 2:
-            continue  # skip singletons, no spread
-        centroid = np.mean(cluster_points, axis=0)
-        rmsd = np.sqrt(np.mean(np.sum((cluster_points - centroid) ** 2, axis=1)))
-        total_rmsd += rmsd * len(cluster_points)
-        total_points += len(cluster_points)
-
-    return total_rmsd / total_points if total_points > 0 else np.nan
