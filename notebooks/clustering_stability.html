@@ -159,10 +159,6 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Clustering Stability</a></li>
-
-
-
-
 <li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
 </ul>
 
@@ -312,13 +308,11 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Clustering Stability</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Root-Mean-Square-Deviation-(RMSD)">Root Mean Square Deviation (RMSD)</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Silhouette-Score">Silhouette Score</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Root-Mean-Square-Deviation-(RMSD)">Root Mean Square Deviation (RMSD)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Silhouette-Score">Silhouette Score</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
 </ul>
-
             </nav>
         </div>
     </div>
@@ -366,9 +360,8 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
 </pre></div></div>
 </div>
-</section>
 <section id="Root-Mean-Square-Deviation-(RMSD)">
-<h1>Root Mean Square Deviation (RMSD)<a class="headerlink" href="#Root-Mean-Square-Deviation-(RMSD)" title="Link to this heading">#</a></h1>
+<h2>Root Mean Square Deviation (RMSD)<a class="headerlink" href="#Root-Mean-Square-Deviation-(RMSD)" title="Link to this heading">#</a></h2>
 <p>The root mean square deviation (RMSD) is a measure that looks at the compactness of clusters. To compute it, we first compute a PCA on the normalized and log-transformed counts, which gives us the first 50 principal components. We then run Leiden clustering on these. Finally, for each cluster, we compute the root mean square deviation of all points within the cluster from the cluster centroid. To ensure that we are not too dependent on the resolution parameter of Leiden clustering, we run it
 with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest RMSD.</p>
 <div class="nbinput docutils container">
@@ -426,7 +419,7 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 <p>ProSeg had the lower RMSD, meaning that it’s clusters are more tight.</p>
 </section>
 <section id="Silhouette-Score">
-<h1>Silhouette Score<a class="headerlink" href="#Silhouette-Score" title="Link to this heading">#</a></h1>
+<h2>Silhouette Score<a class="headerlink" href="#Silhouette-Score" title="Link to this heading">#</a></h2>
 <p>A slightly more elaborate metric is the silhouette score. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). Values range from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.</p>
 <p>As with the RMSD, we compute this for Leiden clustering at different resolutions and report the best one.</p>
 <div class="nbinput docutils container">
@@ -466,7 +459,7 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 <p>ProSeg has a slightly higher silhouette score than BidCell.</p>
 </section>
 <section id="Purity">
-<h1>Purity<a class="headerlink" href="#Purity" title="Link to this heading">#</a></h1>
+<h2>Purity<a class="headerlink" href="#Purity" title="Link to this heading">#</a></h2>
 <p>Another way to assess cluster stability is to cluster only on a subset of all genes. For example, if we randomly select 100 genes and then perform Leiden clustering on those, will our cells typically get assigned to the same cluster or to different ones?</p>
 <p>One way to assess this is by comparing the purity between two clusterings. For every cluster in clustering 1, we check how many other clusters it contains in clustering 2.</p>
 <p>A purity value of 1 means that the clusters are completely pure, whereas a value closer to 0 means that they are more mixed.</p>
@@ -523,7 +516,7 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 <p>The purity is much higher for ProSeg than for BidCell, meaning that the clustering of ProSeg changes less when only looking at subsets of genes.</p>
 </section>
 <section id="Adjusted-Rand-Index-(ARI)">
-<h1>Adjusted Rand Index (ARI)<a class="headerlink" href="#Adjusted-Rand-Index-(ARI)" title="Link to this heading">#</a></h1>
+<h2>Adjusted Rand Index (ARI)<a class="headerlink" href="#Adjusted-Rand-Index-(ARI)" title="Link to this heading">#</a></h2>
 <p>The adjusted rand index (ARI) is another metric to determine the similarity of different clusterings (again, we create five clusterings based on random subsets of 100 genes each). Just like the purity, its values range from 0 (no similarity, not a robust clustering) to 1 (exactly the same clusters, high robustness).</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
@@ -576,6 +569,7 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 </div>
 <p>The ARI is much higher for ProSeg, meaning that it’s clusters are more robust than the ones obtained from BidCell.</p>
 </section>
+</section>
 
 
                 </article>
@@ -622,13 +616,11 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Clustering Stability</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Root-Mean-Square-Deviation-(RMSD)">Root Mean Square Deviation (RMSD)</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Silhouette-Score">Silhouette Score</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
-<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Root-Mean-Square-Deviation-(RMSD)">Root Mean Square Deviation (RMSD)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Silhouette-Score">Silhouette Score</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
 </ul>
-
   </nav></div>
 
 </div></div>
