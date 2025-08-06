@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The nuclear_correlation (nc) accessor &#8212; SegTraQ  documentation</title>
+    <title>The nuclear correlation (nc) accessor &#8212; SegTraQ  documentation</title>
   
   
   
@@ -153,7 +153,7 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">The nuclear_correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
@@ -298,7 +298,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>The nuclear_correlation (nc) accessor</h1>
+    <h1>The nuclear correlation (nc) accessor</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -321,8 +321,8 @@ document.write(`
                 <article class="bd-article">
                   
   <section id="the-nuclear-correlation-nc-accessor">
-<h1>The nuclear_correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor<a class="headerlink" href="#the-nuclear-correlation-nc-accessor" title="Link to this heading">#</a></h1>
-<p>The nuclear_correlation accessor provides metrics to evaluate the correlation between the cell and nuclear segmentation mask.</p>
+<h1>The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor<a class="headerlink" href="#the-nuclear-correlation-nc-accessor" title="Link to this heading">#</a></h1>
+<p>The nuclear correlation accessor provides metrics to evaluate the correlation between the cell and nuclear segmentation mask.</p>
 <dl class="py function" id="module-segtraq.nc.nuclear_correlation">
 <dt class="sig sig-object py" id="segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">
 <span class="sig-prename descclassname"><span class="pre">segtraq.nc.nuclear_correlation.</span></span><span class="sig-name descname"><span class="pre">compute_cell_nuc_ious</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nuc_shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_progress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious" title="Link to this definition">#</a></dt>
