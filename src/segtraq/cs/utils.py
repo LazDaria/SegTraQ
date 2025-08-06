@@ -2,7 +2,7 @@ import anndata as ad
 import numpy as np
 import scanpy as sc
 import spatialdata as sd
-from sklearn.metrics import adjusted_rand_score
+from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
 
 def run_leiden_clustering_on_adata(
@@ -159,3 +159,74 @@ def compute_mean_ari(ari_matrix: np.ndarray) -> float:
     n = ari_matrix.shape[0]
     upper_triangle = ari_matrix[np.triu_indices(n, k=1)]
     return np.mean(upper_triangle)
+
+
+def compute_purity_score(labels_true, labels_pred):
+    """
+    Compute the purity score between two cluster labelings.
+
+    Parameters
+    ----------
+    labels_true : array-like
+        First clustering labels (can be treated as ground truth).
+    labels_pred : array-like
+        Second clustering labels (to compare).
+
+    Returns
+    -------
+    float
+        Purity score.
+    """
+    contingency = confusion_matrix(labels_true, labels_pred)
+    return np.sum(np.max(contingency, axis=0)) / np.sum(contingency)
+
+
+def compute_pairwise_purity(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
+    """
+    Compute the pairwise purity scores between different clusterings in .obs.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData object containing the cluster assignments.
+    cluster_keys : List[str]
+        List of .obs keys with clustering labels.
+
+    Returns
+    -------
+    np.ndarray
+        Symmetric matrix of pairwise purity scores.
+    """
+    n = len(cluster_keys)
+    purity_matrix = np.zeros((n, n))
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            labels_i = adata.obs[cluster_keys[i]]
+            labels_j = adata.obs[cluster_keys[j]]
+            # Compute purity in both directions and average
+            p1 = compute_purity_score(labels_i, labels_j)
+            p2 = compute_purity_score(labels_j, labels_i)
+            avg_purity = (p1 + p2) / 2
+            purity_matrix[i, j] = purity_matrix[j, i] = avg_purity
+
+    np.fill_diagonal(purity_matrix, 1.0)
+    return purity_matrix
+
+
+def compute_mean_purity(purity_matrix: np.ndarray) -> float:
+    """
+    Compute the mean of the upper triangle of the purity matrix.
+
+    Parameters
+    ----------
+    purity_matrix : np.ndarray
+        Pairwise purity score matrix.
+
+    Returns
+    -------
+    float
+        Mean pairwise purity score.
+    """
+    n = purity_matrix.shape[0]
+    return np.mean(purity_matrix[np.triu_indices(n, k=1)])

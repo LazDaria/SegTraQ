@@ -4,12 +4,14 @@ from sklearn.metrics import silhouette_score
 
 from .utils import (
     compute_mean_ari,
+    compute_mean_purity,
     compute_pairwise_ari,
+    compute_pairwise_purity,
     run_leiden_clustering_on_random_gene_subset,
 )
 
 
-def compute_clustering_stability(
+def compute_ari(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
     n_genes_subset: int = 100,
@@ -109,3 +111,46 @@ def compute_silhouette_score(
                 best_silhouette_score = silhouette_avg
 
     return best_silhouette_score
+
+
+def compute_purity(
+    sdata: sd.SpatialData,
+    resolution: float = 1.0,
+    n_genes_subset: int = 100,
+    key_prefix: str = "leiden_subset",
+) -> float:
+    """
+    Compute the clustering consistency using pairwise purity scores across
+    clustering runs on random gene subsets.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        The SpatialData object.
+    resolution : float
+        Leiden resolution parameter.
+    n_genes_subset : int
+        Number of genes to use per clustering run.
+    key_prefix : str
+        Prefix for storing cluster labels in .obs.
+
+    Returns
+    -------
+    float
+        Average pairwise purity score.
+    """
+    adata = sdata.tables["table"]
+    cluster_keys = []
+
+    for random_state in range(5):
+        key_added = run_leiden_clustering_on_random_gene_subset(
+            sdata,
+            resolution=resolution,
+            n_genes_subset=n_genes_subset,
+            key_prefix=key_prefix,
+            random_state=random_state,
+        )
+        cluster_keys.append(key_added)
+
+    purity_matrix = compute_pairwise_purity(adata, cluster_keys)
+    return float(compute_mean_purity(purity_matrix))
