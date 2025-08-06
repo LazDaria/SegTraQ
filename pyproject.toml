@@ -21,6 +21,7 @@ dependencies = [
   "typer",
   "spatialdata",
   "joblib",
+  "geopandas",
 ]
 requires-python = ">= 3.10"
 
@@ -30,12 +31,19 @@ test = [
     "pytest",
     "ruff",
     "ty",
+    "ipdb",
+    "black[jupyter]",
+    "pytest-cov",
 ]
     "ipdb"
 docs = [
     "sphinx",
-    "sphinx-rtd-theme",  # or another theme you prefer
-    "myst-parser"        # if you want to support markdown in Sphinx
+    "sphinx-book-theme",  # or another theme you prefer
+    "myst-parser",        # if you want to support markdown in Sphinx
+    "nbsphinx",          # for rendering Jupyter notebooks in Sphinx
+    "sphinx-autodoc-typehints",  # for better type hint rendering in
+    "sphinx-copybutton",  # for copy buttons in code blocks
+    "pandoc",
 ]
 
 [project.urls]
