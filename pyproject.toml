@@ -22,6 +22,8 @@ dependencies = [
   "spatialdata",
   "joblib",
   "geopandas",
+  "scanpy",
+  "igraph",
   "rtree",
   "tqdm"
 ]
