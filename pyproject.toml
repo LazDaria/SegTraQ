@@ -35,7 +35,7 @@ test = [
     "black[jupyter]",
     "pytest-cov",
 ]
-    "ipdb"
+
 docs = [
     "sphinx",
     "sphinx-book-theme",  # or another theme you prefer
