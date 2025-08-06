@@ -154,7 +154,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear_correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="current nav bd-sidenav">
@@ -313,6 +313,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Silhouette-Score">Silhouette Score</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Visualization">Visualization</a></li>
 </ul>
             </nav>
         </div>
@@ -334,13 +335,27 @@ document.write(`
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
 %autoreload 2
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import scanpy as sc
+import seaborn as sns
 import spatialdata as sd
+import spatialdata_plot  # noqa: F401
+import squidpy as sq
 
 import segtraq as st
 
 # example datasets on which we can compare performance
 sdata_bidcell = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_comparison/spatialData_2_C1_bidcell.zarr&quot;)
+sdata_segger = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_comparison/spatialData_2_C1_segger.zarr&quot;)
+sdata_xenium = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_comparison/spatialData_2_C1_xenium.zarr&quot;)
 sdata_proseg = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_comparison/spatialData_2_C1_proseg.zarr&quot;)
+sdata_dict = {
+    &quot;bidcell&quot;: sdata_bidcell,
+    &quot;segger&quot;: sdata_segger,
+    &quot;xenium&quot;: sdata_xenium,
+    &quot;proseg&quot;: sdata_proseg,
+}
 </pre></div>
 </div>
 </div>
@@ -353,6 +368,14 @@ sdata_proseg = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_compa
   warnings.warn(
 /home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
   from pkg_resources import DistributionNotFound, get_distribution
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/anndata/utils.py:434: FutureWarning: Importing read_text from `anndata` is deprecated. Import anndata.io.read_text instead.
+  warnings.warn(msg, FutureWarning)
+version mismatch: detected: RasterFormatV02, requested: FormatV04
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
+  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
+version mismatch: detected: RasterFormatV02, requested: FormatV04
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
+  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
 version mismatch: detected: RasterFormatV02, requested: FormatV04
 /home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
@@ -369,7 +392,10 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_rmsd(sdata_bidcell)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>rmsds = {}
+for method, sdata in sdata_dict.items():
+    rmsds[method] = st.cs.compute_rmsd(sdata)
+rmsds
 </pre></div>
 </div>
 </div>
@@ -380,6 +406,10 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 <div class="highlight"><pre>
 /home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/legacy_api_wrap/__init__.py:82: UserWarning: Some cells have zero counts
+  return fn(*args_all, **kw)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/legacy_api_wrap/__init__.py:82: UserWarning: Some cells have zero counts
+  return fn(*args_all, **kw)
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -388,18 +418,237 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-12.699893951416016
+{&#39;bidcell&#39;: 12.699893951416016,
+ &#39;segger&#39;: 3.723130941390991,
+ &#39;xenium&#39;: 3.7440602779388428,
+ &#39;proseg&#39;: 3.9636342525482178}
 </pre></div></div>
 </div>
+</section>
+<section id="Silhouette-Score">
+<h2>Silhouette Score<a class="headerlink" href="#Silhouette-Score" title="Link to this heading">#</a></h2>
+<p>A slightly more elaborate metric is the silhouette score. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). Values range from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.</p>
+<p>As with the RMSD, we compute this for Leiden clustering at different resolutions and report the best one.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_rmsd(sdata_proseg)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>silhouette_scores = {}
+for method, sdata in sdata_dict.items():
+    silhouette_scores[method] = st.cs.compute_silhouette_score(sdata)
+silhouette_scores
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: 0.10390220582485199,
+ &#39;segger&#39;: 0.1020861566066742,
+ &#39;xenium&#39;: 0.09785240888595581,
+ &#39;proseg&#39;: 0.18913063406944275}
+</pre></div></div>
+</div>
+</section>
+<section id="Purity">
+<h2>Purity<a class="headerlink" href="#Purity" title="Link to this heading">#</a></h2>
+<p>Another way to assess cluster stability is to cluster only on a subset of all genes. For example, if we randomly select 100 genes and then perform Leiden clustering on those, will our cells typically get assigned to the same cluster or to different ones?</p>
+<p>One way to assess this is by comparing the purity between two clusterings. For every cluster in clustering 1, we check how many other clusters it contains in clustering 2.</p>
+<p>A purity value of 1 means that the clusters are completely pure, whereas a value closer to 0 means that they are more mixed.</p>
+<p>We randomly select 100 genes, perform clustering on them, and do this five times, to obtain five different clusterings. Then we compare them using the purity score.</p>
+<p><strong>Note:</strong> this method will recompute the PCA based on a subset of features. If you will be using the PCA in the anndata later, you should recompute it on the whole data.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>purities = {}
+for method, sdata in sdata_dict.items():
+    purities[method] = st.cs.compute_purity(sdata)
+purities
 </pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: 0.3335519209998457,
+ &#39;segger&#39;: 0.4426705756929638,
+ &#39;xenium&#39;: 0.42796610169491534,
+ &#39;proseg&#39;: 0.6258423122969043}
+</pre></div></div>
+</div>
+</section>
+<section id="Adjusted-Rand-Index-(ARI)">
+<h2>Adjusted Rand Index (ARI)<a class="headerlink" href="#Adjusted-Rand-Index-(ARI)" title="Link to this heading">#</a></h2>
+<p>The adjusted rand index (ARI) is another metric to determine the similarity of different clusterings (again, we create five clusterings based on random subsets of 100 genes each). Just like the purity, its values range from 0 (no similarity, not a robust clustering) to 1 (exactly the same clusters, high robustness).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>aris = {}
+for method, sdata in sdata_dict.items():
+    aris[method] = st.cs.compute_ari(sdata)
+aris
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
+  self._set_arrayXarray(i, j, x)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: 0.1299466585442509,
+ &#39;segger&#39;: 0.17360159096335342,
+ &#39;xenium&#39;: 0.1558165085556677,
+ &#39;proseg&#39;: 0.41885728397994343}
+</pre></div></div>
+</div>
+</section>
+<section id="Visualization">
+<h2>Visualization<a class="headerlink" href="#Visualization" title="Link to this heading">#</a></h2>
+<p>Looking at numbers is one thing, but interpretation will be a lot easier if we visualize our results. The following couple of codeblocks demonstrate how the four methods compare.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># putting everything into a dataframe for easier plotting
+results_df = pd.DataFrame(
+    {
+        &quot;Method&quot;: list(rmsds.keys()),
+        &quot;RMSD&quot;: list(rmsds.values()),
+        &quot;Silhouette Score&quot;: list(silhouette_scores.values()),
+        &quot;Purity&quot;: list(purities.values()),
+        &quot;ARI&quot;: list(aris.values()),
+    }
+)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the RMSD vs. silhouette score
+plt.figure(figsize=(4, 3))
+sns.scatterplot(data=results_df, x=&quot;RMSD&quot;, y=&quot;Silhouette Score&quot;, hue=&quot;Method&quot;, style=&quot;Method&quot;, s=100)
+plt.xlabel(&quot;RMSD (↓)&quot;)
+plt.ylabel(&quot;Silhouette Score (↑)&quot;)
+plt.title(&quot;RMSD vs. Silhouette Score&quot;)
+plt.legend(title=&quot;Method&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_clustering_stability_12_0.png" src="../_images/notebooks_clustering_stability_12_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the purity vs. ARI
+plt.figure(figsize=(4, 3))
+sns.scatterplot(data=results_df, x=&quot;Purity&quot;, y=&quot;ARI&quot;, hue=&quot;Method&quot;, style=&quot;Method&quot;, s=100)
+plt.xlabel(&quot;Purity (↑)&quot;)
+plt.ylabel(&quot;ARI (↑)&quot;)
+plt.title(&quot;Purity vs. ARI&quot;)
+plt.legend(title=&quot;Method&quot;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_clustering_stability_13_0.png" src="../_images/notebooks_clustering_stability_13_0.png" />
+</div>
+</div>
+<p>In these benchmarks, it looks pretty clear that ProSeg is the winner. But what do the segmentation masks actually look like?</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, ax = plt.subplots(1, 4, figsize=(16, 4))
+for i, (method, sdata) in enumerate(sdata_dict.items()):
+    sdata.pl.render_labels().pl.show(ax=ax[i])
+    ax[i].set_title(method.capitalize())
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_clustering_stability_15_0.png" src="../_images/notebooks_clustering_stability_15_0.png" />
+</div>
+</div>
+<p>Let’s also have a quick look at the UMAP of the cells, and go through how one could cluster them. The code for preprocessing is taken from the <a class="reference external" href="https://squidpy.readthedocs.io/en/stable/notebooks/tutorials/tutorial_xenium.html#calculate-quality-control-metrics">squidpy documentation</a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata = sdata_dict[&quot;proseg&quot;].tables[&quot;table&quot;]
+adata.layers[&quot;counts&quot;] = adata.X.copy()
+sc.pp.normalize_total(adata, inplace=True)
+sc.pp.log1p(adata)
+sc.pp.pca(adata)
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
+sc.tl.leiden(adata, flavor=&quot;igraph&quot;, n_iterations=2)
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area stderr docutils container">
@@ -408,85 +657,43 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
   return fn(*args_all, **kw)
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-3.9636342525482178
-</pre></div></div>
-</div>
-<p>ProSeg had the lower RMSD, meaning that it’s clusters are more tight.</p>
-</section>
-<section id="Silhouette-Score">
-<h2>Silhouette Score<a class="headerlink" href="#Silhouette-Score" title="Link to this heading">#</a></h2>
-<p>A slightly more elaborate metric is the silhouette score. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). Values range from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.</p>
-<p>As with the RMSD, we compute this for Leiden clustering at different resolutions and report the best one.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_silhouette_score(sdata_bidcell)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sc.pl.umap(
+    adata,
+    color=[
+        &quot;cell_size&quot;,
+        &quot;eccentricity&quot;,
+        &quot;leiden&quot;,
+    ],
+    wspace=0.1,
+)
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-0.10390220582485199
-</pre></div></div>
+<img alt="../_images/notebooks_clustering_stability_18_0.png" src="../_images/notebooks_clustering_stability_18_0.png" />
+</div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_silhouette_score(sdata_proseg)
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-0.18913063406944275
-</pre></div></div>
-</div>
-<p>ProSeg has a slightly higher silhouette score than BidCell.</p>
-</section>
-<section id="Purity">
-<h2>Purity<a class="headerlink" href="#Purity" title="Link to this heading">#</a></h2>
-<p>Another way to assess cluster stability is to cluster only on a subset of all genes. For example, if we randomly select 100 genes and then perform Leiden clustering on those, will our cells typically get assigned to the same cluster or to different ones?</p>
-<p>One way to assess this is by comparing the purity between two clusterings. For every cluster in clustering 1, we check how many other clusters it contains in clustering 2.</p>
-<p>A purity value of 1 means that the clusters are completely pure, whereas a value closer to 0 means that they are more mixed.</p>
-<p>We randomly select 100 genes, perform clustering on them, and do this five times, to obtain five different clusterings. Then we compare them using the purity score.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_purity(sdata_bidcell)
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-0.3335519209998457
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_purity(sdata_proseg)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># we need to add the spatial coordinates to the adata object for plotting
+adata.obsm[&quot;spatial&quot;] = adata.obs[[&quot;centroid-0&quot;, &quot;centroid-1&quot;]].to_numpy()
+
+sq.pl.spatial_scatter(
+    adata,
+    library_id=&quot;spatial&quot;,
+    shape=None,
+    color=[&quot;leiden&quot;],
+    wspace=0.4,
+)
 </pre></div>
 </div>
 </div>
@@ -495,80 +702,17 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/squidpy/pl/_spatial_utils.py:976: UserWarning: No data for colormapping provided via &#39;c&#39;. Parameters &#39;cmap&#39;, &#39;norm&#39; will be ignored
+  _cax = scatter(
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-0.6258423122969043
-</pre></div></div>
-</div>
-<p>The purity is much higher for ProSeg than for BidCell, meaning that the clustering of ProSeg changes less when only looking at subsets of genes.</p>
-</section>
-<section id="Adjusted-Rand-Index-(ARI)">
-<h2>Adjusted Rand Index (ARI)<a class="headerlink" href="#Adjusted-Rand-Index-(ARI)" title="Link to this heading">#</a></h2>
-<p>The adjusted rand index (ARI) is another metric to determine the similarity of different clusterings (again, we create five clusterings based on random subsets of 100 genes each). Just like the purity, its values range from 0 (no similarity, not a robust clustering) to 1 (exactly the same clusters, high robustness).</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_ari(sdata_bidcell)
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-0.1299466585442509
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.cs.compute_ari(sdata_proseg)
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
-  self._set_arrayXarray(i, j, x)
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-0.41885728397994343
-</pre></div></div>
+<img alt="../_images/notebooks_clustering_stability_19_1.png" src="../_images/notebooks_clustering_stability_19_1.png" />
 </div>
-<p>The ARI is much higher for ProSeg, meaning that it’s clusters are more robust than the ones obtained from BidCell.</p>
+</div>
 </section>
 </section>
 
@@ -621,6 +765,7 @@ with multiple resolutions (by default 0.6, 0.8, and 1.0) and report the lowest R
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Silhouette-Score">Silhouette Score</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Visualization">Visualization</a></li>
 </ul>
   </nav></div>
 
