@@ -22,7 +22,8 @@ dependencies = [
   "spatialdata",
   "joblib",
   "geopandas",
-  "rtree"
+  "rtree",
+  "tqdm"
 ]
 requires-python = ">= 3.10"
 
