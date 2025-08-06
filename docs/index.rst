@@ -13,6 +13,7 @@ SegTraQ documentation
    :caption: Contents:
 
    modules/baseline
+   modules/clustering_stability
    modules/nuclear_correlation
 
 .. toctree::
