@@ -5,48 +5,103 @@ import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score
 
 
-def run_leiden_clustering_on_random_gene_subset(
-    sdata: sd.SpatialData,
+def run_leiden_clustering_on_adata(
+    adata_input,
     resolution: float = 1.0,
-    n_genes_subset: int = 100,
-    key_prefix: str = "leiden_subset",
-    random_state: int = 42,
+    key_added: str = "leiden",
+    preprocess: bool = True,
 ):
-    adata = sdata.tables["table"]
-    rng = np.random.default_rng(random_state)
+    """
+    Run Leiden clustering on a provided AnnData object.
 
-    # --- Subset genes ---
-    n_genes = adata.shape[1]
-    if n_genes_subset > n_genes:
-        raise ValueError("n_genes_subset cannot be greater than total number of genes")
+    Parameters
+    ----------
+    adata_input : AnnData
+        The AnnData object to cluster (can be subset of genes).
+    resolution : float
+        Resolution parameter for Leiden.
+    key_added : str
+        Key under which to store clustering result in `.obs`.
+    preprocess : bool
+        Whether to run normalization, log1p, PCA, and neighbors.
 
-    gene_indices = rng.choice(n_genes, size=n_genes_subset, replace=False)
-    gene_names = adata.var_names[gene_indices]
+    Returns
+    -------
+    labels : pd.Series
+        The Leiden cluster labels.
+    """
+    adata = adata_input.copy()
 
-    # --- Subset AnnData object (keep all cells, only subset genes) ---
-    adata_subset = adata[:, gene_names].copy()
+    if preprocess:
+        if "counts" not in adata.layers:
+            adata.layers["counts"] = adata.X.copy()
+            sc.pp.normalize_total(adata, inplace=True)
+            sc.pp.log1p(adata)
 
-    # --- Preprocess subset ---
-    if "counts" not in adata_subset.layers:
-        adata_subset.layers["counts"] = adata_subset.X.copy()
-        sc.pp.normalize_total(adata_subset, inplace=True)
-        sc.pp.log1p(adata_subset)
-
-    sc.pp.pca(adata_subset)
-    sc.pp.neighbors(adata_subset)
-
-    key_added = f"{key_prefix}_{n_genes_subset}_res{resolution}_seed{random_state}"
+        sc.pp.pca(adata)
+        sc.pp.neighbors(adata)
 
     sc.tl.leiden(
-        adata_subset,
+        adata,
         resolution=resolution,
         flavor="igraph",
         n_iterations=2,
-        key_added="leiden",
+        key_added=key_added,
     )
 
-    # --- Store results back in original AnnData ---
-    adata.obs[key_added] = adata_subset.obs["leiden"].values
+    return adata.obs[key_added].copy()
+
+
+def run_leiden_clustering_on_random_gene_subset(
+    sdata: sd.SpatialData,
+    resolution: float = 1.0,
+    n_genes_subset: int | None = 100,
+    key_prefix: str = "leiden",
+    random_state: int = 42,
+):
+    """
+    Run Leiden clustering on either a random subset of genes or all genes.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        The spatialdata object.
+    resolution : float
+        Leiden resolution.
+    n_genes_subset : int or None
+        If int, run on that number of random genes. If None, use all genes.
+    key_prefix : str
+        Prefix for result key in .obs.
+    random_state : int
+        Seed for reproducibility (when subsetting genes).
+
+    Returns
+    -------
+    key_added : str
+        The key under which clustering results are stored in .obs.
+    """
+    adata = sdata.tables["table"]
+    key_added = None
+
+    if n_genes_subset is None:
+        # Use all genes
+        adata_subset = adata
+        key_added = f"{key_prefix}_allgenes_res{resolution}"
+    else:
+        # Use random subset of genes
+        rng = np.random.default_rng(random_state)
+        n_genes = adata.shape[1]
+        if n_genes_subset > n_genes:
+            raise ValueError("n_genes_subset cannot be greater than total number of genes")
+
+        gene_indices = rng.choice(n_genes, size=n_genes_subset, replace=False)
+        gene_names = adata.var_names[gene_indices]
+        adata_subset = adata[:, gene_names]
+        key_added = f"{key_prefix}_{n_genes_subset}_res{resolution}_seed{random_state}"
+
+    # Run Leiden and store in original object
+    labels = run_leiden_clustering_on_adata(adata_subset, resolution=resolution, key_added=key_added)
+    adata.obs[key_added] = labels.values
 
     return key_added
 
