@@ -1,3 +1,4 @@
+import numpy as np
 import scanpy as sc
 import spatialdata as sd
 from sklearn.metrics import silhouette_score
@@ -7,6 +8,7 @@ from .utils import (
     compute_mean_purity,
     compute_pairwise_ari,
     compute_pairwise_purity,
+    compute_rmsd_for_clustering,
     run_leiden_clustering_on_random_gene_subset,
 )
 
@@ -154,3 +156,58 @@ def compute_purity(
 
     purity_matrix = compute_pairwise_purity(adata, cluster_keys)
     return float(compute_mean_purity(purity_matrix))
+
+
+def compute_rmsd(
+    sdata: sd.SpatialData,
+    resolution: float | list[float] = (0.6, 0.8, 1.0),
+    ncomps: int = 30,
+    key_prefix: str = "leiden_subset",
+    random_state: int = 42,
+) -> float:
+    """
+    Compute RMSD for different Leiden clustering resolutions and report the best (lowest) RMSD.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing clustering information.
+    resolution : float or list of float, optional
+        The resolution parameter(s) for Leiden clustering, by default (0.6, 0.8, 1.0).
+    ncomps : int, optional
+        Number of principal components to use, by default 30.
+    key_prefix : str, optional
+        Prefix for clustering keys in .obs, by default "leiden_subset".
+    random_state : int, optional
+        Seed for reproducibility, by default 42.
+
+    Returns
+    -------
+    float
+        The best (lowest) RMSD across resolutions.
+    """
+    adata = sdata.tables["table"]
+
+    if isinstance(resolution, float):
+        resolution = [resolution]
+
+    # Compute PCA if missing
+    if "X_pca" not in adata.obsm:
+        sc.pp.pca(adata, n_comps=ncomps)
+
+    best_rmsd = np.inf
+    for res in resolution:
+        key_added = run_leiden_clustering_on_random_gene_subset(
+            sdata,
+            resolution=res,
+            n_genes_subset=None,  # Use all genes
+            key_prefix=key_prefix,
+            random_state=random_state,
+        )
+        labels = adata.obs[key_added].values
+        if len(np.unique(labels)) > 1:
+            rmsd_val = compute_rmsd_for_clustering(adata.obsm["X_pca"][:, :ncomps], labels)
+            if rmsd_val < best_rmsd:
+                best_rmsd = rmsd_val
+
+    return best_rmsd if best_rmsd != np.inf else np.nan
