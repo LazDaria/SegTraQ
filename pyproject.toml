@@ -22,6 +22,8 @@ dependencies = [
   "spatialdata",
   "joblib",
   "geopandas",
+  "rtree",
+  "tqdm"
 ]
 requires-python = ">= 3.10"
 
@@ -35,6 +37,7 @@ test = [
     "black[jupyter]",
     "pytest-cov",
 ]
+
 docs = [
     "sphinx",
     "sphinx-book-theme",  # or another theme you prefer
