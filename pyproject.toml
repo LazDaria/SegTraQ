@@ -30,8 +30,8 @@ test = [
     "pytest",
     "ruff",
     "ty",
-    "ipdb"
 ]
+    "ipdb"
 docs = [
     "sphinx",
     "sphinx-rtd-theme",  # or another theme you prefer
