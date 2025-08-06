@@ -3599,9 +3599,10 @@ dependencies = [
     { name = "geopandas" },
     { name = "igraph" },
     { name = "joblib" },
-    { name = "scanpy" },
     { name = "rtree" },
+    { name = "scanpy" },
     { name = "spatialdata" },
+    { name = "tqdm" },
     { name = "typer" },
 ]
 
@@ -3646,6 +3647,7 @@ requires-dist = [
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'" },
+    { name = "tqdm" },
     { name = "ty", marker = "extra == 'test'" },
     { name = "typer" },
 ]
