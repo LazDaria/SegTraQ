@@ -1,9 +1,3 @@
-import pandas as pd
-import pytest
-
-import segtraq as st
-
-
 # def test_data_types_and_columns(sdata_new):
 #     # Prepare table.obs with best_nuc_id and IoU
 #     corr_df = st.nc.compute_cell_nuc_correlation(sdata_new)
