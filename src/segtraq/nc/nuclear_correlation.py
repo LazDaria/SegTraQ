@@ -289,82 +289,82 @@ def compute_cell_nuc_correlation(
     return pd.DataFrame(rows)
 
 
-def compute_differential_expression_between_parts(
-    sdata: sd.SpatialData,
-    best_nuc_id_key: str = "best_nuc_id",
-    table_key: str = "table"
-) -> pd.DataFrame:
-    """
-    For each cell, computes per-gene differential expression between two regions:
-      (i) transcripts within the intersection of the cell and its best-matching nucleus,
-      (ii) transcripts in the remainder of the cell (outside the nucleus-intersection).
+# def compute_differential_expression_between_parts(
+#     sdata: sd.SpatialData,
+#     best_nuc_id_key: str = "best_nuc_id",
+#     table_key: str = "table"
+# ) -> pd.DataFrame:
+#     """
+#     For each cell, computes per-gene differential expression between two regions:
+#       (i) transcripts within the intersection of the cell and its best-matching nucleus,
+#       (ii) transcripts in the remainder of the cell (outside the nucleus-intersection).
 
-    If `cell_iou_key` is not in the annotation table, `compute_cell_nuc_ious()` is run.
+#     If `cell_iou_key` is not in the annotation table, `compute_cell_nuc_ious()` is run.
 
-    Parameters
-    ----------
-    sdata : spatialdata.SpatialData
-        SpatialData object containing:
-          - `.shapes['cell_boundaries']` and `.shapes['nucleus_boundaries']` GeoDataFrames
-          - `.tables[table_key]` AnnData with gene expression counts (`.X`)
-          - `.points['transcripts']`: point-level transcript locations with columns `cell_id` and `feature_name`
-    cell_iou_key : str, default "cell_nuc_iou"
-        Column in `.tables[table_key].obs` that stores `best_nuc_id`.
-        If absent, IoUs will be computed.
-    table_key : str, default "table"
-        Key for the expression matrix in `sdata.tables`.
+#     Parameters
+#     ----------
+#     sdata : spatialdata.SpatialData
+#         SpatialData object containing:
+#           - `.shapes['cell_boundaries']` and `.shapes['nucleus_boundaries']` GeoDataFrames
+#           - `.tables[table_key]` AnnData with gene expression counts (`.X`)
+#           - `.points['transcripts']`: point-level transcript locations with columns `cell_id` and `feature_name`
+#     cell_iou_key : str, default "cell_nuc_iou"
+#         Column in `.tables[table_key].obs` that stores `best_nuc_id`.
+#         If absent, IoUs will be computed.
+#     table_key : str, default "table"
+#         Key for the expression matrix in `sdata.tables`.
 
-    Returns
-    -------
-    pandas.DataFrame
-        Each row corresponds to a (cell, gene) pair and contains:
-          - `cell_id`: cell identifier
-          - `gene`: gene name
-          - `log2FC`: log2 fold change of transcripts inside the intersection vs rest
-            (using pseudocount +1)
-          - `pct_in_intersection`: proportion of that gene’s transcripts inside the nucleus intersection
-          - `total_count`: total number of transcripts for that gene in the cell
-    """
+#     Returns
+#     -------
+#     pandas.DataFrame
+#         Each row corresponds to a (cell, gene) pair and contains:
+#           - `cell_id`: cell identifier
+#           - `gene`: gene name
+#           - `log2FC`: log2 fold change of transcripts inside the intersection vs rest
+#             (using pseudocount +1)
+#           - `pct_in_intersection`: proportion of that gene’s transcripts inside the nucleus intersection
+#           - `total_count`: total number of transcripts for that gene in the cell
+#     """
 
-    df = sdata.tables[table_key].obs.copy()
-    if cell_iou_key not in df.columns:
-        iou_df = compute_cell_nuc_ious(sdata)
-        df = df.merge(iou_df.set_index("cell_id"), left_on="cell_id", right_index=True, how="left")
-    # Need shape geometries
-    cell_shapes = sdata.shapes["cell_boundaries"]
-    nuc_shapes = sdata.shapes["nucleus_boundaries"]
+#     df = sdata.tables[table_key].obs.copy()
+#     if cell_iou_key not in df.columns:
+#         iou_df = compute_cell_nuc_ious(sdata)
+#         df = df.merge(iou_df.set_index("cell_id"), left_on="cell_id", right_index=True, how="left")
+#     # Need shape geometries
+#     cell_shapes = sdata.shapes["cell_boundaries"]
+#     nuc_shapes = sdata.shapes["nucleus_boundaries"]
 
-    # also expression table
-    expr = sdata.tables[table_key]
+#     # also expression table
+#     expr = sdata.tables[table_key]
 
-    records = []
-    for _, cell in df.iterrows():
-        cid = cell.cell_id
-        nid = cell.best_nuc_id
-        if pd.isna(nid):
-            continue
-        cell_poly = cell_shapes.loc[cid].geometry
-        nuc_poly  = nuc_shapes.loc[nid].geometry
-        intersection = cell_poly.intersection(nuc_poly)
-        for g in expr.var_names:
-            # transcripts points layer filtered by region?
-            pts = sdata.points["transcripts"]
-            in_cell = pts[pts.cell_id == cid]
-            x = in_cell.feature_name == g
-            pts_g = in_cell[x]
-            in_inter = pts_g.within(intersection)
-            count_int = in_inter.sum()
-            count_rest = len(pts_g) - count_int
-            # Avoid zeros
-            if count_rest > 0:
-                log2fc = np.log2((count_int + 1)/(count_rest + 1))
-                pct_int = count_int / len(pts_g)
-            else:
-                log2fc = np.nan; pct_int = 1.0
-            records.append({
-                "cell_id": cid, "gene": g,
-                "log2FC": log2fc,
-                "pct_in_intersection": pct_int,
-                "total_count": len(pts_g)
-            })
-    return pd.DataFrame(records)
+#     records = []
+#     for _, cell in df.iterrows():
+#         cid = cell.cell_id
+#         nid = cell.best_nuc_id
+#         if pd.isna(nid):
+#             continue
+#         cell_poly = cell_shapes.loc[cid].geometry
+#         nuc_poly  = nuc_shapes.loc[nid].geometry
+#         intersection = cell_poly.intersection(nuc_poly)
+#         for g in expr.var_names:
+#             # transcripts points layer filtered by region?
+#             pts = sdata.points["transcripts"]
+#             in_cell = pts[pts.cell_id == cid]
+#             x = in_cell.feature_name == g
+#             pts_g = in_cell[x]
+#             in_inter = pts_g.within(intersection)
+#             count_int = in_inter.sum()
+#             count_rest = len(pts_g) - count_int
+#             # Avoid zeros
+#             if count_rest > 0:
+#                 log2fc = np.log2((count_int + 1)/(count_rest + 1))
+#                 pct_int = count_int / len(pts_g)
+#             else:
+#                 log2fc = np.nan; pct_int = 1.0
+#             records.append({
+#                 "cell_id": cid, "gene": g,
+#                 "log2FC": log2fc,
+#                 "pct_in_intersection": pct_int,
+#                 "total_count": len(pts_g)
+#             })
+#     return pd.DataFrame(records)
