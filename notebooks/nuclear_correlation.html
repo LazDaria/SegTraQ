@@ -343,12 +343,13 @@ The autoreload extension is already loaded. To reload it, use:
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
 
-sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/xenium_sp_subset.zarr&quot;)
+#sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/xenium_sp_subset.zarr&quot;)
+sdata = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_comparison/spatialData_2_C1_bidcell.zarr&quot;)
 </pre></div>
 </div>
 </div>
@@ -357,135 +358,10 @@ sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/xenium_sp_subset.z
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
-  warnings.warn(
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
-  from pkg_resources import DistributionNotFound, get_distribution
 version mismatch: detected: RasterFormatV02, requested: FormatV04
 /home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
-  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
-  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
-  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
-  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-version mismatch: detected: RasterFormatV02, requested: FormatV04
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
-  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-version mismatch: detected: RasterFormatV02, requested: FormatV04
-version mismatch: detected: RasterFormatV02, requested: FormatV04
 </pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata[&quot;table&quot;].var
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>gene_ids</th>
-      <th>feature_types</th>
-      <th>genome</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>ABCC11</th>
-      <td>ENSG00000121270</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ACTA2</th>
-      <td>ENSG00000107796</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ACTG2</th>
-      <td>ENSG00000163017</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ADAM9</th>
-      <td>ENSG00000168615</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ADGRE5</th>
-      <td>ENSG00000123146</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>VWF</th>
-      <td>ENSG00000110799</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>WARS</th>
-      <td>ENSG00000140105</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ZEB1</th>
-      <td>ENSG00000148516</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ZEB2</th>
-      <td>ENSG00000169554</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-    <tr>
-      <th>ZNF562</th>
-      <td>ENSG00000171466</td>
-      <td>Gene Expression</td>
-      <td>Unknown</td>
-    </tr>
-  </tbody>
-</table>
-<p>313 rows × 3 columns</p>
-</div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
@@ -1002,7 +878,7 @@ sdata.pl.render_shapes(
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_18_1.png" src="../_images/notebooks_nuclear_correlation_18_1.png" />
+<img alt="../_images/notebooks_nuclear_correlation_17_1.png" src="../_images/notebooks_nuclear_correlation_17_1.png" />
 </div>
 </div>
 <p>In the plots above, we can see that cells that have a high overlap with nuclei, also show a high IoU value. Below, we plot a histogram of IoU values and can see that the median IoU is at 0.16, i.e. 16% overlap.</p>
@@ -1046,7 +922,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_20_0.png" src="../_images/notebooks_nuclear_correlation_20_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_19_0.png" src="../_images/notebooks_nuclear_correlation_19_0.png" />
 </div>
 </div>
 </section>
@@ -1253,7 +1129,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_29_0.png" src="../_images/notebooks_nuclear_correlation_29_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_28_0.png" src="../_images/notebooks_nuclear_correlation_28_0.png" />
 </div>
 </div>
 <p>The histogram below shows the distribution of Pearson correlation values across cells. It is right-skewed, with a median of 0.74. This provides intuition about possible spatial spillover: cells may be contaminated by neighboring cells, assuming that nuclei capture expression with less contamination due to their smaller radius.</p>
@@ -1294,7 +1170,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_31_0.png" src="../_images/notebooks_nuclear_correlation_31_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_30_0.png" src="../_images/notebooks_nuclear_correlation_30_0.png" />
 </div>
 </div>
 <p>The spatial plot below overlays nucleus boundaries, cell masks colored by Pearson correlation, and transcripts. Cells whose transcripts are distributed across the nucleus region tend to have higher correlation with the nucleus, while cells whose transcripts are localized outside the nuclear region—potentially due to spillover from neighboring cells—tend to exhibit lower correlation.</p>
@@ -1410,7 +1286,7 @@ sdata.pl.render_shapes(
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_33_3.png" src="../_images/notebooks_nuclear_correlation_33_3.png" />
+<img alt="../_images/notebooks_nuclear_correlation_32_3.png" src="../_images/notebooks_nuclear_correlation_32_3.png" />
 </div>
 </div>
 </section>
