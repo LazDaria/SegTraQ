@@ -18,9 +18,6 @@ def test_data_types_and_columns(sdata):
         f"Expected correlation dtype float, got {corr_df['correlation'].dtype}"
     )
 
-
 def test_unsupported_metric_raises_value_error(sdata):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match=f"Metric spearman not supported"):
         st.nc.compute_cell_nuc_correlation(sdata, metric="spearman")
-    assert "Metric spearman not supported" in str(excinfo.value)
-
