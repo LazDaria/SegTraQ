@@ -19,10 +19,10 @@ classifiers = [
 license = {text = "MIT"}
 dependencies = [
   "typer",
+  "scanpy",
   "spatialdata",
   "joblib",
   "geopandas",
-  "scanpy",
   "igraph",
   "rtree",
   "tqdm"
