@@ -348,7 +348,7 @@ The autoreload extension is already loaded. To reload it, use:
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
 
-sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/test_sample_new.zarr&quot;)
+sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/test_sample.zarr&quot;)
 </pre></div>
 </div>
 </div>
@@ -380,7 +380,7 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata
@@ -388,12 +388,12 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-SpatialData object, with associated Zarr store: /g/huber/users/lazic/src/segtraq/tests/data/test_sample_new.zarr
+SpatialData object, with associated Zarr store: /g/huber/projects/CODEX/segtraq/data/xenium_sp_subset.zarr
 ├── Images
 │     ├── &#39;he_image&#39;: DataTree[cyx] (3, 448, 527), (3, 224, 264), (3, 112, 131), (3, 56, 66), (3, 28, 33)
 │     ├── &#39;if_image&#39;: DataTree[cyx] (3, 221, 260), (3, 111, 130), (3, 55, 65), (3, 28, 33), (3, 13, 16)
@@ -608,7 +608,7 @@ with coordinate systems:
 <h2>Intersection over Union between cell and nucleus masks<a class="headerlink" href="#Intersection-over-Union-between-cell-and-nucleus-masks" title="Link to this heading">#</a></h2>
 <p>First, we compute the Intersection over Union (IoU) between cell and nuclear masks using <code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import time
@@ -630,7 +630,7 @@ print(f&quot;Elapsed time with {n} threads: {end - start:.2f} seconds&quot;)
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 897.13it/s]
+Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 965.30it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -638,7 +638,7 @@ Processing IoU between cells and nuclei: 100%|██████████| 15
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Elapsed time with 1 threads: 0.18 seconds
+Elapsed time with 1 threads: 0.17 seconds
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -956,7 +956,7 @@ import segtraq as st
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>start = time.time()
@@ -972,7 +972,7 @@ print(f&quot;Elapsed time without computing IoU: {end - start:.2f} seconds&quot;
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 2088.68it/s]
+Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 459.91it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -980,7 +980,7 @@ Processing IoU between cells and nuclei: 100%|██████████| 15
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Elapsed time without computing IoU: 1.32 seconds
+Elapsed time without computing IoU: 47.64 seconds
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
