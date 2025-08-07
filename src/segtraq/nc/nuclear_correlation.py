@@ -28,7 +28,7 @@ def _process_cell(
     cell_row: Series,
     nuc_boundaries: GeoDataFrame,
     nuc_sindex: Index,
-) -> dict[str, int | None | float]:
+) -> dict[str, int | None | str]:
     """For one cell polygon compute the IoU with the best-matching nucleus."""
 
     cell_geom = cell_row.geometry
@@ -42,13 +42,13 @@ def _process_cell(
     candidates = nuc_boundaries.iloc[candidate_idx]
 
     best_iou: float = 0.0
-    best_nuc_id: int | None = None
+    best_nuc_id: str | None = None
     for _, nuc in candidates.iterrows():
         nuc_geom = nuc.geometry
         iou = _compute_iou(cell_geom, nuc_geom)
         if pd.notna(iou) and iou > best_iou:
             best_iou = iou
-            best_nuc_id = nuc.name
+            best_nuc_id = str(nuc.name)
 
     return {"cell_id": cell_row.name, "best_nuc_id": best_nuc_id, "IoU": best_iou}
 
@@ -149,9 +149,11 @@ def _nucleus_by_feature_df(
         coord_sys = "global"  # TODO find an soft coded way to get coordinate system of transcripts
         trans = sd.transformations.get_transformation(pts, to_coordinate_system=coord_sys, get_all=False)
 
-        # reduce transformation to 2D to avoid shape mismatch error
-        trans.scale = trans.scale[:2]
-        trans.axes = trans.axes[:2]
+        if hasattr(trans, "scale") and hasattr(trans, "axes"):
+            # reduce transformation to 2D to avoid shape mismatch error
+            trans.scale = trans.scale[:2]
+            trans.axes = trans.axes[:2]
+
         trans_dict = {coord_sys: trans}
 
         pts2 = PointsModel.parse(
@@ -176,14 +178,14 @@ def _nucleus_by_feature_df(
     ad = sdata2.tables["table"]
     X = ad.X
     arr = X.toarray() if hasattr(X, "toarray") else X
-    df_out = pd.DataFrame(arr, index=sdata2["nucleus_boundaries"].index, columns=ad.var_names)
+    df_out = pd.DataFrame(arr, index=sdata2["nucleus_boundaries"].index.astype(str), columns=ad.var_names)
     return df_out
 
 
 def compute_cell_nuc_correlation(
     sdata: sd.SpatialData,
     table_key: str = "table",
-    best_nuc_key: str = "best_nuc_id",
+    cell_id_key: str = "cell_id",
     metric: str = "pearson",
     transcripts_key: str = "transcripts",
     nucleus_by: str = "nucleus_boundaries",
@@ -205,9 +207,8 @@ def compute_cell_nuc_correlation(
           - `.tables[table_key]` as an AnnData table.
     table_key : str
         Key in `sdata.tables` pointing to the expression matrix.
-    best_nuc_key : str
-        If present in `sdata.tables[table_key].obs`, it will be used directly;
-        if absent, IoU is computed via `compute_cell_nuc_ious()`.
+    cell_id_key : str
+        Column in `sdata.tables[table_key].obs containing cell IDs to match with shapes.
     metric : str
         Correlation metric. Currently supports only `"pearson"`.
     transcripts_key : str
@@ -233,9 +234,14 @@ def compute_cell_nuc_correlation(
     """
 
     df = sdata.tables[table_key].obs.copy()
-    if best_nuc_key not in df.columns:
+    if "best_nuc_id" not in df.columns:
         iou_df = compute_cell_nuc_ious(sdata)
-        df = df.merge(iou_df.set_index("cell_id"), left_on="cell_id", right_index=True, how="left")
+        df = df.merge(
+            iou_df.set_index("cell_id"),
+            left_on=cell_id_key,
+            right_index=True,
+            how="left",
+        )
 
     arr = (
         sdata.tables[table_key].X.toarray()
@@ -244,7 +250,7 @@ def compute_cell_nuc_correlation(
     )
     expr_cells = pd.DataFrame(
         arr,
-        index=sdata.tables[table_key].obs["cell_id"],
+        index=sdata.tables[table_key].obs[cell_id_key],
         columns=sdata.tables[table_key].var_names,
     )
 
