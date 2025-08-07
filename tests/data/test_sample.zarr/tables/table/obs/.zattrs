@@ -1,13 +1,14 @@
 {
-    "_index": "cell_id",
+    "_index": "_index",
     "column-order": [
-        "centroid_x",
-        "centroid_y",
-        "cell_size",
-        "sample_id",
-        "TMA",
-        "region",
-        "mask_id"
+        "cell_id",
+        "transcript_counts",
+        "control_probe_counts",
+        "control_codeword_counts",
+        "total_counts",
+        "cell_area",
+        "nucleus_area",
+        "region"
     ],
     "encoding-type": "dataframe",
     "encoding-version": "0.2.0"

@@ -35,7 +35,11 @@
                 ],
                 "name": "global"
             },
-            "type": "identity"
+            "scale": [
+                4.705882352941177,
+                4.705882352941177
+            ],
+            "type": "scale"
         }
     ],
     "encoding-type": "ngff:shapes",
