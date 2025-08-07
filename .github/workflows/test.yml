@@ -37,7 +37,7 @@ jobs:
         ruff check --exit-zero --statistics
     - name: Run tests with coverage
       run: |
-        pytest --cov=segtraq --cov-report=term-missing --cov-report=xml
+        pytest  --import-mode=importlib --cov=segtraq --cov-report=term-missing --cov-report=xml
     - name: Upload coverage report artifact
       if: matrix.python-version == '3.13'
       uses: actions/upload-artifact@v4
