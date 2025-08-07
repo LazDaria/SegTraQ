@@ -35,6 +35,9 @@ jobs:
       run: |
         ruff check --select=E9,F63,F7,F82
         ruff check --exit-zero --statistics
+    - name: List all files for debugging
+      run: |
+        find . -type f | sort
     - name: Run tests with coverage
       run: |
         pytest  --import-mode=importlib --cov=segtraq --cov-report=term-missing --cov-report=xml
