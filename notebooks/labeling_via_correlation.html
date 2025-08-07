@@ -45,7 +45,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/labeling_via_correlation';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="&lt;no title&gt;" href="nuclear_correlation.html" />
+    <link rel="prev" title="Correlation to nuclear segmentation" href="nuclear_correlation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -159,6 +159,7 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
 
 </ul>
@@ -339,8 +340,9 @@ document.write(`
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import anndata as ad
-from pathlib import Path
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from pathlib import Path
+
+import anndata as ad
 
 scRNAseq_data_path = Path(&quot;/g/huber/projects/CODEX/segtraq/data/label_transfer/scRNA_seq_DLBCL_matched_with_2_C1.h5ad&quot;)
 adata_ref = ad.read(scRNAseq_data_path)
@@ -418,6 +420,7 @@ array([[0.        , 0.        , 0.        , ..., 0.        , 0.        ,
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import numpy as np
+
 logcounts = adata_ref.layers[&quot;logcounts&quot;]
 # If it&#39;s sparse, convert to dense
 if not isinstance(logcounts, np.ndarray):
@@ -432,6 +435,7 @@ celltypes = adata_ref.obs[&quot;cell_type&quot;]
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import pandas as pd
+
 logcounts_df = pd.DataFrame(logcounts, columns=adata_ref.var_names)
 logcounts_df[&quot;celltype&quot;] = celltypes.values
 
@@ -855,7 +859,9 @@ ref_mean_df = logcounts_df.groupby(&quot;celltype&quot;).mean()
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
 
-sdata = sd.read_zarr(&quot;/g/huber/projects/GSK_lazic/B_NHL/BNHL_RICOVER/tma_2/2_C1/proseg_output/spatialData_2_C1_proseg.zarr&quot;)
+sdata = sd.read_zarr(
+    &quot;/g/huber/projects/GSK_lazic/B_NHL/BNHL_RICOVER/tma_2/2_C1/proseg_output/spatialData_2_C1_proseg.zarr&quot;
+)
 </pre></div>
 </div>
 </div>
@@ -874,7 +880,7 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[127]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata = sdata[&#39;table&#39;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata = sdata[&quot;table&quot;]
 </pre></div>
 </div>
 </div>
@@ -883,6 +889,7 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import scanpy as sc
+
 import segtraq as st
 
 # Compute QC metrics
@@ -897,7 +904,7 @@ gene_counts_filtered = gene_counts.loc[adata.obs_names]
 
 adata.obs[&quot;total_transcripts&quot;] = transcript_counts_filtered[&quot;transcript_count&quot;]
 adata.obs[&quot;total_genes&quot;] = gene_counts_filtered[&quot;gene_count&quot;]
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -1188,10 +1195,7 @@ adata.obs[&quot;total_genes&quot;] = gene_counts_filtered[&quot;gene_count&quot;
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Filter outliers
-qc_range = {
-    &quot;total_transcripts&quot;: (10, 2000),
-    &quot;total_genes&quot;: (5, np.inf)
-}
+qc_range = {&quot;total_transcripts&quot;: (10, 2000), &quot;total_genes&quot;: (5, np.inf)}
 
 for key, (low, high) in qc_range.items():
     mask = (adata.obs[key] &gt;= low) &amp; (adata.obs[key] &lt;= high)
@@ -1231,14 +1235,11 @@ adata.layers[&quot;logcounts&quot;] = adata.X.copy()
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[141]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from scipy.spatial.distance import cdist
-from anndata import AnnData
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from anndata import AnnData
+from scipy.spatial.distance import cdist
 
-def assign_celltype_by_pearson(
-    adata: AnnData,
-    ref_mean_df: pd.DataFrame,
-    layer: str = &quot;logcounts&quot;
-) -&gt; pd.DataFrame:
+
+def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, layer: str = &quot;logcounts&quot;) -&gt; pd.DataFrame:
     &quot;&quot;&quot;
     Assigns cell types to cells in `adata` by computing Pearson correlation
     with reference expression profiles.
@@ -1260,9 +1261,9 @@ def assign_celltype_by_pearson(
 
     # Extract query expression data
     X_query = pd.DataFrame(
-        adata.layers[layer].toarray() if hasattr(adata.layers[layer], &quot;toarray&quot;) else adata.layers[layer],
+        (adata.layers[layer].toarray() if hasattr(adata.layers[layer], &quot;toarray&quot;) else adata.layers[layer]),
         index=adata.obs_names,
-        columns=adata.var_names
+        columns=adata.var_names,
     )
 
     # Align gene order
@@ -1274,18 +1275,15 @@ def assign_celltype_by_pearson(
     X_ref = ref_mean_df[common_genes]
 
     # Compute Pearson correlation (1 - correlation distance)
-    cor_mat = 1-cdist(X_query.values, X_ref.values, metric=&quot;correlation&quot;)
+    cor_mat = 1 - cdist(X_query.values, X_ref.values, metric=&quot;correlation&quot;)
     cor_mat_df = pd.DataFrame(cor_mat, index=adata.obs_names, columns=X_ref.index)
 
     # Assign best-matching reference cell type
     best_celltype = cor_mat_df.idxmax(axis=1)
 
     # Return as DataFrame
-    return pd.DataFrame({
-        &quot;cell_id&quot;: adata.obs_names,
-        &quot;celltype&quot;: best_celltype.values
-    })
-<br/></pre></div>
+    return pd.DataFrame({&quot;cell_id&quot;: adata.obs_names, &quot;celltype&quot;: best_celltype.values})
+</pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -1309,7 +1307,7 @@ def assign_celltype_by_pearson(
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[158]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>result_df[&#39;celltype&#39;].value_counts()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>result_df[&quot;celltype&quot;].value_counts()
 </pre></div>
 </div>
 </div>
@@ -1365,9 +1363,9 @@ col_celltype = {
     &quot;T_CD4_reg&quot;: &quot;#66a61e&quot;,
     &quot;T_CD8&quot;: &quot;#66c2a5&quot;,
     &quot;T_dividing&quot;: &quot;#1b9e77&quot;,
-    &quot;Tumor_DLBCL&quot;: &quot;#d45943&quot;
+    &quot;Tumor_DLBCL&quot;: &quot;#d45943&quot;,
 }
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -1382,29 +1380,29 @@ fig, axs = plt.subplots(1, 2, figsize=(14, 6))
 # Plot 1: Cell size
 sc.pl.embedding(
     adata,
-    basis=&#39;X_custom_spatial&#39;,
-    color=&#39;cell_size&#39;,
+    basis=&quot;X_custom_spatial&quot;,
+    color=&quot;cell_size&quot;,
     size=50,
     ax=axs[0],
     show=False,
-    title=&#39;Cell Size&#39;
+    title=&quot;Cell Size&quot;,
 )
 
 # Plot 2: Cell types with custom colors
 sc.pl.embedding(
     adata,
-    basis=&#39;X_custom_spatial&#39;,
-    color=&#39;celltype_corr&#39;,
+    basis=&quot;X_custom_spatial&quot;,
+    color=&quot;celltype_corr&quot;,
     size=50,
     palette=col_celltype,  # your custom palette from before
     ax=axs[1],
     show=False,
-    title=&#39;Cell Type Assignment&#39;
+    title=&quot;Cell Type Assignment&quot;,
 )
 
 plt.tight_layout()
 plt.show()
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1434,7 +1432,7 @@ plt.show()
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">&lt;no title&gt;</p>
+        <p class="prev-next-title">Correlation to nuclear segmentation</p>
       </div>
     </a>
 </div>
