@@ -23,3 +23,4 @@ SegTraQ documentation
    notebooks/baseline
    notebooks/clustering_stability
    notebooks/nuclear_correlation
+   notebooks/z_plane_correlation
