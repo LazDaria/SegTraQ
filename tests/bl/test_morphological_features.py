@@ -3,14 +3,14 @@ import pandas as pd
 import segtraq as st
 
 
-def test_morphological_features(sdata):
-    morphological_features = st.bl.morphological_features(sdata)
+def test_morphological_features(sdata_new):
+    morphological_features = st.bl.morphological_features(sdata_new)
     assert type(morphological_features) is pd.DataFrame, "Morphological features should return a DataFrame"
     assert not morphological_features.empty, "Morphological features DataFrame should not be empty"
     assert "cell_id" in morphological_features.columns, "DataFrame should contain 'cell_id' column"
 
     # TODO: reactivate once the test data is updated
-    # num_cells = st.bl.num_cells(sdata)
+    # num_cells = st.bl.num_cells(sdata_new)
     # assert morphological_features.shape[0] == num_cells, "Number of rows in DataFrame should match number of cells"
 
     all_features = [
