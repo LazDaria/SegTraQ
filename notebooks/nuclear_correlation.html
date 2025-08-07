@@ -348,7 +348,7 @@ The autoreload extension is already loaded. To reload it, use:
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
 
-sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/test_sample.zarr&quot;)
+sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/xenium_sp_subset.zarr&quot;)
 </pre></div>
 </div>
 </div>
@@ -377,6 +377,28 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
 version mismatch: detected: RasterFormatV02, requested: FormatV04
 version mismatch: detected: RasterFormatV02, requested: FormatV04
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata[&#39;table&#39;].var_names
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Index([&#39;ABCC11&#39;, &#39;ACTA2&#39;, &#39;ACTG2&#39;, &#39;ADAM9&#39;, &#39;ADGRE5&#39;, &#39;ADH1B&#39;, &#39;ADIPOQ&#39;,
+       &#39;AGR3&#39;, &#39;AHSP&#39;, &#39;AIF1&#39;,
+       ...
+       &#39;TUBB2B&#39;, &#39;TYROBP&#39;, &#39;UCP1&#39;, &#39;USP53&#39;, &#39;VOPP1&#39;, &#39;VWF&#39;, &#39;WARS&#39;, &#39;ZEB1&#39;,
+       &#39;ZEB2&#39;, &#39;ZNF562&#39;],
+      dtype=&#39;object&#39;, length=313)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -894,7 +916,7 @@ sdata.pl.render_shapes(
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_17_1.png" src="../_images/notebooks_nuclear_correlation_17_1.png" />
+<img alt="../_images/notebooks_nuclear_correlation_18_1.png" src="../_images/notebooks_nuclear_correlation_18_1.png" />
 </div>
 </div>
 <p>In the plots above, we can see that cells that have a high overlap with nuclei, also show a high IoU value. Below, we plot a histogram of IoU values and can see that the median IoU is at 0.16, i.e. 16% overlap.</p>
@@ -938,7 +960,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_19_0.png" src="../_images/notebooks_nuclear_correlation_19_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_20_0.png" src="../_images/notebooks_nuclear_correlation_20_0.png" />
 </div>
 </div>
 </section>
@@ -1145,7 +1167,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_28_0.png" src="../_images/notebooks_nuclear_correlation_28_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_29_0.png" src="../_images/notebooks_nuclear_correlation_29_0.png" />
 </div>
 </div>
 <p>The histogram below shows the distribution of Pearson correlation values across cells. It is right-skewed, with a median of 0.74. This provides intuition about possible spatial spillover: cells may be contaminated by neighboring cells, assuming that nuclei capture expression with less contamination due to their smaller radius.</p>
@@ -1186,7 +1208,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_30_0.png" src="../_images/notebooks_nuclear_correlation_30_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_31_0.png" src="../_images/notebooks_nuclear_correlation_31_0.png" />
 </div>
 </div>
 <p>The spatial plot below overlays nucleus boundaries, cell masks colored by Pearson correlation, and transcripts. Cells whose transcripts are distributed across the nucleus region tend to have higher correlation with the nucleus, while cells whose transcripts are localized outside the nuclear region—potentially due to spillover from neighboring cells—tend to exhibit lower correlation.</p>
@@ -1302,7 +1324,7 @@ sdata.pl.render_shapes(
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_32_3.png" src="../_images/notebooks_nuclear_correlation_32_3.png" />
+<img alt="../_images/notebooks_nuclear_correlation_33_3.png" src="../_images/notebooks_nuclear_correlation_33_3.png" />
 </div>
 </div>
 </section>
