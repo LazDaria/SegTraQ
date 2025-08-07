@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import pytest
 from spatialdata import SpatialData
-from pathlib import Path
 
 
 @pytest.fixture(scope="session", name="sdata_new")
