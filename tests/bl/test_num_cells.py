@@ -3,14 +3,14 @@ import pytest
 import segtraq as st
 
 
-def test_num_cells(sdata):
-    num_cells = st.bl.num_cells(sdata)
+def test_num_cells(sdata_new):
+    num_cells = st.bl.num_cells(sdata_new)
     assert num_cells == 158, f"Expected 158 cells, found {num_cells}"
 
-    num_nuclei = st.bl.num_cells(sdata, shape_key="nucleus_boundaries")
+    num_nuclei = st.bl.num_cells(sdata_new, shape_key="nucleus_boundaries")
     assert num_nuclei == 132, f"Expected 132 cells, found {num_nuclei}"
 
 
-def test_num_cells_invalid_key(sdata):
+def test_num_cells_invalid_key(sdata_new):
     with pytest.raises(KeyError):
-        st.bl.num_cells(sdata, shape_key="invalid_key")
+        st.bl.num_cells(sdata_new, shape_key="invalid_key")
