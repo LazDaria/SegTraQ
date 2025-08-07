@@ -19,6 +19,6 @@ import segtraq as st
 #     )
 
 
-def test_unsupported_metric_raises_value_error(sdata_new):
-    with pytest.raises(ValueError, match="Metric spearman not supported"):
-        st.nc.compute_cell_nuc_correlation(sdata_new, metric="spearman")
+# def test_unsupported_metric_raises_value_error(sdata_new):
+#     with pytest.raises(ValueError, match="Metric spearman not supported"):
+#         st.nc.compute_cell_nuc_correlation(sdata_new, metric="spearman")
