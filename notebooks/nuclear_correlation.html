@@ -341,13 +341,13 @@ The autoreload extension is already loaded. To reload it, use:
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
 
-sdata = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/xenium_sp_subset.zarr&quot;)
-<br/></pre></div>
+sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/test_sample.zarr&quot;)
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -355,6 +355,10 @@ sdata = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/xenium_sp_subset
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
+  warnings.warn(
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
+  from pkg_resources import DistributionNotFound, get_distribution
 version mismatch: detected: RasterFormatV02, requested: FormatV04
 /home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
@@ -940,15 +944,17 @@ plt.show()
 <h2>Expression correlation between cell and nucleus<a class="headerlink" href="#Expression-correlation-between-cell-and-nucleus" title="Link to this heading">#</a></h2>
 <p>Expression correlation between a cell and the “most-overlapping” nucleus can be computed using <code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_correlation</span></code>. This function will internally compute <code class="docutils literal notranslate"><span class="pre">IoU</span></code> using <code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious</span></code> unless already present in the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code>object. Currently only <code class="docutils literal notranslate"><span class="pre">pearson</span></code>correlation is supported. More options will be added later.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import segtraq as st
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import time
+
+import segtraq as st
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>start = time.time()
@@ -962,22 +968,17 @@ print(f&quot;Elapsed time without computing IoU: {end - start:.2f} seconds&quot;
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Elapsed time without computing IoU: 0.26 seconds
+Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 459.91it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/operations/aggregate.py:452: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
-  aggregated = joined.groupby([INDEX, vk])[ONES_COLUMN].agg(agg_func).reset_index()
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
-  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/models/models.py:1144: UserWarning: Converting `region_key: region` to categorical dtype.
-  return convert_region_column_to_categorical(adata)
+Elapsed time without computing IoU: 47.64 seconds
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
