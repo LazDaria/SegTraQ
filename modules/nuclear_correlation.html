@@ -310,7 +310,6 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_correlation()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_differential_expression_between_parts"><code class="docutils literal notranslate"><span class="pre">compute_differential_expression_between_parts()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -394,54 +393,6 @@ for polygon geometries,</p></li>
 </dl>
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.nc.nuclear_correlation.compute_differential_expression_between_parts">
-<span class="sig-prename descclassname"><span class="pre">segtraq.nc.nuclear_correlation.</span></span><span class="sig-name descname"><span class="pre">compute_differential_expression_between_parts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">best_nuc_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'best_nuc_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.nc.nuclear_correlation.compute_differential_expression_between_parts" title="Link to this definition">#</a></dt>
-<dd><dl class="simple">
-<dt>For each cell, computes per-gene differential expression between two regions:</dt><dd><ol class="lowerroman simple">
-<li><p>transcripts within the intersection of the cell and its best-matching nucleus,</p></li>
-<li><p>transcripts in the remainder of the cell (outside the nucleus-intersection).</p></li>
-</ol>
-</dd>
-</dl>
-<p>If <cite>cell_iou_key</cite> is not in the annotation table, <cite>compute_cell_nuc_ious()</cite> is run.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>spatialdata.SpatialData</em>) – <dl class="simple">
-<dt>SpatialData object containing:</dt><dd><ul>
-<li><p><cite>.shapes[‘cell_boundaries’]</cite> and <cite>.shapes[‘nucleus_boundaries’]</cite> GeoDataFrames</p></li>
-<li><p><cite>.tables[table_key]</cite> AnnData with gene expression counts (<cite>.X</cite>)</p></li>
-<li><p><cite>.points[‘transcripts’]</cite>: point-level transcript locations with columns <cite>cell_id</cite> and <cite>feature_name</cite></p></li>
-</ul>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>cell_iou_key</strong> (<em>str</em><em>, </em><em>default &quot;cell_nuc_iou&quot;</em>) – Column in <cite>.tables[table_key].obs</cite> that stores <cite>best_nuc_id</cite>.
-If absent, IoUs will be computed.</p></li>
-<li><p><strong>table_key</strong> (<em>str</em><em>, </em><em>default &quot;table&quot;</em>) – Key for the expression matrix in <cite>sdata.tables</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Each row corresponds to a (cell, gene) pair and contains:</dt><dd><ul class="simple">
-<li><p><cite>cell_id</cite>: cell identifier</p></li>
-<li><p><cite>gene</cite>: gene name</p></li>
-<li><p><cite>log2FC</cite>: log2 fold change of transcripts inside the intersection vs rest
-(using pseudocount +1)</p></li>
-<li><p><cite>pct_in_intersection</cite>: proportion of that gene’s transcripts inside the nucleus intersection</p></li>
-<li><p><cite>total_count</cite>: total number of transcripts for that gene in the cell</p></li>
-</ul>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pandas.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
 </section>
 
 
@@ -491,7 +442,6 @@ If absent, IoUs will be computed.</p></li>
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_correlation()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_differential_expression_between_parts"><code class="docutils literal notranslate"><span class="pre">compute_differential_expression_between_parts()</span></code></a></li>
 </ul>
   </nav></div>
 
