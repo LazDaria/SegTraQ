@@ -1,11 +1,12 @@
 import pytest
 from spatialdata import SpatialData
+from pathlib import Path
 
 
-@pytest.fixture(scope="session", name="sdata")
-def test_sdata():
+@pytest.fixture(scope="session", name="sdata_new")
+def test_sdata_new():
     """Load the SpatialData test sample once per test session."""
-    # test_data_path = Path(__file__).parent / "data" / "test_sample.zarr"
-    test_data_path = "/g/huber/projects/CODEX/segtraq/data/xenium_sp_subset.zarr"
-    sdata = SpatialData.read(test_data_path)
-    return sdata
+
+    test_data_path = Path(__file__).parent / "data" / "xenium_sp_subset.zarr"
+    sdata_new = SpatialData.read(test_data_path)
+    return sdata_new

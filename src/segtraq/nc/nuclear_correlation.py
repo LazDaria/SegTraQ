@@ -251,7 +251,7 @@ def compute_cell_nuc_correlation(
     expr_cells = pd.DataFrame(
         arr,
         index=sdata.tables[table_key].obs[cell_id_key],
-        columns=sdata.tables[table_key].var_names,
+        columns=sdata.tables[table_key].var.index,
     )
 
     expr_nucleus_df = _nucleus_by_feature_df(
