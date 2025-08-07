@@ -1,0 +1,21 @@
+{
+    "_index": "cell_id",
+    "column-order": [
+        "centroid_x",
+        "centroid_y",
+        "cell_size",
+        "axis_minor_length",
+        "axis_major_length",
+        "centroid-0",
+        "centroid-1",
+        "eccentricity",
+        "solidity",
+        "perimeter",
+        "sample_id",
+        "TMA",
+        "region",
+        "mask_id"
+    ],
+    "encoding-type": "dataframe",
+    "encoding-version": "0.2.0"
+}
