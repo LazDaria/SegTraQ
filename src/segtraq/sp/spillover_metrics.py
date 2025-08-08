@@ -94,3 +94,82 @@ def centroid_mean_coord_diff(
     df_total["distance"] = df_total["distance"] / df_total["cell_area"]
     df_total = df_total.set_index(df_total[cell_key])
     return(df_total)
+
+
+def distance_to_membrane(
+    sdata: sd.SpatialData,
+    feature,
+    table_key: str = "table",
+    gene_key: str = "feature_name",
+    transcript_key: str = "transcripts",
+    cell_key: str = "cell_id",
+    ):
+
+    """
+    Calculates the mean distance of the transcript of a feature of interest to the outline of the cell segmentation
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing spatial transcriptomics data.
+    feature: str
+        String indicating the feature/gene to calculate the mean transcript coordiantes on
+    table_key : str, optional
+        The key to access the AnnData table from `sdata.tables`. Default is "table".
+    gene_key : str, optional
+        The key to access gene names within the transcript data. Default is "feature_name". 
+    transcript_key : str, optional
+        The key in the transcript table indicating transcript identifiers. Default is "transcripts".
+    cell_key : str, optional
+        The key in the table indicating cell identifiers. Default is "cell_id".
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with column `["distance_to_outlien"]`
+
+    """
+    
+    #extract the transcript information
+    df = sdata.points[transcript_key].compute()
+
+    #filter to those cells which are in the anndata object
+    df = df[df[cell_key].isin(sdata[table_key].obs[cell_key])]
+
+    #subset transcript dataframe to the feature
+    df = df[df[gene_key] == feature]
+    
+    #drop the background transcripts in cell_id == -1
+    df = df[df[cell_key] != -1]
+    
+    #zip the coordinates to a common column as tuple
+    df['coordinates'] = list(zip(df['x'], df['y']))
+    
+    #make the coordinates into a Point object
+    df["coordinate_points"] = df['coordinates'].map(lambda x: Point(x))
+    
+    #extract the cell segmentation boundaries
+    gdf = sdata["cell_boundaries"]
+    
+    #make the cell key the index for joining the two dataframes
+    df = df.set_index(df["cell_key"])
+    
+    #merge the geopandas dataframe with the dataframe from above
+    gdf = gdf.join(df)
+    
+    #compute the linear outline of the cell segmentation
+    gdf['linear_geometry'] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis = 1)
+    
+    #compute the distance to the linear outline of the cell segmentation
+    gdf["distance_to_outline"] = gdf.apply(lambda x: x['linear_geometry'].project(point), axis = 1)
+    
+    #drop NaN values in the coordinate point column
+    gdf = gdf.dropna(subset="coordinate_points")
+    
+    #calculate the distance to the linear segment
+    gdf["distance_to_outline"] = gdf.apply(lambda x: x['linear_geometry'].project(x["coordinate_points"]), axis = 1)
+    
+    #calculate the mean transcript distance to the cell outline per cell
+    mean_distance_to_outline = gdf.groupby(cell_key)[["distance_to_outline"]].mean()
+
+    return(mean_distance_to_outline)
