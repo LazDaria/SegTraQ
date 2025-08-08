@@ -291,7 +291,7 @@ def compute_cell_nuc_correlation(
 
 # def compute_differential_expression_between_parts(
 #     sdata: sd.SpatialData,
-#     cell_iou_key: str = "cell_nuc_iou",
+#     best_nuc_id_key: str = "best_nuc_id",
 #     table_key: str = "table"
 # ) -> pd.DataFrame:
 #     """
@@ -309,7 +309,7 @@ def compute_cell_nuc_correlation(
 #           - `.tables[table_key]` AnnData with gene expression counts (`.X`)
 #           - `.points['transcripts']`: point-level transcript locations with columns `cell_id` and `feature_name`
 #     cell_iou_key : str, default "cell_nuc_iou"
-#         Column in `.tables[table_key].obs` that stores `best_nuc_id` and `IoU`.
+#         Column in `.tables[table_key].obs` that stores `best_nuc_id`.
 #         If absent, IoUs will be computed.
 #     table_key : str, default "table"
 #         Key for the expression matrix in `sdata.tables`.
