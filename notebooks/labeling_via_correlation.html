@@ -1,0 +1,1533 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Label transfer from scRNA-seq dataset via Pearson correlation &#8212; SegTraQ  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/labeling_via_correlation';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Correlations between the top and bottom of the slice" href="z_plane_correlation.html" />
+    <link rel="prev" title="Correlation to nuclear segmentation" href="nuclear_correlation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SegTraQ  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Baseline metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/labeling_via_correlation.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Label transfer from scRNA-seq dataset via Pearson correlation</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Label transfer from scRNA-seq dataset via Pearson correlation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-scRNA-seq-dataset">Load scRNA-seq dataset</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-spatialData-object">Load spatialData object</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Label-transfer-via-correlation">Label transfer via correlation</a></li>
+</ul>
+</li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Label-transfer-from-scRNA-seq-dataset-via-Pearson-correlation">
+<h1>Label transfer from scRNA-seq dataset via Pearson correlation<a class="headerlink" href="#Label-transfer-from-scRNA-seq-dataset-via-Pearson-correlation" title="Link to this heading">#</a></h1>
+<p>In this notebook, we will show how to transfer labels from a reference single-cell RNA-sequencing (scRNA-seq) dataset via a lightweight approach. We will use Pearson correlation to find the celltype with the highest expression correlation for each cell the spatial transcriptomics datasset, according to <a class="reference external" href="https://github.com/SydneyBioX/CellSPA">CellSPA</a>.</p>
+<section id="Load-scRNA-seq-dataset">
+<h2>Load scRNA-seq dataset<a class="headerlink" href="#Load-scRNA-seq-dataset" title="Link to this heading">#</a></h2>
+<p>We use the scRNA-seq dataset of diffuse large B-cell lymphoma (DLBCL) samples from <a class="reference external" href="https://www.biorxiv.org/content/10.1101/2024.11.01.621259v1">Dong et al.</a> published on <a class="reference external" href="https://www.biorxiv.org/content/10.1101/2024.11.01.621259v1">CellxGene</a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from pathlib import Path
+
+import anndata as ad
+
+scRNAseq_data_path = Path(&quot;/g/huber/projects/CODEX/segtraq/data/label_transfer/scRNA_seq_DLBCL_matched_with_2_C1.h5ad&quot;)
+adata_ref = ad.read(scRNAseq_data_path)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/__init__.py:42: FutureWarning: `anndata.read` is deprecated, use `anndata.read_h5ad` instead. `ad.read` will be removed in mid 2024.
+  warnings.warn(
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata_ref
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+AnnData object with n_obs × n_vars = 29184 × 442
+    obs: &#39;cell_type&#39;, &#39;is_primary_data&#39;, &#39;sample_id&#39;
+</pre></div></div>
+</div>
+<p>The counts in the reference dataset are already log-normalized, so we can copy that matrix to a layer called ‘logcounts’.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata_ref.X.toarray()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[0.        , 0.        , 0.        , ..., 0.        , 0.        ,
+        0.        ],
+       [0.        , 0.        , 0.        , ..., 0.        , 0.        ,
+        0.        ],
+       [0.        , 0.        , 2.38975334, ..., 0.        , 0.        ,
+        0.        ],
+       ...,
+       [0.        , 0.        , 0.        , ..., 0.        , 0.        ,
+        0.        ],
+       [0.        , 0.        , 0.        , ..., 0.        , 0.        ,
+        0.        ],
+       [0.        , 0.        , 0.        , ..., 0.        , 0.        ,
+        0.        ]], shape=(29184, 442))
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata_ref.layers[&quot;logcounts&quot;] = adata_ref.X.copy()
+</pre></div>
+</div>
+</div>
+<p>We aggregate log-normalized gene expression values (<code class="docutils literal notranslate"><span class="pre">logcounts</span></code>) across cells grouped by their annotated cell type, computing the mean expression per gene within each cell type. This yields a reference expression profile for each cell type.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import numpy as np
+
+logcounts = adata_ref.layers[&quot;logcounts&quot;]
+# If it&#39;s sparse, convert to dense
+if not isinstance(logcounts, np.ndarray):
+    logcounts = logcounts.toarray()
+
+celltypes = adata_ref.obs[&quot;cell_type&quot;]
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import pandas as pd
+
+logcounts_df = pd.DataFrame(logcounts, columns=adata_ref.var_names)
+logcounts_df[&quot;celltype&quot;] = celltypes.values
+
+ref_mean_df = logcounts_df.groupby(&quot;celltype&quot;).mean()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_3092810/2272690639.py:6: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  ref_mean_df = logcounts_df.groupby(&#34;celltype&#34;).mean()
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>ref_mean_df
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>A2M</th>
+      <th>ABCA1</th>
+      <th>ACACA</th>
+      <th>ACADM</th>
+      <th>ACKR1</th>
+      <th>ACKR4</th>
+      <th>ACTA2</th>
+      <th>ADAM10</th>
+      <th>ADAM17</th>
+      <th>ADCY7</th>
+      <th>...</th>
+      <th>IL9</th>
+      <th>IGLC3</th>
+      <th>HMGB1</th>
+      <th>GNAS</th>
+      <th>IL22</th>
+      <th>IGLC2</th>
+      <th>DRAIC</th>
+      <th>ANGPT2</th>
+      <th>ICOSLG</th>
+      <th>IL6ST</th>
+    </tr>
+    <tr>
+      <th>celltype</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>B</th>
+      <td>0.000000</td>
+      <td>0.016769</td>
+      <td>0.156024</td>
+      <td>0.159486</td>
+      <td>0.000000</td>
+      <td>0.022256</td>
+      <td>0.050791</td>
+      <td>0.213838</td>
+      <td>0.229673</td>
+      <td>0.270148</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>DC_pc</th>
+      <td>0.036694</td>
+      <td>0.169812</td>
+      <td>0.117063</td>
+      <td>0.444065</td>
+      <td>0.004440</td>
+      <td>0.003707</td>
+      <td>0.140305</td>
+      <td>0.437622</td>
+      <td>0.294588</td>
+      <td>0.784672</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>Endothelia</th>
+      <td>1.471162</td>
+      <td>0.178528</td>
+      <td>0.270104</td>
+      <td>0.289596</td>
+      <td>0.885165</td>
+      <td>0.013624</td>
+      <td>0.112109</td>
+      <td>0.361705</td>
+      <td>0.256111</td>
+      <td>0.163421</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>Epithelia</th>
+      <td>0.019746</td>
+      <td>0.080427</td>
+      <td>0.254660</td>
+      <td>0.178775</td>
+      <td>0.001124</td>
+      <td>0.026345</td>
+      <td>0.017461</td>
+      <td>0.119152</td>
+      <td>0.206132</td>
+      <td>0.108029</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>Fibro_Muscle</th>
+      <td>0.266040</td>
+      <td>0.312430</td>
+      <td>0.264807</td>
+      <td>0.343359</td>
+      <td>0.072844</td>
+      <td>0.003145</td>
+      <td>0.434594</td>
+      <td>0.369848</td>
+      <td>0.277516</td>
+      <td>0.193193</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>Mono_Macro</th>
+      <td>0.656003</td>
+      <td>0.890168</td>
+      <td>0.149249</td>
+      <td>0.331428</td>
+      <td>0.014655</td>
+      <td>0.002430</td>
+      <td>0.114052</td>
+      <td>0.358778</td>
+      <td>0.334295</td>
+      <td>0.585345</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>NK</th>
+      <td>0.021211</td>
+      <td>0.106054</td>
+      <td>0.201798</td>
+      <td>0.357114</td>
+      <td>0.005284</td>
+      <td>0.000000</td>
+      <td>0.101637</td>
+      <td>0.559331</td>
+      <td>0.245895</td>
+      <td>0.659352</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>Pericyte</th>
+      <td>2.253352</td>
+      <td>0.360183</td>
+      <td>0.252609</td>
+      <td>0.435539</td>
+      <td>0.326374</td>
+      <td>0.000000</td>
+      <td>0.803320</td>
+      <td>0.553716</td>
+      <td>0.318709</td>
+      <td>0.157481</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>T_CD4</th>
+      <td>0.029272</td>
+      <td>0.077661</td>
+      <td>0.152805</td>
+      <td>0.257307</td>
+      <td>0.008759</td>
+      <td>0.000000</td>
+      <td>0.137884</td>
+      <td>0.459278</td>
+      <td>0.233179</td>
+      <td>0.363228</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>T_CD8</th>
+      <td>0.031461</td>
+      <td>0.045086</td>
+      <td>0.151711</td>
+      <td>0.311616</td>
+      <td>0.004273</td>
+      <td>0.001105</td>
+      <td>0.106523</td>
+      <td>0.336085</td>
+      <td>0.214291</td>
+      <td>0.386563</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>T_dividing</th>
+      <td>0.051053</td>
+      <td>0.032399</td>
+      <td>0.196901</td>
+      <td>0.487031</td>
+      <td>0.003520</td>
+      <td>0.000000</td>
+      <td>0.150578</td>
+      <td>0.765854</td>
+      <td>0.408252</td>
+      <td>0.345907</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>Tumor_DLBCL</th>
+      <td>0.017330</td>
+      <td>0.074456</td>
+      <td>0.278579</td>
+      <td>0.419433</td>
+      <td>0.004762</td>
+      <td>0.000889</td>
+      <td>0.196989</td>
+      <td>0.418151</td>
+      <td>0.366993</td>
+      <td>0.365700</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>cDC</th>
+      <td>0.077264</td>
+      <td>0.341498</td>
+      <td>0.163797</td>
+      <td>0.296956</td>
+      <td>0.021874</td>
+      <td>0.005103</td>
+      <td>0.095915</td>
+      <td>0.394451</td>
+      <td>0.305254</td>
+      <td>0.900343</td>
+      <td>...</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+  </tbody>
+</table>
+<p>13 rows × 442 columns</p>
+</div></div>
+</div>
+</section>
+</section>
+<section id="Load-spatialData-object">
+<h1>Load spatialData object<a class="headerlink" href="#Load-spatialData-object" title="Link to this heading">#</a></h1>
+<p>Next, we load the spatialdata object of a Xenium DLBCL sample.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
+
+sdata = sd.read_zarr(
+    &quot;/g/huber/projects/GSK_lazic/B_NHL/BNHL_RICOVER/tma_2/2_C1/proseg_output/spatialData_2_C1_proseg.zarr&quot;
+)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
+  warnings.warn(
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
+  from pkg_resources import DistributionNotFound, get_distribution
+version mismatch: detected: RasterFormatV02, requested: FormatV04
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
+  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
+</pre></div></div>
+</div>
+<p>We perform quality control steps (filtering based on #transcripts and #genes per cell) and log-normalization.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata = sdata[&quot;table&quot;]
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[131]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import scanpy as sc
+
+import segtraq as st
+
+# Compute QC metrics
+transcript_counts = st.bl.transcripts_per_cell(sdata)
+gene_counts = st.bl.genes_per_cell(sdata)
+
+transcript_counts.index = transcript_counts.index.astype(str)
+gene_counts.index = gene_counts.index.astype(str)
+
+transcript_counts_filtered = transcript_counts.loc[adata.obs_names]
+gene_counts_filtered = gene_counts.loc[adata.obs_names]
+
+adata.obs[&quot;total_transcripts&quot;] = transcript_counts_filtered[&quot;transcript_count&quot;]
+adata.obs[&quot;total_genes&quot;] = gene_counts_filtered[&quot;gene_count&quot;]
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[144]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata.obs
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[144]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>centroid_x</th>
+      <th>centroid_y</th>
+      <th>cell_size</th>
+      <th>axis_minor_length</th>
+      <th>axis_major_length</th>
+      <th>centroid-0</th>
+      <th>centroid-1</th>
+      <th>eccentricity</th>
+      <th>solidity</th>
+      <th>perimeter</th>
+      <th>sample_id</th>
+      <th>TMA</th>
+      <th>region</th>
+      <th>mask_id</th>
+      <th>total_transcripts</th>
+      <th>total_genes</th>
+    </tr>
+    <tr>
+      <th>cell_id</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>377.79850</td>
+      <td>513.17664</td>
+      <td>395.71875</td>
+      <td>6.590376</td>
+      <td>8.878127</td>
+      <td>512.720930</td>
+      <td>376.953488</td>
+      <td>0.670050</td>
+      <td>0.860000</td>
+      <td>24.899495</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>1</td>
+      <td>993</td>
+      <td>73</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>349.86170</td>
+      <td>643.56384</td>
+      <td>92.53125</td>
+      <td>2.653300</td>
+      <td>5.366563</td>
+      <td>643.600000</td>
+      <td>349.000000</td>
+      <td>0.869227</td>
+      <td>0.500000</td>
+      <td>0.000000</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>2</td>
+      <td>985</td>
+      <td>89</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>401.73760</td>
+      <td>398.32178</td>
+      <td>397.68750</td>
+      <td>5.502993</td>
+      <td>9.527791</td>
+      <td>396.305556</td>
+      <td>400.916667</td>
+      <td>0.816339</td>
+      <td>0.800000</td>
+      <td>21.071068</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>3</td>
+      <td>959</td>
+      <td>136</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>257.44656</td>
+      <td>319.80533</td>
+      <td>773.71875</td>
+      <td>9.718573</td>
+      <td>11.625859</td>
+      <td>319.301205</td>
+      <td>257.168675</td>
+      <td>0.548814</td>
+      <td>0.813725</td>
+      <td>34.384776</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>4</td>
+      <td>932</td>
+      <td>161</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>195.35858</td>
+      <td>549.35860</td>
+      <td>194.90625</td>
+      <td>3.843169</td>
+      <td>5.055352</td>
+      <td>548.785714</td>
+      <td>194.928571</td>
+      <td>0.649668</td>
+      <td>0.875000</td>
+      <td>11.414214</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>5</td>
+      <td>926</td>
+      <td>47</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>5843</th>
+      <td>539.39000</td>
+      <td>343.35000</td>
+      <td>196.87500</td>
+      <td>6.445665</td>
+      <td>16.611864</td>
+      <td>343.063492</td>
+      <td>539.158730</td>
+      <td>0.921653</td>
+      <td>0.684783</td>
+      <td>40.798990</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>5843</td>
+      <td>61</td>
+      <td>85</td>
+    </tr>
+    <tr>
+      <th>5844</th>
+      <td>256.99690</td>
+      <td>636.03420</td>
+      <td>316.96875</td>
+      <td>7.896618</td>
+      <td>12.941854</td>
+      <td>636.506667</td>
+      <td>256.333333</td>
+      <td>0.792277</td>
+      <td>0.842697</td>
+      <td>35.142136</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>5844</td>
+      <td>61</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>5845</th>
+      <td>310.64035</td>
+      <td>493.85090</td>
+      <td>112.21875</td>
+      <td>6.976622</td>
+      <td>7.382183</td>
+      <td>493.272727</td>
+      <td>310.151515</td>
+      <td>0.326891</td>
+      <td>0.733333</td>
+      <td>24.727922</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>5845</td>
+      <td>60</td>
+      <td>109</td>
+    </tr>
+    <tr>
+      <th>5846</th>
+      <td>366.64166</td>
+      <td>153.53334</td>
+      <td>236.25000</td>
+      <td>8.121170</td>
+      <td>12.488528</td>
+      <td>152.528571</td>
+      <td>366.328571</td>
+      <td>0.759686</td>
+      <td>0.777778</td>
+      <td>36.556349</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>5846</td>
+      <td>60</td>
+      <td>46</td>
+    </tr>
+    <tr>
+      <th>5847</th>
+      <td>494.74417</td>
+      <td>190.87209</td>
+      <td>169.31250</td>
+      <td>8.103957</td>
+      <td>8.811781</td>
+      <td>190.180000</td>
+      <td>494.300000</td>
+      <td>0.392685</td>
+      <td>0.847458</td>
+      <td>26.384776</td>
+      <td>2_C1</td>
+      <td>2</td>
+      <td>cell_labels</td>
+      <td>5847</td>
+      <td>60</td>
+      <td>33</td>
+    </tr>
+  </tbody>
+</table>
+<p>5845 rows × 16 columns</p>
+</div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[133]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Filter outliers
+qc_range = {&quot;total_transcripts&quot;: (10, 2000), &quot;total_genes&quot;: (5, np.inf)}
+
+for key, (low, high) in qc_range.items():
+    mask = (adata.obs[key] &gt;= low) &amp; (adata.obs[key] &lt;= high)
+    adata = adata[mask.to_numpy()].copy()
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[134]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Normalize and log-transform
+sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.log1p(adata)
+adata.layers[&quot;logcounts&quot;] = adata.X.copy()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/legacy_api_wrap/__init__.py:82: UserWarning: Some cells have zero counts
+  return fn(*args_all, **kw)
+</pre></div></div>
+</div>
+<section id="Label-transfer-via-correlation">
+<h2>Label transfer via correlation<a class="headerlink" href="#Label-transfer-via-correlation" title="Link to this heading">#</a></h2>
+<p>Now, we compute the Pearson correlation between each query cell in the processed <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object and the mean expression profiles of reference cell types.</p>
+<p>We first identify the common genes between the query data and the reference matrix, and then compute a correlation matrix where each entry reflects the similarity between a query cell and a reference cell type.</p>
+<p>For each query cell, we:</p>
+<p>Assign the most correlated reference cell type (i.e., the one with the highest Pearson correlation),</p>
+<p>Store both the correlation value and the predicted cell type.</p>
+<p>This provides a label transfer from the reference to the query dataset based on global transcriptomic similarity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from anndata import AnnData
+from scipy.spatial.distance import cdist
+
+
+def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, layer: str = &quot;logcounts&quot;) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;
+    Assigns cell types to cells in `adata` by computing Pearson correlation
+    with reference expression profiles.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Query dataset with gene expression data in the specified layer.
+    ref_mean_df : pd.DataFrame
+        Reference expression matrix with shape (cell_types x genes).
+    layer : str, default=&quot;logcounts&quot;
+        Layer in `adata` to use for expression values.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with `cell_id` and assigned `celltype`.
+    &quot;&quot;&quot;
+    # TODO - check if cdist does really Pearson correlation
+
+    # Extract query expression data
+    X_query = pd.DataFrame(
+        (adata.layers[layer].toarray() if hasattr(adata.layers[layer], &quot;toarray&quot;) else adata.layers[layer]),
+        index=adata.obs_names,
+        columns=adata.var_names,
+    )
+
+    # Align gene order
+    common_genes = X_query.columns.intersection(ref_mean_df.columns)
+    if len(common_genes) == 0:
+        raise ValueError(&quot;No common genes found between query and reference.&quot;)
+
+    X_query = X_query[common_genes]
+    X_ref = ref_mean_df[common_genes]
+
+    # Compute Pearson correlation (1 - correlation distance)
+    cor_mat = 1 - cdist(X_query.values, X_ref.values, metric=&quot;correlation&quot;)
+    cor_mat_df = pd.DataFrame(cor_mat, index=adata.obs_names, columns=X_ref.index)
+
+    # Assign best-matching reference cell type
+    best_celltype = cor_mat_df.idxmax(axis=1)
+
+    # Return as DataFrame
+    return pd.DataFrame({&quot;cell_id&quot;: adata.obs_names, &quot;celltype&quot;: best_celltype.values})
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[146]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>result_df = assign_celltype_by_pearson(adata, ref_mean_df)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_2382657/4082630372.py:48: FutureWarning: The behavior of DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated. In a future version this will raise ValueError
+  best_celltype = cor_mat_df.idxmax(axis=1)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[158]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>result_df[&quot;celltype&quot;].value_counts()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[158]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+celltype
+Tumor_DLBCL     2293
+T_CD8            952
+Mono_Macro       789
+T_CD4            599
+T_dividing       521
+Fibro_Muscle     204
+cDC              134
+Pericyte         123
+B                100
+Endothelia        62
+NK                35
+DC_pc             23
+Epithelia          6
+Name: count, dtype: int64
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[156]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>result_df.set_index(&quot;cell_id&quot;, inplace=True)
+adata.obs[&quot;celltype_corr&quot;] = result_df.loc[adata.obs_names, &quot;celltype&quot;]
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[163]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># define colors for cell types
+
+col_celltype = {
+    &quot;B&quot;: &quot;#fb8072&quot;,
+    &quot;cDC&quot;: &quot;#bc80bd&quot;,
+    &quot;DC_pc&quot;: &quot;#910290&quot;,
+    &quot;Endothelia&quot;: &quot;#fdb462&quot;,
+    &quot;Epithelia&quot;: &quot;#959059&quot;,
+    &quot;Fibro_Muscle&quot;: &quot;#fed9a6&quot;,
+    &quot;Mono_Macro&quot;: &quot;#a6cee3&quot;,
+    &quot;NK&quot;: &quot;#2782bb&quot;,
+    &quot;Pericyte&quot;: &quot;#d2cd7e&quot;,
+    &quot;T_CD4&quot;: &quot;#3c7761&quot;,
+    &quot;T_CD4_reg&quot;: &quot;#66a61e&quot;,
+    &quot;T_CD8&quot;: &quot;#66c2a5&quot;,
+    &quot;T_dividing&quot;: &quot;#1b9e77&quot;,
+    &quot;Tumor_DLBCL&quot;: &quot;#d45943&quot;,
+}
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[170]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
+
+# Set up side-by-side plots
+fig, axs = plt.subplots(1, 2, figsize=(14, 6))
+
+# Plot 1: Cell size
+sc.pl.embedding(
+    adata,
+    basis=&quot;X_custom_spatial&quot;,
+    color=&quot;cell_size&quot;,
+    size=50,
+    ax=axs[0],
+    show=False,
+    title=&quot;Cell Size&quot;,
+)
+
+# Plot 2: Cell types with custom colors
+sc.pl.embedding(
+    adata,
+    basis=&quot;X_custom_spatial&quot;,
+    color=&quot;celltype_corr&quot;,
+    size=50,
+    palette=col_celltype,  # your custom palette from before
+    ax=axs[1],
+    show=False,
+    title=&quot;Cell Type Assignment&quot;,
+)
+
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_labeling_via_correlation_26_0.png" src="../_images/notebooks_labeling_via_correlation_26_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="nuclear_correlation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Correlation to nuclear segmentation</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="z_plane_correlation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Correlations between the top and bottom of the slice</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Label transfer from scRNA-seq dataset via Pearson correlation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-scRNA-seq-dataset">Load scRNA-seq dataset</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-spatialData-object">Load spatialData object</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Label-transfer-via-correlation">Label transfer via correlation</a></li>
+</ul>
+</li>
+</ul>
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
