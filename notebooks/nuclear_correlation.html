@@ -163,6 +163,7 @@
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Correlation to nuclear segmentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
 
+<li class="toctree-l1"><a class="reference internal" href="z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
 </ul>
 
     </div>
@@ -624,7 +625,7 @@ print(f&quot;Elapsed time with {n} threads: {end - start:.2f} seconds&quot;)
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 781.63it/s]
+Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 945.41it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -632,7 +633,7 @@ Processing IoU between cells and nuclei: 100%|██████████| 15
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Elapsed time with 1 threads: 0.21 seconds
+Elapsed time with 1 threads: 0.17 seconds
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -980,7 +981,7 @@ print(f&quot;Elapsed time without computing IoU: {end - start:.2f} seconds&quot;
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Elapsed time without computing IoU: 0.94 seconds
+Elapsed time without computing IoU: 1.14 seconds
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">

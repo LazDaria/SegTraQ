@@ -162,6 +162,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
 
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
 </ul>
 
     </div>
@@ -314,6 +315,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_purity"><code class="docutils literal notranslate"><span class="pre">compute_purity()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_rmsd"><code class="docutils literal notranslate"><span class="pre">compute_rmsd()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_silhouette_score"><code class="docutils literal notranslate"><span class="pre">compute_silhouette_score()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_z_plane_correlation"><code class="docutils literal notranslate"><span class="pre">compute_z_plane_correlation()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -419,6 +421,32 @@ clustering runs on random gene subsets.</p>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.cs.clustering_stability.compute_z_plane_correlation">
+<span class="sig-prename descclassname"><span class="pre">segtraq.cs.clustering_stability.</span></span><span class="sig-name descname"><span class="pre">compute_z_plane_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.cs.clustering_stability.compute_z_plane_correlation" title="Link to this definition">#</a></dt>
+<dd><p>Compute the Pearson correlation between the top and bottom quantiles of transcripts in the z-plane.</p>
+<p>This function computes the Pearson correlation between the top and bottom quantiles of transcripts
+in the z-plane for each cell. It subsets the transcripts based on the z-coordinate and calculates
+the correlation for each cell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing transcript data.</p></li>
+<li><p><strong>quantile</strong> (<em>float</em><em>, </em><em>optional</em>) – The quantile to use for bottom and top subsets, by default 25.</p></li>
+<li><p><strong>transcript_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for transcripts in sdata.points, by default “transcripts”.</p></li>
+<li><p><strong>cell_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for cell IDs in sdata.points, by default “cell_id”.</p></li>
+<li><p><strong>gene_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for gene names in sdata.points, by default “feature_name”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame with cell IDs as index and Pearson correlations as values.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -470,6 +498,7 @@ clustering runs on random gene subsets.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_purity"><code class="docutils literal notranslate"><span class="pre">compute_purity()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_rmsd"><code class="docutils literal notranslate"><span class="pre">compute_rmsd()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_silhouette_score"><code class="docutils literal notranslate"><span class="pre">compute_silhouette_score()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_z_plane_correlation"><code class="docutils literal notranslate"><span class="pre">compute_z_plane_correlation()</span></code></a></li>
 </ul>
   </nav></div>
 
