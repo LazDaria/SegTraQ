@@ -327,8 +327,8 @@ document.write(`
   <section id="Correlation-to-nuclear-segmentation">
 <h1>Correlation to nuclear segmentation<a class="headerlink" href="#Correlation-to-nuclear-segmentation" title="Link to this heading">#</a></h1>
 <p>The <code class="docutils literal notranslate"><span class="pre">nuclear_correlation</span></code> module provides metrics to assess how well cell segmentation masks align with nuclear segmentation masks. It is applicable only when nuclear masks are available.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
@@ -336,17 +336,8 @@ document.write(`
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-The autoreload extension is already loaded. To reload it, use:
-  %reload_ext autoreload
-</pre></div></div>
-</div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
@@ -360,6 +351,10 @@ sdata = sd.read_zarr(&quot;/home/lazic/src/segtraq/tests/data/xenium_sp_subset.z
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
+  warnings.warn(
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
+  from pkg_resources import DistributionNotFound, get_distribution
 version mismatch: detected: RasterFormatV02, requested: FormatV04
 /home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
@@ -379,7 +374,7 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata
@@ -387,7 +382,7 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -415,7 +410,7 @@ with coordinate systems:
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata[&quot;table&quot;].obs.reset_index(inplace=True)
@@ -423,7 +418,7 @@ with coordinate systems:
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata[&quot;table&quot;].obs
@@ -431,7 +426,7 @@ with coordinate systems:
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -607,7 +602,7 @@ with coordinate systems:
 <h2>Intersection over Union between cell and nucleus masks<a class="headerlink" href="#Intersection-over-Union-between-cell-and-nucleus-masks" title="Link to this heading">#</a></h2>
 <p>First, we compute the Intersection over Union (IoU) between cell and nuclear masks using <code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import time
@@ -629,7 +624,7 @@ print(f&quot;Elapsed time with {n} threads: {end - start:.2f} seconds&quot;)
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 921.10it/s]
+Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 781.63it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -637,7 +632,7 @@ Processing IoU between cells and nuclei: 100%|██████████| 15
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Elapsed time with 1 threads: 0.18 seconds
+Elapsed time with 1 threads: 0.21 seconds
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -650,7 +645,7 @@ Elapsed time with 1 threads: 0.18 seconds
 </div>
 <p>For each <code class="docutils literal notranslate"><span class="pre">cell_id</span></code>, we obtain the ID (<code class="docutils literal notranslate"><span class="pre">best_nuc_id</span></code>) of the nucleus mask with the highest <code class="docutils literal notranslate"><span class="pre">IoU</span></code>. If a cell does not overlap with any nucleus, the function returns a missing value for <code class="docutils literal notranslate"><span class="pre">best_nuc_id</span></code>. If the nucleus has an invalid geometry, <code class="docutils literal notranslate"><span class="pre">IoU</span></code>is reported as <code class="docutils literal notranslate"><span class="pre">NA</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>results_df
@@ -658,7 +653,7 @@ Elapsed time with 1 threads: 0.18 seconds
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -759,7 +754,7 @@ Elapsed time with 1 threads: 0.18 seconds
 </div>
 <p>We will store the results in the <code class="docutils literal notranslate"><span class="pre">.obs</span></code> of the <code class="docutils literal notranslate"><span class="pre">Table</span></code> within the <code class="docutils literal notranslate"><span class="pre">sdata</span></code> object for plotting.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata[&quot;table&quot;]
@@ -767,7 +762,7 @@ Elapsed time with 1 threads: 0.18 seconds
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -780,7 +775,7 @@ AnnData object with n_obs × n_vars = 122 × 313
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>ious_df = results_df.set_index(&quot;cell_id&quot;)
@@ -791,7 +786,7 @@ sdata[&quot;table&quot;].obs[&quot;best_nuc_id&quot;] = sdata[&quot;table&quot;]
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata
@@ -799,7 +794,7 @@ sdata[&quot;table&quot;].obs[&quot;best_nuc_id&quot;] = sdata[&quot;table&quot;]
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -827,10 +822,11 @@ with coordinate systems:
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
+import spatialdata_plot
 
 axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)[1].flatten()
 
@@ -871,44 +867,34 @@ sdata.pl.render_shapes(
 <div class="highlight"><pre>
 /home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/spatialdata.py:511: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">AttributeError</span>                            Traceback (most recent call last)
-Cell <span class="ansi-green-fg">In[17], line 10</span>
-<span class="ansi-green-intense-fg ansi-bold">      7</span> sdata<span style="color: rgb(98,98,98)">.</span>set_table_annotates_spatialelement(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">table</span><span style="color: rgb(175,0,0)">&#34;</span>, region<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">cell_boundaries</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-intense-fg ansi-bold">      9</span> <span style="color: rgb(95,135,135)"># plot</span>
-<span class="ansi-green-fg">---&gt; 10</span> <span class="ansi-yellow-bg">sdata</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">pl</span><span style="color: rgb(98,98,98)">.</span>render_shapes(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">nucleus_boundaries</span><span style="color: rgb(175,0,0)">&#34;</span>)<span style="color: rgb(98,98,98)">.</span>pl<span style="color: rgb(98,98,98)">.</span>show(
-<span class="ansi-green-intense-fg ansi-bold">     11</span>     ax<span style="color: rgb(98,98,98)">=</span>axes[<span style="color: rgb(98,98,98)">0</span>], title<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Nucleus boundaries</span><span style="color: rgb(175,0,0)">&#34;</span>, coordinate_systems<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">global</span><span style="color: rgb(175,0,0)">&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">     12</span> )
-<span class="ansi-green-intense-fg ansi-bold">     14</span> sdata<span style="color: rgb(98,98,98)">.</span>pl<span style="color: rgb(98,98,98)">.</span>render_shapes(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">cell_boundaries</span><span style="color: rgb(175,0,0)">&#34;</span>, color<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">IoU</span><span style="color: rgb(175,0,0)">&#34;</span>)<span style="color: rgb(98,98,98)">.</span>pl<span style="color: rgb(98,98,98)">.</span>show(
-<span class="ansi-green-intense-fg ansi-bold">     15</span>     ax<span style="color: rgb(98,98,98)">=</span>axes[<span style="color: rgb(98,98,98)">1</span>], title<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Cell boundaries colored by IoU</span><span style="color: rgb(175,0,0)">&#34;</span>, coordinate_systems<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">global</span><span style="color: rgb(175,0,0)">&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">     16</span> )
-<span class="ansi-green-intense-fg ansi-bold">     18</span> sdata<span style="color: rgb(98,98,98)">.</span>pl<span style="color: rgb(98,98,98)">.</span>render_shapes(
-<span class="ansi-green-intense-fg ansi-bold">     19</span>     element<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">nucleus_boundaries</span><span style="color: rgb(175,0,0)">&#34;</span>,
-<span class="ansi-green-intense-fg ansi-bold">     20</span>     fill_alpha<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.2</span>,
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">     30</span>     outline_color<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#34;</span>,
-<span class="ansi-green-intense-fg ansi-bold">     31</span> )<span style="color: rgb(98,98,98)">.</span>pl<span style="color: rgb(98,98,98)">.</span>show(ax<span style="color: rgb(98,98,98)">=</span>axes[<span style="color: rgb(98,98,98)">2</span>], title<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Overlay of nuclei and cell masks colored by IoU</span><span style="color: rgb(175,0,0)">&#34;</span>, colorbar<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-
-<span class="ansi-red-fg">AttributeError</span>: &#39;SpatialData&#39; object has no attribute &#39;pl&#39;
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:105: UserWarning: Key `cell_boundaries` already exists. Overwriting it in-memory.
+  self._check_key(key, self.keys(), self._shared_keys)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:125: UserWarning: Key `table` already exists. Overwriting it in-memory.
+  self._check_key(key, self.keys(), self._shared_keys)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:105: UserWarning: Key `cell_boundaries` already exists. Overwriting it in-memory.
+  self._check_key(key, self.keys(), self._shared_keys)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:125: UserWarning: Key `table` already exists. Overwriting it in-memory.
+  self._check_key(key, self.keys(), self._shared_keys)
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_17_2.png" src="../_images/notebooks_nuclear_correlation_17_2.png" />
+<img alt="../_images/notebooks_nuclear_correlation_17_1.png" src="../_images/notebooks_nuclear_correlation_17_1.png" />
 </div>
 </div>
 <p>In the plots above, we can see that cells that have a high overlap with nuclei, also show a high IoU value. Below, we plot a histogram of IoU values and can see that the median IoU is at 0.16, i.e. 16% overlap.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
@@ -955,7 +941,7 @@ plt.show()
 <h2>Expression correlation between cell and nucleus<a class="headerlink" href="#Expression-correlation-between-cell-and-nucleus" title="Link to this heading">#</a></h2>
 <p>Expression correlation between a cell and the “most-overlapping” nucleus can be computed using <code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_correlation</span></code>. This function will internally compute <code class="docutils literal notranslate"><span class="pre">IoU</span></code> using <code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious</span></code> unless already present in the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code>object. Currently only <code class="docutils literal notranslate"><span class="pre">pearson</span></code>correlation is supported. More options will be added later.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import time
@@ -965,7 +951,7 @@ import segtraq as st
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>start = time.time()
@@ -981,7 +967,12 @@ print(f&quot;Elapsed time without computing IoU: {end - start:.2f} seconds&quot;
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Processing IoU between cells and nuclei: 100%|██████████| 158/158 [00:00&lt;00:00, 1978.34it/s]
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/operations/aggregate.py:452: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  aggregated = joined.groupby([INDEX, vk])[ONES_COLUMN].agg(agg_func).reset_index()
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
+/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/models/models.py:1144: UserWarning: Converting `region_key: region` to categorical dtype.
+  return convert_region_column_to_categorical(adata)
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -989,11 +980,11 @@ Processing IoU between cells and nuclei: 100%|██████████| 15
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Elapsed time without computing IoU: 1.03 seconds
+Elapsed time without computing IoU: 0.94 seconds
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>corr_df
@@ -1001,7 +992,8 @@ Elapsed time without computing IoU: 1.03 seconds
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
 <div>
@@ -1113,7 +1105,7 @@ Elapsed time without computing IoU: 1.03 seconds
 </div>
 <p>We will store the results in the <code class="docutils literal notranslate"><span class="pre">.obs</span></code> of the <code class="docutils literal notranslate"><span class="pre">Table</span></code> within the <code class="docutils literal notranslate"><span class="pre">sdata</span></code> object for plotting.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>corr_df = corr_df.set_index(&quot;cell_id&quot;)
@@ -1124,7 +1116,7 @@ sdata[&quot;table&quot;].obs[&quot;pearson_corr&quot;] = sdata[&quot;table&quot;
 </div>
 <p>We plot Pearson correlation versus IoU and observe a positive trend: cells with greater overlap with nuclei tend to exhibit higher expression correlation.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import seaborn as sns
@@ -1158,7 +1150,7 @@ plt.show()
 </div>
 <p>The histogram below shows the distribution of Pearson correlation values across cells. It is right-skewed, with a median of 0.74. This provides intuition about possible spatial spillover: cells may be contaminated by neighboring cells, assuming that nuclei capture expression with less contamination due to their smaller radius.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Prepare IoU values
@@ -1199,7 +1191,7 @@ plt.show()
 </div>
 <p>The spatial plot below overlays nucleus boundaries, cell masks colored by Pearson correlation, and transcripts. Cells whose transcripts are distributed across the nucleus region tend to have higher correlation with the nucleus, while cells whose transcripts are localized outside the nuclear region—potentially due to spillover from neighboring cells—tend to exhibit lower correlation.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
