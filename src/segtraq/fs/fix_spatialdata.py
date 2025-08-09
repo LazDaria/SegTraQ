@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 import xarray as xr
+from shapely.geometry import Polygon
+from skimage import measure
 
 
 def create_spatialdata(
@@ -352,3 +354,60 @@ def validate_spatialdata(
                 f"This might lead to inconsistencies in the spatialdata object.",
                 stacklevel=2,
             )
+
+
+def compute_shapes(
+    sdata: sd.SpatialData, labels_key: str = "labels", shape_key: str = "cell_boundaries"
+) -> sd.SpatialData:
+    assert shape_key not in sdata.shapes, (
+        f"Shapes with key '{shape_key}' already exist in SpatialData. "
+        "Please choose a different key by setting the shape_key parameter or remove the existing shapes."
+    )
+
+    # Ensure labels are present
+    assert labels_key in sdata.labels, (
+        f"Labels DataFrame must contain key: {labels_key}. "
+        f"Available keys: {list(sdata.labels.keys())}. "
+        f"If you want to use a different key, set the labels_key parameter."
+    )
+
+    # Get numpy array from sdata.labels
+    labels = (
+        sdata.labels[labels_key].values if hasattr(sdata.labels[labels_key], "values") else sdata.labels[labels_key]
+    )
+
+    # Ensure it's an integer mask
+    labels = np.asarray(labels, dtype=np.int32)
+
+    polygons = []
+    cell_ids = []
+
+    for cell_id in np.unique(labels):
+        if cell_id == 0:  # skip background
+            continue
+
+        # Find contours for this cell (connectivity 1)
+        contours = measure.find_contours(labels == cell_id, level=0.5)
+        for contour in contours:
+            # contour coordinates are (row, col), flip to (x, y)
+            poly = Polygon(contour[:, ::-1])
+            if not poly.is_valid or poly.is_empty:
+                continue
+            polygons.append(poly)
+            cell_ids.append(cell_id)
+
+    # Build DataFrame with cell_id and geometry
+    shapes_df = pd.DataFrame({"cell_id": cell_ids, "geometry": polygons})
+
+    # Convert DataFrame to a GeoDataFrame if SpatialData expects it
+    try:
+        import geopandas as gpd
+
+        shapes_gdf = gpd.GeoDataFrame(shapes_df, geometry="geometry", crs="EPSG:4326")
+    except ImportError:
+        shapes_gdf = shapes_df
+
+    # Add to SpatialData
+    sdata.shapes[shape_key] = sd.models.ShapesModel.parse(shapes_gdf)
+
+    return sdata
