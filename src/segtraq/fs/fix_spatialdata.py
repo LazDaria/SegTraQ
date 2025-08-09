@@ -12,12 +12,10 @@ def create_spatialdata(
     labels=None,
     tables=None,
     images=None,
-    shape_key="cell_boundaries",
-    label_key="cell_labels",
-    gene_key="gene_name",
     cell_key_points="assignment",
     cell_key_shapes="cell_id",
     cell_key_tables="cell_id",
+    shape_layer_key="layer",
     relabel_points: bool = False,
     relabel_shapes: bool = False,
     relabel_tables: bool = False,
@@ -52,8 +50,10 @@ def create_spatialdata(
 
     # === SHAPES (POLYGONS) ===
     shapes_sd = None
-    # == 2D ==
+    shapes_sd_dict = dict()
+
     assert shapes is None or isinstance(shapes, pd.DataFrame), "Shapes must be a pandas DataFrame or None"
+
     if shapes is not None:
         assert cell_key_shapes in shapes.columns, (
             f"Shapes DataFrame must contain column: {cell_key_shapes}. "
@@ -62,35 +62,44 @@ def create_spatialdata(
         )
         poly_ids = set(shapes[cell_key_shapes])
 
-    if not relabel_shapes:
-        if shapes is not None:
-            assert shapes[cell_key_shapes].min() >= 1, (
-                f"Cell IDs in shapes must start at 1. "
-                f"Found minimum cell ID: {shapes[cell_key_shapes].min()}. "
-                f"If you want to relabel the shapes by adding 1, set relabel_shapes=True."
-            )
-    else:
-        if shapes is not None:
+        if not relabel_shapes:
+            if shapes is not None:
+                assert shapes[cell_key_shapes].min() >= 1, (
+                    f"Cell IDs in shapes must start at 1. "
+                    f"Found minimum cell ID: {shapes[cell_key_shapes].min()}. "
+                    f"If you want to relabel the shapes by adding 1, set relabel_shapes=True."
+                )
+        else:
             shapes = shapes.copy()  # avoid modifying the original DataFrame
             shapes[cell_key_shapes] = shapes[cell_key_shapes] + 1
 
-    transcript_ids = set(points[cell_key_points].unique())
-    missing_in_polygons = transcript_ids - poly_ids
-    if not consolidate_shapes:
-        assert not missing_in_polygons, (
-            f"Missing {len(missing_in_polygons)} cell IDs from polygons: {missing_in_polygons}. "
-            "If you want to consolidate the shapes and the transcripts, set consolidate_shapes=True. "
-            "This will remove the missing cell IDs from the points."
-        )
-    elif len(missing_in_polygons) > 0:
-        # remove points that are not in the polygons
-        points = points[~points[cell_key_points].isin(missing_in_polygons)]
+        transcript_ids = set(points[cell_key_points].unique())
+        missing_in_polygons = transcript_ids - poly_ids
+        if not consolidate_shapes:
+            assert not missing_in_polygons, (
+                f"Missing {len(missing_in_polygons)} cell IDs from polygons: {missing_in_polygons}. "
+                "If you want to consolidate the shapes and the transcripts, set consolidate_shapes=True. "
+                "This will remove the missing cell IDs from the points."
+            )
+        elif len(missing_in_polygons) > 0:
+            # remove points that are not in the polygons
+            points = points[~points[cell_key_points].isin(missing_in_polygons)]
 
-    if shapes is not None:
-        shapes_sd = sd.models.ShapesModel.parse(shapes)
-
-    # == 3D ==
-    # TODO: implement 3D shapes (probably sensible to split up the layers into different layers within the shapes)
+        # check if shapes contains cell IDs that occur multiple times
+        # if there are, this likely means that there are multiple layers that should be split into separate polygons
+        if shapes[cell_key_shapes].duplicated().any():
+            assert shape_layer_key in shapes.columns, (
+                f"Some cell IDs in shapes occur multiple times. "
+                f"This is likely due to multiple z layers being present in your shapes (e. g. when using ProSeg). "
+                f"To split these into separate polygons, set the shape_layer_key parameter. "
+                f"Available columns: {shapes.columns.tolist()}"
+            )
+            for i, layer in enumerate(shapes[shape_layer_key].unique()):
+                layer_shapes = shapes[shapes[shape_layer_key] == layer]
+                shapes_sd_dict[f"cell_boundaries_layer_{i}"] = sd.models.ShapesModel.parse(layer_shapes)
+        else:
+            shapes_sd = sd.models.ShapesModel.parse(shapes)
+            shapes_sd_dict = {"cell_boundaries": shapes_sd}
 
     # === LABELS ===
     labels_sd = None
@@ -114,6 +123,7 @@ def create_spatialdata(
     # === TABLES ===
     tables_sd = None
     if tables is not None:
+        table_metadata = list(table_metadata)
         # Prepare obs DataFrame with string index
         obs_df = tables[table_metadata].copy()
         obs_df.index = obs_df.index.astype(str)  # ensure AnnData-compatible index
@@ -206,8 +216,8 @@ def create_spatialdata(
     # Generate spatial data object
     sdata = sd.SpatialData(
         images={"image": images_sd} if images is not None else {},
-        points={"points": points_sd},
-        shapes={"cell_boundaries": shapes_sd} if shapes is not None else {},
+        points={"transcripts": points_sd},
+        shapes=shapes_sd_dict,
         tables={"table": tables_sd} if tables is not None else {},
         labels={"cell_labels": labels_sd} if labels is not None else {},
     )
