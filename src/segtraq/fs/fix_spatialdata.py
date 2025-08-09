@@ -1,3 +1,4 @@
+import copy
 import warnings
 
 import anndata as ad
@@ -5,8 +6,9 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 import xarray as xr
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon, Polygon
 from skimage import measure
+from skimage.draw import polygon
 
 
 def create_spatialdata(
@@ -409,5 +411,73 @@ def compute_shapes(
 
     # Add to SpatialData
     sdata.shapes[shape_key] = sd.models.ShapesModel.parse(shapes_gdf)
+
+    return sdata
+
+
+def compute_labels(
+    sdata: sd.SpatialData,
+    labels_key: str = "cell_labels",
+    shapes_key: str = "cell_boundaries",
+    cell_key_shapes: str = "cell_id",
+) -> sd.SpatialData:
+    assert labels_key not in sdata.labels, (
+        f"Labels with key '{labels_key}' already exist in SpatialData. "
+        "Please choose a different key by setting the labels_key parameter or remove the existing labels."
+    )
+
+    # Ensure shapes are present
+    assert shapes_key in sdata.shapes, (
+        f"Shapes DataFrame must contain key: {shapes_key}. "
+        f"Available keys: {list(sdata.shapes.keys())}. "
+        f"If you want to use a different key, set the shapes_key parameter."
+    )
+
+    # Get shapes DataFrame
+    shapes = sdata.shapes[shapes_key]
+    assert cell_key_shapes in shapes.columns, (
+        f"Shapes DataFrame must contain column: {cell_key_shapes}. "
+        f"Available columns: {shapes.columns.tolist()}. "
+        f"If you want to use a different column, set the cell_key_shapes parameter."
+    )
+
+    # if an image is present, we can use the image to figure out the size of the labels
+    if len(sdata.images) > 0:
+        image = next(iter(sdata.images.values())).squeeze()
+        height, width = image.data.shape
+    else:
+        # if no image is present, we get the minimum and maximum coordinates from the shapes
+        max_x = shapes["geometry"].apply(lambda geom: geom.bounds[2]).max()
+        max_y = shapes["geometry"].apply(lambda geom: geom.bounds[3]).max()
+
+        height = int(max_y)
+        width = int(max_x)
+
+    # Create an empty label array
+    labels = np.zeros((height, width), dtype=np.int32)
+
+    # Fill the label array with cell IDs from shapes
+    for _, row in shapes.iterrows():
+        cell_id = row[cell_key_shapes]
+        geom = row["geometry"]
+
+        # Ensure we have only polygons
+        if isinstance(geom, Polygon):
+            polygons = [geom]
+        elif isinstance(geom, MultiPolygon):
+            polygons = list(geom.geoms)
+        else:
+            continue  # skip unsupported geometries
+
+        for poly in polygons:
+            coords = np.array(poly.exterior.coords)
+            rr, cc = polygon(coords[:, 1], coords[:, 0], shape=labels.shape)
+            labels[rr, cc] = cell_id
+
+    # copying the sdata object to avoid modifying the original
+    # TODO: should make it possible to run this in-place
+    sdata = copy.deepcopy(sdata)
+    # Add labels to SpatialData
+    sdata.labels[labels_key] = sd.models.Labels2DModel.parse(labels)
 
     return sdata
