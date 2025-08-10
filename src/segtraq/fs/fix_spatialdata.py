@@ -29,6 +29,68 @@ def create_spatialdata(
     consolidate_tables: bool = False,
     consolidate_labels: bool = True,
 ) -> sd.SpatialData:
+    """
+    Creates a SpatialData object from provided spatial transcriptomics data components.
+
+    This function integrates transcript (points), cell boundary (shapes), segmentation label (labels),
+    cell feature (tables), and image data into a single SpatialData object, performing consistency checks
+    and optional relabeling or consolidation of cell IDs across modalities.
+
+    Parameters
+    ----------
+    points : pd.DataFrame
+        DataFrame containing transcript coordinates and cell assignments.
+        Must include columns "x", "y", "z" and the column specified by `cell_key_points`.
+    shapes : pd.DataFrame or None, optional
+        DataFrame containing cell boundary polygons. Must include the column specified by `cell_key_shapes`.
+        Default is None.
+    labels : np.ndarray or None, optional
+        Segmentation label image (2D or 3D array) with cell IDs. Default is None.
+    tables : pd.DataFrame or None, optional
+        DataFrame containing per-cell features. Must include the column specified by `cell_key_tables`. Default is None.
+    images : np.ndarray or None, optional
+        Image data (2D or 3D array). Default is None.
+    cell_key_points : str, optional
+        Column name in `points` DataFrame indicating cell assignments. Default is "assignment".
+    cell_key_shapes : str, optional
+        Column name in `shapes` DataFrame indicating cell IDs. Default is "cell_id".
+    cell_key_tables : str, optional
+        Column name in `tables` DataFrame indicating cell IDs. Default is "cell_id".
+    shape_layer_key : str, optional
+        Column name in `shapes` DataFrame indicating layer information for splitting polygons. Default is "layer".
+    relabel_points : bool, optional
+        If True, increment all cell IDs in `points` by 1. Default is False.
+    relabel_shapes : bool, optional
+        If True, increment all cell IDs in `shapes` by 1. Default is False.
+    relabel_tables : bool, optional
+        If True, increment all cell IDs in `tables` by 1. Default is False.
+    table_metadata : tuple of str, optional
+        Column names in `tables` to use as metadata (obs) in AnnData.
+        Default is ("cell_id", "centroid_x", "centroid_y", "cell_size").
+    consolidate_shapes : bool, optional
+        If True, remove points with cell IDs not present in `shapes`. Default is False.
+    consolidate_tables : bool, optional
+        If True, remove points with cell IDs not present in `tables`. Default is False.
+    consolidate_labels : bool, optional
+        If True, remove points with cell IDs not present in `labels`. Default is True.
+
+    Returns
+    -------
+    sd.SpatialData
+        A SpatialData object containing the integrated spatial transcriptomics data.
+
+    Raises
+    ------
+    AssertionError
+        If required columns are missing, cell IDs are inconsistent, or data integrity checks fail.
+
+    Notes
+    -----
+    - Cell IDs in all modalities are expected to start at 1 unless relabeling is enabled.
+    - If consolidation is enabled for shapes, tables, or labels, points with missing cell IDs in
+    those modalities are removed.
+    - For shapes with multiple layers, polygons are split by the `shape_layer_key` column.
+    """
     assert isinstance(points, pd.DataFrame), "Points must be a pandas DataFrame"
     required_columns = ["x", "y", "z"]
     assert all(col in points.columns for col in required_columns), (
@@ -217,13 +279,47 @@ def validate_spatialdata(
     data_key: str = None,
 ) -> bool:
     """
-    Validate the given SpatialData object.
+    Validates the integrity of a SpatialData object by checking the consistency of cell IDs across points,
+    shapes, labels, and tables.
 
-    Args:
-        spatial_data (sd.SpatialData): The SpatialData object to validate.
+    This function ensures that:
+    - All points have corresponding shapes, labels, and tables.
+    - Cell IDs in points match those in shapes, labels, and tables.
+    - If shapes or labels are present, they contain all cell IDs from the points.
+    - If tables are present, they contain all cell IDs from the shapes.
 
-    Returns:
-        bool: True if the SpatialData object is valid, False otherwise.
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object to validate.
+    shape_key : str or list of str, optional
+        Key(s) for accessing shapes in the SpatialData. Default is "cell_boundaries".
+    label_key : str, optional
+        Key for accessing labels in the SpatialData. Default is "cell_labels".
+    points_key : str, optional
+        Key for accessing points in the SpatialData. Default is "transcripts".
+    table_key : str, optional
+        Key for accessing tables in the SpatialData. Default is "table".
+    cell_key_points : str, optional
+        Column name in points DataFrame indicating cell assignments. Default is "assignment".
+    cell_key_shapes : str, optional
+        Column name in shapes DataFrame indicating cell IDs. Default is "cell_id".
+    cell_key_tables : str, optional
+        Column name in tables DataFrame indicating cell IDs. Default is "cell_id".
+    data_key : str, optional
+        Key for accessing data in labels if they are stored as a DataTree. Default is None.
+
+    Raises
+    ------
+    TypeError
+        If the input is not an instance of sd.SpatialData.
+    ValueError
+        If the SpatialData object does not contain points or if there are inconsistencies in cell IDs.
+
+    Returns
+    -------
+    bool
+        True if the SpatialData object is valid, otherwise raises an error.
     """
     if not isinstance(sdata, sd.SpatialData):
         raise TypeError("Input must be an instance of sd.SpatialData")
@@ -357,10 +453,38 @@ def validate_spatialdata(
                 stacklevel=2,
             )
 
+    return True
+
 
 def compute_shapes(
     sdata: sd.SpatialData, labels_key: str = "labels", shape_key: str = "cell_boundaries"
 ) -> sd.SpatialData:
+    """
+    Compute cell shapes from the labels in the SpatialData object.
+    This function extracts cell boundaries from the segmentation labels and stores them as polygons in
+    the shapes of the SpatialData object.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing segmentation labels.
+    labels_key : str, optional
+        Key for accessing the labels in the SpatialData. Default is "labels".
+    shape_key : str, optional
+        Key for storing the computed shapes in the SpatialData. Default is "cell_boundaries".
+
+    Returns
+    -------
+    sd.SpatialData
+        The updated SpatialData object with computed shapes added.
+
+    Raises
+    ------
+    AssertionError
+        If the labels are not present or if the shape_key already exists in the shapes of the SpatialData.
+    TypeError
+        If the labels are not in the expected format (e.g., not a numpy array or DataFrame).
+    """
     assert shape_key not in sdata.shapes, (
         f"Shapes with key '{shape_key}' already exist in SpatialData. "
         "Please choose a different key by setting the shape_key parameter or remove the existing shapes."
@@ -421,6 +545,33 @@ def compute_labels(
     shapes_key: str = "cell_boundaries",
     cell_key_shapes: str = "cell_id",
 ) -> sd.SpatialData:
+    """
+    Compute labels from the shapes in the SpatialData object.
+    This function generates a label array from the cell boundaries stored in the shapes of the SpatialData object.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing cell boundaries.
+    labels_key : str, optional
+        Key for storing the generated labels in the SpatialData. Default is "cell_labels".
+    shapes_key : str, optional
+        Key for accessing the shapes in the SpatialData. Default is "cell_boundaries".
+    cell_key_shapes : str, optional
+        Key for accessing the cell IDs in the shapes. Default is "cell_id".
+
+    Returns
+    -------
+    sd.SpatialData
+        The updated SpatialData object with generated labels added.
+
+    Raises
+    ------
+    AssertionError
+        If the labels are not present or if the shapes_key does not exist in the shapes of the SpatialData.
+    TypeError
+        If the shapes are not in the expected format (e.g., not a DataFrame).
+    """
     assert labels_key not in sdata.labels, (
         f"Labels with key '{labels_key}' already exist in SpatialData. "
         "Please choose a different key by setting the labels_key parameter or remove the existing labels."
@@ -492,6 +643,40 @@ def compute_tables(
     cell_key_points: str = "assignment",
     gene_key: str = "gene",
 ) -> sd.SpatialData:
+    """
+    Compute tables from the shapes and points in the SpatialData object.
+    This function generates a table of gene expression values for each cell based on the transcript points.
+    It creates an AnnData object with the expression matrix and cell metadata, and stores it in the SpatialData object.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing shapes and points.
+    tables_key : str, optional
+        Key for storing the generated tables in the SpatialData. Default is "table".
+    shapes_key : str, optional
+        Key for accessing the shapes in the SpatialData. Default is "cell_boundaries".
+    points_key : str, optional
+        Key for accessing the points in the SpatialData. Default is "transcripts".
+    cell_key_shapes : str, optional
+        Key for accessing the cell IDs in the shapes. Default is "cell_id".
+    cell_key_points : str, optional
+        Key for accessing the cell assignments in the points. Default is "assignment".
+    gene_key : str, optional
+        Key for accessing the gene names in the points. Default is "gene".
+
+    Returns
+    -------
+    sd.SpatialData
+        The updated SpatialData object with generated tables added.
+
+    Raises
+    ------
+    AssertionError
+        If the tables already exist or if required keys or columns are missing.
+    TypeError
+        If the shapes or points are not in the expected format (e.g., not a DataFrame).
+    """
     assert tables_key not in sdata.tables, (
         f"Tables with key '{tables_key}' already exist in SpatialData. "
         f"Available tables: {list(sdata.tables.keys())}. "
