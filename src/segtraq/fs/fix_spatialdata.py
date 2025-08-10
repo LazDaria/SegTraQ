@@ -481,3 +481,91 @@ def compute_labels(
     sdata.labels[labels_key] = sd.models.Labels2DModel.parse(labels)
 
     return sdata
+
+
+def compute_tables(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    cell_key_shapes: str = "cell_id",
+    cell_key_points: str = "assignment",
+    gene_key: str = "gene",
+) -> sd.SpatialData:
+    assert tables_key not in sdata.tables, (
+        f"Tables with key '{tables_key}' already exist in SpatialData. "
+        f"Available tables: {list(sdata.tables.keys())}. "
+        "Please choose a different key by setting the tables_key parameter or remove the existing table."
+    )
+
+    # Ensure shapes are present
+    assert shapes_key in sdata.shapes, (
+        f"Shapes DataFrame must contain key: {shapes_key}. "
+        f"Available keys: {list(sdata.shapes.keys())}. "
+        "If you want to use a different key, set the shapes_key parameter."
+    )
+
+    # Ensure points are present
+    assert points_key in sdata.points, (
+        f"Points DataFrame must contain key: {points_key}. "
+        f"Available keys: {list(sdata.points.keys())}. "
+        "If you want to use a different key, set the points_key parameter."
+    )
+
+    shapes = sdata.shapes[shapes_key]
+    shapes = shapes.set_crs(None, allow_override=True)  # explicitly say “no CRS”
+    points = sdata.points[points_key]
+
+    # Check required columns in shapes
+    assert cell_key_shapes in shapes.columns, (
+        f"Shapes DataFrame must contain column: {cell_key_shapes}. "
+        f"Available columns: {shapes.columns.tolist()}. "
+        "If you want to use a different column, set the cell_key_shapes parameter."
+    )
+
+    # Check required columns in points
+    assert cell_key_points in points.columns, (
+        f"Points DataFrame must contain column: {cell_key_points}. "
+        f"Available columns: {points.columns.tolist()}. "
+        "If you want to use a different column, set the cell_key_points parameter."
+    )
+    assert gene_key in points.columns, (
+        f"Points DataFrame must contain column: {gene_key}. "
+        f"Available columns: {points.columns.tolist()}. "
+        "If you want to use a different column, set the gene_key parameter."
+    )
+
+    # 1. Build expression matrix from points
+    expr_df = (
+        points[[cell_key_points, gene_key]]  # just the columns we need
+        .compute()  # force into Pandas
+        .groupby([cell_key_points, gene_key])
+        .size()
+        .unstack(fill_value=0)
+    )
+
+    # 2. Create obs from shapes
+    obs_df = shapes.set_index(cell_key_shapes)[["geometry"]].copy()
+    obs_df["cell_id"] = obs_df.index
+    obs_df["centroid_x"] = obs_df.geometry.centroid.x
+    obs_df["centroid_y"] = obs_df.geometry.centroid.y
+    obs_df["cell_size"] = obs_df.geometry.area
+    obs_df.drop(columns=["geometry"], inplace=True)
+
+    # 3. Align obs and X
+    all_cells = obs_df.index.union(expr_df.index)
+    obs_df = obs_df.reindex(all_cells)
+    expr_df = expr_df.reindex(all_cells, fill_value=0)
+    expr_df.columns = expr_df.columns.astype(str)
+
+    obs_df.index = obs_df.index.astype(str)
+    expr_df.index = expr_df.index.astype(str)
+    expr_df.columns = expr_df.columns.astype(str)
+
+    # 4. Create AnnData
+    adata = ad.AnnData(X=expr_df.to_numpy(), obs=obs_df, var=pd.DataFrame(index=expr_df.columns))
+
+    # 5. Store in SpatialData
+    sdata = copy.deepcopy(sdata)
+    sdata.tables[tables_key] = adata
+    return sdata
