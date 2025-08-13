@@ -356,7 +356,7 @@ def compute_correlation_between_parts(
                     "cell_id": cell_id,
                     "best_nuc_id": best_nuc_id,
                     "IoU": iou_val,
-                    "correlation_parts": np.nan, 
+                    "correlation_parts": np.nan,
                 }
             )  # TODO np.nan
             continue
