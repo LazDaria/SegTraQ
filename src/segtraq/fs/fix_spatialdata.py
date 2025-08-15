@@ -1,9 +1,11 @@
 import copy
+import warnings
 
 import anndata as ad
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+import xarray as xr
 from shapely.geometry import MultiPolygon, Polygon
 from skimage import measure
 from skimage.draw import polygon
@@ -272,6 +274,7 @@ def create_spatialdata(
 def validate_spatialdata(
     sdata: sd.SpatialData,
     shape_key: str | list[str] = "cell_boundaries",
+    label_key: str = "cell_labels",
     points_key: str = "transcripts",
     table_key: str = "table",
     cell_key_points: str = "assignment",
@@ -296,6 +299,8 @@ def validate_spatialdata(
         The SpatialData object to validate.
     shape_key : str or list of str, optional
         Key(s) for accessing shapes in the SpatialData. Default is "cell_boundaries".
+    label_key : str, optional
+        Key for accessing labels in the SpatialData. Default is "cell_labels".
     points_key : str, optional
         Key for accessing points in the SpatialData. Default is "transcripts".
     table_key : str, optional
@@ -328,6 +333,7 @@ def validate_spatialdata(
 
     contains_points = len(sdata.points) > 0
     contains_shapes = len(sdata.shapes) > 0
+    contains_labels = len(sdata.labels) > 0
     contains_tables = len(sdata.tables) > 0
 
     # check if there are points in the spatial data
@@ -343,6 +349,7 @@ def validate_spatialdata(
     )
     transcript_ids = set(points[cell_key_points].unique())
     shapes_cell_ids = set()
+    labels_cell_ids = set()
 
     # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
     if contains_shapes:
@@ -400,6 +407,49 @@ def validate_spatialdata(
                 f"Missing {len(missing_in_shapes)} cell IDs in shapes: {missing_in_shapes}. "
                 "These cells are present in tables, but not in shapes. "
                 "This might lead to inconsistencies in the spatialdata object."
+            )
+
+    # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
+    if contains_labels:
+        labels = sdata.labels[label_key]
+
+        # handling weird spatialdata structures
+        if isinstance(labels, xr.DataTree):
+            assert data_key is not None, (
+                f"It looks like your labels are stored as a DataTree. "
+                f"Please provide a data_key to access the labels data. Available keys are: {list(labels.keys())}."
+            )
+            assert data_key.split("/")[0] in labels.keys(), (
+                f"Data key {data_key} not found in the labels data. Available keys: {list(labels.keys())}"
+            )
+
+            labels = labels[data_key]  # Get the dataset node
+
+            assert isinstance(labels, xr.DataArray), (
+                f"The labels data should be a DataArray. Please provide a valid data key. "
+                f"Available keys are: {[data_key + '/' + x for x in list(labels.keys())]}."
+            )
+
+        # label ID and cell ID are not the same
+        labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
+
+    # if there are both shapes and labels, ensure they are compatible
+    if contains_shapes and contains_labels:
+        num_missing_in_shapes = len(labels_cell_ids) - len(shapes_cell_ids)
+        num_missing_in_labels = len(shapes_cell_ids) - len(labels_cell_ids)
+        if num_missing_in_labels > 0:
+            warnings.warn(
+                f"Missing {num_missing_in_labels} cell IDs in labels."
+                f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
+                f"This might lead to inconsistencies in the spatialdata object.",
+                stacklevel=2,
+            )
+        if num_missing_in_shapes > 0:
+            warnings.warn(
+                f"Missing {num_missing_in_shapes} cell IDs in shapes: "
+                f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
+                f"This might lead to inconsistencies in the spatialdata object.",
+                stacklevel=2,
             )
 
     return True
