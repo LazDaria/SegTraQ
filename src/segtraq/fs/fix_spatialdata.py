@@ -5,6 +5,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+import geopandas as gpd
 import xarray as xr
 from shapely.geometry import MultiPolygon, Polygon
 from skimage import measure
@@ -17,7 +18,7 @@ def create_spatialdata(
     labels=None,
     tables=None,
     images=None,
-    cell_key_points="assignment",
+    cell_key_points="cell_id",
     cell_key_shapes="cell_id",
     cell_key_tables="cell_id",
     shape_layer_key="layer",
@@ -29,6 +30,7 @@ def create_spatialdata(
     consolidate_tables: bool = False,
     consolidate_labels: bool = True,
     background_cell_id: str = "UNASSIGNED",
+    coord_columns: tuple[str, str, str] = ("x", "y", "z"),
 ) -> sd.SpatialData:
     """
     Creates a SpatialData object from provided spatial transcriptomics data components.
@@ -41,7 +43,7 @@ def create_spatialdata(
     ----------
     points : pd.DataFrame
         DataFrame containing transcript coordinates and cell assignments.
-        Must include columns "x", "y", "z" and the column specified by `cell_key_points`.
+        Must include the column specified by `cell_key_points`.
     shapes : pd.DataFrame or None, optional
         DataFrame containing cell boundary polygons. Must include the column specified by `cell_key_shapes`.
         Default is None.
@@ -76,6 +78,8 @@ def create_spatialdata(
         If True, remove points with cell IDs not present in `labels`. Default is True.
     background_cell_id : str, optional
         Cell ID to use for unassigned transcripts in points. Default is "UNASSIGNED".
+    coord_columns : tuple of str, optional
+        Names of the coordinate columns in `points` DataFrame. Default is ("x", "y", "z").
 
     Returns
     -------
@@ -95,10 +99,16 @@ def create_spatialdata(
     - For shapes with multiple layers, polygons are split by the `shape_layer_key` column.
     """
     assert isinstance(points, pd.DataFrame), "Points must be a pandas DataFrame"
-    required_columns = ["x", "y", "z"]
-    assert all(col in points.columns for col in required_columns), (
-        f"Points DataFrame must contain columns: {required_columns}"
+    # check that x, y, and z coordinates are present in the points DataFrame
+    assert all(col in points.columns for col in coord_columns), (
+        f"Points DataFrame must contain columns: {coord_columns}. "
+        f"Available columns: {points.columns.tolist()}. "
+        f"If you want to use different columns for the coordinates, set the coord_columns parameter."
     )
+    
+    # if the coords_columns are not x, y, z, we relabel them
+    if coord_columns != ("x", "y", "z"):
+        points = points.rename(columns={coord_columns[0]: "x", coord_columns[1]: "y", coord_columns[2]: "z"})
 
     # === POINTS (TRANSCRIPTS) ===
     assert cell_key_points in points.columns, (
@@ -106,16 +116,17 @@ def create_spatialdata(
         f"Available columns: {points.columns.tolist()}. "
         f"If you want to use a different column, set the cell_key_points parameter."
     )
-    # check that the minimum cell ID is 1
-    if not relabel_points:
-        assert points[cell_key_points].min() >= 1, (
-            "Cell IDs in points must start at 1. "
-            f"Found minimum cell ID: {points[cell_key_points].min()}. "
-            f"If you want to relabel the points by adding 1, set relabel_points=True."
-        )
-    else:
-        points = points.copy()  # avoid modifying the original DataFrame
-        points[cell_key_points] = points[cell_key_points] + 1
+    # check that the minimum cell ID is 1 (if the cell IDs are integer-based)
+    if points[cell_key_points].dtype.kind in "iu":
+        if not relabel_points:
+            assert points[cell_key_points].min() >= 1, (
+                "Cell IDs in points must start at 1. "
+                f"Found minimum cell ID: {points[cell_key_points].min()}. "
+                f"If you want to relabel the points by adding 1, set relabel_points=True."
+            )
+        else:
+            points = points.copy()  # avoid modifying the original DataFrame
+            points[cell_key_points] = points[cell_key_points] + 1
 
     # === SHAPES (POLYGONS) ===
     shapes_sd = None
@@ -131,16 +142,17 @@ def create_spatialdata(
         )
         shapes_cell_ids = set(shapes[cell_key_shapes])
 
-        if not relabel_shapes:
-            if shapes is not None:
-                assert shapes[cell_key_shapes].min() >= 1, (
-                    f"Cell IDs in shapes must start at 1. "
-                    f"Found minimum cell ID: {shapes[cell_key_shapes].min()}. "
-                    f"If you want to relabel the shapes by adding 1, set relabel_shapes=True."
-                )
-        else:
-            shapes = shapes.copy()  # avoid modifying the original DataFrame
-            shapes[cell_key_shapes] = shapes[cell_key_shapes] + 1
+        if shapes[cell_key_shapes].dtype.kind in "iu":
+            if not relabel_shapes:
+                if shapes is not None:
+                    assert shapes[cell_key_shapes].min() >= 1, (
+                        f"Cell IDs in shapes must start at 1. "
+                        f"Found minimum cell ID: {shapes[cell_key_shapes].min()}. "
+                        f"If you want to relabel the shapes by adding 1, set relabel_shapes=True."
+                    )
+            else:
+                shapes = shapes.copy()  # avoid modifying the original DataFrame
+                shapes[cell_key_shapes] = shapes[cell_key_shapes] + 1
 
         transcript_ids = set(points[cell_key_points].unique())
         missing_in_polygons = transcript_ids - shapes_cell_ids
@@ -753,3 +765,33 @@ def compute_tables(
     sdata = copy.deepcopy(sdata)
     sdata.tables[tables_key] = adata
     return sdata
+
+
+def create_geopandas_df(df: pd.DataFrame) -> gpd.GeoDataFrame:
+    polygons = []
+    ids = []
+
+    assert 'cell_id' in df.columns, (
+        "DataFrame must contain 'cell_id' column to group by cell IDs."
+    )
+    assert 'vertex_x' in df.columns and 'vertex_y' in df.columns, (
+        "DataFrame must contain 'vertex_x' and 'vertex_y' columns for polygon coordinates."
+    )
+
+    for cell_id, group in df.groupby('cell_id'):
+        # Group by label_id if you may have multiple polygons per cell
+        polys = []
+        for _, sub in group.groupby('label_id'):
+            coords = list(zip(sub['vertex_x'], sub['vertex_y']))
+            if len(coords) >= 3:  # valid polygon
+                polys.append(Polygon(coords))
+        if len(polys) == 1:
+            polygons.append(polys[0])
+        else:
+            polygons.append(MultiPolygon(polys))
+        ids.append(cell_id)
+
+    return gpd.GeoDataFrame(
+        {'cell_id': ids, 'geometry': polygons},
+        crs="EPSG:4326"  # or your actual CRS
+    )
