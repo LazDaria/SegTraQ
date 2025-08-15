@@ -1,11 +1,9 @@
 import copy
-import warnings
 
 import anndata as ad
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-import xarray as xr
 from shapely.geometry import MultiPolygon, Polygon
 from skimage import measure
 from skimage.draw import polygon
@@ -28,6 +26,7 @@ def create_spatialdata(
     consolidate_shapes: bool = False,
     consolidate_tables: bool = False,
     consolidate_labels: bool = True,
+    background_cell_id: str = "UNASSIGNED",
 ) -> sd.SpatialData:
     """
     Creates a SpatialData object from provided spatial transcriptomics data components.
@@ -73,6 +72,8 @@ def create_spatialdata(
         If True, remove points with cell IDs not present in `tables`. Default is False.
     consolidate_labels : bool, optional
         If True, remove points with cell IDs not present in `labels`. Default is True.
+    background_cell_id : str, optional
+        Cell ID to use for unassigned transcripts in points. Default is "UNASSIGNED".
 
     Returns
     -------
@@ -262,6 +263,7 @@ def create_spatialdata(
         cell_key_shapes=cell_key_shapes,
         cell_key_tables=cell_key_tables,
         data_key=None,
+        background_cell_id=background_cell_id,
     )
 
     return sdata
@@ -270,13 +272,13 @@ def create_spatialdata(
 def validate_spatialdata(
     sdata: sd.SpatialData,
     shape_key: str | list[str] = "cell_boundaries",
-    label_key: str = "cell_labels",
     points_key: str = "transcripts",
     table_key: str = "table",
     cell_key_points: str = "assignment",
     cell_key_shapes: str = "cell_id",
     cell_key_tables: str = "cell_id",
     data_key: str = None,
+    background_cell_id: str = "UNASSIGNED",
 ) -> bool:
     """
     Validates the integrity of a SpatialData object by checking the consistency of cell IDs across points,
@@ -294,8 +296,6 @@ def validate_spatialdata(
         The SpatialData object to validate.
     shape_key : str or list of str, optional
         Key(s) for accessing shapes in the SpatialData. Default is "cell_boundaries".
-    label_key : str, optional
-        Key for accessing labels in the SpatialData. Default is "cell_labels".
     points_key : str, optional
         Key for accessing points in the SpatialData. Default is "transcripts".
     table_key : str, optional
@@ -308,6 +308,8 @@ def validate_spatialdata(
         Column name in tables DataFrame indicating cell IDs. Default is "cell_id".
     data_key : str, optional
         Key for accessing data in labels if they are stored as a DataTree. Default is None.
+    background_cell_id : str, optional
+        Cell ID to use for unassigned transcripts in points. Default is "UNASSIGNED".
 
     Raises
     ------
@@ -326,7 +328,6 @@ def validate_spatialdata(
 
     contains_points = len(sdata.points) > 0
     contains_shapes = len(sdata.shapes) > 0
-    contains_labels = len(sdata.labels) > 0
     contains_tables = len(sdata.tables) > 0
 
     # check if there are points in the spatial data
@@ -342,7 +343,6 @@ def validate_spatialdata(
     )
     transcript_ids = set(points[cell_key_points].unique())
     shapes_cell_ids = set()
-    labels_cell_ids = set()
 
     # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
     if contains_shapes:
@@ -366,10 +366,12 @@ def validate_spatialdata(
             f"If you want to use a different column, set the cell_key_shapes parameter."
         )
         shapes_cell_ids = set(shapes[cell_key_shapes])
-        missing_in_polygons = transcript_ids - shapes_cell_ids
+        missing_in_polygons = transcript_ids - shapes_cell_ids - {background_cell_id}
         assert len(missing_in_polygons) == 0, (
             f"Missing {len(missing_in_polygons)} cell IDs from polygons: {missing_in_polygons}. "
-            f"These cell IDs are present in the points, but not in the shapes."
+            f"These cell IDs are present in the points, but not in the shapes. "
+            f"If your missing cell ID is indicating an unassigned transcript, "
+            f"you can set the background_cell_id parameter."
         )
 
         # if shapes and tables are present, ensure that the cell IDs match
@@ -398,59 +400,6 @@ def validate_spatialdata(
                 f"Missing {len(missing_in_shapes)} cell IDs in shapes: {missing_in_shapes}. "
                 "These cells are present in tables, but not in shapes. "
                 "This might lead to inconsistencies in the spatialdata object."
-            )
-
-    # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
-    if contains_labels:
-        labels = sdata.labels[label_key]
-
-        # handling weird spatialdata structures
-        if isinstance(labels, xr.DataTree):
-            assert data_key is not None, (
-                f"It looks like your labels are stored as a DataTree. "
-                f"Please provide a data_key to access the labels data. Available keys are: {list(labels.keys())}."
-            )
-            assert data_key.split("/")[0] in labels.keys(), (
-                f"Data key {data_key} not found in the labels data. Available keys: {list(labels.keys())}"
-            )
-
-            labels = labels[data_key]  # Get the dataset node
-
-            assert isinstance(labels, xr.DataArray), (
-                f"The labels data should be a DataArray. Please provide a valid data key. "
-                f"Available keys are: {[data_key + '/' + x for x in list(labels.keys())]}."
-            )
-
-        labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
-        missing_in_labels = transcript_ids - labels_cell_ids
-        assert len(missing_in_labels) == 0, (
-            f"Missing {len(missing_in_labels)} cell IDs from labels: "
-            f"{list(missing_in_labels)[: min(5, len(missing_in_labels))]}... "
-            f"These cell IDs are present in the points, but not in the labels. "
-            f"The cell IDs in your labels look like this: {list(labels_cell_ids)[: min(5, len(labels_cell_ids))]}... "
-        )
-
-    # if there are both shapes and labels, ensure they are compatible
-    if contains_shapes and contains_labels:
-        missing_in_shapes = labels_cell_ids - shapes_cell_ids
-        missing_in_labels = shapes_cell_ids - labels_cell_ids
-        if len(missing_in_labels) > 0:
-            warnings.warn(
-                f"Missing {len(missing_in_labels)} cell IDs in labels: "
-                f"{list(missing_in_labels)[: min(5, len(missing_in_labels))]}... "
-                f"These cells are present in shapes, but not in labels. "
-                f"Cell IDs in labels look like this: {list(labels_cell_ids)[: min(5, len(labels_cell_ids))]}... "
-                f"This might lead to inconsistencies in the spatialdata object.",
-                stacklevel=2,
-            )
-        if len(missing_in_shapes) > 0:
-            warnings.warn(
-                f"Missing {len(missing_in_shapes)} cell IDs in shapes: "
-                f"{list(missing_in_shapes)[: min(5, len(missing_in_shapes))]}... "
-                f"These cells are present in labels, but not in shapes. "
-                f"Cell IDs in shapes look like this: {list(shapes_cell_ids)[: min(5, len(shapes_cell_ids))]}... "
-                f"This might lead to inconsistencies in the spatialdata object.",
-                stacklevel=2,
             )
 
     return True
