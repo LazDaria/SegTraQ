@@ -255,7 +255,6 @@ def morphological_features(
         "elongation",
         "eccentricity",
         "compactness",
-        "sphericity",
     ]
 
     # If no features specified, compute all
@@ -370,15 +369,5 @@ def morphological_features(
         if areas is None:
             areas = geom.area
         features["compactness"] = (perimeters**2) / (areas + 1e-6)
-
-    if "sphericity" in features_to_compute:
-        # Use circularity as a proxy for sphericity
-        if "circularity" not in features.columns:
-            if areas is None:
-                areas = geom.area
-            if perimeters is None:
-                perimeters = geom.length
-            features["circularity"] = 4 * np.pi * areas / (perimeters**2 + 1e-6)
-        features["sphericity"] = features["circularity"]
 
     return features
