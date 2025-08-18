@@ -69,7 +69,7 @@ def compute_silhouette_score(
     sdata: sd.SpatialData,
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     metric: str = "euclidean",
-    ncomps: int = 30,
+    ncomps: int = 50,
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
 ) -> float:
@@ -85,7 +85,7 @@ def compute_silhouette_score(
     metric : str, optional
         The metric to use for silhouette score calculation, by default "euclidean".
     ncomps : int, optional
-        The number of principal components to use, by default 30.
+        The number of principal components to use, by default 50.
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     random_state : int, optional
