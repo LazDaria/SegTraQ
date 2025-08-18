@@ -44,7 +44,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'modules/nuclear_correlation';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="The fix spatialdata (fs) accessor" href="fix_spatialdata.html" />
+    <link rel="next" title="Baseline metrics" href="../notebooks/baseline.html" />
     <link rel="prev" title="The clustering stability (cs) accessor" href="clustering_stability.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -154,16 +154,12 @@
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
-
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
 </ul>
 
     </div>
@@ -312,7 +308,6 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_correlation()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious()</span></code></a></li>
 </ul>
             </nav>
@@ -329,52 +324,6 @@ document.write(`
 <h1>The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor<a class="headerlink" href="#the-nuclear-correlation-nc-accessor" title="Link to this heading">#</a></h1>
 <p>The nuclear correlation accessor provides metrics to evaluate the correlation between the cell and nuclear segmentation mask.</p>
 <dl class="py function" id="module-segtraq.nc.nuclear_correlation">
-<dt class="sig sig-object py" id="segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation">
-<span class="sig-prename descclassname"><span class="pre">segtraq.nc.nuclear_correlation.</span></span><span class="sig-name descname"><span class="pre">compute_cell_nuc_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'pearson'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcripts_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_coordinate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_coordinate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation" title="Link to this definition">#</a></dt>
-<dd><p>For each cell in the SpatialData table, identifies the nucleus with highest IoU
-and computes a correlation (e.g. Pearson) between the gene expression profiles
-of the cell and that nucleus.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>spatialdata.SpatialData</em>) – <dl class="simple">
-<dt>A SpatialData object containing:</dt><dd><ul>
-<li><p><cite>.shapes[‘cell_boundaries’]</cite> and <cite>.shapes[‘nucleus_boundaries’]</cite>
-for polygon geometries,</p></li>
-<li><p><cite>.tables[table_key]</cite> as an AnnData table.</p></li>
-</ul>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>table_key</strong> (<em>str</em>) – Key in <cite>sdata.tables</cite> pointing to the expression matrix.</p></li>
-<li><p><strong>cell_id_key</strong> (<em>str</em>) – Column in <a href="#id1"><span class="problematic" id="id2">`</span></a>sdata.tables[table_key].obs containing cell IDs to match with shapes.</p></li>
-<li><p><strong>metric</strong> (<em>str</em>) – Correlation metric. Currently supports only <cite>“pearson”</cite>.</p></li>
-<li><p><strong>transcripts_key</strong> (<em>str</em>) – Name of transcripts <cite>Points</cite> element.</p></li>
-<li><p><strong>nucleus_by</strong> (<em>str</em>) – Name of nucleus shape layer to aggregate by.</p></li>
-<li><p><strong>feature_column</strong> (<em>str</em>) – Column in transcripts pointing to feature (e.g. gene/protein).</p></li>
-<li><p><strong>x_coordinate</strong> (<em>str</em>) – Column in transcripts pointing x coordinate.</p></li>
-<li><p><strong>y_coordinate</strong> (<em>str</em>) – Column in transcripts pointing y coordinate.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>DataFrame with columns:</dt><dd><ul class="simple">
-<li><p><cite>cell_id</cite>: identifier of each cell,</p></li>
-<li><p><cite>best_nuc_id</cite>: matching nucleus ID with highest IoU (or None),</p></li>
-<li><p><cite>correlation</cite>: Pearson correlation between the cell and its matched nucleus gene counts
-(NaN if no match).</p></li>
-</ul>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pandas.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">
 <span class="sig-prename descclassname"><span class="pre">segtraq.nc.nuclear_correlation.</span></span><span class="sig-name descname"><span class="pre">compute_cell_nuc_ious</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nuc_shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_progress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious" title="Link to this definition">#</a></dt>
 <dd><p>Compute per-cell IoU between cell and nucleus boundaries in a SpatialData object.</p>
@@ -420,11 +369,11 @@ for polygon geometries,</p></li>
       </div>
     </a>
     <a class="right-next"
-       href="fix_spatialdata.html"
+       href="../notebooks/baseline.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</p>
+        <p class="prev-next-title">Baseline metrics</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -444,7 +393,6 @@ for polygon geometries,</p></li>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_correlation()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious"><code class="docutils literal notranslate"><span class="pre">compute_cell_nuc_ious()</span></code></a></li>
 </ul>
   </nav></div>

@@ -15,7 +15,6 @@ SegTraQ documentation
    modules/baseline
    modules/clustering_stability
    modules/nuclear_correlation
-   modules/fix_spatialdata
 
 .. toctree::
    :maxdepth: 1
@@ -24,5 +23,3 @@ SegTraQ documentation
    notebooks/baseline
    notebooks/clustering_stability
    notebooks/nuclear_correlation
-   notebooks/labeling_via_correlation
-   notebooks/z_plane_correlation
