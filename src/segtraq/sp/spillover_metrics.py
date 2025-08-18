@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+from shapely import Point, LinearRing
 
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
@@ -126,7 +127,11 @@ def distance_to_membrane(
     Returns
     -------
     pd.DataFrame
-        A DataFrame with column `["distance_to_outlien"]`
+        A DataFrame with columns `["distance_to_outline_inverse", "distance_to_outline" and "cell_area"]`
+
+    Notes
+    -----
+    Requires that the input AnnData table contains a "cell_area" column in `.obs`.
 
     """
     
@@ -152,24 +157,35 @@ def distance_to_membrane(
     gdf = sdata["cell_boundaries"]
     
     #make the cell key the index for joining the two dataframes
-    df = df.set_index(df["cell_key"])
+    df = df.set_index(df[cell_key])
     
     #merge the geopandas dataframe with the dataframe from above
     gdf = gdf.join(df)
     
     #compute the linear outline of the cell segmentation
-    gdf['linear_geometry'] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis = 1)
-    
-    #compute the distance to the linear outline of the cell segmentation
-    gdf["distance_to_outline"] = gdf.apply(lambda x: x['linear_geometry'].project(point), axis = 1)
+    gdf["linear_geometry"] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis = 1)
     
     #drop NaN values in the coordinate point column
     gdf = gdf.dropna(subset="coordinate_points")
     
-    #calculate the distance to the linear segment
-    gdf["distance_to_outline"] = gdf.apply(lambda x: x['linear_geometry'].project(x["coordinate_points"]), axis = 1)
+    #calculate the distance of the transcript points to the linear segment
+    gdf["distance_to_outline"] = gdf.apply(lambda x: x["coordinate_points"].distance(x["linear_geometry"]), axis = 1)
+    
+    #rename index as this should not have the same name as one of the columns
+    gdf.index.name = "index"
     
     #calculate the mean transcript distance to the cell outline per cell
     mean_distance_to_outline = gdf.groupby(cell_key)[["distance_to_outline"]].mean()
-
+    
+    #extract the cell area
+    area_df = sdata[table_key].obs[[cell_key, "cell_area"]]
+    mean_distance_to_outline = mean_distance_to_outline.merge(area_df, on=cell_key, how="left")
+    
+    #normalise by area
+    mean_distance_to_outline["distance_to_outline_inverse"] = mean_distance_to_outline["distance_to_outline"]/mean_distance_to_outline["cell_area"]
+    
+    #take the inverse - score is high when distance is small. sqrt transformed to handle right skewed distribution
+    mean_distance_to_outline["distance_to_outline_inverse"] = 1/np.sqrt(mean_distance_to_outline["distance_to_outline"])
+    mean_distance_to_outline = mean_distance_to_outline.set_index(mean_distance_to_outline[cell_key])
+    
     return(mean_distance_to_outline)
