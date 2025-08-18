@@ -1,0 +1,624 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>The fix spatialdata (fs) accessor &#8212; SegTraQ  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'modules/fix_spatialdata';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Baseline metrics" href="../notebooks/baseline.html" />
+    <link rel="prev" title="The nuclear correlation (nc) accessor" href="nuclear_correlation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SegTraQ  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/modules/fix_spatialdata.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>The fix spatialdata (fs) accessor</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.compute_labels"><code class="docutils literal notranslate"><span class="pre">compute_labels()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.compute_shapes"><code class="docutils literal notranslate"><span class="pre">compute_shapes()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.compute_tables"><code class="docutils literal notranslate"><span class="pre">compute_tables()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.create_spatialdata"><code class="docutils literal notranslate"><span class="pre">create_spatialdata()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.validate_spatialdata"><code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code></a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="the-fix-spatialdata-fs-accessor">
+<h1>The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor<a class="headerlink" href="#the-fix-spatialdata-fs-accessor" title="Link to this heading">#</a></h1>
+<p>The fix spatialdata accessor provides functions for creating and validating spatial transcriptomics data.</p>
+<dl class="py function" id="module-segtraq.fs.fix_spatialdata">
+<dt class="sig sig-object py" id="segtraq.fs.fix_spatialdata.compute_labels">
+<span class="sig-prename descclassname"><span class="pre">segtraq.fs.fix_spatialdata.</span></span><span class="sig-name descname"><span class="pre">compute_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_labels'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.fs.fix_spatialdata.compute_labels" title="Link to this definition">#</a></dt>
+<dd><p>Compute labels from the shapes in the SpatialData object.
+This function generates a label array from the cell boundaries stored in the shapes of the SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing cell boundaries.</p></li>
+<li><p><strong>labels_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for storing the generated labels in the SpatialData. Default is “cell_labels”.</p></li>
+<li><p><strong>shapes_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the shapes in the SpatialData. Default is “cell_boundaries”.</p></li>
+<li><p><strong>cell_key_shapes</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the cell IDs in the shapes. Default is “cell_id”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated SpatialData object with generated labels added.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sd.SpatialData</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>AssertionError</strong> – If the labels are not present or if the shapes_key does not exist in the shapes of the SpatialData.</p></li>
+<li><p><strong>TypeError</strong> – If the shapes are not in the expected format (e.g., not a DataFrame).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.fs.fix_spatialdata.compute_shapes">
+<span class="sig-prename descclassname"><span class="pre">segtraq.fs.fix_spatialdata.</span></span><span class="sig-name descname"><span class="pre">compute_shapes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'labels'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.fs.fix_spatialdata.compute_shapes" title="Link to this definition">#</a></dt>
+<dd><p>Compute cell shapes from the labels in the SpatialData object.
+This function extracts cell boundaries from the segmentation labels and stores them as polygons in
+the shapes of the SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing segmentation labels.</p></li>
+<li><p><strong>labels_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the labels in the SpatialData. Default is “labels”.</p></li>
+<li><p><strong>shape_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for storing the computed shapes in the SpatialData. Default is “cell_boundaries”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated SpatialData object with computed shapes added.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sd.SpatialData</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>AssertionError</strong> – If the labels are not present or if the shape_key already exists in the shapes of the SpatialData.</p></li>
+<li><p><strong>TypeError</strong> – If the labels are not in the expected format (e.g., not a numpy array or DataFrame).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.fs.fix_spatialdata.compute_tables">
+<span class="sig-prename descclassname"><span class="pre">segtraq.fs.fix_spatialdata.</span></span><span class="sig-name descname"><span class="pre">compute_tables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'assignment'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'gene'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.fs.fix_spatialdata.compute_tables" title="Link to this definition">#</a></dt>
+<dd><p>Compute tables from the shapes and points in the SpatialData object.
+This function generates a table of gene expression values for each cell based on the transcript points.
+It creates an AnnData object with the expression matrix and cell metadata, and stores it in the SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing shapes and points.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for storing the generated tables in the SpatialData. Default is “table”.</p></li>
+<li><p><strong>shapes_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the shapes in the SpatialData. Default is “cell_boundaries”.</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the points in the SpatialData. Default is “transcripts”.</p></li>
+<li><p><strong>cell_key_shapes</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the cell IDs in the shapes. Default is “cell_id”.</p></li>
+<li><p><strong>cell_key_points</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the cell assignments in the points. Default is “assignment”.</p></li>
+<li><p><strong>gene_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing the gene names in the points. Default is “gene”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated SpatialData object with generated tables added.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sd.SpatialData</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>AssertionError</strong> – If the tables already exist or if required keys or columns are missing.</p></li>
+<li><p><strong>TypeError</strong> – If the shapes or points are not in the expected format (e.g., not a DataFrame).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.fs.fix_spatialdata.create_spatialdata">
+<span class="sig-prename descclassname"><span class="pre">segtraq.fs.fix_spatialdata.</span></span><span class="sig-name descname"><span class="pre">create_spatialdata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_shapes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_tables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_layer_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'layer'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relabel_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relabel_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relabel_tables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('cell_id',</span> <span class="pre">'centroid_x',</span> <span class="pre">'centroid_y',</span> <span class="pre">'cell_size')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_tables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_cell_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coord_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('x',</span> <span class="pre">'y',</span> <span class="pre">'z')</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.fs.fix_spatialdata.create_spatialdata" title="Link to this definition">#</a></dt>
+<dd><p>Creates a SpatialData object from provided spatial transcriptomics data components.</p>
+<p>This function integrates transcript (points), cell boundary (shapes), segmentation label (labels),
+cell feature (tables), and image data into a single SpatialData object, performing consistency checks
+and optional relabeling or consolidation of cell IDs across modalities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>points</strong> (<em>pd.DataFrame</em>) – DataFrame containing transcript coordinates and cell assignments.
+Must include the column specified by <cite>cell_key_points</cite>.</p></li>
+<li><p><strong>shapes</strong> (<em>pd.DataFrame</em><em>, </em><em>dictionary</em><em>, or </em><em>None</em><em>, </em><em>optional</em>) – DataFrame containing cell boundary polygons. Must include the column specified by <cite>cell_key_shapes</cite>.
+If a dictionary is provided, it should contain a key ‘cell_boundaries’ with the DataFrame.
+Default is None.</p></li>
+<li><p><strong>labels</strong> (<em>np.ndarray</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Segmentation label image (2D or 3D array) with cell IDs. Default is None.
+If a dictionary is provided, it should contain a key ‘cell_labels’ with the DataFrame.</p></li>
+<li><p><strong>tables</strong> (<em>pd.DataFrame</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – DataFrame containing per-cell features. Must include the column specified by <cite>cell_key_tables</cite>. Default is None.</p></li>
+<li><p><strong>images</strong> (<em>np.ndarray</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Image data (2D or 3D array). Default is None.</p></li>
+<li><p><strong>cell_key_points</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>points</cite> DataFrame indicating cell assignments. Default is “assignment”.</p></li>
+<li><p><strong>cell_key_shapes</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>shapes</cite> DataFrame indicating cell IDs. Default is “cell_id”.</p></li>
+<li><p><strong>cell_key_tables</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>tables</cite> DataFrame indicating cell IDs. Default is “cell_id”.</p></li>
+<li><p><strong>shape_layer_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>shapes</cite> DataFrame indicating layer information for splitting polygons. Default is “layer”.</p></li>
+<li><p><strong>relabel_points</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, increment all cell IDs in <cite>points</cite> by 1. Default is False.</p></li>
+<li><p><strong>relabel_shapes</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, increment all cell IDs in <cite>shapes</cite> by 1. Default is False.</p></li>
+<li><p><strong>relabel_tables</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, increment all cell IDs in <cite>tables</cite> by 1. Default is False.</p></li>
+<li><p><strong>table_metadata</strong> (<em>tuple</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Column names in <cite>tables</cite> to use as metadata (obs) in AnnData.
+Default is (“cell_id”, “centroid_x”, “centroid_y”, “cell_size”).</p></li>
+<li><p><strong>consolidate_shapes</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, remove points with cell IDs not present in <cite>shapes</cite>. Default is False.</p></li>
+<li><p><strong>consolidate_tables</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, remove points with cell IDs not present in <cite>tables</cite>. Default is False.</p></li>
+<li><p><strong>background_cell_id</strong> (<em>str</em><em>, </em><em>optional</em>) – Cell ID to use for unassigned transcripts in points. Default is “UNASSIGNED”.</p></li>
+<li><p><strong>coord_columns</strong> (<em>tuple</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Names of the coordinate columns in <cite>points</cite> DataFrame. Default is (“x”, “y”, “z”).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A SpatialData object containing the integrated spatial transcriptomics data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sd.SpatialData</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If required columns are missing, cell IDs are inconsistent, or data integrity checks fail.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Cell IDs in all modalities are expected to start at 1 unless relabeling is enabled.</p></li>
+<li><p>If consolidation is enabled for shapes, tables, or labels, points with missing cell IDs in</p></li>
+</ul>
+<p>those modalities are removed.
+- For shapes with multiple layers, polygons are split by the <cite>shape_layer_key</cite> column.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.fs.fix_spatialdata.validate_spatialdata">
+<span class="sig-prename descclassname"><span class="pre">segtraq.fs.fix_spatialdata.</span></span><span class="sig-name descname"><span class="pre">validate_spatialdata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_labels'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'assignment'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key_tables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_cell_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#segtraq.fs.fix_spatialdata.validate_spatialdata" title="Link to this definition">#</a></dt>
+<dd><p>Validates the integrity of a SpatialData object by checking the consistency of cell IDs across points,
+shapes, labels, and tables.</p>
+<p>This function ensures that:
+- All points have corresponding shapes, labels, and tables.
+- Cell IDs in points match those in shapes, labels, and tables.
+- If shapes or labels are present, they contain all cell IDs from the points.
+- If tables are present, they contain all cell IDs from the shapes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object to validate.</p></li>
+<li><p><strong>shape_key</strong> (<em>str</em><em> or </em><em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Key(s) for accessing shapes in the SpatialData. Default is “cell_boundaries”.</p></li>
+<li><p><strong>label_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing labels in the SpatialData. Default is “cell_labels”.</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing points in the SpatialData. Default is “transcripts”.</p></li>
+<li><p><strong>table_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing tables in the SpatialData. Default is “table”.</p></li>
+<li><p><strong>cell_key_points</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in points DataFrame indicating cell assignments. Default is “assignment”.</p></li>
+<li><p><strong>cell_key_shapes</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in shapes DataFrame indicating cell IDs. Default is “cell_id”.</p></li>
+<li><p><strong>cell_key_tables</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in tables DataFrame indicating cell IDs. Default is “cell_id”.</p></li>
+<li><p><strong>data_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing data in labels if they are stored as a DataTree. Default is None.</p></li>
+<li><p><strong>background_cell_id</strong> (<em>str</em><em>, </em><em>optional</em>) – Cell ID to use for unassigned transcripts in points. Default is “UNASSIGNED”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – If the input is not an instance of sd.SpatialData.</p></li>
+<li><p><strong>ValueError</strong> – If the SpatialData object does not contain points or if there are inconsistencies in cell IDs.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if the SpatialData object is valid, otherwise raises an error.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="nuclear_correlation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../notebooks/baseline.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Baseline metrics</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.compute_labels"><code class="docutils literal notranslate"><span class="pre">compute_labels()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.compute_shapes"><code class="docutils literal notranslate"><span class="pre">compute_shapes()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.compute_tables"><code class="docutils literal notranslate"><span class="pre">compute_tables()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.create_spatialdata"><code class="docutils literal notranslate"><span class="pre">create_spatialdata()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.fs.fix_spatialdata.validate_spatialdata"><code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
