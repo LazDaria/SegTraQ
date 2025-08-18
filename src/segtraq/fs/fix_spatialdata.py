@@ -2,10 +2,10 @@ import copy
 import warnings
 
 import anndata as ad
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-import geopandas as gpd
 import xarray as xr
 from shapely.geometry import MultiPolygon, Polygon
 from skimage import measure
@@ -28,7 +28,6 @@ def create_spatialdata(
     table_metadata=("cell_id", "centroid_x", "centroid_y", "cell_size"),
     consolidate_shapes: bool = False,
     consolidate_tables: bool = False,
-    consolidate_labels: bool = True,
     background_cell_id: str = "UNASSIGNED",
     coord_columns: tuple[str, str, str] = ("x", "y", "z"),
 ) -> sd.SpatialData:
@@ -44,11 +43,13 @@ def create_spatialdata(
     points : pd.DataFrame
         DataFrame containing transcript coordinates and cell assignments.
         Must include the column specified by `cell_key_points`.
-    shapes : pd.DataFrame or None, optional
+    shapes : pd.DataFrame, dictionary, or None, optional
         DataFrame containing cell boundary polygons. Must include the column specified by `cell_key_shapes`.
+        If a dictionary is provided, it should contain a key 'cell_boundaries' with the DataFrame.
         Default is None.
     labels : np.ndarray or None, optional
         Segmentation label image (2D or 3D array) with cell IDs. Default is None.
+        If a dictionary is provided, it should contain a key 'cell_labels' with the DataFrame.
     tables : pd.DataFrame or None, optional
         DataFrame containing per-cell features. Must include the column specified by `cell_key_tables`. Default is None.
     images : np.ndarray or None, optional
@@ -74,8 +75,6 @@ def create_spatialdata(
         If True, remove points with cell IDs not present in `shapes`. Default is False.
     consolidate_tables : bool, optional
         If True, remove points with cell IDs not present in `tables`. Default is False.
-    consolidate_labels : bool, optional
-        If True, remove points with cell IDs not present in `labels`. Default is True.
     background_cell_id : str, optional
         Cell ID to use for unassigned transcripts in points. Default is "UNASSIGNED".
     coord_columns : tuple of str, optional
@@ -105,7 +104,7 @@ def create_spatialdata(
         f"Available columns: {points.columns.tolist()}. "
         f"If you want to use different columns for the coordinates, set the coord_columns parameter."
     )
-    
+
     # if the coords_columns are not x, y, z, we relabel them
     if coord_columns != ("x", "y", "z"):
         points = points.rename(columns={coord_columns[0]: "x", coord_columns[1]: "y", coord_columns[2]: "z"})
@@ -132,7 +131,22 @@ def create_spatialdata(
     shapes_sd = None
     shapes_sd_dict = dict()
 
-    assert shapes is None or isinstance(shapes, pd.DataFrame), "Shapes must be a pandas DataFrame or None"
+    assert shapes is None or isinstance(shapes, pd.DataFrame) or isinstance(shapes, dict), (
+        "Shapes must be a pandas DataFrame or dictionary or None"
+    )
+
+    # if shapes is a dictionary, we assess if it contains valid keys
+    if isinstance(shapes, dict):
+        assert "cell_boundaries" in shapes.keys(), "Shapes dictionary must contain key: 'cell_boundaries'."
+        # if there are multiple keys (e. g. from a nuclear and a whole cell mask), we only check the whole cell mask
+        # the other one goes into the spatialdata dict directly
+        other_keys = set(shapes.keys()) - {"cell_boundaries"}
+        if len(other_keys) > 0:
+            for key in other_keys:
+                shapes_sd = sd.models.ShapesModel.parse(shapes[key])
+                shapes_sd_dict[key] = shapes_sd
+
+            shapes = shapes["cell_boundaries"]  # use the cell boundaries for further processing
 
     if shapes is not None:
         assert cell_key_shapes in shapes.columns, (
@@ -142,6 +156,7 @@ def create_spatialdata(
         )
         shapes_cell_ids = set(shapes[cell_key_shapes])
 
+        # if the cell IDs in shapes are integer-based, we check that they start at 1
         if shapes[cell_key_shapes].dtype.kind in "iu":
             if not relabel_shapes:
                 if shapes is not None:
@@ -180,26 +195,40 @@ def create_spatialdata(
                 shapes_sd_dict[f"cell_boundaries_layer_{i}"] = sd.models.ShapesModel.parse(layer_shapes)
         else:
             shapes_sd = sd.models.ShapesModel.parse(shapes)
-            shapes_sd_dict = {"cell_boundaries": shapes_sd}
+            if len(shapes_sd_dict) == 0:
+                shapes_sd_dict = {"cell_boundaries": shapes_sd}
+            else:
+                shapes_sd_dict["cell_boundaries"] = shapes_sd
 
     # === LABELS ===
     labels_sd = None
-    if labels is not None:
-        # consistency checks
-        # with the points
-        cell_ids_from_points = set(points[cell_key_points].unique())
-        cell_ids_from_labels = set(np.unique(labels))
-        missing_in_labels = cell_ids_from_points - cell_ids_from_labels
-        if not consolidate_labels:
-            assert not missing_in_labels, (
-                f"Missing {len(missing_in_labels)} cell IDs from labels: {missing_in_labels}. "
-                f"If you want to consolidate the labels and the transcripts, set consolidate_labels=True. "
-                f"This will remove the missing cell IDs from the points."
-            )
-        elif len(missing_in_labels) > 0:
-            points = points[~points[cell_key_points].isin(missing_in_labels)]
+    labels_sd_dict = dict()
 
-        labels_sd = sd.models.Labels2DModel.parse(labels)
+    assert labels is None or isinstance(labels, np.ndarray) or isinstance(labels, dict), (
+        "Labels must be a numpy array or dictionary or None"
+    )
+
+    # if labels is a dictionary, we assess if it contains valid keys
+    if isinstance(labels, dict):
+        assert "cell_labels" in labels.keys(), "Labels dictionary must contain key: 'cell_labels'."
+        # if there are multiple keys (e. g. from a nuclear and a whole cell mask), we only check the whole cell mask
+        # the other one goes into the spatialdata dict directly
+        other_keys = set(labels.keys()) - {"cell_labels"}
+        if len(other_keys) > 0:
+            for key in other_keys:
+                labels_sd = sd.models.Labels2DModel.parse(labels[key])
+                labels_sd_dict[key] = labels_sd
+
+            labels = labels["cell_labels"]  # use the cell labels for further processing
+
+    # The code is checking if the variable `labels` is not `None`. If `labels` is not `None`, the code
+    # block following the `if` statement will be executed.
+    if labels is not None:
+        if len(labels_sd_dict) == 0:
+            labels_sd = sd.models.Labels2DModel.parse(labels)
+            labels_sd_dict = {"cell_labels": labels_sd}
+        else:
+            labels_sd_dict["cell_labels"] = labels_sd
 
     # === TABLES ===
     tables_sd = None
@@ -263,7 +292,7 @@ def create_spatialdata(
         points={"transcripts": points_sd},
         shapes=shapes_sd_dict,
         tables={"table": tables_sd} if tables is not None else {},
-        labels={"cell_labels": labels_sd} if labels is not None else {},
+        labels=labels_sd_dict,
     )
 
     # === FINAL VALIDATION ===
@@ -771,18 +800,16 @@ def create_geopandas_df(df: pd.DataFrame) -> gpd.GeoDataFrame:
     polygons = []
     ids = []
 
-    assert 'cell_id' in df.columns, (
-        "DataFrame must contain 'cell_id' column to group by cell IDs."
-    )
-    assert 'vertex_x' in df.columns and 'vertex_y' in df.columns, (
+    assert "cell_id" in df.columns, "DataFrame must contain 'cell_id' column to group by cell IDs."
+    assert "vertex_x" in df.columns and "vertex_y" in df.columns, (
         "DataFrame must contain 'vertex_x' and 'vertex_y' columns for polygon coordinates."
     )
 
-    for cell_id, group in df.groupby('cell_id'):
+    for cell_id, group in df.groupby("cell_id"):
         # Group by label_id if you may have multiple polygons per cell
         polys = []
-        for _, sub in group.groupby('label_id'):
-            coords = list(zip(sub['vertex_x'], sub['vertex_y']))
+        for _, sub in group.groupby("label_id"):
+            coords = list(zip(sub["vertex_x"], sub["vertex_y"], strict=False))
             if len(coords) >= 3:  # valid polygon
                 polys.append(Polygon(coords))
         if len(polys) == 1:
@@ -791,7 +818,4 @@ def create_geopandas_df(df: pd.DataFrame) -> gpd.GeoDataFrame:
             polygons.append(MultiPolygon(polys))
         ids.append(cell_id)
 
-    return gpd.GeoDataFrame(
-        {'cell_id': ids, 'geometry': polygons},
-        crs="EPSG:4326"  # or your actual CRS
-    )
+    return gpd.GeoDataFrame({"cell_id": ids, "geometry": polygons}, crs="EPSG:4326")  # or your actual CRS
