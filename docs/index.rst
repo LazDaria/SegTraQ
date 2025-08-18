@@ -15,6 +15,7 @@ SegTraQ documentation
    modules/baseline
    modules/clustering_stability
    modules/nuclear_correlation
+   modules/spillover_metrics
 
 .. toctree::
    :maxdepth: 1
