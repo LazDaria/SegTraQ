@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Correlations between the top and bottom of the slice &#8212; SegTraQ  documentation</title>
+    <title>Reading files into spatialdata &#8212; SegTraQ  documentation</title>
   
   
   
@@ -42,10 +42,9 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/z_plane_correlation';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/spatialdata';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="Label transfer from scRNA-seq dataset via Pearson correlation" href="labeling_via_correlation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -108,6 +107,8 @@
       
       
       
+        
+      
       <div class="bd-sidebar-primary bd-sidebar">
         
 
@@ -157,13 +158,13 @@
 <li class="toctree-l1"><a class="reference internal" href="../modules/fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
-<ul class="current nav bd-sidenav">
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Clustering Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
 
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Correlations between the top and bottom of the slice</a></li>
+<li class="toctree-l1"><a class="reference internal" href="z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
 </ul>
 
     </div>
@@ -218,7 +219,7 @@
       
       
       
-      <li><a href="../_sources/notebooks/z_plane_correlation.ipynb" target="_blank"
+      <li><a href="../_sources/notebooks/spatialdata.ipynb" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -289,7 +290,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -300,11 +303,22 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Correlations between the top and bottom of the slice</h1>
+    <h1>Reading files into spatialdata</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Technology-Focus:-ProSeg">Technology Focus: ProSeg</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Segger">Segger</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#BIDcell">BIDcell</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Xenium">Xenium</a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -314,28 +328,21 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="Correlations-between-the-top-and-bottom-of-the-slice">
-<h1>Correlations between the top and bottom of the slice<a class="headerlink" href="#Correlations-between-the-top-and-bottom-of-the-slice" title="Link to this heading">#</a></h1>
-<p>To assess if there are cells lying on top of each other in the z plane, we can slice our data into a top and bottom plane, e. g. by taking the top 25% and the bottom 25%. We can then compute the Pearson correlation between the two planes for each cell. If the correlation is high, the top and bottom layers likely show the same cell. If it is low, there might be two or more cells overlapping in the z direction.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+  <div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
 %autoreload 2
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import spatialdata as sd
-import squidpy as sq
+import pandas as pd
+import tifffile
 
 import segtraq as st
-
-sdata = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/seg_comparison/spatialData_2_C1_proseg.zarr&quot;)
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
@@ -344,435 +351,239 @@ The autoreload extension is already loaded. To reload it, use:
   %reload_ext autoreload
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/anndata/utils.py:434: FutureWarning: Importing read_text from `anndata` is deprecated. Import anndata.io.read_text instead.
-  warnings.warn(msg, FutureWarning)
-version mismatch: detected: RasterFormatV02, requested: FormatV04
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/zarr/creation.py:610: UserWarning: ignoring keyword argument &#39;read_only&#39;
-  compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-</pre></div></div>
-</div>
+<section id="Reading-files-into-spatialdata">
+<h1>Reading files into spatialdata<a class="headerlink" href="#Reading-files-into-spatialdata" title="Link to this heading">#</a></h1>
+<p>Before assessing the quality of a segmentation, we first need to get the data into <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code> format. The following sections show how this can be achieved from a variety of different segmentation methods.</p>
+<p>We always require a transcript dataframe, and any additional data can come as shapes, labels, or images.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>correlation_df = st.cs.compute_z_plane_correlation(sdata)
-correlation_df.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>transcript_df = pd.read_csv(
+    &quot;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample/transcripts.csv&quot;
+)
+transcript_df.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transcript_id</th>
+      <th>cell_id</th>
+      <th>overlaps_nucleus</th>
+      <th>feature_name</th>
+      <th>x_location</th>
+      <th>y_location</th>
+      <th>z_location</th>
+      <th>qv</th>
+      <th>fov_name</th>
+      <th>nucleus_distance</th>
+      <th>codeword_index</th>
+      <th>codeword_category</th>
+      <th>is_gene</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>282643208155248</td>
+      <td>bfnbkogm-1</td>
+      <td>0</td>
+      <td>AAMP</td>
+      <td>57.153320</td>
+      <td>163.29980</td>
+      <td>20.156250</td>
+      <td>35.75</td>
+      <td>V12</td>
+      <td>0.15625</td>
+      <td>3277</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>282643207975264</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>ABCA1</td>
+      <td>69.262695</td>
+      <td>175.47168</td>
+      <td>23.562500</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>0.93750</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>282716222414197</td>
+      <td>nhlaipjn-1</td>
+      <td>1</td>
+      <td>ABCA1</td>
+      <td>73.387695</td>
+      <td>189.01855</td>
+      <td>21.593750</td>
+      <td>40.00</td>
+      <td>W12</td>
+      <td>0.00000</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>282643207864202</td>
+      <td>bfndjloi-1</td>
+      <td>0</td>
+      <td>ABCA1</td>
+      <td>100.747070</td>
+      <td>141.87793</td>
+      <td>20.546875</td>
+      <td>36.25</td>
+      <td>V12</td>
+      <td>0.93750</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>282716222540753</td>
+      <td>nhlcfdpj-1</td>
+      <td>1</td>
+      <td>ABCA7</td>
+      <td>85.856445</td>
+      <td>192.45605</td>
+      <td>22.890625</td>
+      <td>40.00</td>
+      <td>W12</td>
+      <td>0.00000</td>
+      <td>8133</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<section id="Technology-Focus:-ProSeg">
+<h2>Technology Focus: ProSeg<a class="headerlink" href="#Technology-Focus:-ProSeg" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: where is the mapping between cell IDs and cell labels?
+# shape_df = gpd.read_file(&#39;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample/
+# proseg_output/cell-polygons-layers.geojson&#39;)
+# sdata = st.fs.create_spatialdata(points=transcript_df, shapes=shape_df,
+# optional, if your coordinates are not named x, y, z
+#                                 coord_columns=[&#39;x_location&#39;, &#39;y_location&#39;, &#39;z_location&#39;],
+#                                 cell_key_shapes=&#39;cell&#39;,  # optional, if your cell is not called cell_id
+#                                 relabel_shapes=True,  # optional, if your cell IDs do not start at 1
+#                                )
+# sdata
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Segger">
+<h2>Segger<a class="headerlink" href="#Segger" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: where are the assignments?
+# &#39;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample
+# /segger_output/val_tiles/processed/&#39;
+</pre></div>
+</div>
+</div>
+</section>
+<section id="BIDcell">
+<h2>BIDcell<a class="headerlink" href="#BIDcell" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: do we not have whole cell labels?
+nucleus_labels = tifffile.imread(
+    &quot;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample/bidcell_output/nuclei.tif&quot;
+)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata = st.fs.create_spatialdata(
+    points=transcript_df,
+    labels=nucleus_labels,
+    # optional, if your coordinates are not named x, y, z
+    coord_columns=[&quot;x_location&quot;, &quot;y_location&quot;, &quot;z_location&quot;],
+)
+sdata
 </pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;string&gt;:35: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
-&lt;string&gt;:36: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>correlation</th>
-    </tr>
-    <tr>
-      <th>cell_id</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>UNASSIGNED</th>
-      <td>0.986754</td>
-    </tr>
-    <tr>
-      <th>affmepaj-1</th>
-      <td>0.668409</td>
-    </tr>
-    <tr>
-      <th>affmgdje-1</th>
-      <td>0.313853</td>
-    </tr>
-    <tr>
-      <th>affmgmio-1</th>
-      <td>0.422878</td>
-    </tr>
-    <tr>
-      <th>affmkcka-1</th>
-      <td>0.570178</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># Plot the distribution of correlation values
-plt.figure(figsize=(8, 4))
-sns.histplot(correlation_df[&quot;correlation&quot;], bins=30, kde=True)
-
-plt.title(&quot;Distribution of Correlation Between Top and Bottom Planes&quot;)
-plt.xlabel(&quot;Pearson Correlation&quot;)
-plt.ylabel(&quot;Number of Cells&quot;)
-plt.tight_layout()
-plt.show()
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_z_plane_correlation_3_0.png" src="../_images/notebooks_z_plane_correlation_3_0.png" />
+<div class="highlight"><pre>
+SpatialData object
+├── Labels
+│     └── &#39;cell_labels&#39;: DataArray[yx] (551, 680)
+└── Points
+      └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 13) (3D points)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        cell_labels (Labels), transcripts (Points)
+</pre></div></div>
 </div>
-</div>
+</section>
+<section id="Xenium">
+<h2>Xenium<a class="headerlink" href="#Xenium" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: at this point, we should merge them to the adata object
-# unfortunately, the adata object does not contain matching cell IDs, so we cannot do this yet
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># &#39;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample/&#39;
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata = sdata.tables[&quot;table&quot;]
-
-# we need to add the spatial coordinates to the adata object for plotting
-adata.obsm[&quot;spatial&quot;] = adata.obs[[&quot;centroid-0&quot;, &quot;centroid-1&quot;]].to_numpy()
-
-# adding the correlation values to the adata object
-adata.obs[&quot;z_plane_correlation&quot;] = adata.obs.index.map(correlation_df[&quot;correlation&quot;])
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata.obs
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>centroid_x</th>
-      <th>centroid_y</th>
-      <th>cell_size</th>
-      <th>axis_minor_length</th>
-      <th>axis_major_length</th>
-      <th>centroid-0</th>
-      <th>centroid-1</th>
-      <th>eccentricity</th>
-      <th>solidity</th>
-      <th>perimeter</th>
-      <th>sample_id</th>
-      <th>TMA</th>
-      <th>region</th>
-      <th>mask_id</th>
-      <th>z_plane_correlation</th>
-    </tr>
-    <tr>
-      <th>cell_id</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>1</th>
-      <td>377.79850</td>
-      <td>513.17664</td>
-      <td>395.71875</td>
-      <td>6.590376</td>
-      <td>8.878127</td>
-      <td>512.720930</td>
-      <td>376.953488</td>
-      <td>0.670050</td>
-      <td>0.860000</td>
-      <td>24.899495</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>1</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>349.86170</td>
-      <td>643.56384</td>
-      <td>92.53125</td>
-      <td>2.653300</td>
-      <td>5.366563</td>
-      <td>643.600000</td>
-      <td>349.000000</td>
-      <td>0.869227</td>
-      <td>0.500000</td>
-      <td>0.000000</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>2</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>401.73760</td>
-      <td>398.32178</td>
-      <td>397.68750</td>
-      <td>5.502993</td>
-      <td>9.527791</td>
-      <td>396.305556</td>
-      <td>400.916667</td>
-      <td>0.816339</td>
-      <td>0.800000</td>
-      <td>21.071068</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>3</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>257.44656</td>
-      <td>319.80533</td>
-      <td>773.71875</td>
-      <td>9.718573</td>
-      <td>11.625859</td>
-      <td>319.301205</td>
-      <td>257.168675</td>
-      <td>0.548814</td>
-      <td>0.813725</td>
-      <td>34.384776</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>4</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>5</th>
-      <td>195.35858</td>
-      <td>549.35860</td>
-      <td>194.90625</td>
-      <td>3.843169</td>
-      <td>5.055352</td>
-      <td>548.785714</td>
-      <td>194.928571</td>
-      <td>0.649668</td>
-      <td>0.875000</td>
-      <td>11.414214</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>5</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>5843</th>
-      <td>539.39000</td>
-      <td>343.35000</td>
-      <td>196.87500</td>
-      <td>6.445665</td>
-      <td>16.611864</td>
-      <td>343.063492</td>
-      <td>539.158730</td>
-      <td>0.921653</td>
-      <td>0.684783</td>
-      <td>40.798990</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>5843</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>5844</th>
-      <td>256.99690</td>
-      <td>636.03420</td>
-      <td>316.96875</td>
-      <td>7.896618</td>
-      <td>12.941854</td>
-      <td>636.506667</td>
-      <td>256.333333</td>
-      <td>0.792277</td>
-      <td>0.842697</td>
-      <td>35.142136</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>5844</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>5845</th>
-      <td>310.64035</td>
-      <td>493.85090</td>
-      <td>112.21875</td>
-      <td>6.976622</td>
-      <td>7.382183</td>
-      <td>493.272727</td>
-      <td>310.151515</td>
-      <td>0.326891</td>
-      <td>0.733333</td>
-      <td>24.727922</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>5845</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>5846</th>
-      <td>366.64166</td>
-      <td>153.53334</td>
-      <td>236.25000</td>
-      <td>8.121170</td>
-      <td>12.488528</td>
-      <td>152.528571</td>
-      <td>366.328571</td>
-      <td>0.759686</td>
-      <td>0.777778</td>
-      <td>36.556349</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>5846</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>5847</th>
-      <td>494.74417</td>
-      <td>190.87209</td>
-      <td>169.31250</td>
-      <td>8.103957</td>
-      <td>8.811781</td>
-      <td>190.180000</td>
-      <td>494.300000</td>
-      <td>0.392685</td>
-      <td>0.847458</td>
-      <td>26.384776</td>
-      <td>2_C1</td>
-      <td>2</td>
-      <td>cell_labels</td>
-      <td>5847</td>
-      <td>NaN</td>
-    </tr>
-  </tbody>
-</table>
-<p>5847 rows × 15 columns</p>
-</div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sq.pl.spatial_scatter(
-    adata,
-    library_id=&quot;spatial&quot;,
-    shape=None,
-    color=[&quot;z_plane_correlation&quot;],
-)
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_z_plane_correlation_7_0.png" src="../_images/notebooks_z_plane_correlation_7_0.png" />
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
-</div>
+</section>
 </section>
 
 
@@ -786,21 +597,30 @@ adata.obs[&quot;z_plane_correlation&quot;] = adata.obs.index.map(correlation_df[
                 <footer class="prev-next-footer d-print-none">
                   
 <div class="prev-next-area">
-    <a class="left-prev"
-       href="labeling_via_correlation.html"
-       title="previous page">
-      <i class="fa-solid fa-angle-left"></i>
-      <div class="prev-next-info">
-        <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Label transfer from scRNA-seq dataset via Pearson correlation</p>
-      </div>
-    </a>
 </div>
                 </footer>
               
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Technology-Focus:-ProSeg">Technology Focus: ProSeg</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Segger">Segger</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#BIDcell">BIDcell</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Xenium">Xenium</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>
