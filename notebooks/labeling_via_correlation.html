@@ -155,7 +155,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="current nav bd-sidenav">
@@ -340,7 +340,7 @@ document.write(`
 <h2>Load scRNA-seq dataset<a class="headerlink" href="#Load-scRNA-seq-dataset" title="Link to this heading">#</a></h2>
 <p>We use the scRNA-seq dataset of diffuse large B-cell lymphoma (DLBCL) samples from <a class="reference external" href="https://www.biorxiv.org/content/10.1101/2024.11.01.621259v1">Dong et al.</a> published on <a class="reference external" href="https://www.biorxiv.org/content/10.1101/2024.11.01.621259v1">CellxGene</a>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from pathlib import Path
@@ -362,7 +362,7 @@ adata_ref = ad.read(scRNAseq_data_path)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata_ref
@@ -370,7 +370,7 @@ adata_ref = ad.read(scRNAseq_data_path)
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -381,7 +381,7 @@ AnnData object with n_obs × n_vars = 29184 × 442
 </div>
 <p>The counts in the reference dataset are already log-normalized, so we can copy that matrix to a layer called ‘logcounts’.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata_ref.X.toarray()
@@ -389,7 +389,7 @@ AnnData object with n_obs × n_vars = 29184 × 442
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -410,7 +410,7 @@ array([[0.        , 0.        , 0.        , ..., 0.        , 0.        ,
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata_ref.layers[&quot;logcounts&quot;] = adata_ref.X.copy()
@@ -419,7 +419,7 @@ array([[0.        , 0.        , 0.        , ..., 0.        , 0.        ,
 </div>
 <p>We aggregate log-normalized gene expression values (<code class="docutils literal notranslate"><span class="pre">logcounts</span></code>) across cells grouped by their annotated cell type, computing the mean expression per gene within each cell type. This yields a reference expression profile for each cell type.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import numpy as np
@@ -434,7 +434,7 @@ celltypes = adata_ref.obs[&quot;cell_type&quot;]
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import pandas as pd
@@ -451,12 +451,12 @@ ref_mean_df = logcounts_df.groupby(&quot;celltype&quot;).mean()
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_3092810/2272690639.py:6: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+/tmp/ipykernel_2382657/1950447002.py:5: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
   ref_mean_df = logcounts_df.groupby(&#34;celltype&#34;).mean()
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>ref_mean_df
@@ -464,7 +464,7 @@ ref_mean_df = logcounts_df.groupby(&quot;celltype&quot;).mean()
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -857,7 +857,7 @@ ref_mean_df = logcounts_df.groupby(&quot;celltype&quot;).mean()
 <h1>Load spatialData object<a class="headerlink" href="#Load-spatialData-object" title="Link to this heading">#</a></h1>
 <p>Next, we load the spatialdata object of a Xenium DLBCL sample.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[126]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
@@ -873,10 +873,6 @@ sdata = sd.read_zarr(
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
-  warnings.warn(
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
-  from pkg_resources import DistributionNotFound, get_distribution
 version mismatch: detected: RasterFormatV02, requested: FormatV04
 /home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
@@ -884,7 +880,7 @@ version mismatch: detected: RasterFormatV02, requested: FormatV04
 </div>
 <p>We perform quality control steps (filtering based on #transcripts and #genes per cell) and log-normalization.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[127]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>adata = sdata[&quot;table&quot;]
@@ -1239,7 +1235,7 @@ adata.layers[&quot;logcounts&quot;] = adata.X.copy()
 <p>Store both the correlation value and the predicted cell type.</p>
 <p>This provides a label transfer from the reference to the query dataset based on global transcriptomic similarity.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[141]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from anndata import AnnData
@@ -1265,7 +1261,6 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, layer:
     pd.DataFrame
         DataFrame with `cell_id` and assigned `celltype`.
     &quot;&quot;&quot;
-    # TODO - check if cdist does really Pearson correlation
 
     # Extract query expression data
     X_query = pd.DataFrame(
