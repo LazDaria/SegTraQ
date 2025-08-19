@@ -318,7 +318,7 @@ def validate_spatialdata(
     label_key: str = "cell_labels",
     points_key: str = "transcripts",
     table_key: str = "table",
-    cell_key_points: str = "assignment",
+    cell_key_points: str = "cell_id",
     cell_key_shapes: str = "cell_id",
     cell_key_tables: str = "cell_id",
     data_key: str = None,
@@ -481,14 +481,14 @@ def validate_spatialdata(
         if num_missing_in_labels > 0:
             warnings.warn(
                 f"Missing {num_missing_in_labels} cell IDs in labels."
-                f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
+                f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
                 f"This might lead to inconsistencies in the spatialdata object.",
                 stacklevel=2,
             )
         if num_missing_in_shapes > 0:
             warnings.warn(
                 f"Missing {num_missing_in_shapes} cell IDs in shapes: "
-                f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
+                f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
                 f"This might lead to inconsistencies in the spatialdata object.",
                 stacklevel=2,
             )
