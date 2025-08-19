@@ -5,21 +5,6 @@ import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
 
-def _run_pca(adata, force_run: bool = False):
-    # check if PCA has already been run
-    count_layer_exists = "counts" in adata.layers
-    x_is_int = np.issubdtype(adata.X.dtype, np.integer)
-    if not count_layer_exists and x_is_int:
-        adata.layers["counts"] = adata.X.copy()
-        sc.pp.normalize_total(adata, inplace=True)
-        sc.pp.log1p(adata)
-
-    # run PCA if not already done
-    if "X_pca" not in adata.obsm or force_run:
-        sc.pp.pca(adata)
-    return adata
-
-
 def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
     """
     Compute RMSD (root mean squared deviation) of clusters from their centroids.
@@ -76,7 +61,7 @@ def run_leiden_clustering_on_adata(
         The Leiden cluster labels.
     """
     adata = adata_input.copy()
-    adata = _run_pca(adata, force_run=True)
+    sc.pp.pca(adata)
     sc.pp.neighbors(adata)
 
     sc.tl.leiden(
@@ -87,7 +72,7 @@ def run_leiden_clustering_on_adata(
         key_added=key_added,
     )
 
-    return adata.obs[key_added].copy()
+    return adata.obs[key_added].copy(), adata.obsm["X_pca"]
 
 
 def run_leiden_clustering_on_random_gene_subset(
@@ -138,10 +123,10 @@ def run_leiden_clustering_on_random_gene_subset(
         key_added = f"{key_prefix}_{n_genes_subset}_res{resolution}_seed{random_state}"
 
     # Run Leiden and store in original object
-    labels = run_leiden_clustering_on_adata(adata_subset, resolution=resolution, key_added=key_added)
+    labels, pca = run_leiden_clustering_on_adata(adata_subset, resolution=resolution, key_added=key_added)
     adata.obs[key_added] = labels.values
 
-    return key_added
+    return key_added, pca
 
 
 def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> float:
