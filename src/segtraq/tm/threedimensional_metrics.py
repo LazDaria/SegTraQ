@@ -32,5 +32,5 @@ def shape_metrics(
     z = np.array(sdata.points[transcript_key][z_coordinate])
 
     d = {"mean" : np.mean(z), "variance" : np.var(z), "skew" : skew(z), "kurtosis" : kurtosis(z)}
-    df = pd.DataFrame(data = d)
+    df = pd.DataFrame(data = d, index = 0)
     return(df)
