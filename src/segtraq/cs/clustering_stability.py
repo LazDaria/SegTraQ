@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import spatialdata as sd
 from scipy.stats import pearsonr
 from sklearn.metrics import silhouette_score
 
 from .utils import (
-    _run_pca,
     compute_mean_ari,
     compute_mean_purity,
     compute_pairwise_ari,
@@ -42,14 +40,13 @@ def compute_rmsd(
         The best (lowest) RMSD across resolutions.
     """
     adata = sdata.tables["table"]
-    adata = _run_pca(adata)
 
     if isinstance(resolution, float):
         resolution = [resolution]
 
     best_rmsd = np.inf
     for res in resolution:
-        key_added = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
             resolution=res,
             n_genes_subset=None,  # Use all genes
@@ -58,7 +55,7 @@ def compute_rmsd(
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
-            rmsd_val = compute_rmsd_for_clustering(adata.obsm["X_pca"][:, :], labels)
+            rmsd_val = compute_rmsd_for_clustering(pca, labels)
             if rmsd_val < best_rmsd:
                 best_rmsd = float(rmsd_val)
 
@@ -104,7 +101,7 @@ def compute_silhouette_score(
 
     for res in resolution:
         # Run clustering for each resolution
-        key_added = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
             resolution=res,
             n_genes_subset=None,  # Use all genes
@@ -115,10 +112,7 @@ def compute_silhouette_score(
         # Compute silhouette score
         labels = adata.obs[key_added]
         if len(set(labels)) > 1:  # Ensure more than one cluster exists
-            # check if PCA is available, otherwise compute it using scanpy
-            if "X_pca" not in adata.obsm:
-                sc.pp.pca(adata, n_comps=ncomps)
-            silhouette_avg = silhouette_score(adata.obsm["X_pca"][:, :ncomps], labels, metric=metric)
+            silhouette_avg = silhouette_score(pca, labels, metric=metric)
             if silhouette_avg > best_silhouette_score:
                 best_silhouette_score = silhouette_avg
 
@@ -155,7 +149,7 @@ def compute_purity(
     cluster_keys = []
 
     for random_state in range(5):
-        key_added = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
             resolution=resolution,
             n_genes_subset=n_genes_subset,
@@ -197,7 +191,7 @@ def compute_ari(
     cluster_keys = []
     # Run clustering on random subsets of genes
     for random_state in range(5):
-        key_added = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
             resolution=resolution,
             n_genes_subset=n_genes_subset,
