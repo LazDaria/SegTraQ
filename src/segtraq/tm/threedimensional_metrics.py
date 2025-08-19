@@ -25,12 +25,12 @@ def shape_metrics(
     Returns
     -------
     pd.DataFrame
-        A DataFrame with columns `["mean", "variance", "skew, "kurtosis"]`
+        A DataFrame with keys `["mean", "variance", "skew, "kurtosis"]`
     """
     
     
     z = np.array(sdata.points[transcript_key][z_coordinate])
 
-    df_res = pd.DataFrame(mean = np.mean(z), variance = np.var(z), skew = skew(z), kurtosis = kurtosis(z))
-
-    return(df_res)
+    d = {"mean" : np.mean(z), "variance" : np.var(z), "skew" : skew(z), "kurtosis" : kurtosis(z)}
+    df = pd.DataFrame(data = d)
+    return(df)
