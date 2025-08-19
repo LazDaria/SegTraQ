@@ -153,7 +153,7 @@
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
@@ -270,45 +270,41 @@ document.write(`
 
 <div class="genindex-jumpbox">
  <a href="#C"><strong>C</strong></a>
- | <a href="#D"><strong>D</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
  
 </div>
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics.centroid_mean_coord_diff">centroid_mean_coord_diff() (in module segtraq.sp.spillover_metrics)</a>
-</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.nc.nuclear_correlation)</a>
+      <li><a href="modules/fix_spatialdata.html#segtraq.fs.fix_spatialdata.compute_labels">compute_labels() (in module segtraq.fs.fix_spatialdata)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_purity">compute_purity() (in module segtraq.cs.clustering_stability)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_rmsd">compute_rmsd() (in module segtraq.cs.clustering_stability)</a>
+</li>
+      <li><a href="modules/fix_spatialdata.html#segtraq.fs.fix_spatialdata.compute_shapes">compute_shapes() (in module segtraq.fs.fix_spatialdata)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_silhouette_score">compute_silhouette_score() (in module segtraq.cs.clustering_stability)</a>
 </li>
+      <li><a href="modules/fix_spatialdata.html#segtraq.fs.fix_spatialdata.compute_tables">compute_tables() (in module segtraq.fs.fix_spatialdata)</a>
+</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_z_plane_correlation">compute_z_plane_correlation() (in module segtraq.cs.clustering_stability)</a>
 </li>
-  </ul></td>
-</tr></table>
-
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics.distance_to_membrane">distance_to_membrane() (in module segtraq.sp.spillover_metrics)</a>
+      <li><a href="modules/fix_spatialdata.html#segtraq.fs.fix_spatialdata.create_spatialdata">create_spatialdata() (in module segtraq.fs.fix_spatialdata)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -332,9 +328,9 @@ document.write(`
 </li>
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">segtraq.cs.clustering_stability</a>
 </li>
-        <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">segtraq.nc.nuclear_correlation</a>
+        <li><a href="modules/fix_spatialdata.html#module-segtraq.fs.fix_spatialdata">segtraq.fs.fix_spatialdata</a>
 </li>
-        <li><a href="modules/spillover_metrics.html#module-segtraq.sp.spillover_metrics">segtraq.sp.spillover_metrics</a>
+        <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">segtraq.nc.nuclear_correlation</a>
 </li>
       </ul></li>
   </ul></td>
@@ -386,17 +382,17 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
+    segtraq.fs.fix_spatialdata
+
+      <ul>
+        <li><a href="modules/fix_spatialdata.html#module-segtraq.fs.fix_spatialdata">module</a>
+</li>
+      </ul></li>
+      <li>
     segtraq.nc.nuclear_correlation
 
       <ul>
         <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.sp.spillover_metrics
-
-      <ul>
-        <li><a href="modules/spillover_metrics.html#module-segtraq.sp.spillover_metrics">module</a>
 </li>
       </ul></li>
   </ul></td>
@@ -410,6 +406,14 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.transcripts_per_cell">transcripts_per_cell() (in module segtraq.bl.baseline)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/fix_spatialdata.html#segtraq.fs.fix_spatialdata.validate_spatialdata">validate_spatialdata() (in module segtraq.fs.fix_spatialdata)</a>
 </li>
   </ul></td>
 </tr></table>
