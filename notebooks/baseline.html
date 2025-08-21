@@ -46,7 +46,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Clustering Stability" href="clustering_stability.html" />
-    <link rel="prev" title="The spillover metrics (sp) accessor" href="../modules/spillover_metrics.html" />
+    <link rel="prev" title="The fix spatialdata (fs) accessor" href="../modules/fix_spatialdata.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -155,7 +155,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="current nav bd-sidenav">
@@ -343,23 +343,13 @@ sdata = sd.read_zarr(&quot;/g/huber/projects/CODEX/segtraq/data/spatialdata_xeni
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
   warnings.warn(
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
   from pkg_resources import DistributionNotFound, get_distribution
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:532: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
-  left = partial(_left_join_spatialelement_table)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:533: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
-  left_exclusive = partial(_left_exclusive_join_spatialelement_table)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:534: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
-  inner = partial(_inner_join_spatialelement_table)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:535: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
-  right = partial(_right_join_spatialelement_table)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:536: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
-  right_exclusive = partial(_right_exclusive_join_spatialelement_table)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/zarr/creation.py:610: UserWarning: ignoring keyword argument &#39;read_only&#39;
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/zarr/creation.py:614: UserWarning: ignoring keyword argument &#39;read_only&#39;
   compressor, fill_value = _kwargs_compat(compressor, fill_value, kwargs)
-/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
+/home/meyerben/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
   warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
 </pre></div></div>
 </div>
@@ -430,7 +420,7 @@ with coordinate systems:
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.bl.num_genes(sdata)
@@ -438,7 +428,7 @@ with coordinate systems:
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -447,7 +437,7 @@ with coordinate systems:
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.bl.perc_unassigned_transcripts(sdata)
@@ -455,7 +445,7 @@ with coordinate systems:
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -465,7 +455,7 @@ with coordinate systems:
 </div>
 <p>Next, let’s see how many transcripts were detected per cell. We can do this using the <code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code> method.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>transcripts_per_cell = st.bl.transcripts_per_cell(sdata)
@@ -476,7 +466,7 @@ transcripts_per_cell.head()
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -533,7 +523,7 @@ transcripts_per_cell.head()
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the number of transcripts per cell
@@ -571,7 +561,7 @@ plt.show()
 </div>
 <p>We can also do the same thing for the number of genes per cell, since there are often multiple transcripts measured per gene.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>genes_per_cell = st.bl.genes_per_cell(sdata)
@@ -582,7 +572,7 @@ genes_per_cell.head()
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -639,7 +629,7 @@ genes_per_cell.head()
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the number of genes per cell
@@ -677,7 +667,7 @@ plt.show()
 </div>
 <p>Next to the number of transcripts per cell, we can also investigate the transcript density, which is computed as the number of transcripts divided by the cell area. Note that the background does not appear in this data frame.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>transcript_density = st.bl.transcript_density(sdata)
@@ -686,7 +676,7 @@ transcript_density.head()
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -743,7 +733,7 @@ transcript_density.head()
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># plotting the transcript density per cell
@@ -781,7 +771,7 @@ plt.show()
 </div>
 <p>Finally, let’s look at some morphological features, such as the cell area, circularity, elongation, etc. We can get those with the function <code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code>. If you only want to compute certain features, you can select them with the <code class="docutils literal notranslate"><span class="pre">features_to_compute</span></code> argument. This can drastically reduce the runtime, as especially the features <code class="docutils literal notranslate"><span class="pre">elongation</span></code> and <code class="docutils literal notranslate"><span class="pre">eccentricity</span></code> can take a while to compute.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>morphological_features = st.bl.morphological_features(sdata)
@@ -790,7 +780,7 @@ morphological_features.head()
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -824,6 +814,7 @@ morphological_features.head()
       <th>elongation</th>
       <th>eccentricity</th>
       <th>compactness</th>
+      <th>sphericity</th>
     </tr>
   </thead>
   <tbody>
@@ -841,6 +832,7 @@ morphological_features.head()
       <td>1.190205</td>
       <td>0.542289</td>
       <td>16.128517</td>
+      <td>0.779140</td>
     </tr>
     <tr>
       <th>1</th>
@@ -856,6 +848,7 @@ morphological_features.head()
       <td>1.659024</td>
       <td>0.797919</td>
       <td>18.845720</td>
+      <td>0.666802</td>
     </tr>
     <tr>
       <th>2</th>
@@ -871,6 +864,7 @@ morphological_features.head()
       <td>1.278102</td>
       <td>0.622764</td>
       <td>20.656002</td>
+      <td>0.608364</td>
     </tr>
     <tr>
       <th>3</th>
@@ -886,6 +880,7 @@ morphological_features.head()
       <td>1.050888</td>
       <td>0.307414</td>
       <td>14.584639</td>
+      <td>0.861617</td>
     </tr>
     <tr>
       <th>4</th>
@@ -901,6 +896,7 @@ morphological_features.head()
       <td>1.675849</td>
       <td>0.802455</td>
       <td>16.180981</td>
+      <td>0.776614</td>
     </tr>
   </tbody>
 </table>
@@ -908,7 +904,7 @@ morphological_features.head()
 </div>
 <p>Let’s plot all of the distributions in one plot using subplots.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># exclude &#39;cell_id&#39; from the features to plot
@@ -916,7 +912,7 @@ features = [f for f in morphological_features.columns if f != &quot;cell_id&quot
 
 # define grid layout
 num_features = len(features)
-cols = 6
+cols = 5
 rows = math.ceil(num_features / cols)
 
 # create subplots
@@ -972,12 +968,12 @@ plt.show()
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../modules/spillover_metrics.html"
+       href="../modules/fix_spatialdata.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</p>
+        <p class="prev-next-title">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</p>
       </div>
     </a>
     <a class="right-next"

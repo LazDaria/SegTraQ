@@ -1,0 +1,1470 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Reading files into spatialdata &#8212; SegTraQ  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/spatialdata';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SegTraQ  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Baseline metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/spatialdata.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Reading files into spatialdata</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Technology-Focus:-ProSeg">Technology Focus: ProSeg</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Segger">Segger</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#BIDcell">BIDcell</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Xenium">Xenium</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+
+from pathlib import Path
+
+import geopandas as gpd
+import pandas as pd
+import tifffile
+
+import segtraq as st
+
+PATH = Path(&quot;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/dask/dataframe/__init__.py:31: FutureWarning: The legacy Dask DataFrame implementation is deprecated and will be removed in a future version. Set the configuration option `dataframe.query-planning` to `True` or None to enable the new Dask Dataframe implementation and silence this warning.
+  warnings.warn(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/xarray_schema/__init__.py:1: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools&lt;81.
+  from pkg_resources import DistributionNotFound, get_distribution
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:532: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
+  left = partial(_left_join_spatialelement_table)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:533: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
+  left_exclusive = partial(_left_exclusive_join_spatialelement_table)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:534: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
+  inner = partial(_inner_join_spatialelement_table)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:535: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
+  right = partial(_right_join_spatialelement_table)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/query/relational_query.py:536: FutureWarning: functools.partial will be a method descriptor in future Python versions; wrap it in enum.member() if you want to preserve the old behavior
+  right_exclusive = partial(_right_exclusive_join_spatialelement_table)
+</pre></div></div>
+</div>
+<section id="Reading-files-into-spatialdata">
+<h1>Reading files into spatialdata<a class="headerlink" href="#Reading-files-into-spatialdata" title="Link to this heading">#</a></h1>
+<p>Before assessing the quality of a segmentation, we first need to get the data into <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code> format. The following sections show how this can be achieved from a variety of different segmentation methods.</p>
+<p>We always require a transcript dataframe, and any additional data can come as shapes, labels, or images.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># reading the transcript df
+transcript_df = pd.read_csv(PATH / &quot;transcripts.csv&quot;)
+
+# optional, if you want to add an image
+image = tifffile.imread(PATH / &quot;dapi_um.tif&quot;)
+
+transcript_df.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transcript_id</th>
+      <th>cell_id</th>
+      <th>overlaps_nucleus</th>
+      <th>feature_name</th>
+      <th>x_location</th>
+      <th>y_location</th>
+      <th>z_location</th>
+      <th>qv</th>
+      <th>fov_name</th>
+      <th>nucleus_distance</th>
+      <th>codeword_index</th>
+      <th>codeword_category</th>
+      <th>is_gene</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>282643208155248</td>
+      <td>bfnbkogm-1</td>
+      <td>0</td>
+      <td>AAMP</td>
+      <td>57.153320</td>
+      <td>163.29980</td>
+      <td>20.156250</td>
+      <td>35.75</td>
+      <td>V12</td>
+      <td>0.15625</td>
+      <td>3277</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>282643207975264</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>ABCA1</td>
+      <td>69.262695</td>
+      <td>175.47168</td>
+      <td>23.562500</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>0.93750</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>282716222414197</td>
+      <td>nhlaipjn-1</td>
+      <td>1</td>
+      <td>ABCA1</td>
+      <td>73.387695</td>
+      <td>189.01855</td>
+      <td>21.593750</td>
+      <td>40.00</td>
+      <td>W12</td>
+      <td>0.00000</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>282643207864202</td>
+      <td>bfndjloi-1</td>
+      <td>0</td>
+      <td>ABCA1</td>
+      <td>100.747070</td>
+      <td>141.87793</td>
+      <td>20.546875</td>
+      <td>36.25</td>
+      <td>V12</td>
+      <td>0.93750</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>282716222540753</td>
+      <td>nhlcfdpj-1</td>
+      <td>1</td>
+      <td>ABCA7</td>
+      <td>85.856445</td>
+      <td>192.45605</td>
+      <td>22.890625</td>
+      <td>40.00</td>
+      <td>W12</td>
+      <td>0.00000</td>
+      <td>8133</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>If you want to load the data into a spatialdata object yourself, you can use the <code class="docutils literal notranslate"><span class="pre">create_spatialdata()</span></code> method. Alternatively, you can opt for one of our technology-specific readers, which are detailed below.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># example for how to create a spatialdata object yourself
+sdata = st.fs.create_spatialdata(
+    points=transcript_df, images=image, coord_columns=[&quot;x_location&quot;, &quot;y_location&quot;, &quot;z_location&quot;]
+)
+sdata
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;c&#39;</span>, <span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object
+├── Images
+│     └── &#39;image&#39;: DataArray[cyx] (1, 551, 680)
+└── Points
+      └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 13) (3D points)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        image (Images), transcripts (Points)
+</pre></div></div>
+</div>
+<p>If you already have a spatialdata object, you can quickly assess its consistency with <code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code>. This will check if the cell IDs match between the transcripts and the shapes, if the labels and shapes contain the same number of cells, and a couple of other things. If everything is okay, the method will simply return <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>st.fs.validate_spatialdata(sdata)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<section id="Technology-Focus:-ProSeg">
+<h2>Technology Focus: ProSeg<a class="headerlink" href="#Technology-Focus:-ProSeg" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>shapes = gpd.read_file(PATH / &quot;proseg_output_v3/cell-polygons-layers.geojson&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># for ProSeg, we need to add a mapping from the cell_id to the label_id
+var_df = pd.read_csv(PATH / &quot;proseg_output_v3/cell-metadata.csv.gz&quot;, compression=&quot;gzip&quot;)
+# this dictionary maps from a cell ID (e. g. bfnbkogm-1) to a numeric ID (e. g. 1)
+cell_id_dict = dict(zip(var_df[&quot;original_cell_id&quot;], var_df[&quot;cell&quot;], strict=False))
+# adding the mapped ID into the dataframe
+transcript_df[&quot;cell_id_numeric&quot;] = transcript_df[&quot;cell_id&quot;].map(cell_id_dict).astype(&quot;Int64&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata = st.fs.create_spatialdata(
+    points=transcript_df,
+    images=image,
+    shapes=shapes,
+    coord_columns=[&quot;x_location&quot;, &quot;y_location&quot;, &quot;z_location&quot;],
+    cell_key_points=&quot;cell_id_numeric&quot;,
+    cell_key_shapes=&quot;cell&quot;,
+    relabel_points=True,
+    relabel_shapes=True,
+    consolidate_shapes=True,
+)
+sdata
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;c&#39;</span>, <span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object
+├── Images
+│     └── &#39;image&#39;: DataArray[cyx] (1, 551, 680)
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 14) (3D points)
+└── Shapes
+      ├── &#39;cell_boundaries_layer_0&#39;: GeoDataFrame shape: (2078, 3) (2D shapes)
+      ├── &#39;cell_boundaries_layer_1&#39;: GeoDataFrame shape: (2094, 3) (2D shapes)
+      ├── &#39;cell_boundaries_layer_2&#39;: GeoDataFrame shape: (2094, 3) (2D shapes)
+      └── &#39;cell_boundaries_layer_3&#39;: GeoDataFrame shape: (2072, 3) (2D shapes)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        image (Images), transcripts (Points), cell_boundaries_layer_0 (Shapes), cell_boundaries_layer_1 (Shapes), cell_boundaries_layer_2 (Shapes), cell_boundaries_layer_3 (Shapes)
+</pre></div></div>
+</div>
+</section>
+<section id="Segger">
+<h2>Segger<a class="headerlink" href="#Segger" title="Link to this heading">#</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># &quot;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample/segger_output/&quot;
+transcripts = pd.read_parquet(
+    PATH / &quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20250817/segger_transcripts.parquet&quot;
+)
+transcripts
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transcript_id</th>
+      <th>cell_id</th>
+      <th>overlaps_nucleus</th>
+      <th>feature_name</th>
+      <th>x_location</th>
+      <th>y_location</th>
+      <th>z_location</th>
+      <th>qv</th>
+      <th>fov_name</th>
+      <th>nucleus_distance</th>
+      <th>codeword_index</th>
+      <th>codeword_category</th>
+      <th>is_gene</th>
+      <th>score</th>
+      <th>segger_cell_id</th>
+      <th>bound</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>282643207824235</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>DeprecatedCodeword_2163</td>
+      <td>22.887695</td>
+      <td>177.737305</td>
+      <td>21.156250</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>1.546875</td>
+      <td>2163</td>
+      <td>deprecated_codeword</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>UNASSIGNED</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>282643207824313</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>ATF2</td>
+      <td>25.840820</td>
+      <td>177.190430</td>
+      <td>22.531250</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>3.984375</td>
+      <td>6802</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+      <td>NaN</td>
+      <td>UNASSIGNED</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>282643207824939</td>
+      <td>UNASSIGNED</td>
+      <td>1</td>
+      <td>DeprecatedCodeword_2163</td>
+      <td>46.684570</td>
+      <td>161.659180</td>
+      <td>20.734375</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>0.000000</td>
+      <td>2163</td>
+      <td>deprecated_codeword</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>UNASSIGNED</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>282643207824972</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>DeprecatedCodeword_2163</td>
+      <td>47.481445</td>
+      <td>173.299805</td>
+      <td>24.734375</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>1.156250</td>
+      <td>2163</td>
+      <td>deprecated_codeword</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>UNASSIGNED</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>282643207824999</td>
+      <td>UNASSIGNED</td>
+      <td>1</td>
+      <td>DeprecatedCodeword_2163</td>
+      <td>48.372070</td>
+      <td>165.190430</td>
+      <td>24.078125</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>0.000000</td>
+      <td>2163</td>
+      <td>deprecated_codeword</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>UNASSIGNED</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>389540</th>
+      <td>282720518222957</td>
+      <td>nedkeclc-1</td>
+      <td>1</td>
+      <td>CD79A</td>
+      <td>666.122070</td>
+      <td>332.643555</td>
+      <td>19.718750</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>0.000000</td>
+      <td>17359</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+      <td>0.905907</td>
+      <td>bfjhblik-1</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>389541</th>
+      <td>282720518222958</td>
+      <td>necpdkpf-1</td>
+      <td>0</td>
+      <td>TOX4</td>
+      <td>666.887695</td>
+      <td>367.612305</td>
+      <td>23.093750</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>0.218750</td>
+      <td>16650</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+      <td>0.632168</td>
+      <td>necpdakf-1</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>389542</th>
+      <td>282720518222964</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>UBE2D3</td>
+      <td>668.418945</td>
+      <td>325.784180</td>
+      <td>21.046875</td>
+      <td>7.50</td>
+      <td>W13</td>
+      <td>1.140625</td>
+      <td>13702</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+      <td>NaN</td>
+      <td>UNASSIGNED</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>389543</th>
+      <td>282720518222968</td>
+      <td>bfjhblik-1</td>
+      <td>1</td>
+      <td>IFIT3</td>
+      <td>669.872070</td>
+      <td>335.502930</td>
+      <td>22.953125</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>0.000000</td>
+      <td>13477</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+      <td>0.872147</td>
+      <td>bfjhblik-1</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>389544</th>
+      <td>282720518222978</td>
+      <td>UNASSIGNED</td>
+      <td>1</td>
+      <td>CD79A</td>
+      <td>673.731445</td>
+      <td>352.737305</td>
+      <td>22.156250</td>
+      <td>30.25</td>
+      <td>W13</td>
+      <td>0.000000</td>
+      <td>17359</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+      <td>0.511073</td>
+      <td>necicbin-1</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+<p>389545 rows × 16 columns</p>
+</div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># cell_shapes = gpd.read_parquet(PATH / &quot;segger_output/benchmarks/
+# segger_output_0.5_False_4_12_15_3_20250817/segger_boundaries.parquet&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: read nuclei
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: these are missing
+# &quot;/g/huber/projects/CODEX/segtraq/valid_testdata/BC_cellseg_10x/BC_Xenium_cellseg_sample/segger_output/benchmarks/
+# segger_output_0.5_False_4_12_15_3_20250817/&quot;
+</pre></div>
+</div>
+</div>
+</section>
+<section id="BIDcell">
+<h2>BIDcell<a class="headerlink" href="#BIDcell" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>bidcell_path = PATH / &quot;bidcell_output&quot;
+
+# reading cell labels
+cell_labels_path = list(bidcell_path.glob(&quot;model_outputs/202*/test_output/epoch_4_step_100_connected.tif&quot;))
+cell_labels = tifffile.imread(cell_labels_path[0])
+
+# reading nucleus labels
+nucleus_labels = tifffile.imread(bidcell_path / &quot;nuclei.tif&quot;)
+
+# reading the resized image
+image = tifffile.imread(bidcell_path / &quot;dapi_resized.tif&quot;)
+
+# reading the processed transcripts
+transcripts = pd.read_csv(bidcell_path / &quot;transcripts_processed.csv&quot;, index_col=0)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata = st.fs.create_spatialdata(
+    points=transcripts,
+    labels={&quot;cell_labels&quot;: cell_labels, &quot;nucleus_labels&quot;: nucleus_labels},
+    images=image,
+    # optional, if your coordinates are not named x, y, z
+    coord_columns=[&quot;x_location&quot;, &quot;y_location&quot;, &quot;z_location&quot;],
+)
+sdata
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;c&#39;</span>, <span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object
+├── Images
+│     └── &#39;image&#39;: DataArray[cyx] (1, 551, 680)
+├── Labels
+│     ├── &#39;cell_labels&#39;: DataArray[yx] (551, 680)
+│     └── &#39;nucleus_labels&#39;: DataArray[yx] (551, 680)
+└── Points
+      └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 13) (3D points)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        image (Images), cell_labels (Labels), nucleus_labels (Labels), transcripts (Points)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># we can compute the shapes as follows
+sdata = st.fs.compute_shapes(sdata, labels_key=&quot;cell_labels&quot;)
+sdata
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object
+├── Images
+│     └── &#39;image&#39;: DataArray[cyx] (1, 551, 680)
+├── Labels
+│     ├── &#39;cell_labels&#39;: DataArray[yx] (551, 680)
+│     └── &#39;nucleus_labels&#39;: DataArray[yx] (551, 680)
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 13) (3D points)
+└── Shapes
+      └── &#39;cell_boundaries&#39;: GeoDataFrame shape: (2276, 2) (2D shapes)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        image (Images), cell_labels (Labels), nucleus_labels (Labels), transcripts (Points), cell_boundaries (Shapes)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>transcripts
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transcript_id</th>
+      <th>cell_id</th>
+      <th>overlaps_nucleus</th>
+      <th>feature_name</th>
+      <th>x_location</th>
+      <th>y_location</th>
+      <th>z_location</th>
+      <th>qv</th>
+      <th>fov_name</th>
+      <th>nucleus_distance</th>
+      <th>codeword_index</th>
+      <th>codeword_category</th>
+      <th>is_gene</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>282643208155248</td>
+      <td>bfnbkogm-1</td>
+      <td>0</td>
+      <td>AAMP</td>
+      <td>57.153320</td>
+      <td>163.29980</td>
+      <td>20.156250</td>
+      <td>35.75</td>
+      <td>V12</td>
+      <td>0.156250</td>
+      <td>3277</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>282643207975264</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>ABCA1</td>
+      <td>69.262695</td>
+      <td>175.47168</td>
+      <td>23.562500</td>
+      <td>40.00</td>
+      <td>V12</td>
+      <td>0.937500</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>282716222414197</td>
+      <td>nhlaipjn-1</td>
+      <td>1</td>
+      <td>ABCA1</td>
+      <td>73.387695</td>
+      <td>189.01855</td>
+      <td>21.593750</td>
+      <td>40.00</td>
+      <td>W12</td>
+      <td>0.000000</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>282643207864202</td>
+      <td>bfndjloi-1</td>
+      <td>0</td>
+      <td>ABCA1</td>
+      <td>100.747070</td>
+      <td>141.87793</td>
+      <td>20.546875</td>
+      <td>36.25</td>
+      <td>V12</td>
+      <td>0.937500</td>
+      <td>9629</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>282716222540753</td>
+      <td>nhlcfdpj-1</td>
+      <td>1</td>
+      <td>ABCA7</td>
+      <td>85.856445</td>
+      <td>192.45605</td>
+      <td>22.890625</td>
+      <td>40.00</td>
+      <td>W12</td>
+      <td>0.000000</td>
+      <td>8133</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>293060</th>
+      <td>282720517240514</td>
+      <td>UNASSIGNED</td>
+      <td>0</td>
+      <td>ZNF395</td>
+      <td>618.950200</td>
+      <td>452.58105</td>
+      <td>21.093750</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>0.468750</td>
+      <td>76</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>293061</th>
+      <td>282720517607183</td>
+      <td>nfjgchil-1</td>
+      <td>0</td>
+      <td>ZNF592</td>
+      <td>601.434600</td>
+      <td>451.25293</td>
+      <td>20.656250</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>1.671875</td>
+      <td>12984</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>293062</th>
+      <td>282720518212562</td>
+      <td>UNASSIGNED</td>
+      <td>1</td>
+      <td>ZNF687</td>
+      <td>604.950200</td>
+      <td>459.14355</td>
+      <td>21.203125</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>0.000000</td>
+      <td>3031</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>293063</th>
+      <td>282720517371680</td>
+      <td>UNASSIGNED</td>
+      <td>1</td>
+      <td>ZNF687</td>
+      <td>605.028300</td>
+      <td>460.28418</td>
+      <td>21.125000</td>
+      <td>30.75</td>
+      <td>W13</td>
+      <td>0.000000</td>
+      <td>3031</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>293064</th>
+      <td>282720518027360</td>
+      <td>UNASSIGNED</td>
+      <td>1</td>
+      <td>ZYX</td>
+      <td>619.528300</td>
+      <td>454.81543</td>
+      <td>20.390625</td>
+      <td>40.00</td>
+      <td>W13</td>
+      <td>0.000000</td>
+      <td>9941</td>
+      <td>predesigned_gene</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+<p>293065 rows × 13 columns</p>
+</div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># TODO: FIX THE MAPPING FROM CELL TO LABEL IDS
+# might want to create a method that does this
+# st.fs.validate_spatialdata(sdata, cell_key_points=&#39;cell_id&#39;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Xenium">
+<h2>Xenium<a class="headerlink" href="#Xenium" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>image = tifffile.imread(PATH / &quot;dapi_um.tif&quot;)
+cell_labels = tifffile.imread(PATH / &quot;cell_mask_um.tif&quot;)
+nucleus_labels = tifffile.imread(PATH / &quot;nuc_mask_um.tif&quot;)
+cell_shapes = pd.read_parquet(PATH / &quot;cell_boundaries.parquet&quot;)
+nucleus_shapes = pd.read_parquet(PATH / &quot;nucleus_boundaries.parquet&quot;)
+transcript_df = pd.read_csv(PATH / &quot;transcripts.csv&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># converting the data frames into geopandas dfs
+cell_shapes = st.fs.create_geopandas_df(cell_shapes)
+nucleus_shapes = st.fs.create_geopandas_df(nucleus_shapes)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>sdata = st.fs.create_spatialdata(
+    points=transcripts,
+    labels={&quot;cell_labels&quot;: cell_labels, &quot;nucleus_labels&quot;: nucleus_labels},
+    images=image,
+    shapes={&quot;cell_boundaries&quot;: cell_shapes, &quot;nucleus_boundaries&quot;: nucleus_shapes},
+    # optional, if your coordinates are not named x, y, z
+    coord_columns=[&quot;x_location&quot;, &quot;y_location&quot;, &quot;z_location&quot;],
+    consolidate_shapes=True,
+)
+sdata
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
+<span class="ansi-blue-fg">INFO    </span> no axes information specified in the object, setting `dims` to: <span class="ansi-bold">(</span><span class="ansi-green-fg">&#39;c&#39;</span>, <span class="ansi-green-fg">&#39;y&#39;</span>, <span class="ansi-green-fg">&#39;x&#39;</span><span class="ansi-bold">)</span>
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/fs/fix_spatialdata.py:299: UserWarning: Missing 7 cell IDs in shapes: There are 2231 cell IDs in labels, but only 2224 are in shapes. This might lead to inconsistencies in the spatialdata object.
+  validate_spatialdata(
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object
+├── Images
+│     └── &#39;image&#39;: DataArray[cyx] (1, 551, 680)
+├── Labels
+│     ├── &#39;cell_labels&#39;: DataArray[yx] (551, 680)
+│     └── &#39;nucleus_labels&#39;: DataArray[yx] (551, 680)
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 13) (3D points)
+└── Shapes
+      ├── &#39;cell_boundaries&#39;: GeoDataFrame shape: (2198, 2) (2D shapes)
+      └── &#39;nucleus_boundaries&#39;: GeoDataFrame shape: (2195, 2) (2D shapes)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        image (Images), cell_labels (Labels), nucleus_labels (Labels), transcripts (Points), cell_boundaries (Shapes), nucleus_boundaries (Shapes)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># ensuring that the new spatialdata is consistent
+st.fs.validate_spatialdata(sdata, cell_key_points=&quot;cell_id&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_439/3019179017.py:2: UserWarning: Missing 33 cell IDs in shapes: There are 2231 cell IDs in labels, but only 2198 are in shapes. This might lead to inconsistencies in the spatialdata object.
+  st.fs.validate_spatialdata(sdata, cell_key_points=&#34;cell_id&#34;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Technology-Focus:-ProSeg">Technology Focus: ProSeg</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Segger">Segger</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#BIDcell">BIDcell</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Xenium">Xenium</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
