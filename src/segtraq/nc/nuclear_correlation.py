@@ -1,3 +1,4 @@
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import spatialdata as sd
@@ -289,82 +290,135 @@ def compute_cell_nuc_correlation(
     return pd.DataFrame(rows)
 
 
-# def compute_differential_expression_between_parts(
-#     sdata: sd.SpatialData,
-#     best_nuc_id_key: str = "best_nuc_id",
-#     table_key: str = "table"
-# ) -> pd.DataFrame:
-#     """
-#     For each cell, computes per-gene differential expression between two regions:
-#       (i) transcripts within the intersection of the cell and its best-matching nucleus,
-#       (ii) transcripts in the remainder of the cell (outside the nucleus-intersection).
+def compute_correlation_between_parts(
+    sdata: sd.SpatialData,
+    table_key: str = "table",
+    cell_shape_key: str = "cell_boundaries",
+    nuc_shape_key: str = "nucleus_boundaries",
+    transcripts_key: str = "transcripts",
+    feature_column: str = "feature_name",
+    x_coordinate: str = "x",
+    y_coordinate: str = "y",
+) -> pd.DataFrame:
+    """
+    Compute Pearson correlation between cell part overlapping with its nucleus and the rest of the cell.
 
-#     If `cell_iou_key` is not in the annotation table, `compute_cell_nuc_ious()` is run.
+    Parameters
+    ----------
+    sdata : SpatialData
+        The SpatialData object containing cells, nuclei, and transcript points.
+    table_key : str
+        Key in `sdata.tables` pointing to the expression matrix.
+    cell_shape_key : str
+        Key for cell boundaries in sdata.shapes.
+    nuc_shape_key : str
+        Key for nucleus boundaries in sdata.shapes.
+    transcripts_key : str
+        Key for transcript points in sdata.points.
+    feature_column : str
+        Feature column in transcript points (e.g. gene name).
+    x_coordinate : str
+        Column name for x coordinate.
+    y_coordinate : str
+        Column name for y coordinate.
 
-#     Parameters
-#     ----------
-#     sdata : spatialdata.SpatialData
-#         SpatialData object containing:
-#           - `.shapes['cell_boundaries']` and `.shapes['nucleus_boundaries']` GeoDataFrames
-#           - `.tables[table_key]` AnnData with gene expression counts (`.X`)
-#           - `.points['transcripts']`: point-level transcript locations with columns `cell_id` and `feature_name`
-#     cell_iou_key : str, default "cell_nuc_iou"
-#         Column in `.tables[table_key].obs` that stores `best_nuc_id`.
-#         If absent, IoUs will be computed.
-#     table_key : str, default "table"
-#         Key for the expression matrix in `sdata.tables`.
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ["cell_id", "best_nuc_id", "correlation"]
+    """
 
-#     Returns
-#     -------
-#     pandas.DataFrame
-#         Each row corresponds to a (cell, gene) pair and contains:
-#           - `cell_id`: cell identifier
-#           - `gene`: gene name
-#           - `log2FC`: log2 fold change of transcripts inside the intersection vs rest
-#             (using pseudocount +1)
-#           - `pct_in_intersection`: proportion of that gene’s transcripts inside the nucleus intersection
-#           - `total_count`: total number of transcripts for that gene in the cell
-#     """
+    # Step 1: Compute IoUs if needed
+    if "best_nuc_id" not in sdata.tables[table_key].obs.columns:
+        iou_df = compute_cell_nuc_ious(sdata, cell_shape_key, nuc_shape_key)
+    else:
+        iou_df = sdata.tables[table_key].obs[["cell_id", "best_nuc_id", "IoU"]].copy()
 
-#     df = sdata.tables[table_key].obs.copy()
-#     if cell_iou_key not in df.columns:
-#         iou_df = compute_cell_nuc_ious(sdata)
-#         df = df.merge(iou_df.set_index("cell_id"), left_on="cell_id", right_index=True, how="left")
-#     # Need shape geometries
-#     cell_shapes = sdata.shapes["cell_boundaries"]
-#     nuc_shapes = sdata.shapes["nucleus_boundaries"]
+    # Set up geometries
+    cell_gdf = sdata.shapes[cell_shape_key]
+    nuc_gdf = sdata.shapes[nuc_shape_key]
+    transcripts_df = sdata.points[transcripts_key].compute()
 
-#     # also expression table
-#     expr = sdata.tables[table_key]
+    # Assuming transcripts_df has 'x' and 'y' columns
+    transcripts_gdf = gpd.GeoDataFrame(
+        transcripts_df,
+        geometry=gpd.points_from_xy(transcripts_df[x_coordinate], transcripts_df[y_coordinate]),
+        crs=nuc_gdf.crs,  # TODO - how do make sure that they are actually in the same coordinate system
+    )
 
-#     records = []
-#     for _, cell in df.iterrows():
-#         cid = cell.cell_id
-#         nid = cell.best_nuc_id
-#         if pd.isna(nid):
-#             continue
-#         cell_poly = cell_shapes.loc[cid].geometry
-#         nuc_poly  = nuc_shapes.loc[nid].geometry
-#         intersection = cell_poly.intersection(nuc_poly)
-#         for g in expr.var_names:
-#             # transcripts points layer filtered by region?
-#             pts = sdata.points["transcripts"]
-#             in_cell = pts[pts.cell_id == cid]
-#             x = in_cell.feature_name == g
-#             pts_g = in_cell[x]
-#             in_inter = pts_g.within(intersection)
-#             count_int = in_inter.sum()
-#             count_rest = len(pts_g) - count_int
-#             # Avoid zeros
-#             if count_rest > 0:
-#                 log2fc = np.log2((count_int + 1)/(count_rest + 1))
-#                 pct_int = count_int / len(pts_g)
-#             else:
-#                 log2fc = np.nan; pct_int = 1.0
-#             records.append({
-#                 "cell_id": cid, "gene": g,
-#                 "log2FC": log2fc,
-#                 "pct_in_intersection": pct_int,
-#                 "total_count": len(pts_g)
-#             })
-#     return pd.DataFrame(records)
+    results = []
+    for row in tqdm(iou_df.itertuples(index=False), desc="Computing correlations"):
+        cell_id, best_nuc_id, iou_val = row.cell_id, row.best_nuc_id, row.IoU
+
+        if best_nuc_id is None:
+            results.append(
+                {
+                    "cell_id": cell_id,
+                    "best_nuc_id": best_nuc_id,
+                    "IoU": iou_val,
+                    "correlation_parts": np.nan,
+                }
+            )  # TODO np.nan
+            continue
+
+        cell_geom = cell_gdf.loc[cell_id].geometry
+        nuc_geom = nuc_gdf.loc[
+            int(best_nuc_id)
+        ].geometry  # TODO - sdata['table'].obs_names is str, but shapes are int - check how they link
+
+        if not (cell_geom.is_valid and nuc_geom.is_valid):
+            results.append(
+                {
+                    "cell_id": cell_id,
+                    "best_nuc_id": best_nuc_id,
+                    "IoU": iou_val,
+                    "correlation_parts": np.nan,
+                }
+            )  # TODO np.nan
+            continue
+
+        intersection = cell_geom.intersection(nuc_geom)
+        remainder = cell_geom.difference(intersection)
+
+        if intersection.is_empty or remainder.is_empty:
+            results.append(
+                {
+                    "cell_id": cell_id,
+                    "best_nuc_id": best_nuc_id,
+                    "IoU": iou_val,
+                    "correlation_parts": np.nan,
+                }
+            )  # TODO np.nan
+            continue
+
+        # Select transcripts inside each part
+        pts_intersection = transcripts_gdf[transcripts_gdf.geometry.within(intersection)]
+        pts_remainder = transcripts_gdf[transcripts_gdf.geometry.within(remainder)]
+
+        # Count features
+        count_intersection = pts_intersection[feature_column].value_counts()
+        count_remainder = pts_remainder[feature_column].value_counts()
+
+        # Restrict to var_names from sdata.tables[table_key]
+        valid_features = sdata.tables[table_key].var_names
+        filtered_features = count_intersection.index.union(count_remainder.index).intersection(valid_features)
+
+        # Create aligned vectors for Pearson correlation
+        vec1 = count_intersection.reindex(filtered_features, fill_value=0)
+        vec2 = count_remainder.reindex(filtered_features, fill_value=0)
+
+        if vec1.sum() == 0 or vec2.sum() == 0:
+            corr = np.nan
+        else:
+            corr, _ = pearsonr(vec1, vec2)
+
+        results.append(
+            {
+                "cell_id": cell_id,
+                "best_nuc_id": best_nuc_id,
+                "IoU": iou_val,
+                "correlation_parts": corr,
+            }
+        )
+
+    return pd.DataFrame(results)
