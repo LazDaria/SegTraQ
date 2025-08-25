@@ -155,8 +155,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../modules/fix_spatialdata.html">The fix spatialdata (<code class="code docutils literal notranslate"><span class="pre">fs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="current nav bd-sidenav">
@@ -341,7 +339,7 @@ document.write(`
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import spatialdata as sd
@@ -805,76 +803,6 @@ with coordinate systems:
         he_image (Images), if_image (Images), morphology_focus (Images), morphology_mip (Images), cell_labels (Labels), nucleus_labels (Labels), transcripts (Points), cell_boundaries (Shapes), cell_circles (Shapes), nucleus_boundaries (Shapes)
 </pre></div></div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
-
-axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)[1].flatten()
-
-# link annotations with cell boundaries
-sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
-sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
-
-# plot
-sdata.pl.render_shapes(&quot;nucleus_boundaries&quot;).pl.show(
-    ax=axes[0], title=&quot;Nucleus boundaries&quot;, coordinate_systems=&quot;global&quot;
-)
-
-sdata.pl.render_shapes(&quot;cell_boundaries&quot;, color=&quot;IoU&quot;).pl.show(
-    ax=axes[1], title=&quot;Cell boundaries colored by IoU&quot;, coordinate_systems=&quot;global&quot;
-)
-
-sdata.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;IoU&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.show(ax=axes[2], title=&quot;Overlay of nuclei and cell masks colored by IoU&quot;, colorbar=True)
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/spatialdata.py:511: UserWarning: Converting `region_key: region` to categorical dtype.
-  convert_region_column_to_categorical(table)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
-  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
-  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:105: UserWarning: Key `cell_boundaries` already exists. Overwriting it in-memory.
-  self._check_key(key, self.keys(), self._shared_keys)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:125: UserWarning: Key `table` already exists. Overwriting it in-memory.
-  self._check_key(key, self.keys(), self._shared_keys)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
-  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/anndata/_core/aligned_df.py:68: ImplicitModificationWarning: Transforming to str index.
-  warnings.warn(&#34;Transforming to str index.&#34;, ImplicitModificationWarning)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:105: UserWarning: Key `cell_boundaries` already exists. Overwriting it in-memory.
-  self._check_key(key, self.keys(), self._shared_keys)
-/home/lazic/miniforge3/envs/sc_analysis_sdata/lib/python3.10/site-packages/spatialdata/_core/_elements.py:125: UserWarning: Key `table` already exists. Overwriting it in-memory.
-  self._check_key(key, self.keys(), self._shared_keys)
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_16_1.png" src="../_images/notebooks_nuclear_correlation_16_1.png" />
-</div>
-</div>
 <p>The histogram of IoU distribution (below) shows a median IoU is at 0.16, i.e. 16% overlap.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
@@ -916,7 +844,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_18_0.png" src="../_images/notebooks_nuclear_correlation_18_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_17_0.png" src="../_images/notebooks_nuclear_correlation_17_0.png" />
 </div>
 </div>
 <p>In the spatial plots, we can see that cells that have a high overlap with nuclei, also show a high IoU value.</p>
@@ -925,6 +853,7 @@ plt.show()
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
+import spatialdata_plot
 
 axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)[1].flatten()
 
@@ -979,7 +908,7 @@ sdata.pl.render_shapes(
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_20_1.png" src="../_images/notebooks_nuclear_correlation_20_1.png" />
+<img alt="../_images/notebooks_nuclear_correlation_19_1.png" src="../_images/notebooks_nuclear_correlation_19_1.png" />
 </div>
 </div>
 </section>
@@ -1199,7 +1128,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_29_0.png" src="../_images/notebooks_nuclear_correlation_29_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_28_0.png" src="../_images/notebooks_nuclear_correlation_28_0.png" />
 </div>
 </div>
 <p>The calculated R2 (coefficient of determination) is 0.214 indicating that correlation between cell and nucleus increases with their IoU.</p>
@@ -1252,7 +1181,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_31_0.png" src="../_images/notebooks_nuclear_correlation_31_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_30_0.png" src="../_images/notebooks_nuclear_correlation_30_0.png" />
 </div>
 </div>
 <p>The spatial plot below overlays nucleus boundaries, cell masks colored by Pearson correlation, and transcripts. Cells whose transcripts are distributed across the nucleus region tend to have higher correlation with the nucleus, while cells whose transcripts are localized outside the nuclear region—potentially due to spillover from neighboring cells—tend to exhibit lower correlation.</p>
@@ -1360,7 +1289,7 @@ sdata.pl.render_shapes(
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_33_3.png" src="../_images/notebooks_nuclear_correlation_33_3.png" />
+<img alt="../_images/notebooks_nuclear_correlation_32_3.png" src="../_images/notebooks_nuclear_correlation_32_3.png" />
 </div>
 </div>
 </section>
@@ -1696,7 +1625,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_42_0.png" src="../_images/notebooks_nuclear_correlation_42_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_41_0.png" src="../_images/notebooks_nuclear_correlation_41_0.png" />
 </div>
 </div>
 <p>The histogram below visualizes the Pearson correlation between transcript counts in the intersection and remainder of each cell, plotted against the Intersection over Union (IoU) with the nucleus. The calculated R2 (coefficient of determination) value is 0.005, indicating that IoU explains less than 1% of the variance in correlation. This negligible relationship suggests that normalization of the correlation metric by IoU is not necessary.</p>
@@ -1748,7 +1677,7 @@ plt.show()
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_44_0.png" src="../_images/notebooks_nuclear_correlation_44_0.png" />
+<img alt="../_images/notebooks_nuclear_correlation_43_0.png" src="../_images/notebooks_nuclear_correlation_43_0.png" />
 </div>
 </div>
 <p>Because <code class="docutils literal notranslate"><span class="pre">spatialdata-plot</span></code> plots all boundaries in grey, if there are NaN values in the annotation (describe <a class="reference external" href="https://github.com/scverse/spatialdata-plot/pull/87">before</a>), we will copy the <code class="docutils literal notranslate"><span class="pre">pearson_corr_parts</span></code> column and set <code class="docutils literal notranslate"><span class="pre">NaN</span></code>values to <code class="docutils literal notranslate"><span class="pre">0.0</span></code>just for plotting. We will try to solve this issue later.</p>
@@ -1924,7 +1853,7 @@ sdata[&quot;table&quot;].obs.drop(columns=[&quot;pearson_corr_parts_plot&quot;],
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_nuclear_correlation_48_5.png" src="../_images/notebooks_nuclear_correlation_48_5.png" />
+<img alt="../_images/notebooks_nuclear_correlation_47_5.png" src="../_images/notebooks_nuclear_correlation_47_5.png" />
 </div>
 </div>
 <div class="nbinput nblast docutils container">
