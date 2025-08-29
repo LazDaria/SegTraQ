@@ -27,9 +27,10 @@ def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
 
 def _process_cell(
     cell_row: Series,
+    cell_id_key_shape: str, 
     nuc_boundaries: GeoDataFrame,
     nuc_sindex: Index,
-) -> dict[str, int | None | str]:
+) -> dict[str | int, str | int, int | None | float]:
     """For one cell polygon compute the IoU with the best-matching nucleus."""
 
     cell_geom = cell_row.geometry
@@ -38,24 +39,25 @@ def _process_cell(
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
 
     if not candidate_idx:
-        return {"cell_id": cell_row.name, "best_nuc_id": None, "IoU": 0.0}
+        return {"cell_id": cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
 
     candidates = nuc_boundaries.iloc[candidate_idx]
 
     best_iou: float = 0.0
-    best_nuc_id: str | None = None
+    best_nuc_id = np.nan
     for _, nuc in candidates.iterrows():
         nuc_geom = nuc.geometry
         iou = _compute_iou(cell_geom, nuc_geom)
         if pd.notna(iou) and iou > best_iou:
             best_iou = iou
-            best_nuc_id = str(nuc.name)
+            best_nuc_id = nuc.name
 
-    return {"cell_id": cell_row.name, "best_nuc_id": best_nuc_id, "IoU": best_iou}
+    return {"cell_id": cell_row[cell_id_key_shape], "best_nuc_id": best_nuc_id, "IoU": best_iou}
 
 
 def compute_cell_nuc_ious(
     sdata: sd.SpatialData,
+    cell_id_key_shape: str = "cell_id",
     cell_shape_key: str = "cell_boundaries",
     nuc_shape_key: str = "nucleus_boundaries",
     n_jobs: int = -1,
@@ -68,6 +70,8 @@ def compute_cell_nuc_ious(
     ----------
     sdata : spatialdata.SpatialData
         Must contain cell and nuclear shapes.
+    cell_id_key_shape: str
+        Column in `sdata.shapes[cell_shape_key] containing cell IDs.
     cell_shape_key : str, optional
         The key in the `shapes` attribute of `sdata` that corresponds to cell boundaries.
     nuc_shape_key : str, optional
@@ -101,7 +105,7 @@ def compute_cell_nuc_ious(
 
     # Parallel loop over cells
     results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
-        delayed(_process_cell)(cell_row, nuc_boundaries, nuc_sindex) for _, cell_row in iterator
+        delayed(_process_cell)(cell_row, cell_id_key_shape, nuc_boundaries, nuc_sindex) for _, cell_row in iterator
     )
 
     return pd.DataFrame(results)
@@ -179,7 +183,7 @@ def _nucleus_by_feature_df(
     ad = sdata2.tables["table"]
     X = ad.X
     arr = X.toarray() if hasattr(X, "toarray") else X
-    df_out = pd.DataFrame(arr, index=sdata2["nucleus_boundaries"].index.astype(str), columns=ad.var_names)
+    df_out = pd.DataFrame(arr, index=sdata2["nucleus_boundaries"].index, columns=ad.var_names)
     return df_out
 
 
@@ -193,6 +197,8 @@ def compute_cell_nuc_correlation(
     feature_column: str = "feature_name",
     x_coordinate: str = "x",
     y_coordinate: str = "y",
+    cell_shape_key: str = "cell_boundaries",
+    n_jobs_iou: int = -1
 ) -> pd.DataFrame:
     """
     For each cell in the SpatialData table, identifies the nucleus with highest IoU
@@ -222,7 +228,10 @@ def compute_cell_nuc_correlation(
         Column in transcripts pointing x coordinate.
     y_coordinate: str
         Column in transcripts pointing y coordinate.
-
+    cell_shape_key: str
+        Name of cell shape layer used for IoU if not yet calculated.
+    n_jobs_iou: int
+        Number of jobs for computing IoU, if not yet calculated.
 
     Returns
     -------
@@ -236,11 +245,10 @@ def compute_cell_nuc_correlation(
 
     df = sdata.tables[table_key].obs.copy()
     if "best_nuc_id" not in df.columns:
-        iou_df = compute_cell_nuc_ious(sdata)
-        df = df.merge(
-            iou_df.set_index("cell_id"),
+        iou_df = compute_cell_nuc_ious(sdata, cell_id_key, cell_shape_key=cell_shape_key, nuc_shape_key=nucleus_by, n_jobs=n_jobs_iou)
+        df = df.merge(iou_df,
+            right_on = cell_id_key, 
             left_on=cell_id_key,
-            right_index=True,
             how="left",
         )
 
@@ -258,7 +266,10 @@ def compute_cell_nuc_correlation(
     expr_nucleus_df = _nucleus_by_feature_df(
         sdata, transcripts_key, nucleus_by, feature_column, x_coordinate, y_coordinate
     )
-    expr_nucleus = expr_nucleus_df[expr_cells.columns]
+
+    common_genes = expr_nucleus_df.columns.intersection(expr_cells.columns)
+    expr_nucleus = expr_nucleus_df[common_genes]
+    expr_cells = expr_cells[common_genes]
 
     rows = []
     for _, row in df.iterrows():
@@ -267,7 +278,7 @@ def compute_cell_nuc_correlation(
             rows.append(
                 {
                     "cell_id": cid,
-                    "best_nuc_id": None,
+                    "best_nuc_id": np.nan,
                     "IoU": row.IoU,
                     "correlation": 0.0,
                 }
@@ -290,9 +301,10 @@ def compute_cell_nuc_correlation(
     return pd.DataFrame(rows)
 
 
-def compute_correlation_between_parts(
+def compute_correlation_between_parts_slow(
     sdata: sd.SpatialData,
     table_key: str = "table",
+    cell_id_key_shape: str = "cell_id",
     cell_shape_key: str = "cell_boundaries",
     nuc_shape_key: str = "nucleus_boundaries",
     transcripts_key: str = "transcripts",
@@ -309,6 +321,8 @@ def compute_correlation_between_parts(
         The SpatialData object containing cells, nuclei, and transcript points.
     table_key : str
         Key in `sdata.tables` pointing to the expression matrix.
+    cell_id_key_shape: str
+        Column in shapes containing cell IDs.
     cell_shape_key : str
         Key for cell boundaries in sdata.shapes.
     nuc_shape_key : str
@@ -330,7 +344,7 @@ def compute_correlation_between_parts(
 
     # Step 1: Compute IoUs if needed
     if "best_nuc_id" not in sdata.tables[table_key].obs.columns:
-        iou_df = compute_cell_nuc_ious(sdata, cell_shape_key, nuc_shape_key)
+        iou_df = compute_cell_nuc_ious(sdata, cell_id_key_shape, cell_shape_key, nuc_shape_key)
     else:
         iou_df = sdata.tables[table_key].obs[["cell_id", "best_nuc_id", "IoU"]].copy()
 
@@ -347,10 +361,10 @@ def compute_correlation_between_parts(
     )
 
     results = []
-    for row in tqdm(iou_df.itertuples(index=False), desc="Computing correlations"):
+    for row in tqdm(iou_df.itertuples(index=False), total=len(iou_df), desc="Computing correlations"):
         cell_id, best_nuc_id, iou_val = row.cell_id, row.best_nuc_id, row.IoU
 
-        if best_nuc_id is None:
+        if pd.isna(best_nuc_id):
             results.append(
                 {
                     "cell_id": cell_id,
@@ -363,8 +377,8 @@ def compute_correlation_between_parts(
 
         cell_geom = cell_gdf.loc[cell_id].geometry
         nuc_geom = nuc_gdf.loc[
-            int(best_nuc_id)
-        ].geometry  # TODO - sdata['table'].obs_names is str, but shapes are int - check how they link
+            best_nuc_id
+        ].geometry
 
         if not (cell_geom.is_valid and nuc_geom.is_valid):
             results.append(
@@ -422,3 +436,138 @@ def compute_correlation_between_parts(
         )
 
     return pd.DataFrame(results)
+
+def compute_correlation_between_parts(
+    sdata,
+    table_key: str = "table",
+    cell_id_key_shape: str = "cell_id",
+    cell_shape_key: str = "cell_boundaries",
+    nuc_shape_key: str = "nucleus_boundaries",
+    transcripts_key: str = "transcripts",
+    feature_column: str = "feature_name",
+    x_coordinate: str = "x",
+    y_coordinate: str = "y",
+    n_jobs: int = 1,  # joblib not strictly needed; most win is from vectorization
+):
+    """
+    Vectorized version: computes Pearson correlation between the cell∩best_nucleus
+    ("intersection") and the rest of the cell ("remainder") using spatial joins.
+    Returns DataFrame with columns ["cell_id", "best_nuc_id", "IoU", "correlation_parts"].
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        The SpatialData object containing cells, nuclei, and transcript points.
+    table_key : str
+        Key in `sdata.tables` pointing to the expression matrix.
+    cell_id_key_shape: 
+        Column in `sdata.shapes[cell_shape_key] containing cell IDs.
+    cell_shape_key : str
+        Key for cell boundaries in sdata.shapes.
+    nuc_shape_key : str
+        Key for nucleus boundaries in sdata.shapes.
+    transcripts_key : str
+        Key for transcript points in sdata.points.
+    feature_column : str
+        Feature column in transcript points (e.g. gene name).
+    x_coordinate : str
+        Column name for x coordinate.
+    y_coordinate : str
+        Column name for y coordinate.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ["cell_id", "best_nuc_id", "correlation"]
+    """
+
+    if "best_nuc_id" not in sdata.tables[table_key].obs.columns:
+        iou_df = compute_cell_nuc_ious(sdata, cell_id_key_shape, cell_shape_key, nuc_shape_key, n_jobs=n_jobs)
+    else:
+        iou_df = sdata.tables[table_key].obs[["cell_id", "best_nuc_id", "IoU"]].copy()
+
+    best_nuc_map = iou_df.set_index("cell_id")["best_nuc_id"]
+
+    cells_gdf: gpd.GeoDataFrame = sdata.shapes[cell_shape_key]
+    nucs_gdf: gpd.GeoDataFrame = sdata.shapes[nuc_shape_key]
+    transcripts_df = sdata.points[transcripts_key].compute()
+
+    # Choose a single CRS (cells' CRS), and reproject other layers if needed - TODO
+    target_crs = nucs_gdf.crs
+    # if nucs_gdf.crs != target_crs:
+    #    nucs_gdf = nucs_gdf.to_crs(target_crs)
+    # transcripts -> GeoDataFrame
+    transcripts_gdf = gpd.GeoDataFrame(
+        transcripts_df,
+        geometry=gpd.points_from_xy(transcripts_df[x_coordinate], transcripts_df[y_coordinate]),
+        crs=transcripts_df.attrs.get("crs", target_crs) or target_crs,
+    )
+    # if transcripts_gdf.crs != target_crs:
+    #     transcripts_gdf = transcripts_gdf.to_crs(target_crs)
+    
+    tx_in_cell = gpd.sjoin(
+        transcripts_gdf[[feature_column, "geometry"]],
+        cells_gdf[[cell_id_key_shape, "geometry"]],
+        how="inner",
+        predicate="within",
+    )
+
+    nucs_gdf.index.name="nuc_id"
+    tx_in_nuc = gpd.sjoin(
+        transcripts_gdf[["geometry"]],
+        nucs_gdf[["geometry"]],
+        how="left",
+        predicate="within",
+    )[["nuc_id"]]
+
+    tx = tx_in_cell.join(tx_in_nuc, how="left")
+
+    tx["best_nuc_id"] = tx[cell_id_key_shape].map(best_nuc_map)
+    tx["in_intersection"] = (tx["nuc_id"].notna()) & (tx["nuc_id"] == tx["best_nuc_id"])
+    tx["part"] = np.where(tx["in_intersection"], "intersection", "remainder")
+
+    valid_features = pd.Index(sdata.tables[table_key].var_names)
+    tx = tx.dropna(subset=[feature_column])
+    tx = tx[tx[feature_column].isin(valid_features)]
+    tx[feature_column] = tx[feature_column].cat.remove_unused_categories()
+
+    counts = (
+        tx.groupby([cell_id_key_shape, "part", feature_column])
+        .size()
+        .rename("count")
+        .reset_index()
+    )
+
+    mat = counts.pivot_table(
+        index=[cell_id_key_shape, feature_column],
+        columns="part",
+        values="count",
+        fill_value=0,
+        aggfunc="sum",
+    )
+
+    mat = mat[["intersection", "remainder"]]
+
+    def _corr_two_cols(df_cell):
+        x = df_cell["intersection"].to_numpy(dtype=float)
+        y = df_cell["remainder"].to_numpy(dtype=float)
+        if x.sum() == 0 or y.sum() == 0:
+            return np.nan
+        r, _ = pearsonr(x, y)
+        return r
+
+    corr_per_cell = (
+        mat.groupby(level=0, sort=False)
+        .apply(_corr_two_cols)
+        .rename("correlation_parts")
+        .to_frame()
+    )
+
+    out = (
+        iou_df.set_index("cell_id")[["best_nuc_id", "IoU"]]
+        .join(corr_per_cell, how="left")
+        .reset_index()
+    )
+
+    return out
+
