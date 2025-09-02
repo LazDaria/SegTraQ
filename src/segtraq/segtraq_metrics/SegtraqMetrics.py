@@ -9,7 +9,7 @@ from .. import fs, sp, nc, bl, cs, pl
 from ..utils import run_label_transfer
 
 class SegTraqer:
-    def __init__(self,
+    def __init__(self, 
                  sdata,
                  adata_ref,
                  ref_celltype_key: str = "celltype",
