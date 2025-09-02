@@ -289,75 +289,46 @@ def plot_box_by_celltype_combined(
     missing_label: str = "None",
 ) -> pd.DataFrame:
     """
-    Separate (stacked) boxplots per method for any numeric obs key (e.g., 'F1_purity', 'cell_size', ...).
-
-    Expects box_df from build_obs_box_df. Each subplot uses:
-      x="Cell Type", y="value" for a single "Segmentation Method".
+    Side-by-side boxplots for any numeric obs key (e.g., 'F1_purity', 'cell_size', ...).
+    Expects box_df from build_obs_box_df.
+    Uses: x="Cell Type", y="value", hue="Segmentation Method".
     """
-    output_path = Path(output_path); output_path.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     box_df = build_obs_box_df(method_to_adata, celltype_col, value_key, dropna, missing_label)
 
     if box_df.empty:
         raise ValueError("box_df is empty.")
 
-    # Order of cell types on x-axis
     if x_order is None:
         x_order = sorted(box_df["Cell Type"].unique().tolist())
 
-    # Label for y-axis
     value_key = box_df["variable"].iloc[0] if "variable" in box_df.columns else "value"
 
-    # Preserve the insertion order of methods from the input dict if possible
-    method_order = [m for m in method_to_adata.keys() if m in box_df["Segmentation Method"].unique()]
-    # Include any remaining methods not in the dict order (safety)
-    method_order += [m for m in box_df["Segmentation Method"].unique() if m not in method_order]
+    fig, ax = plt.subplots(figsize=(max(10, 0.8 * len(x_order)), 5))
 
-    n_methods = len(method_order)
-    if n_methods == 0:
-        raise ValueError("No methods found in box_df.")
+    sns.boxplot(
+        data=box_df,
+        x="Cell Type",
+        y="value",
+        hue="Segmentation Method",
+        order=x_order,
+        palette=method_palette,
+        ax=ax,
+    )  # grouped boxplot via hue :contentReference[oaicite:3]{index=3}
 
-    # Figure sizing: width scales with number of cell types; height scales with number of methods
-    fig_width = max(10, 0.8 * len(x_order))
-    height_per_row = 4
-    fig, axes = plt.subplots(
-        nrows=n_methods, ncols=1, figsize=(fig_width, height_per_row * n_methods),
-        sharex=True, sharey=True
-    )
-    if n_methods == 1:
-        axes = [axes]
+    ax.set_xlabel("Cell Type")
+    ax.set_ylabel(value_key)
+    ax.set_title(title or f"{value_key} by Cell Type")
+    ax.legend(title="", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=False)
 
-    for ax, method in zip(axes, method_order):
-        df_m = box_df[box_df["Segmentation Method"] == method]
-        color = method_palette.get(method, None) if method_palette is not None else None
-
-        sns.boxplot(
-            data=df_m,
-            x="Cell Type", y="value",
-            order=x_order,
-            color=color,
-            ax=ax
-        )
-
-        ax.set_xlabel("Cell Type")
-        ax.set_ylabel(value_key)
-        ax.set_title(method)
-        # We'll rotate x-ticks on the bottom axis; for others, hide to reduce clutter
-        if ax is not axes[-1]:
-            ax.set_xticklabels([])
-            ax.set_xlabel("")
-        else:
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-
-    if title:
-        fig.suptitle(title, y=0.995)
-        fig.subplots_adjust(top=0.93)  # leave room for suptitle
-
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     fig.tight_layout()
     fig.savefig(output_path / filename, bbox_inches="tight")
     plt.close(fig)
-    return box_df
 
+    return box_df
 
 def plot_box_by_celltype(
     method_to_adata: Dict[str, ad.AnnData],
