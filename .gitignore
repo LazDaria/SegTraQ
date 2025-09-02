@@ -107,3 +107,5 @@ ENV/
 .vscode/
 .idea/
 
+#temporary solution
+tests/data*
