@@ -1,31 +1,33 @@
 import pandas as pd
 import numpy as np
 import anndata as ad
-from scipy.spatial import ConvexHull
-from typing import Dict, Any, Optional, List, Tuple
-from tqdm import tqdm
+from typing import Dict, List, Tuple
 import scanpy as sc
 from itertools import combinations
-from scipy.spatial.distance import pdist, squareform
-from scipy.stats import entropy
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.pyplot as plt
-import dask
 import squidpy as sq
+from collections import Counter
+import warnings
+from ..utils import _looks_like_counts
+from scipy import sparse
 
-from typing import Dict, List, Optional
-import numpy as np
-import pandas as pd
-import anndata as ad
+def _apply_overlap_filter(marker_dict: Dict[str, List[str]], t, n_ct) -> Dict[str, List[str]]:
+    all_genes = [g for gl in marker_dict.values() for g in gl]
+    if not all_genes:
+        return {k: [] for k in marker_dict}
+    counts = pd.Series(all_genes).value_counts()
+    # drop genes appearing in >= t * n_types lists
+    drop_genes = set(counts[counts >= (t * n_ct)].index)
+    return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
-def find_markers_cellspa(
+def get_ref_markers(
     adata_ref: ad.AnnData,
     cell_type_column: str,
-    q: float = 0.90,
+    q_pos: float = 0.95,
+    q_neg: float = 0.10,
     t: float = 0.25,
 ) -> Dict[str, Dict[str, List[str]]]:
     """
-    BIDCell/CellSPA-style marker discovery with Segger-style output.
+    BIDCell/CellSPA-style marker discovery.
 
     For each cell type c:
       w_g = mean(expression of gene g in cells of c) - mean(expression of g in all other cells)
@@ -41,8 +43,10 @@ def find_markers_cellspa(
         Reference single-cell dataset (cells x genes).
     cell_type_column : str
         Column in `adata_ref.obs` containing cell type labels.
-    q : float, optional (default: 0.90)
-        Upper quantile for positives; lower (1 - q) is used for negatives.
+    q_pos : float, optional (default: 0.95)
+        Upper quantile for positives.
+    q_neg : float, optional (default: 0.10)
+        Lower quantile for negatives.
     t : float, optional (default: 0.25)
         Overlap filter: drop genes that appear in >= t * n_types marker lists.
 
@@ -51,6 +55,15 @@ def find_markers_cellspa(
     dict
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
+
+    if _looks_like_counts(adata_ref.X):
+        warnings.warn(
+            "Reference adata_ref does not appear log-normalized."
+            "Counts will be log1p-transformed before running label transfer.",
+            RuntimeWarning,
+        )
+        sc.pp.normalize_total(adata_ref, target_sum=1e4)
+        sc.pp.log1p(adata_ref)
 
     X = adata_ref.X
     X = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
@@ -61,8 +74,7 @@ def find_markers_cellspa(
     if n_types < 2:
         raise ValueError("Need at least two cell types to compute differential markers.")
 
-    # --- compute per-type mean expression (genes x types)
-    # result: DataFrame with index=genes, columns=types
+    # compute per-type mean expression (genes x types)
     means = {}
     for ct in types:
         mask = (ctypes == ct)
@@ -72,7 +84,7 @@ def find_markers_cellspa(
             means[ct] = X[mask].mean(axis=0)
     ref_exprs = pd.DataFrame(means, index=genes)
 
-    # --- differential score w = mean_in_type - mean_in_others
+    # differential score w = mean_in_type - mean_in_others
     pos_lists: Dict[str, List[str]] = {}
     neg_lists: Dict[str, List[str]] = {}
     type_cols = ref_exprs.columns.to_list()
@@ -83,8 +95,8 @@ def find_markers_cellspa(
         w = in_ct - others
 
         # quantile cutoffs
-        q_hi = np.quantile(w, q)
-        q_lo = np.quantile(w, 1.0 - q)
+        q_hi = np.quantile(w, q_pos)
+        q_lo = np.quantile(w, q_neg)
 
         # positives = top-q
         pos_genes = ref_exprs.index[w > q_hi].tolist()
@@ -94,134 +106,105 @@ def find_markers_cellspa(
         pos_lists[ct] = pos_genes
         neg_lists[ct] = neg_genes
 
-    # --- overlap filter (remove ubiquitous markers)
-    def _apply_overlap_filter(marker_dict: Dict[str, List[str]], t) -> Dict[str, List[str]]:
-        all_genes = [g for gl in marker_dict.values() for g in gl]
-        if not all_genes:
-            return {k: [] for k in marker_dict}
-        counts = pd.Series(all_genes).value_counts()
-        # drop genes appearing in >= t * n_types lists
-        drop_genes = set(counts[counts >= (t * n_types)].index)
-        return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
+    # overlap filter (remove ubiquitous markers)
+    pos_lists = _apply_overlap_filter(pos_lists, t=t, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=1, n_ct=n_types)
 
-    pos_lists = _apply_overlap_filter(pos_lists, t=t)
-    neg_lists = _apply_overlap_filter(neg_lists, t=1)
-
-    # --- assemble Segger-style output
     markers = {ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in types}
     return markers
 
-
-def find_markers(
-    adata_ref: ad.AnnData,
-    cell_type_column: str,
-    pos_percentile: float = 5,
-    neg_percentile: float = 10,
-    percentage: float = 50,
-) -> Dict[str, Dict[str, List[str]]]:
-    """
-    Derive positive/negative marker sets per cell type using percentile cutoffs and an expression fraction filter.
-
-    Parameters
-    ----------
-    adata_ref : AnnData
-        Reference dataset.
-    cell_type_column : str
-        Column in `adata.obs` indicating cell type labels.
-    pos_percentile : float, optional
-        Upper percentile defining highly expressed genes (default: 5).
-    neg_percentile : float, optional
-        Lower percentile defining lowly expressed genes (default: 10).
-    percentage : float, optional
-        Minimum % of cells within a type that must express a positive marker (default: 50).
-
-    Returns
-    -------
-    dict
-        Mapping {cell_type: {'positive': List[str], 'negative': List[str]}}.
-    """
-    markers: Dict[str, Dict[str, List[str]]] = {}
-
-    sc.tl.rank_genes_groups(adata_ref, groupby=cell_type_column)
-
-    genes = adata_ref.var_names
-    for cell_type in adata_ref.obs[cell_type_column].unique():
-        # Subset to a single cell type
-        subset = adata_ref[adata_ref.obs[cell_type_column] == cell_type]
-
-        # Mean expression per gene and percentile thresholds
-        mean_expr = np.asarray(subset.X.mean(axis=0)).flatten()
-        hi_cut = np.percentile(mean_expr, 100 - pos_percentile)
-        lo_cut = np.percentile(mean_expr, neg_percentile)
-
-        # Indices for positive/negative sets by thresholds
-        pos_idx = np.where(mean_expr >= hi_cut)[0]
-        neg_idx = np.where(mean_expr <= lo_cut)[0]
-
-        # Enforce within-type expression fraction for positives
-        expr_frac = np.asarray((subset.X[:, pos_idx] > 0).mean(axis=0)).flatten()
-        valid_pos_idx = pos_idx[expr_frac >= (percentage / 100)]
-
-        positive_markers = list(genes[valid_pos_idx])
-        negative_markers = list(genes[neg_idx])
-
-        markers[cell_type] = {"positive": positive_markers, "negative": negative_markers}
-
-    return markers
-
-
-def find_mutually_exclusive_genes(
+def get_mut_excl_markers(
     adata_ref: ad.AnnData,
     markers: Dict[str, Dict[str, List[str]]],
     cell_type_column: str,
+    pos_threshold: float = 0.20,
+    neg_threshold: float = 0.05,
 ) -> List[Tuple[str, str]]:
     """
-    Extract mutually exclusive gene pairs based on expression specificity criteria.
+    Finds mutually exclusive markers (presence-based specificity)
+
+    For each cell type c, scan its positive markers and keep genes that are present
+    in > pos_threshold of cells of c and < neg_threshold of cells in all other types.
+    From these candidates, retain only genes that satisfy the rule for a single cell type;
+    finally, return all cross-type pairs formed by these type-unique genes.
 
     Parameters
     ----------
     adata_ref : AnnData
-        Reference dataset.
+        Reference single-cell dataset (cells × genes).
     markers : dict
-        Marker dictionary as returned by `find_markers`.
+        Marker dictionary as returned by `find_markers`; only the "positive" list is used.
     cell_type_column : str
-        Column in `adata.obs` indicating cell type labels.
-
+        Column in `adata_ref.obs` containing cell-type labels.
+    pos_threshold : float, optional (default: 0.20)
+        Minimum fraction of cells within the target type where a gene must be present (>0).
+    neg_threshold : float, optional (default: 0.05)
+        Maximum fraction of cells in the complement (all other types) where the gene may be present.
     Returns
     -------
     list of tuple
         Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.
     """
-    exclusive_genes: Dict[str, List[str]] = {}
-    all_exclusive: List[str] = []
 
-    for cell_type, marker_sets in markers.items():
-        positive = marker_sets["positive"]
-        exclusive_genes[cell_type] = []
+    pos_by_ct = {ct: m.get("positive", []) for ct, m in markers.items()}
+    all_genes = sorted({g for gs in pos_by_ct.values() for g in gs})
 
-        for gene in positive:
-            gene_expr = adata_ref[:, gene].X
-            mask_ct = (adata_ref.obs[cell_type_column] == cell_type).to_numpy(dtype=bool)
-            mask_other = ~mask_ct
+    var_index = pd.Index(adata_ref.var_names)
+    genes = [g for g in all_genes if g in var_index]
 
-            # Specificity rule: present in >20% of target type, <5% of others
-            if (gene_expr[mask_ct] > 0).mean() > 0.2 and (gene_expr[mask_other] > 0).mean() < 0.05:
-                exclusive_genes[cell_type].append(gene)
-                all_exclusive.append(gene)
 
-    # Keep only genes that appear in the exclusive lists
-    unique_exclusive = list({g for ct in exclusive_genes for g in exclusive_genes[ct] if g in all_exclusive})
-    filtered = {ct: [g for g in exclusive_genes[ct] if g in unique_exclusive] for ct in exclusive_genes}
+    X = adata_ref[:, genes].X
+    if sparse.issparse(X):
+        X = X.tocsr()
+        B = (X > 0).tocsr()
+    else:
+        B = (np.asarray(X) > 0)
 
-    # All cross-type pairs
-    mutually_exclusive_pairs = [
-        (g1, g2)
-        for ct1, ct2 in combinations(filtered.keys(), 2)
-        for g1 in filtered[ct1]
-        for g2 in filtered[ct2]
-    ]
-    return mutually_exclusive_pairs
+    gene2col = {g: i for i, g in enumerate(genes)}
 
+    labels = np.asarray(adata_ref.obs[cell_type_column])
+    cell_types = list(pos_by_ct.keys())
+
+    exclusive_genes = {ct: [] for ct in cell_types}
+    all_exclusive = []
+
+    for ct in cell_types:
+        pos_genes = [g for g in pos_by_ct[ct] if g in gene2col]
+        if not pos_genes:
+            continue
+
+        mask_ct = (labels == ct)
+        n_ct = int(mask_ct.sum())
+        if n_ct == 0:
+            continue
+        mask_other = ~mask_ct
+        n_other = int(mask_other.sum())
+
+        if sparse.issparse(B):
+            ct_counts = np.asarray(B[mask_ct].getnnz(axis=0)).ravel()
+            other_counts = np.asarray(B[mask_other].getnnz(axis=0)).ravel()
+        else:
+            ct_counts = B[mask_ct].sum(axis=0).ravel()
+            other_counts = B[mask_other].sum(axis=0).ravel()
+
+        frac_ct = ct_counts / max(n_ct, 1)
+        frac_other = other_counts / max(n_other, 1)
+
+        idx = [gene2col[g] for g in pos_genes]
+        keep = (frac_ct[idx] > pos_threshold) & (frac_other[idx] < neg_threshold)
+        kept_genes = [g for g, k in zip(pos_genes, keep) if k]
+
+        exclusive_genes[ct] = kept_genes
+        all_exclusive.extend(kept_genes)
+
+    freq = Counter(all_exclusive)
+    unique_exclusive = {g for g, c in freq.items() if c == 1}
+    filtered = {ct: [g for g in gs if g in unique_exclusive] for ct, gs in exclusive_genes.items()}
+
+    pairs = [(g1, g2)
+             for ct1, ct2 in combinations(filtered.keys(), 2)
+             for g1 in filtered[ct1] for g2 in filtered[ct2]]
+    return pairs
 
 def compute_MECR(
     sdata,

@@ -4,9 +4,8 @@ from .spillover_metrics import (
 )
 
 from .spillover_metrics_supervised import (
-    find_markers,
-    find_markers_cellspa,
-    find_mutually_exclusive_genes,
+    get_ref_markers,
+    get_mut_excl_markers,
     compute_MECR,
     calculate_contamination,
     calculate_sensitivity,
@@ -16,9 +15,8 @@ from .spillover_metrics_supervised import (
 __all__ = [
     "centroid_mean_coord_diff",
     "distance_to_membrane",
-    "find_markers", 
-    "find_markers_cellspa",
-    "find_mutually_exclusive_genes",
+    "get_ref_markers",
+    "get_mut_excl_markers",
     "compute_MECR",
     "calculate_contamination",
     "calculate_sensitivity",

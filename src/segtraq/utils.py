@@ -185,6 +185,7 @@ def run_label_transfer(
         # Write back only to the filtered subset cells
         out = ct_corr.rename(columns={"celltype": label_key, "pearson_corr": score_key})
         tbl.obs = tbl.obs.merge(out, how="left", left_on="cell_id", right_on="cell_id")
+        tbl.obs[label_key] = tbl.obs[label_key].astype("category")
         return None
     else:
         return ct_corr
