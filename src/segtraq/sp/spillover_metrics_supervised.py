@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import scanpy as sc
 from itertools import combinations
 import squidpy as sq
-from collections import Counter
+from collections import Counter, defaultdict
 import warnings
 from ..utils import _looks_like_counts
 from scipy import sparse
@@ -114,11 +114,12 @@ def get_ref_markers(
     return markers
 
 def get_mut_excl_markers(
-    adata_ref: ad.AnnData,
-    markers: Dict[str, Dict[str, List[str]]],
+    adata_ref,
+    markers,
     cell_type_column: str,
     pos_threshold: float = 0.20,
     neg_threshold: float = 0.05,
+    max_codetect: float = 0.01,
 ) -> List[Tuple[str, str]]:
     """
     Finds mutually exclusive markers (presence-based specificity)
@@ -140,34 +141,35 @@ def get_mut_excl_markers(
         Minimum fraction of cells within the target type where a gene must be present (>0).
     neg_threshold : float, optional (default: 0.05)
         Maximum fraction of cells in the complement (all other types) where the gene may be present.
+    max_codetect: float, optional (default: 0.01)
+        Maximum fraction of cells in which mutually exclusive gene pairs may be co-detected.
     Returns
     -------
     list of tuple
         Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.
     """
-
     pos_by_ct = {ct: m.get("positive", []) for ct, m in markers.items()}
     all_genes = sorted({g for gs in pos_by_ct.values() for g in gs})
-
     var_index = pd.Index(adata_ref.var_names)
     genes = [g for g in all_genes if g in var_index]
-
+    if not genes:
+        return []
 
     X = adata_ref[:, genes].X
     if sparse.issparse(X):
         X = X.tocsr()
-        B = (X > 0).tocsr()
+        B = (X > 0).astype(np.uint8).tocsr()
     else:
-        B = (np.asarray(X) > 0)
+        B = sparse.csr_matrix((np.asarray(X) > 0).astype(np.uint8))
 
     gene2col = {g: i for i, g in enumerate(genes)}
-
     labels = np.asarray(adata_ref.obs[cell_type_column])
     cell_types = list(pos_by_ct.keys())
 
     exclusive_genes = {ct: [] for ct in cell_types}
     all_exclusive = []
 
+    n_cells = B.shape[0]
     for ct in cell_types:
         pos_genes = [g for g in pos_by_ct[ct] if g in gene2col]
         if not pos_genes:
@@ -180,12 +182,11 @@ def get_mut_excl_markers(
         mask_other = ~mask_ct
         n_other = int(mask_other.sum())
 
-        if sparse.issparse(B):
-            ct_counts = np.asarray(B[mask_ct].getnnz(axis=0)).ravel()
-            other_counts = np.asarray(B[mask_other].getnnz(axis=0)).ravel()
-        else:
-            ct_counts = B[mask_ct].sum(axis=0).ravel()
-            other_counts = B[mask_other].sum(axis=0).ravel()
+        B_ct = B[mask_ct]
+        B_other = B[mask_other]
+
+        ct_counts = np.asarray(B_ct.getnnz(axis=0)).ravel()
+        other_counts = np.asarray(B_other.getnnz(axis=0)).ravel()
 
         frac_ct = ct_counts / max(n_ct, 1)
         frac_other = other_counts / max(n_other, 1)
@@ -197,6 +198,7 @@ def get_mut_excl_markers(
         exclusive_genes[ct] = kept_genes
         all_exclusive.extend(kept_genes)
 
+    # keep genes that are exclusive to exactly one type
     freq = Counter(all_exclusive)
     unique_exclusive = {g for g, c in freq.items() if c == 1}
     filtered = {ct: [g for g in gs if g in unique_exclusive] for ct, gs in exclusive_genes.items()}
@@ -204,7 +206,38 @@ def get_mut_excl_markers(
     pairs = [(g1, g2)
              for ct1, ct2 in combinations(filtered.keys(), 2)
              for g1 in filtered[ct1] for g2 in filtered[ct2]]
-    return pairs
+
+    # filter out genes that are co-detected in >=max_codetect
+    col_counts = np.asarray(B.getnnz(axis=0)).ravel()
+    frac_overall = col_counts / max(n_cells, 1)
+
+    # pre-filter (if either gene is present in <= max_codetect of cells, pair cannot exceed the threshold)
+    def auto_pass(g1, g2):
+        return (frac_overall[gene2col[g1]] <= max_codetect) or (frac_overall[gene2col[g2]] <= max_codetect)
+
+    trivial = [p for p in pairs if auto_pass(*p)]
+    to_check = [p for p in pairs if not auto_pass(*p)]
+    if not to_check:
+        return trivial
+
+    B_csc = B.tocsc()
+
+    cols_needed = np.array(sorted({gene2col[g] for p in to_check for g in p}), dtype=int)
+    B_sub = B_csc[:, cols_needed]
+
+    co_counts = (B_sub.T @ B_sub).tocsr()
+
+    idx_map = {c: i for i, c in enumerate(cols_needed)}
+    passed = []
+    for g1, g2 in to_check:
+        i = idx_map[gene2col[g1]]
+        j = idx_map[gene2col[g2]]
+        both = co_counts[i, j] / n_cells
+        if both <= max_codetect:
+            passed.append((g1, g2))
+
+    return trivial + passed
+
 
 def compute_MECR(
     sdata,
@@ -240,163 +273,369 @@ def compute_MECR(
 
     return mecr
 
+from typing import Literal, Tuple
+from collections import defaultdict
+import numpy as np
+import pandas as pd
+from scipy import sparse
+import squidpy as sq
 
 def calculate_contamination(
     sdata,
-    markers: Dict[str, Dict[str, List[str]]],
+    markers,
+    celltype_column: str,
+    table_key: str = "table",
     radius: float = 15,
     n_neighs: int = 10,
-    celltype_column: str = "celltype_major",
-    num_cells: int = 10000,
-    table_key: str = "table",
-    centroid_x_key: str = "x_centroid",
-    centroid_y_key: str = "y_centroid"
-) -> pd.DataFrame:
+    num_cells: int = 10_000,
+    seed: int = 0,
+    cell_centroid_x_key: str = "cell_centroid_x",
+    cell_centroid_y_key: str = "cell_centroid_y",
+    weight_edges: bool = False,
+    # NEW: scaling controls
+    include_marker_presence: bool = True,
+    include_ct2_total: bool = True,
+    marker_presence_power: float = 1.0,   # stronger/weaker penalty
+    ct2_total_power: float = 1.0,         # stronger/weaker penalty
+    presence_gene_set: Literal["ct_pos", "diff"] = "ct_pos",
+    eps: float = 1e-12,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Estimate normalized cross-type contamination using positive markers and spatial neighborhoods.
+    Compute directional contamination (“leakage”) between cell types and scale by:
+      (1) neighborhood presence of ct-specific markers, and
+      (2) total count (library size) of the target ct2 cell.
 
-    Parameters
-    ----------
-    sdata : SpatialData-like
-        Container with `.tables[table_key]` as AnnData.
-    markers : dict
-        Marker dictionary with per-type 'positive' and 'negative' lists.
-    radius : float, optional
-        Neighborhood radius for spatial graph (default: 15).
-    n_neighs : int, optional
-        Max neighbors to retain (default: 10).
-    celltype_column : str, optional
-        Column in `adata.obs` with cell type labels (default: 'celltype_major').
-    num_cells : int, optional
-        Number of randomly sampled cells used for estimation (default: 10000).
-    table_key : str, optional
-        Key of the AnnData table in `sdata.tables`.
-    centroid_x_key: str, optional
-        Column in .tables[table_key]` with spatial x centroids.
-    centroid_y_key: str, optional
-        Column in .tables[table_key]` with spatial y centroids.
-    
-    Returns
-    -------
-    pandas.DataFrame
-        Matrix of normalized contamination from source → target types.
+    Scaling is applied by multiplying the denominator by:
+      scale = (marker_presence_scale ** marker_presence_power) * (ct2_total_scale ** ct2_total_power)
 
-    Raises
-    ------
-    ValueError
-        If `celltype_column` is not present in `adata.obs`.
+    - marker_presence_scale ~ 1 when the neighborhood's average ct-marker load matches the global average.
+      >1 when the neighborhood is enriched for ct markers.
+    - ct2_total_scale ~ 1 for an average-sized ct2 cell, >1 for larger/higher-capture ct2 cells.
+
+    Parameters match your original signature; new knobs are documented above.
     """
+
     adata = sdata.tables[table_key]
 
-    if celltype_column not in adata.obs:
-        raise ValueError("Column celltype_column must be present in adata.obs.")
-
-    # Positive marker lookup per cell type
-    pos_markers = {ct: markers[ct]["positive"] for ct in markers}
-
-    # Build spatial graph from centroids
-    adata.obsm["spatial"] = adata.obs[[centroid_x_key, centroid_y_key]].to_numpy()
+    # coordinates / neighbors
+    adata.obsm["spatial"] = adata.obs[[cell_centroid_x_key, cell_centroid_y_key]].to_numpy()
     sq.gr.spatial_neighbors(adata, radius=radius, n_neighs=n_neighs, coord_type="generic")
-    neighbors = adata.obsp["spatial_connectivities"].tolil()
+    G = adata.obsp["spatial_connectivities"].tocsr()
+    n = adata.n_obs
 
-    # Raw counts matrix and metadata
-    raw = adata[:, adata.var_names].layers["raw"].toarray() #####TODO - handle check - whether log-normalized and store counts in raw
-    cell_types = adata.obs[celltype_column].values
+    # expression to CSR
+    X = adata.X
+    if not sparse.issparse(X):
+        X = sparse.csr_matrix(np.asarray(X))
+    else:
+        X = X.tocsr()
 
-    # Sampling set
-    sel = np.random.choice(adata.n_obs, size=min(num_cells, adata.n_obs), replace=False)
+    # library sizes (ct2 total)
+    libsize = np.asarray(X.sum(axis=1)).ravel()
+    mean_lib = float(libsize.mean()) + eps
 
-    contamination: Dict[str, Dict[str, float]] = {ct: {ct2: 0.0 for ct2 in pos_markers} for ct in pos_markers}
-    negighborings: Dict[str, Dict[str, int]] = {ct: {ct2: 0 for ct2 in pos_markers} for ct in pos_markers}
+    # marker sets
+    var_index = pd.Index(adata.var_names)
+    pos_markers = {ct: [g for g in set(m.get("positive", [])) if g in var_index]
+                   for ct, m in markers.items()}
+    # indices for ct positives
+    pos_idx_by_ct = {
+        ct: np.array([var_index.get_loc(g) for g in gs], dtype=int)
+        for ct, gs in pos_markers.items()
+    }
 
-    # Iterate over sampled cells
-    for idx in sel:
-        src_type = cell_types[idx]
-        own = set(pos_markers[src_type])
+    # indices for S(ct, ct2) = ct_pos \ ct2_pos (your original "diff" set)
+    gene_idx = {g: var_index.get_loc(g) for gs in pos_markers.values() for g in gs}
+    ct_list = list(pos_markers)
+    diff_cols = {}
+    for ct in ct_list:
+        set_ct = set(pos_markers[ct])
+        for ct2 in ct_list:
+            if ct == ct2:
+                continue
+            cols = [gene_idx[g] for g in set_ct.difference(pos_markers[ct2])]
+            diff_cols[(ct, ct2)] = np.array(cols, dtype=int)
 
-        # Sum marker counts within the local neighborhood (including self)
-        for marker in own:
-            if marker in adata.var_names:
-                total_in_nbhd = raw[idx, adata.var_names.get_loc(marker)]
-                for nb in neighbors.rows[idx]:
-                    total_in_nbhd += raw[nb, adata.var_names.get_loc(marker)]
+    # --- NEW: precompute per-cell ct-marker loads for neighborhood presence scaling ---
+    # We do this for ct positives (default), optionally you can switch to "diff" set.
+    M_by_ct = {}
+    mean_M_by_ct = {}
+    for ct in ct_list:
+        if presence_gene_set == "ct_pos":
+            idx = pos_idx_by_ct[ct]
+        else:  # "diff" presence is ct vs. *all others*; we approximate with ct_pos here for simplicity/robustness
+            idx = pos_idx_by_ct[ct]
+        if idx.size == 0:
+            M = np.zeros(n, dtype=float)
+        else:
+            M = np.asarray(X[:, idx].sum(axis=1)).ravel()
+        M_by_ct[ct] = M
+        mean_M_by_ct[ct] = float(M.mean()) + eps
 
-                # Attribute neighbor-specific fractions to cross-type contamination
-                for nb in neighbors.rows[idx]:
-                    nb_type = cell_types[nb]
-                    if nb_type == src_type:
-                        continue
+    # sampling
+    rng = np.random.default_rng(seed)
+    idx_cells = rng.choice(n, size=min(num_cells, n), replace=False)
 
-                    nb_markers = set(pos_markers.get(nb_type, []))
-                    contam_markers = own - nb_markers  # avoid markers shared with neighbor's own type
+    types = np.asarray(adata.obs[celltype_column])
+    C_sum = defaultdict(lambda: defaultdict(float))
+    C_cnt = defaultdict(lambda: defaultdict(int))
+    records = []
 
-                    for m in contam_markers:
-                        if m in adata.var_names:
-                            m_counts_nb = raw[nb, adata.var_names.get_loc(m)]
-                            if total_in_nbhd > 0:
-                                contamination[src_type][nb_type] += m_counts_nb / total_in_nbhd
-                                negighborings[src_type][nb_type] += 1
+    # effective graph (with self-loop) for weighted mode
+    if weight_edges:
+        G_eff = G + sparse.eye(G.shape[0], format="csr")
+    else:
+        G_eff = None
 
-    # Normalize by neighbor-count accumulator (with +1 as in original)
-    contam_df = pd.DataFrame(contamination).T
-    neg_df = pd.DataFrame(negighborings).T
-    contam_df.index.name = "Source Cell Type"
-    contam_df.columns.name = "Target Cell Type"
+    for i in idx_cells:
+        ct = types[i]
 
-    return contam_df / (neg_df + 1)
-
-def calculate_sensitivity(
-    sdata,
-    purified_markers: Dict[str, List[str]],
-    max_cells_per_type: int = 1000,
-    table_key: str = "table",
-    celltype_column : str = "celltype_major"
-) -> Dict[str, List[float]]:
-    """
-    Compute per-cell sensitivity of purified marker sets for each cell type.
-
-    Parameters
-    ----------
-    sdata : SpatialData-like
-        Container with `.tables[table_key]` as AnnData.
-    purified_markers : dict
-        Mapping {cell_type: {'positive': List[str], ...}} of purified markers.
-    max_cells_per_type : int, optional
-        Cap on cells per type when computing sensitivities (default: 1000).
-    table_key : str, optional
-        Key of the AnnData table in `sdata.tables`.
-    celltype_column : str, optional
-        Column in `adata.obs` with cell type labels (default: 'celltype_major').
-
-    Returns
-    -------
-    dict
-        {cell_type: List[float]} where each value is the fraction of markers expressed in a cell.
-    """
-    adata = sdata.tables[table_key]
-
-    results: Dict[str, List[float]] = {ct: [] for ct in purified_markers}
-
-    for ct, mk in purified_markers.items():
-        pos = mk["positive"]
-        subset = adata[adata.obs[celltype_column] == ct]
-
-        # Optional downsampling
-        if subset.n_obs > max_cells_per_type:
-            idx = np.random.choice(subset.n_obs, max_cells_per_type, replace=False)
-            subset = subset[idx]
-
-        # Fraction of positive markers expressed per cell
-        if len(pos) == 0:
-            results[ct].extend([0.0] * subset.n_obs)
+        start, end = G.indptr[i], G.indptr[i + 1]
+        neigh = G.indices[start:end]
+        if neigh.size == 0:
             continue
 
-        pos_idx = subset.var_names.get_indexer(pos)
-        for row in subset.X.toarray():
-            n_expr = np.asarray((row[pos_idx] > 0).sum())
-            results[ct].append(n_expr / len(pos))
+        # --- marker presence scale for this source cell's neighborhood (depends only on ct and i) ---
+        marker_presence_scale = 1.0
+        if include_marker_presence:
+            M_ct = M_by_ct[ct]
+            mean_M_ct = mean_M_by_ct[ct]
+            if weight_edges:
+                wi0, wi1 = G_eff.indptr[i], G_eff.indptr[i + 1]
+                w_idx = G_eff.indices[wi0:wi1]
+                w_val = G_eff.data[wi0:wi1]
+                presence = float((w_val * M_ct[w_idx]).sum())
+                norm = float(w_val.sum()) * mean_M_ct + eps
+            else:
+                S_idx = np.concatenate(([i], neigh))
+                presence = float(M_ct[i] + M_ct[neigh].sum())
+                norm = float(S_idx.size) * mean_M_ct + eps
+            marker_presence_scale = max(presence / norm, eps) ** marker_presence_power
 
-    return results
+        # Loop ct2 neighbors
+        for j in neigh:
+            ct2 = types[j]
+            if ct2 == ct:
+                continue
+            cols = diff_cols.get((ct, ct2))
+            if cols is None or cols.size == 0:
+                continue
+
+            # numerator: neighbor j counts over S(ct, ct2)
+            num = float(X[j, cols].sum())
+
+            # base denominator: counts over S in (i ∪ N(i))
+            if weight_edges:
+                wi0, wi1 = G_eff.indptr[i], G_eff.indptr[i + 1]
+                w_idx = G_eff.indices[wi0:wi1]
+                w_val = G_eff.data[wi0:wi1]
+                denom = float((sparse.csr_matrix((w_val, ([0]*len(w_idx), w_idx)), shape=(1, n)) @ X[:, cols]).sum())
+            else:
+                denom = float(X[i, cols].sum() + X[neigh, :][:, cols].sum())
+
+            if denom <= 0.0:
+                continue
+
+            # ct2 total count scale
+            ct2_total_scale = 1.0
+            if include_ct2_total:
+                ct2_total_scale = max(libsize[j] / mean_lib, eps) ** ct2_total_power
+
+            # combine scales
+            scale = marker_presence_scale * ct2_total_scale
+            denom_scaled = denom * scale
+
+            val = num / denom_scaled if denom_scaled > 0 else 0.0
+            C_sum[ct][ct2] += val
+            C_cnt[ct][ct2] += 1
+
+            records.append({
+                "cell_id": int(i),
+                "cell_type": ct,
+                "neighbor_id": int(j),
+                "neighbor_type": ct2,
+                "ratio": val,
+                "num": num,
+                "denom_base": denom,
+                "marker_presence_scale": marker_presence_scale,
+                "ct2_total_scale": ct2_total_scale,
+                "denom_scaled": denom_scaled,
+            })
+
+    # aggregate
+    cts = sorted(pos_markers)
+    out = pd.DataFrame(0.0, index=cts, columns=cts)
+    for ct in cts:
+        for ct2 in cts:
+            if ct == ct2:
+                continue
+            k = C_cnt[ct][ct2]
+            out.loc[ct, ct2] = C_sum[ct][ct2] / k if k else 0.0
+
+    out.index.name = "Source Cell Type"
+    out.columns.name = "Target Cell Type"
+    records_df = pd.DataFrame(records)
+    return out, records_df
+
+
+def calculate_contamination(
+    sdata,
+    markers,
+    celltype_column: str,
+    table_key: str = "table",
+    radius: float = 15,
+    n_neighs: int = 10,
+    num_cells: int = 10_000,
+    seed: int = 0,
+    cell_centroid_x_key: str = "cell_centroid_x",
+    cell_centroid_y_key: str = "cell_centroid_y",
+    weight_edges: bool = False 
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+
+    """
+    Compute directional contamination (“leakage”) between cell types from spatial neighbors using
+    ct-specific positive markers: for each ct cell and neighbor ct2, measure the fraction of ct-marker
+    signal in ct2 neighbors relative to the ct neighborhood total, then average over interactions.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Must contain `tables[table_key]` as AnnData with expression and coordinates.
+    markers : dict
+        {cell_type: {"positive": list[str], "negative": list[str] (optional)}}, using only "positive".
+    celltype_column : str
+        Column in the AnnData `.obs` with cell-type labels.
+    table_key : str, optional
+        Key of the AnnData table in `sdata.tables`.
+    radius : float, optional
+        Radius for spatial neighbor construction.
+    n_neighs : int, optional
+        Max number of neighbors per cell (used with `radius`).
+    num_cells : int, optional
+        Number of cells to sample (speed/precision trade-off).
+    seed : int, optional
+        RNG seed for reproducible sampling.
+    cell_centroid_x_key : str, optional
+        `.obs` key for x-coordinates (used to build `.obsm["spatial"]` if needed).
+    cell_centroid_y_key : str, optional
+        `.obs` key for y-coordinates (used to build `.obsm["spatial"]` if needed).
+    weight_edges : bool, optional
+        Weight neighbor contributions by graph edge weights if True.
+
+    Returns
+    -------
+    out: pandas.DataFrame
+        Rows = source types (ct), columns = target types (ct2); entry is the mean fraction of
+        ct-specific marker counts found in ct2 neighbors relative to ct neighborhood totals (directional).
+    records_df: pandas.DataFrame
+        Pandas dataframe with per-cell cell_id (ct), cell_type (ct), neighbor_id (ct2), neigbhor_type (ct2) and ratio
+        (ct-specific markers counts found in ct2 neighbors relative to ct neighborhood total counts).
+    """
+
+    adata = sdata.tables[table_key]
+
+    adata.obsm["spatial"] = adata.obs[[cell_centroid_x_key, cell_centroid_y_key]].to_numpy()
+    sq.gr.spatial_neighbors(adata, radius=radius, n_neighs=n_neighs, coord_type="generic")
+    G = adata.obsp["spatial_connectivities"].tocsr()  
+
+    X = adata.X
+    if not sparse.issparse(X):
+        X = sparse.csr_matrix(np.asarray(X))
+    else:
+        X = X.tocsr()
+
+    # library sizes 
+    libsize = np.asarray(X.sum(axis=1)).ravel()
+    mean_lib = float(libsize.mean())
+
+    var_index = pd.Index(adata.var_names)
+    pos_markers = {ct: [g for g in set(m.get("positive", [])) if g in var_index]
+                   for ct, m in markers.items()}
+    gene_idx = {g: var_index.get_loc(g) for gs in pos_markers.values() for g in gs}
+ 
+    ct_list = list(pos_markers)
+    diff_cols = {}
+    for ct in ct_list:
+        set_ct = set(pos_markers[ct])
+        for ct2 in ct_list:
+            if ct == ct2:
+                continue
+            cols = [gene_idx[g] for g in set_ct.difference(pos_markers[ct2])]
+            diff_cols[(ct, ct2)] = np.array(cols, dtype=int)
+
+    rng = np.random.default_rng(seed)
+    n = adata.n_obs
+    idx_cells = rng.choice(n, size=min(num_cells, n), replace=False)
+
+    types = np.asarray(adata.obs[celltype_column])
+    C_sum = defaultdict(lambda: defaultdict(float))
+    C_cnt = defaultdict(lambda: defaultdict(int))
+
+    if weight_edges:
+        # normalized weights can be derived from G; here we just use G as-is and add identity
+        G_eff = G + sparse.eye(G.shape[0], format="csr")
+    else:
+        # unweighted: treat neighbors equally
+        G_eff = None
+
+    records = []
+
+    for i in idx_cells:
+        ct = types[i]
+
+        start, end = G.indptr[i], G.indptr[i + 1]
+        neigh = G.indices[start:end]
+        if neigh.size == 0:
+            continue
+
+        for j in neigh:
+            ct2 = types[j]
+            if ct2 == ct:
+                continue
+            cols = diff_cols.get((ct, ct2))
+            if cols is None or cols.size == 0:
+                continue
+
+            # numerator: neighbor j counts over S(ct, ct2) and scale by its total counts -#TODO - check if this makes sense
+            num = X[j, cols].sum() #/ (libsize[j] / mean_lib)
+
+            # denominator: counts over S in (i ∪ N(i))
+            if weight_edges:
+                # weighted neighborhood sum: use (row i of G_eff) as weights
+                w_idx = G_eff.indices[G_eff.indptr[i]:G_eff.indptr[i+1]]
+                w_val = G_eff.data[G_eff.indptr[i]:G_eff.indptr[i+1]]
+                # sum over rows w-weighted: (w^T @ X[:, cols]) -> use sparse vector-matrix product
+                denom = (sparse.csr_matrix((w_val, ([0]*len(w_idx), w_idx)), shape=(1, n)) @ X[:, cols]).sum()
+            else:
+                # unweighted: sum rows {i} ∪ neigh
+                denom = X[i, cols].sum() + X[neigh, :][:, cols].sum()
+
+            denom = float(denom)
+            if denom > 0.0:
+                C_sum[ct][ct2] += float(num) / denom
+                C_cnt[ct][ct2] += 1
+
+                records.append({
+                    "cell_id": int(i),
+                    "cell_type": ct,
+                    "neighbor_id": int(j),
+                    "neighbor_type": ct2,
+                    "ratio": float(num) / denom
+                })
+                records_df = pd.DataFrame(records)
+
+    cts = sorted(pos_markers)
+    out = pd.DataFrame(0.0, index=cts, columns=cts)
+    for ct in cts:
+        for ct2 in cts:
+            if ct == ct2: 
+                continue
+            k = C_cnt[ct][ct2]
+            out.loc[ct, ct2] = C_sum[ct][ct2] / k if k else 0.0
+
+    out.index.name = "Source Cell Type"
+    out.columns.name = "Target Cell Type"
+    return out, records_df
 
 def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_quantiles: bool) -> tuple:
     """Precision, recall, F1 for one list using upper-quantile rule (CellSPA)."""
@@ -405,13 +644,12 @@ def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_
 
     actual = np.zeros(n_genes, dtype=bool)
     actual[marker_idx] = True
-    frac = actual.mean()  # |markers| / G
+    frac = actual.mean()  
 
-    if use_quantiles and frac > 0:
-        thr = np.quantile(expr, 1.0 - frac)  # upper quantile
+    if use_quantiles:
+        thr = np.quantile(expr, 1.0 - frac)  
         predicted = expr > thr
     else:
-        # fallback (CellSPA always uses quantiles; this branch keeps API flexible)
         predicted = expr > 0
 
     tp = int((predicted & actual).sum())
@@ -430,23 +668,34 @@ def calculate_marker_purity(
     use_quantiles: bool = True,
     table_key: str = "table",
 ) -> pd.DataFrame:
+
     """
-    CellSPA-style marker purity for positive & negative lists from a single dict.
+    Compute per-cell marker purity: for each cell's annotated type, evaluate Precision/Recall/F1
+    using its positive and negative marker lists, then summarize into an overall `F1_purity`
+    that rewards high positive-F1 and low negative-F1.
 
-    markers[ct] must be like: {"positive": [...], "negative": [...]}
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Must contain `tables[table_key]` as an AnnData with expression and `.obs` metadata.
+    celltype_column : str
+        Column in the AnnData `.obs` with cell-type labels.
+    markers : dict
+        {cell_type: {"positive": list[str], "negative": list[str]}}; both lists are required.
+    use_quantiles : bool, optional
+        If True, define predictions by the top-|markers| fraction per cell (rank-based);
+        if False, use direct expression-based criteria (e.g., >0).
+    table_key : str, optional
+        Key of the AnnData table in `sdata.tables`.
 
-    For each cell with type `ct`:
-      - Positive pass: score Precision/Recall/F1 using markers[ct]["positive"]
-        Predicted = top-|pos|/G fraction of genes (upper quantile).
-      - Negative pass: score Precision/Recall/F1 using markers[ct]["negative"]
-        Predicted = top-|neg|/G fraction of genes (upper quantile)  <-- matches CellSPA’s call with a “negative” list.
-      - Purity summary (optional): F1_purity = 2 * ((1 - F1_neg) * F1_pos) / ((1 - F1_neg) + F1_pos)
-
-    Returns a DataFrame indexed by cells with columns:
-      ['positive_precision','positive_recall','positive_F1',
-       'negative_precision','negative_recall','negative_F1',
-       'F1_purity','cell_type']
+    Returns
+    -------
+    pandas.DataFrame
+        Columns: ['positive_precision','positive_recall','positive_F1',
+                  'negative_precision','negative_recall','negative_F1',
+                  'F1_purity','cell_type'] indexed by cell.
     """
+
     adata = sdata.tables[table_key]
 
     # dense view for quantiles; adjust if you need to stay sparse
@@ -471,10 +720,10 @@ def calculate_marker_purity(
         # positive pass (upper quantile)
         p_prec, p_rec, p_f1 = _score_one_list(expr, pos_idx_map.get(ct, np.empty(0, dtype=int)), n_genes, use_quantiles)
 
-        # negative pass (upper quantile as well — same as CellSPA called with a negative list)
+        # negative pass (upper quantile)
         n_prec, n_rec, n_f1 = _score_one_list(expr, neg_idx_map.get(ct, np.empty(0, dtype=int)), n_genes, use_quantiles)
 
-        # fused purity (optional summary)
+        # fused purity 
         denom = (1.0 - n_f1) + p_f1
         f1_purity = (2.0 * (1.0 - n_f1) * p_f1 / denom) if denom > 0 else 0.0
 
