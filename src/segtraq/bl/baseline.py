@@ -6,24 +6,24 @@ from joblib import Parallel, delayed
 from shapely.geometry import Polygon
 
 
-def num_cells(sdata: sd.SpatialData, shape_key: str = "cell_boundaries") -> int:
+def num_cells(sdata: sd.SpatialData, table_key: str = "table") -> int:
     """
-    Counts the number of cells in the given SpatialData object based on the specified shape key.
+    Counts the number of cells in the given SpatialData object based on the specified table key.
 
     Parameters
     ----------
     sdata : sd.SpatialData
-        The SpatialData object containing spatial information and cell boundaries.
-    shape_key : str, optional
-        The key in the `shapes` attribute of `sdata` that corresponds to cell boundaries.
-        Default is "cell_boundaries".
+        The SpatialData object containing spatial information and a table.
+    cell_id : str, optional
+        The key in the `tables` attribute of `sdata` that corresponds to table.
+        Default is "table".
 
     Returns
     -------
     int
-        The number of cells found under the specified shape key.
+        The number of cells found under the specified table key.
     """
-    return len(sdata.shapes[shape_key])
+    return len(sdata.tables[table_key])
 
 
 def num_transcripts(sdata: sd.SpatialData, transcript_key: str = "transcripts"):
@@ -125,7 +125,7 @@ def transcripts_per_cell(
         A DataFrame with two columns: the cell identifier (`cell_key`) and the
         corresponding transcript count ("transcript_count").
     """
-    counts = sdata.points[transcript_key][cell_key].compute().value_counts()
+    counts = sdata.points[transcript_key][cell_key].compute().value_counts().astype("int64")
     counts_df = counts.reset_index()
     counts_df.columns = [cell_key, "transcript_count"]
     return counts_df
@@ -164,6 +164,7 @@ def transcript_density(
     table_key: str = "table",
     transcript_key: str = "transcripts",
     cell_key: str = "cell_id",
+    area_key: str = "cell_area",
 ) -> pd.DataFrame:
     """
     Calculates the transcript density for each cell in a SpatialData object.
@@ -179,6 +180,8 @@ def transcript_density(
         The key in the transcript table indicating transcript identifiers. Default is "transcripts".
     cell_key : str, optional
         The key in the table indicating cell identifiers. Default is "cell_id".
+    area_key: str, optional
+        The key in the table indicating the cell area/volume. Default is "cell_area".
 
     Returns
     -------
@@ -186,17 +189,13 @@ def transcript_density(
         A DataFrame with columns `[cell_key, "transcript_density"]`,
         where "transcript_density" is the number of transcripts per unit area for
         each cell. Rows with missing values are dropped.
-
-    Notes
-    -----
-    Requires that the input AnnData table contains a "cell_area" column in `.obs`.
     """
     adata = sdata.tables[table_key]
     counts_df = transcripts_per_cell(sdata, transcript_key, cell_key)
-    area_df = adata.obs[[cell_key, "cell_area"]]
+    area_df = adata.obs[[cell_key, area_key]]
 
     merged = counts_df.merge(area_df, on=cell_key, how="left")
-    merged["transcript_density"] = merged["transcript_count"] / merged["cell_area"]
+    merged["transcript_density"] = merged["transcript_count"] / merged[area_key]
 
     return merged[[cell_key, "transcript_density"]].dropna()
 
