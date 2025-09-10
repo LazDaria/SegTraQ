@@ -161,6 +161,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering Stability</a></li>
+
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/read_spatialdata.html">Creating spatialdata objects using method-specific readers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
@@ -314,6 +315,7 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_ari"><code class="docutils literal notranslate"><span class="pre">compute_ari()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_mean_cosine_distance"><code class="docutils literal notranslate"><span class="pre">compute_mean_cosine_distance()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_purity"><code class="docutils literal notranslate"><span class="pre">compute_purity()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_rmsd"><code class="docutils literal notranslate"><span class="pre">compute_rmsd()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_silhouette_score"><code class="docutils literal notranslate"><span class="pre">compute_silhouette_score()</span></code></a></li>
@@ -347,6 +349,29 @@ document.write(`
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The average pairwise ARI across the specified cluster keys.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.cs.clustering_stability.compute_mean_cosine_distance">
+<span class="sig-prename descclassname"><span class="pre">segtraq.cs.clustering_stability.</span></span><span class="sig-name descname"><span class="pre">compute_mean_cosine_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.6,</span> <span class="pre">0.8,</span> <span class="pre">1.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'leiden_subset'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#segtraq.cs.clustering_stability.compute_mean_cosine_distance" title="Link to this definition">#</a></dt>
+<dd><p>Compute mean cosine distance for different Leiden clustering resolutions
+and report the best (lowest) mean cosine distance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing clustering information.</p></li>
+<li><p><strong>resolution</strong> (<em>float</em><em> or </em><em>list</em><em> of </em><em>float</em><em>, </em><em>optional</em>) – The resolution parameter(s) for Leiden clustering, by default (0.6, 0.8, 1.0).</p></li>
+<li><p><strong>key_prefix</strong> (<em>str</em><em>, </em><em>optional</em>) – Prefix for clustering keys in .obs, by default “leiden_subset”.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for reproducibility, by default 42.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The best (lowest) mean cosine distance across resolutions.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>float</p>
@@ -497,6 +522,7 @@ the correlation for each cell.</p>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_ari"><code class="docutils literal notranslate"><span class="pre">compute_ari()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_mean_cosine_distance"><code class="docutils literal notranslate"><span class="pre">compute_mean_cosine_distance()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_purity"><code class="docutils literal notranslate"><span class="pre">compute_purity()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_rmsd"><code class="docutils literal notranslate"><span class="pre">compute_rmsd()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.cs.clustering_stability.compute_silhouette_score"><code class="docutils literal notranslate"><span class="pre">compute_silhouette_score()</span></code></a></li>
