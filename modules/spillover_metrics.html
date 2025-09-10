@@ -161,11 +161,10 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering Stability</a></li>
-
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
-
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/read_spatialdata.html">Creating spatialdata objects using method-specific readers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/spillover_metrics_supervised.html">Supervised spillover metrics</a></li>
 </ul>
 
     </div>
@@ -314,8 +313,12 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.spillover_metrics">Spillover metrics (unsupervised)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spillover-metrics-supervised">Spillover metrics (supervised)</a></li>
 </ul>
             </nav>
         </div>
@@ -330,7 +333,9 @@ document.write(`
   <section id="the-spillover-metrics-sp-accessor">
 <h1>The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-spillover-metrics-sp-accessor" title="Link to this heading">#</a></h1>
 <p>The spillover metrics accessor provides metrics to compare the mean spatial distribution of transcripts in relation to the centroid and the segmented outline of the cell.</p>
-<dl class="py function" id="module-segtraq.sp.spillover_metrics">
+<section id="module-segtraq.sp.spillover_metrics">
+<span id="spillover-metrics-unsupervised"></span><h2>Spillover metrics (unsupervised)<a class="headerlink" href="#module-segtraq.sp.spillover_metrics" title="Link to this heading">#</a></h2>
+<dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.spillover_metrics.centroid_mean_coord_diff">
 <span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics.</span></span><span class="sig-name descname"><span class="pre">centroid_mean_coord_diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('x',</span> <span class="pre">'y')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('centroid_x',</span> <span class="pre">'centroid_y')</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff" title="Link to this definition">#</a></dt>
 <dd><p>Calculates the euclidean distance between the mean x,y coordinate of the transcripts
@@ -389,6 +394,10 @@ where “distance” is the euclidean distance between the coordinates <a href="
 </dd></dl>
 
 </section>
+<section id="spillover-metrics-supervised">
+<h2>Spillover metrics (supervised)<a class="headerlink" href="#spillover-metrics-supervised" title="Link to this heading">#</a></h2>
+</section>
+</section>
 
 
                 </article>
@@ -435,8 +444,12 @@ where “distance” is the euclidean distance between the coordinates <a href="
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.spillover_metrics">Spillover metrics (unsupervised)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spillover-metrics-supervised">Spillover metrics (supervised)</a></li>
 </ul>
   </nav></div>
 
