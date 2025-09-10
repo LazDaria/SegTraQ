@@ -164,7 +164,7 @@ def transcript_density(
     table_key: str = "table",
     transcript_key: str = "transcripts",
     cell_key: str = "cell_id",
-    area_key: str = "cell_area"
+    area_key: str = "cell_area",
 ) -> pd.DataFrame:
     """
     Calculates the transcript density for each cell in a SpatialData object.

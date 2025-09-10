@@ -1,0 +1,14 @@
+{
+    "_index": "_index",
+    "column-order": [
+        "cell_id",
+        "centroid_x",
+        "centroid_y",
+        "centroid_z",
+        "volume",
+        "label_id",
+        "region"
+    ],
+    "encoding-type": "dataframe",
+    "encoding-version": "0.2.0"
+}

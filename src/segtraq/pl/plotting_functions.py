@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Dict, List, Tuple, Mapping, Optional, Union, Sequence
+
+import anndata as ad
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-import anndata as ad
-from matplotlib.patches import Patch
 import tifffile as tiff
 from matplotlib.colors import to_rgb
+from matplotlib.patches import Patch
 
 # =========================
 # BUILDERS (method-agnostic)
 # =========================
+
 
 def _fill_celltype(s: pd.Series, missing_label: str = "None") -> pd.Series:
     # Categorical needs category added before fillna; otherwise cast to string then fill.
@@ -24,8 +26,9 @@ def _fill_celltype(s: pd.Series, missing_label: str = "None") -> pd.Series:
     else:
         return s.astype("string").fillna(missing_label)
 
+
 def build_celltype_composition_df(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     include_zeros: bool = True,
     missing_label: str = "None",
@@ -33,11 +36,14 @@ def build_celltype_composition_df(
     frames = []
     for method, adata in method_to_adata.items():
         ct = _fill_celltype(adata.obs[celltype_col], missing_label)
-        vc = ct.value_counts(dropna=False)                        # counts
-        props = ct.value_counts(normalize=True, dropna=False)     # proportions
-        df = (pd.DataFrame({"Count": vc, "Proportion": props})
-                .rename_axis("Cell Type").reset_index()
-                .assign(**{"Segmentation Method": method}))
+        vc = ct.value_counts(dropna=False)  # counts
+        props = ct.value_counts(normalize=True, dropna=False)  # proportions
+        df = (
+            pd.DataFrame({"Count": vc, "Proportion": props})
+            .rename_axis("Cell Type")
+            .reset_index()
+            .assign(**{"Segmentation Method": method})
+        )
         frames.append(df)
 
     out = pd.concat(frames, ignore_index=True)
@@ -45,23 +51,23 @@ def build_celltype_composition_df(
     if include_zeros:
         methods = sorted(method_to_adata.keys())
         celltypes = sorted(out["Cell Type"].unique().tolist())
-        full = pd.MultiIndex.from_product(
-            [methods, celltypes],
-            names=["Segmentation Method", "Cell Type"]
-        ).to_frame(index=False)
-        out = (full.merge(out, how="left",
-                          on=["Segmentation Method", "Cell Type"])
-                    .fillna({"Count": 0, "Proportion": 0.0}))
+        full = pd.MultiIndex.from_product([methods, celltypes], names=["Segmentation Method", "Cell Type"]).to_frame(
+            index=False
+        )
+        out = full.merge(out, how="left", on=["Segmentation Method", "Cell Type"]).fillna(
+            {"Count": 0, "Proportion": 0.0}
+        )
     return out
 
+
 def build_umap_and_scores_df(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     umap_key: str = "X_umap",
-    bl_metrics_path: Tuple[str, str] = ("segtraq", "bl", "summary"),
-    cs_metrics_path: Tuple[str, str] = ("segtraq", "cs"),
+    bl_metrics_path: tuple[str, str] = ("segtraq", "bl", "summary"),
+    cs_metrics_path: tuple[str, str] = ("segtraq", "cs"),
     missing_label: str = "None",
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     rows, mrows = [], []
     for method, adata in method_to_adata.items():
         if umap_key not in adata.obsm:
@@ -71,12 +77,16 @@ def build_umap_and_scores_df(
             raise ValueError(f"{method}: {umap_key} must be n_cells x 2.")
 
         ct = _fill_celltype(adata.obs[celltype_col], missing_label)
-        rows.append(pd.DataFrame({
-            "x": umap[:, 0],
-            "y": umap[:, 1],
-            "Cell Type": ct.values,
-            "Segmentation Method": method,
-        }))
+        rows.append(
+            pd.DataFrame(
+                {
+                    "x": umap[:, 0],
+                    "y": umap[:, 1],
+                    "Cell Type": ct.values,
+                    "Segmentation Method": method,
+                }
+            )
+        )
 
         d = adata.uns
         cs = d
@@ -87,20 +97,23 @@ def build_umap_and_scores_df(
         for k in bl_metrics_path:
             bl = bl.get(k, {}) if isinstance(bl, dict) else {}
 
-        mrows.append({
-            "Segmentation Method": method,
-            "n_cells": bl.get("num_cells", np.nan),
-            "perc_unassigned": bl.get("perc_unassigned_transcripts", np.nan),
-            "rmsd": cs.get("rmsd", np.nan),
-            "silhouette": cs.get("silhouette", np.nan),
-            "ari": cs.get("ari", np.nan),
-            "purity": cs.get("purity", np.nan)
-        })
+        mrows.append(
+            {
+                "Segmentation Method": method,
+                "n_cells": bl.get("num_cells", np.nan),
+                "perc_unassigned": bl.get("perc_unassigned_transcripts", np.nan),
+                "rmsd": cs.get("rmsd", np.nan),
+                "silhouette": cs.get("silhouette", np.nan),
+                "ari": cs.get("ari", np.nan),
+                "purity": cs.get("purity", np.nan),
+            }
+        )
 
     return pd.concat(rows, ignore_index=True), pd.DataFrame(mrows)
 
+
 def build_obs_box_df(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     value_key: str,
     dropna: bool = True,
@@ -117,13 +130,14 @@ def build_obs_box_df(
         if dropna:
             d = d.dropna(subset=["value"])
         frames.append(d)
-    return (pd.concat(frames, ignore_index=True)
-            if frames else pd.DataFrame(columns=["Segmentation Method","Cell Type","value","variable"]))
+    return (
+        pd.concat(frames, ignore_index=True)
+        if frames
+        else pd.DataFrame(columns=["Segmentation Method", "Cell Type", "value", "variable"])
+    )
 
 
-def build_mecr_df(
-    method_to_mecr: Mapping[str, Mapping[Tuple[str, str], float]]
-) -> pd.DataFrame:
+def build_mecr_df(method_to_mecr: Mapping[str, Mapping[tuple[str, str], float]]) -> pd.DataFrame:
     """
     Flatten {(gene1,gene2)->MECR} dicts for many methods into one DF.
 
@@ -140,7 +154,7 @@ def build_mecr_df(
         part["Segmentation Method"] = method
         frames.append(part)
     if not frames:
-        return pd.DataFrame(columns=["Segmentation Method","gene1","gene2","MECR"])
+        return pd.DataFrame(columns=["Segmentation Method", "gene1", "gene2", "MECR"])
     return pd.concat(frames, ignore_index=True)
 
 
@@ -148,15 +162,16 @@ def build_mecr_df(
 # PLOTS (method-agnostic)
 # =========================
 
+
 def plot_celltype_proportions_stacked(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     ct_palette: Mapping[str, str],
     output_path: Path,
     filename: str = "celltype_proportions_stacked.pdf",
     title: str = "Cell-type proportions",
     include_zeros: bool = True,
-    missing_label: str = "None"
+    missing_label: str = "None",
 ) -> pd.DataFrame:
     """
     Stacked bar plot (one bar per method) of cell-type proportions.
@@ -166,7 +181,8 @@ def plot_celltype_proportions_stacked(
 
     comp_df = build_celltype_composition_df(method_to_adata, celltype_col, include_zeros, missing_label)
 
-    output_path = Path(output_path); output_path.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     methods = comp_df["Segmentation Method"].unique().tolist()
     celltypes = sorted(comp_df["Cell Type"].unique().tolist(), key=str)
@@ -181,8 +197,8 @@ def plot_celltype_proportions_stacked(
     width = 0.7
     bottoms = np.zeros(len(methods), dtype=float)
 
-    fig, ax = plt.subplots(figsize=(max(4, 1.2*len(methods)), 5))
-    for ct, color in zip(celltypes, color_list):
+    fig, ax = plt.subplots(figsize=(max(4, 1.2 * len(methods)), 5))
+    for ct, color in zip(celltypes, color_list, strict=False):
         heights = np.array([pivot.loc[ct, m] if m in pivot.columns else 0.0 for m in methods], dtype=float)
         ax.bar(x, heights, width, bottom=bottoms, color=color, edgecolor="white", label=ct)
         bottoms += heights  # stack (Matplotlib stacking uses 'bottom')  :contentReference[oaicite:1]{index=1}
@@ -195,24 +211,24 @@ def plot_celltype_proportions_stacked(
     ax.legend(title="Cell Type", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=False)
 
     fig.tight_layout()
-    #fig.savefig(output_path / filename, bbox_inches="tight")
+    # fig.savefig(output_path / filename, bbox_inches="tight")
     fig.savefig(output_path / f"{filename}.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
     # also return/save counts table for convenience
-    counts_df = comp_df[["Segmentation Method","Cell Type","Count"]].copy()
+    counts_df = comp_df[["Segmentation Method", "Cell Type", "Count"]].copy()
     counts_df.to_csv(output_path / "celltype_counts_per_method.csv", index=False)
     return counts_df
 
 
 def plot_umaps_by_feature(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     ct_palette: Mapping[str, str],
     output_path: Path,
     umap_key: str = "X_umap",
-    bl_metrics_path: Tuple[str, str] = ("segtraq", "bl", "summary"),
-    cs_metrics_path: Tuple[str, str] = ("segtraq", "cs"),
+    bl_metrics_path: tuple[str, str] = ("segtraq", "bl", "summary"),
+    cs_metrics_path: tuple[str, str] = ("segtraq", "cs"),
     missing_label: str = "None",
     filename: str = "umap_by_celltype_all_methods.pdf",
     point_size: float = 6.0,
@@ -226,15 +242,18 @@ def plot_umaps_by_feature(
       - umap_df from build_umap_and_scores_df
       - scores_df from build_umap_and_scores_df
     """
-    output_path = Path(output_path); output_path.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    umap_df, scores_df = build_umap_and_scores_df(method_to_adata, celltype_col, umap_key, bl_metrics_path, cs_metrics_path, missing_label)
+    umap_df, scores_df = build_umap_and_scores_df(
+        method_to_adata, celltype_col, umap_key, bl_metrics_path, cs_metrics_path, missing_label
+    )
 
     methods = umap_df["Segmentation Method"].unique().tolist()
     n = len(methods)
     cols = max(1, cols)
     rows = int(np.ceil(n / cols))
-    fig, axes = plt.subplots(rows, cols, figsize=(6*cols, 7*rows), squeeze=False)
+    fig, axes = plt.subplots(rows, cols, figsize=(6 * cols, 7 * rows), squeeze=False)
 
     all_celltypes = sorted(umap_df["Cell Type"].dropna().unique().tolist())
     palette = {ct: ct_palette.get(ct, "#aaaaaa") for ct in all_celltypes}
@@ -245,25 +264,45 @@ def plot_umaps_by_feature(
         df_m = umap_df[umap_df["Segmentation Method"] == method]
         # Use seaborn scatter with categorical hue (palette mapping)  :contentReference[oaicite:2]{index=2}
         sns.scatterplot(
-            data=df_m, x="x", y="y",
-            hue="Cell Type", palette=palette, s=point_size, linewidth=0, ax=ax, legend=False
+            data=df_m, x="x", y="y", hue="Cell Type", palette=palette, s=point_size, linewidth=0, ax=ax, legend=False
         )
         ax.set_title(method)
-        ax.set_xlabel("UMAP-1"); ax.set_ylabel("UMAP-2")
+        ax.set_xlabel("UMAP-1")
+        ax.set_ylabel("UMAP-2")
 
         # annotate scores (top-right)
         row = scores_df[scores_df["Segmentation Method"] == method]
         if not row.empty:
             (n_cells, perc_unassigned, rmsd, sil, ari, pur) = (
-                row["n_cells"].iloc[0], row["perc_unassigned"].iloc[0], row["rmsd"].iloc[0], row["silhouette"].iloc[0], row["ari"].iloc[0], row["purity"].iloc[0]
+                row["n_cells"].iloc[0],
+                row["perc_unassigned"].iloc[0],
+                row["rmsd"].iloc[0],
+                row["silhouette"].iloc[0],
+                row["ari"].iloc[0],
+                row["purity"].iloc[0],
             )
-            txt = f"# Cells: {n_cells}\nPerc. unass.: {perc_unassigned:.3f}\nRMSD: {rmsd:.3f}\nSilhouette: {sil:.3f}\nARI: {ari:.3f}\nPurity: {pur:.3f}"
-            ax.text(0.99, 0.99, txt, transform=ax.transAxes, ha="right", va="top",
-                    fontsize=10, bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
-                                           alpha=0.8, edgecolor="0.8"))
+            txt = (
+                f"# Cells: {n_cells}\n"
+                f"Perc. unass.: {perc_unassigned:.3f}\n"
+                f"RMSD: {rmsd:.3f}\n"
+                f"Silhouette: {sil:.3f}\n"
+                f"ARI: {ari:.3f}\n"
+                f"Purity: {pur:.3f}"
+            )
+
+            ax.text(
+                0.99,
+                0.99,
+                txt,
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=10,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8, edgecolor="0.8"),
+            )
 
     # hide unused axes
-    for j in range(n, rows*cols):
+    for j in range(n, rows * cols):
         axes[j // cols, j % cols].axis("off")
 
     # optional global legend
@@ -276,15 +315,16 @@ def plot_umaps_by_feature(
     fig.savefig(output_path / filename, bbox_inches="tight")
     plt.close(fig)
 
+
 def plot_box_by_celltype_combined(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     value_key: str,
     method_palette: Mapping[str, str],
     output_path: Path,
     filename: str,
-    x_order: Optional[List[str]] = None,
-    title: Optional[str] = None,
+    x_order: list[str] | None = None,
+    title: str | None = None,
     dropna: bool = True,
     missing_label: str = "None",
 ) -> pd.DataFrame:
@@ -330,15 +370,16 @@ def plot_box_by_celltype_combined(
 
     return box_df
 
+
 def plot_box_by_celltype(
-    method_to_adata: Dict[str, ad.AnnData],
+    method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
     value_key: str,
     method_palette: Mapping[str, str],
     output_path: Path,
     filename: str,
-    x_order: Optional[List[str]] = None,
-    title: Optional[str] = None,
+    x_order: list[str] | None = None,
+    title: str | None = None,
     dropna: bool = True,
     missing_label: str = "None",
 ) -> pd.DataFrame:
@@ -346,7 +387,8 @@ def plot_box_by_celltype(
     Stacked boxplots per method (vertical), with cell types on the x-axis.
     Only the lowest panel shows x tick labels. Y-axes are independent.
     """
-    output_path = Path(output_path); output_path.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     box_df = build_obs_box_df(method_to_adata, celltype_col, value_key, dropna, missing_label)
     if box_df.empty:
@@ -366,15 +408,16 @@ def plot_box_by_celltype(
     fig_width = max(10, 0.8 * len(x_order))
     height_per_row = 4
     fig, axes = plt.subplots(
-        nrows=n_methods, ncols=1,
+        nrows=n_methods,
+        ncols=1,
         figsize=(fig_width, height_per_row * n_methods),
-        sharex=True,   # shared categories across panels
-        sharey=False   # independent y-axes
+        sharex=True,  # shared categories across panels
+        sharey=False,  # independent y-axes
     )
     if n_methods == 1:
         axes = [axes]
 
-    for ax, method in zip(axes, method_order):
+    for ax, method in zip(axes, method_order, strict=False):
         df_m = box_df[box_df["Segmentation Method"] == method]
         if df_m.empty:
             ax.axis("off")
@@ -383,13 +426,7 @@ def plot_box_by_celltype(
 
         color = method_palette.get(method, None) if method_palette is not None else None
 
-        sns.boxplot(
-            data=df_m,
-            x="Cell Type", y="value",
-            order=x_order,
-            color=color,
-            ax=ax
-        )
+        sns.boxplot(data=df_m, x="Cell Type", y="value", order=x_order, color=color, ax=ax)
 
         ax.set_ylabel(value_key)
         ax.set_title(method)
@@ -416,7 +453,7 @@ def plot_box_by_celltype(
 def plot_mecr_boxplot(
     mecr_df: pd.DataFrame,
     *,
-    method_palette: Optional[Mapping[str, str]] = None,
+    method_palette: Mapping[str, str] | None = None,
     output_path: Path,
     filename: str = "mecr_boxplot.pdf",
 ) -> pd.DataFrame:
@@ -425,11 +462,12 @@ def plot_mecr_boxplot(
 
     Expects mecr_df from build_mecr_df with columns ['Segmentation Method','MECR'].
     """
-    output_path = Path(output_path); output_path.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
     if mecr_df.empty:
         raise ValueError("mecr_df is empty.")
 
-    fig, ax = plt.subplots(figsize=(max(3.5, 1.2*mecr_df['Segmentation Method'].nunique()), 6))
+    fig, ax = plt.subplots(figsize=(max(3.5, 1.2 * mecr_df["Segmentation Method"].nunique()), 6))
     sns.boxplot(data=mecr_df, x="Segmentation Method", y="MECR", palette=method_palette, ax=ax)
     ax.set_title("Mutually Exclusive Co-expression Rate (MECR)")
     ax.set_xlabel("Segmentation Method")
@@ -441,15 +479,16 @@ def plot_mecr_boxplot(
     plt.close(fig)
     return mecr_df
 
+
 def save_mask_to_tiff(
     sdata,
-    labels_keys: Union[str, Sequence[str]],
-    output_dir: Union[str, Path],
+    labels_keys: str | Sequence[str],
+    output_dir: str | Path,
     scale: str = "scale0",
     table_key: str = "table",
     obs_label_col: str = "label_id",
     obs_celltype_col: str = "transferred_celltype",
-    palette: Optional[Dict[str, str]] = None,
+    palette: dict[str, str] | None = None,
     default_hex: str = "#808080",
     save_rgb_masks: bool = True,
     save_label_id_masks: bool = True,
@@ -478,7 +517,7 @@ def save_mask_to_tiff(
     obs = sdata.tables[table_key].obs
 
     label_to_ct = obs.set_index(obs_label_col)[obs_celltype_col]
-    
+
     max_id = obs[obs_label_col].max()
 
     mapped = label_to_ct.map(palette)
@@ -490,10 +529,10 @@ def save_mask_to_tiff(
         lut[int(lid)] = (np.array(to_rgb(hexcol)) * 255).astype(np.uint8)
 
     for key in labels_keys:
-        da = sdata.labels[key][scale]["image"] 
-        labels = da.to_numpy()            
+        da = sdata.labels[key][scale]["image"]
+        labels = da.to_numpy()
         H, W = labels.shape
-        
+
         if save_rgb_masks:
             rgb = lut[labels]
             tiff.imwrite(output_dir / f"{key}_{obs_celltype_col}.tif", rgb, photometric="rgb")
@@ -503,14 +542,14 @@ def save_mask_to_tiff(
 
     if include_transcripts:
         pts = sdata.points[transcripts_key]
-        df = pts.compute() if hasattr(pts, "compute") else pts 
+        df = pts.compute() if hasattr(pts, "compute") else pts
 
-        id_map = dict(zip(obs[obs_cell_id_col], obs[obs_label_col]))
+        id_map = dict(zip(obs[obs_cell_id_col], obs[obs_label_col], strict=False))
         id_map.setdefault(unassigned_cell_id, 0)
 
         x = df[x_col].astype(int).to_numpy()
         y = df[y_col].astype(int).to_numpy()
-        lid = (df[obs_cell_id_col].map(id_map).astype(int).to_numpy())  
+        lid = df[obs_cell_id_col].map(id_map).astype(int).to_numpy()
 
         ok = (x >= 0) & (x < W) & (y >= 0) & (y < H) & (lid >= 0) & (lid <= max_id)
 

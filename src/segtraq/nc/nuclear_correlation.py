@@ -27,7 +27,7 @@ def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
 
 def _process_cell(
     cell_row: Series,
-    cell_id_key_shape: str, 
+    cell_id_key_shape: str,
     nuc_boundaries: GeoDataFrame,
     nuc_sindex: Index,
 ) -> dict[str | int, str | int, int | None | float]:
@@ -198,7 +198,7 @@ def compute_cell_nuc_correlation(
     x_coordinate: str = "x",
     y_coordinate: str = "y",
     cell_shape_key: str = "cell_boundaries",
-    n_jobs_iou: int = -1
+    n_jobs_iou: int = -1,
 ) -> pd.DataFrame:
     """
     For each cell in the SpatialData table, identifies the nucleus with highest IoU
@@ -245,9 +245,12 @@ def compute_cell_nuc_correlation(
 
     df = sdata.tables[table_key].obs.copy()
     if "best_nuc_id" not in df.columns:
-        iou_df = compute_cell_nuc_ious(sdata, cell_id_key, cell_shape_key=cell_shape_key, nuc_shape_key=nucleus_by, n_jobs=n_jobs_iou)
-        df = df.merge(iou_df,
-            right_on = cell_id_key, 
+        iou_df = compute_cell_nuc_ious(
+            sdata, cell_id_key, cell_shape_key=cell_shape_key, nuc_shape_key=nucleus_by, n_jobs=n_jobs_iou
+        )
+        df = df.merge(
+            iou_df,
+            right_on=cell_id_key,
             left_on=cell_id_key,
             how="left",
         )
@@ -376,9 +379,7 @@ def compute_correlation_between_parts_slow(
             continue
 
         cell_geom = cell_gdf.loc[cell_id].geometry
-        nuc_geom = nuc_gdf.loc[
-            best_nuc_id
-        ].geometry
+        nuc_geom = nuc_gdf.loc[best_nuc_id].geometry
 
         if not (cell_geom.is_valid and nuc_geom.is_valid):
             results.append(
@@ -437,6 +438,7 @@ def compute_correlation_between_parts_slow(
 
     return pd.DataFrame(results)
 
+
 def compute_correlation_between_parts(
     sdata,
     table_key: str = "table",
@@ -460,7 +462,7 @@ def compute_correlation_between_parts(
         The SpatialData object containing cells, nuclei, and transcript points.
     table_key : str
         Key in `sdata.tables` pointing to the expression matrix.
-    cell_id_key_shape: 
+    cell_id_key_shape:
         Column in `sdata.shapes[cell_shape_key] containing cell IDs.
     cell_shape_key : str
         Key for cell boundaries in sdata.shapes.
@@ -504,7 +506,7 @@ def compute_correlation_between_parts(
     )
     # if transcripts_gdf.crs != target_crs:
     #     transcripts_gdf = transcripts_gdf.to_crs(target_crs)
-    
+
     tx_in_cell = gpd.sjoin(
         transcripts_gdf[[feature_column, "geometry"]],
         cells_gdf[[cell_id_key_shape, "geometry"]],
@@ -512,7 +514,7 @@ def compute_correlation_between_parts(
         predicate="within",
     )
 
-    nucs_gdf.index.name="nuc_id"
+    nucs_gdf.index.name = "nuc_id"
     tx_in_nuc = gpd.sjoin(
         transcripts_gdf[["geometry"]],
         nucs_gdf[["geometry"]],
@@ -531,12 +533,7 @@ def compute_correlation_between_parts(
     tx = tx[tx[feature_column].isin(valid_features)]
     tx[feature_column] = tx[feature_column].cat.remove_unused_categories()
 
-    counts = (
-        tx.groupby([cell_id_key_shape, "part", feature_column])
-        .size()
-        .rename("count")
-        .reset_index()
-    )
+    counts = tx.groupby([cell_id_key_shape, "part", feature_column]).size().rename("count").reset_index()
 
     mat = counts.pivot_table(
         index=[cell_id_key_shape, feature_column],
@@ -556,18 +553,8 @@ def compute_correlation_between_parts(
         r, _ = pearsonr(x, y)
         return r
 
-    corr_per_cell = (
-        mat.groupby(level=0, sort=False)
-        .apply(_corr_two_cols)
-        .rename("correlation_parts")
-        .to_frame()
-    )
+    corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
 
-    out = (
-        iou_df.set_index("cell_id")[["best_nuc_id", "IoU"]]
-        .join(corr_per_cell, how="left")
-        .reset_index()
-    )
+    out = iou_df.set_index("cell_id")[["best_nuc_id", "IoU"]].join(corr_per_cell, how="left").reset_index()
 
     return out
-
