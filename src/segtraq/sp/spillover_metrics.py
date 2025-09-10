@@ -75,8 +75,10 @@ def centroid_mean_coord_diff(
     y_mean = pd.DataFrame(y_mean)
 
     # extract the centroids
-    df_centroids_x = pd.DataFrame(sdata[shape_key].centroid.x, columns=[centroid_key[0]])
-    df_centroids_y = pd.DataFrame(sdata[shape_key].centroid.y, columns=[centroid_key[1]])
+    gdf = sdata[shape_key].copy()
+    gdf.set_index(gdf[cell_key], inplace=True)
+    df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
+    df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner join on the cell ids - some cells have no transcripts
     df_total_x = df_centroids_x.join(x_mean, on=cell_key, how="inner")
@@ -160,10 +162,10 @@ def distance_to_membrane(
     gdf = sdata["cell_boundaries"]
 
     # make the cell key the index for joining the two dataframes
-    df = df.set_index(df[cell_key])
+    # df = df.set_index(df[cell_key])
 
     # merge the geopandas dataframe with the dataframe from above
-    gdf = gdf.join(df)
+    gdf = gdf.merge(df, how="inner", on=cell_key)
 
     # compute the linear outline of the cell segmentation
     gdf["linear_geometry"] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis=1)
