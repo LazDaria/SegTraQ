@@ -108,4 +108,5 @@ ENV/
 .idea/
 
 #temporary solution
-tests/data*
+#tests/data*
+tests/data/scRNAseq_ref.h5ad

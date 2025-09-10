@@ -1,17 +1,17 @@
 # SegTraq/src/segtraq/utils/label_transfer.py
-from typing import Optional, Union
+
+import warnings
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import warnings
 from anndata import AnnData
 from scipy.spatial.distance import cdist
 
 from .bl import baseline as bl
 
 
-def _to_ndarray(x) -> np.ndarray: 
+def _to_ndarray(x) -> np.ndarray:
     return x.toarray() if hasattr(x, "toarray") else np.asarray(x)
 
 
@@ -64,9 +64,7 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, cell_i
     best_celltype = cor_df.idxmax(axis=1)
     best_score = cor_df.max(axis=1)
 
-    return pd.DataFrame(
-        {"cell_id": X_query.index, "celltype": best_celltype.values, "pearson_corr": best_score.values}
-    )
+    return pd.DataFrame({"cell_id": X_query.index, "celltype": best_celltype.values, "pearson_corr": best_score.values})
 
 
 def run_label_transfer(
@@ -81,7 +79,7 @@ def run_label_transfer(
     label_key: str = "transferred_celltype",
     score_key: str = "transferred_celltype_corr",
     inplace: bool = True,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """
     Transfer cell labels from a reference AnnData to `sdata.tables[table_key]` by
     Pearson correlation to reference mean profiles.
@@ -89,11 +87,11 @@ def run_label_transfer(
     Parameters
     ----------
     sdata : SpatialData-like
-        Container with `.tables[table_key]` as AnnData, and points needed for QC if absent. 
-        `sdata.tables[table_key].X` values are ideally normalized and log1p transformed. 
+        Container with `.tables[table_key]` as AnnData, and points needed for QC if absent.
+        `sdata.tables[table_key].X` values are ideally normalized and log1p transformed.
         Otherwise transformation will be performed before running label transfer.
     adata_ref : AnnData
-        Reference dataset (ideally normalized & log1p). 
+        Reference dataset (ideally normalized & log1p).
         Otherwise transformation will be performed before running label transfer.
     celltype_key : str
         Column in `adata_ref.obs` with reference cell types.
@@ -127,6 +125,7 @@ def run_label_transfer(
             "Reference adata_ref does not appear log-normalized."
             "Counts will be log1p-transformed before running label transfer.",
             RuntimeWarning,
+            stacklevel=2,
         )
         sc.pp.normalize_total(adata_ref, target_sum=1e4)
         sc.pp.log1p(adata_ref)
@@ -165,7 +164,7 @@ def run_label_transfer(
     adata_q = tbl[mask].copy()
 
     # Ensure obs_names are cell ids (needed for merges/returns)
-    #if "cell_id" in adata_q.obs.columns:
+    # if "cell_id" in adata_q.obs.columns:
     #    adata_q.obs_names = adata_q.obs["cell_id"].astype(str)
 
     # Normalize & log1p (query)
@@ -174,6 +173,7 @@ def run_label_transfer(
             "Spatialdata table appears to contain raw counts. "
             "Counts will be log1p-transformed before running label transfer.",
             RuntimeWarning,
+            stacklevel=2,
         )
         sc.pp.normalize_total(adata_q, target_sum=1e4)
         sc.pp.log1p(adata_q)
