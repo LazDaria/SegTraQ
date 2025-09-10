@@ -25,7 +25,5 @@ SegTraQ documentation
    notebooks/baseline
    notebooks/clustering_stability
    notebooks/nuclear_correlation
-   notebooks/read_spatialdata
    notebooks/labeling_via_correlation
    notebooks/z_plane_correlation
-   notebooks/spillover_metrics_supervised
