@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-from pathlib import Path
 import gzip
 import shutil
+from pathlib import Path
 
+import anndata as ad
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 import tifffile as tiff
-import anndata as ad
-
-from scipy.sparse import csr_matrix
-from scipy.io import mmread
-from shapely.geometry import Polygon, MultiPolygon, mapping
-from shapely.validation import make_valid
-from rasterio.features import rasterize
-from skimage.measure import find_contours
 from pyarrow import parquet as pq
-
+from rasterio.features import rasterize
+from scipy.io import mmread
+from scipy.sparse import csr_matrix
+from shapely.geometry import MultiPolygon, Polygon, mapping
+from shapely.validation import make_valid
+from skimage.measure import find_contours
 from spatialdata import SpatialData
 from spatialdata.models import (
     Image2DModel,
@@ -31,6 +29,7 @@ from spatialdata.models import (
 # -----------------------------------------------------------------------------
 # Helper: build polygons from per-vertex rows
 # -----------------------------------------------------------------------------
+
 
 def build_cell_polygons_from_vertices(
     df: pd.DataFrame,
@@ -104,14 +103,16 @@ def build_cell_polygons_from_vertices(
 
     return gdf
 
+
 # -----------------------------------------------------------------------------
 # Helper: mode projection across Z for labels
 # -----------------------------------------------------------------------------
 
+
 def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
     # stack: (Z, H, W), dtype integer labels
     Z, H, W = stack.shape
-    flat = stack.reshape(Z, -1).T                 # (H*W, Z)
+    flat = stack.reshape(Z, -1).T  # (H*W, Z)
     max_id = int(stack.max())
     counts = np.zeros((flat.shape[0], max_id + 1), dtype=np.int32)
     idx = np.arange(flat.shape[0])
@@ -124,9 +125,11 @@ def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
     winner = counts.argmax(axis=1).astype(np.int32)
     return winner.reshape(H, W)
 
+
 # -----------------------------------------------------------------------------
 # Helper: extract polygon boundaries from a 2D labels image
 # -----------------------------------------------------------------------------
+
 
 def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
     """
@@ -164,12 +167,14 @@ def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0
     gdf = gpd.GeoDataFrame({"cell_id": ids, "label_id": ids, "geometry": geoms}).set_index("label_id")
     return gdf
 
+
 # -----------------------------------------------------------------------------
 # Reader: 10x Xenium
 # -----------------------------------------------------------------------------
 
+
 def read_xenium(path_to_data: Path) -> SpatialData:
-    '''
+    """
     Create spatialdata object from subset 10x Xenium data.
 
     Parameters:
@@ -177,19 +182,17 @@ def read_xenium(path_to_data: Path) -> SpatialData:
 
     Returns
     SpatialData: A spatialdata object.
-    '''
+    """
     # Table for sdata
     with gzip.open(path_to_data / "cell_feature_matrix" / "matrix.mtx.gz", "rt") as f:
-        X = mmread(f).tocsr()   # shape: n_features x n_barcodes
+        X = mmread(f).tocsr()  # shape: n_features x n_barcodes
 
     features = pd.read_csv(
-        path_to_data / "cell_feature_matrix" / "features.tsv.gz",
-        sep="\t", header=None, compression="gzip"
+        path_to_data / "cell_feature_matrix" / "features.tsv.gz", sep="\t", header=None, compression="gzip"
     )
 
     barcodes = pd.read_csv(
-        path_to_data / "cell_feature_matrix" / "barcodes.tsv.gz",
-        sep="\t", header=None, compression="gzip"
+        path_to_data / "cell_feature_matrix" / "barcodes.tsv.gz", sep="\t", header=None, compression="gzip"
     )[0]
 
     gene_mask = features[2] == "Gene Expression"
@@ -249,11 +252,9 @@ def read_xenium(path_to_data: Path) -> SpatialData:
 
     # Points for sdata
     transcripts_df = pq.read_table(path_to_data / "transcripts.parquet").to_pandas()
-    transcripts_df['feature_name'] = transcripts_df['feature_name'].astype('category')
-    transcripts_df['is_gene'] = transcripts_df['is_gene'].astype('str')
-    transcripts_df = transcripts_df.rename(
-        columns={"x_location": "x", "y_location": "y", "z_location": "z"}
-    )
+    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
+    transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("str")
+    transcripts_df = transcripts_df.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
     transcripts_sd = PointsModel.parse(transcripts_df)
 
     # --- assemble SpatialData
@@ -266,16 +267,18 @@ def read_xenium(path_to_data: Path) -> SpatialData:
     )
     return sdata_object
 
+
 # -----------------------------------------------------------------------------
 # Reader: Proseg 2.0
 # -----------------------------------------------------------------------------
+
 
 def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialData:
     """
     Build a SpatialData object from Proseg outputs.
 
     Assumes the following files & columns exist:
-      expected-counts.csv.gz            -> cells x genes 
+      expected-counts.csv.gz            -> cells x genes
       cell-metadata.csv.gz               -> 'cell_id','cell_centroid_x','cell_centroid_y','cell_area'
       cell-polygons-layers.geojson(.gz)  -> 'cell','layer','geometry'
       transcript-metadata.csv.gz         -> 'x_location','y_location','z_location','gene'  (optional 'cell')
@@ -289,7 +292,7 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     var = pd.DataFrame(index=gene_cols)
     var.index.name = "gene_symbol"
     X_est = counts_df.values
-    X_est = csr_matrix(X_est) 
+    X_est = csr_matrix(X_est)
 
     # Round to nearest int and convert to CSR
     X = np.rint(counts_df.values).astype(np.int32, copy=False)
@@ -343,9 +346,9 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     # Per-layer shapes and labels + accumulate for 3D stack & MIP
     z_levels = sorted(gdf["layer"].unique())
     # stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
-    max_proj = np.zeros((H, W), dtype=np.uint32)
+    # max_proj = np.zeros((H, W), dtype=np.uint32)
 
-    for zi, z in enumerate(z_levels):
+    for _zi, z in enumerate(z_levels):
         layer_gdf = gdf[gdf["layer"] == z]
 
         # Shapes (index must be instance ids to join with table.instance_key)
@@ -356,20 +359,15 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
         shapes_dict[f"cell_boundaries_z{int(z)}"] = ShapesModel.parse(layer_shapes)
 
         # Labels via rasterize (value == cell id, background 0)
-        shapes_iter = ((mapping(geom), int(cid)+1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry))
-        img = rasterize(
-            shapes_iter,
-            out_shape=(H, W),
-            fill=0,
-            dtype=np.uint32
+        shapes_iter = (
+            (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry, strict=False)
         )
+        img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
 
-        labels_dict[f"cell_labels_z{int(z)}"] = Labels2DModel.parse(
-            img, scale_factors=(2, 2, 2), dims=["y", "x"]
-        )
+        labels_dict[f"cell_labels_z{int(z)}"] = Labels2DModel.parse(img, scale_factors=(2, 2, 2), dims=["y", "x"])
 
         # stack[zi] = img
-        #max_proj = np.maximum(max_proj, img)
+        # max_proj = np.maximum(max_proj, img)
     # proj = labels_mode_projection(stack)  # more representative than MIP
 
     # MIP label (2D)
@@ -405,18 +403,31 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     # Points (transcripts)
     # -------------------------
     tx = pd.read_csv(path_to_proseg_data / "transcript-metadata.csv.gz", compression="gzip")
-    tx = tx.rename(columns={
-        "gene": "feature_name",
-        "assignment": "cell_id"
-    })
+    tx = tx.rename(columns={"gene": "feature_name", "assignment": "cell_id"})
 
-    keep_cols = [c for c in ["transcript_id", "x", "y", "z", "observed_x", "observed_y", "observed_z", "feature_name", "cell_id", "qv", "probability"] if c in tx.columns]
+    keep_cols = [
+        c
+        for c in [
+            "transcript_id",
+            "x",
+            "y",
+            "z",
+            "observed_x",
+            "observed_y",
+            "observed_z",
+            "feature_name",
+            "cell_id",
+            "qv",
+            "probability",
+        ]
+        if c in tx.columns
+    ]
     tx = tx[keep_cols].copy()
 
     tx["cell_id"] = (tx["cell_id"] + 1).astype(int)
     tx["feature_name"] = tx["feature_name"].astype("category")
 
-    tx.loc[tx["cell_id"] == 2**32, "cell_id"] = 0 #uint32_max placeholder meaning “no assignment / background”
+    tx.loc[tx["cell_id"] == 2**32, "cell_id"] = 0  # uint32_max placeholder meaning “no assignment / background”
 
     transcripts_sd = PointsModel.parse(tx)
 
@@ -432,9 +443,11 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     )
     return sdata
 
+
 # -----------------------------------------------------------------------------
 # Reader: Proseg 3.0
 # -----------------------------------------------------------------------------
+
 
 def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialData:
     """
@@ -452,7 +465,7 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     # Table (counts + metadata)
     # -------------------------
     with gzip.open(path_to_proseg_data / "counts.mtx.gz", "rt") as f:
-        X = mmread(f).tocsr()   # cells x genes
+        X = mmread(f).tocsr()  # cells x genes
 
     X = X.astype(np.int32)
 
@@ -462,10 +475,15 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
 
     obs = pd.read_csv(path_to_proseg_data / "cell-metadata.csv.gz", compression="gzip")
     obs.drop(columns=["cluster", "scale", "original_cell_id"], inplace=True)
-    obs.rename(columns={"cell": "cell_id",
-                        "centroid_x": "centroid_x",
-                        "cell_centroid_y": "centroid_y",
-                        "surface_area": "cell_area"}, inplace=True)
+    obs.rename(
+        columns={
+            "cell": "cell_id",
+            "centroid_x": "centroid_x",
+            "cell_centroid_y": "centroid_y",
+            "surface_area": "cell_area",
+        },
+        inplace=True,
+    )
     obs["cell_id"] = obs["cell_id"] + 1
     obs["label_id"] = obs["cell_id"]
     obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
@@ -510,7 +528,7 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     # Per-layer shapes and labels + accumulate for 3D stack & MIP
     z_levels = sorted(gdf["layer"].unique())
     stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
-    max_proj = np.zeros((H, W), dtype=np.uint32)
+    # max_proj = np.zeros((H, W), dtype=np.uint32)
 
     for zi, z in enumerate(z_levels):
         layer_gdf = gdf[gdf["layer"] == z]
@@ -523,33 +541,22 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
         shapes_dict[f"cell_boundaries_z{int(z)}"] = ShapesModel.parse(layer_shapes)
 
         # Labels via rasterize (value == cell id, background 0)
-        shapes_iter = ((mapping(geom), int(cid)+1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry))
-        img = rasterize(
-            shapes_iter,
-            out_shape=(H, W),
-            fill=0,
-            dtype=np.uint32
+        shapes_iter = (
+            (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry, strict=False)
         )
+        img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
 
-        labels_dict[f"cell_labels_z{int(z)}"] = Labels2DModel.parse(
-            img, scale_factors=(2, 2, 2), dims=["y", "x"]
-        )
+        labels_dict[f"cell_labels_z{int(z)}"] = Labels2DModel.parse(img, scale_factors=(2, 2, 2), dims=["y", "x"])
 
         stack[zi] = img
-        #max_proj = np.maximum(max_proj, img)
+        # max_proj = np.maximum(max_proj, img)
     proj = labels_mode_projection(stack)  # more representative than MIP
 
     # MIP label (2D)
-    labels_dict["cell_labels"] = Labels2DModel.parse(
-        proj, scale_factors=(2, 2, 2), dims=["y", "x"]
-    )
+    labels_dict["cell_labels"] = Labels2DModel.parse(proj, scale_factors=(2, 2, 2), dims=["y", "x"])
 
     # 3D label stack: (z, y, x)
-    labels_dict["cell_labels_3d"] = Labels3DModel.parse(
-        stack,
-        scale_factors=None,
-        dims=["z", "y", "x"]
-    )
+    labels_dict["cell_labels_3d"] = Labels3DModel.parse(stack, scale_factors=None, dims=["z", "y", "x"])
 
     # Generate 2D cell_boundaries from label projection
     polys2d = labels_to_shapes(proj, simplify_tolerance=0.5)
@@ -572,10 +579,7 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     # Points (transcripts)
     # -------------------------
     tx = pd.read_csv(path_to_proseg_data / "transcript-metadata.csv.gz", compression="gzip")
-    tx = tx.rename(columns={
-        "gene": "feature_name",
-        "assignment": "cell_id"
-    })
+    tx = tx.rename(columns={"gene": "feature_name", "assignment": "cell_id"})
     keep_cols = [c for c in ["transcript_id", "x", "y", "z", "feature_name", "cell_id"] if c in tx.columns]
     tx = tx[keep_cols].copy()
     tx["cell_id"] = tx["cell_id"].fillna(0)
@@ -595,12 +599,14 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     )
     return sdata
 
+
 # -----------------------------------------------------------------------------
 # Reader: BIDCell
 # -----------------------------------------------------------------------------
 
+
 def read_bidcell(path_to_data: Path) -> SpatialData:
-    '''
+    """
     Create spatialdata object from subset BIDCell data.
 
     Parameters:
@@ -608,7 +614,7 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
 
     Returns
     SpatialData: A spatialdata object.
-    '''
+    """
 
     bidcell_path = path_to_data
 
@@ -641,6 +647,7 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
     var = pd.DataFrame(index=pd.Index(expr_cols, name="gene_symbol"))
 
     from scipy import sparse  # keep local to avoid altering behavior elsewhere
+
     X = merged_df[expr_cols].to_numpy()
     X = sparse.csr_matrix(X)
 
@@ -686,13 +693,7 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
     transcripts = transcripts.copy()
     transcripts["cell_id"] = cell_labels[y, x]
 
-    transcripts = transcripts.rename(
-        columns={
-            "x_location": "x",
-            "y_location": "y",
-            "z_location": "z"
-        }
-    )
+    transcripts = transcripts.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
 
     transcripts["feature_name"] = transcripts["feature_name"].astype("category")
     transcripts["is_gene"] = transcripts["is_gene"].astype("string")
@@ -710,12 +711,14 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
 
     return sdata
 
+
 # -----------------------------------------------------------------------------
 # Reader: Segger
 # -----------------------------------------------------------------------------
 
+
 def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
-    '''
+    """
     Create spatialdata object from subset Segger data.
 
     Parameters:
@@ -723,7 +726,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
 
     Returns
     SpatialData: A spatialdata object.
-    '''
+    """
 
     # -------------------------
     # Table (AnnData)
@@ -775,14 +778,14 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     H = dapi.shape[1]
     W = dapi.shape[2]
 
-    shapes_iter = ((mapping(geom), int(cid)) for cid, geom in zip(shapes_gdf.index, shapes_gdf.geometry))
+    shapes_iter = ((mapping(geom), int(cid)) for cid, geom in zip(shapes_gdf.index, shapes_gdf.geometry, strict=False))
     label_img = rasterize(
         shapes_iter,
         out_shape=(H, W),
         fill=0,
         dtype=np.uint32,
     )
-    #fewer labels than shapes - why?
+    # fewer labels than shapes - why?
     cell_labels_sd = Labels2DModel.parse(label_img, scale_factors=(2, 2, 2), dims=["y", "x"])
 
     # nucleus labels from 10x
@@ -795,18 +798,13 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     transcripts = pd.read_parquet(path_to_data / "segger_transcripts.parquet")
     transcripts.drop(columns=["score", "bound", "cell_id"], inplace=True)
     transcripts = transcripts.rename(
-        columns={
-            "x_location": "x",
-            "y_location": "y",
-            "z_location": "z",
-            "segger_cell_id": "cell_id"
-        }
+        columns={"x_location": "x", "y_location": "y", "z_location": "z", "segger_cell_id": "cell_id"}
     )
 
     transcripts["feature_name"] = transcripts["feature_name"].astype("category")
     transcripts["is_gene"] = transcripts["is_gene"].astype("string")
     transcripts[transcripts["cell_id"].isin(adata.obs["cell_id"])]
-    #there are cells in the transcripts that are not present in the boundaries - check why - invalid shapes?
+    # there are cells in the transcripts that are not present in the boundaries - check why - invalid shapes?
     transcripts = transcripts[transcripts["cell_id"].isin(adata.obs["cell_id"])]
 
     transcripts_sd = PointsModel.parse(transcripts)
@@ -837,4 +835,3 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     )
 
     return sdata
-
