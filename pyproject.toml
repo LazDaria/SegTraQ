@@ -25,6 +25,8 @@ dependencies = [
   "geopandas",
   "igraph",
   "rtree",
+  "rasterio",
+  "squidpy",
   "tqdm",
   "anndata==0.11.4"
 ]
