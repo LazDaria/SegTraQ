@@ -6,6 +6,7 @@ from sklearn.metrics import silhouette_score
 
 from .utils import (
     compute_mean_ari,
+    compute_mean_cosine_distance_for_clustering,
     compute_mean_purity,
     compute_pairwise_ari,
     compute_pairwise_purity,
@@ -60,6 +61,55 @@ def compute_rmsd(
                 best_rmsd = float(rmsd_val)
 
     return best_rmsd if best_rmsd != np.inf else np.nan
+
+
+def compute_mean_cosine_distance(
+    sdata: sd.SpatialData,
+    resolution: float | list[float] = (0.6, 0.8, 1.0),
+    key_prefix: str = "leiden_subset",
+    random_state: int = 42,
+) -> float:
+    """
+    Compute mean cosine distance for different Leiden clustering resolutions
+    and report the best (lowest) mean cosine distance.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing clustering information.
+    resolution : float or list of float, optional
+        The resolution parameter(s) for Leiden clustering, by default (0.6, 0.8, 1.0).
+    key_prefix : str, optional
+        Prefix for clustering keys in .obs, by default "leiden_subset".
+    random_state : int, optional
+        Seed for reproducibility, by default 42.
+
+    Returns
+    -------
+    float
+        The best (lowest) mean cosine distance across resolutions.
+    """
+    adata = sdata.tables["table"]
+
+    if isinstance(resolution, float):
+        resolution = [resolution]
+
+    best_distance = np.inf
+    for res in resolution:
+        key_added, pca = run_leiden_clustering_on_random_gene_subset(
+            sdata,
+            resolution=res,
+            n_genes_subset=None,  # Use all genes
+            key_prefix=key_prefix,
+            random_state=random_state,
+        )
+        labels = adata.obs[key_added].values
+        if len(np.unique(labels)) > 1:
+            distance_val = compute_mean_cosine_distance_for_clustering(pca, labels)
+            if distance_val < best_distance:
+                best_distance = float(distance_val)
+
+    return best_distance if best_distance != np.inf else np.nan
 
 
 def compute_silhouette_score(
