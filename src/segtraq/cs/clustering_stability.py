@@ -3,6 +3,7 @@ import pandas as pd
 import spatialdata as sd
 from scipy.stats import pearsonr
 from sklearn.metrics import silhouette_score
+from typing import Optional
 
 from .utils import (
     compute_mean_ari,
@@ -68,10 +69,12 @@ def compute_mean_cosine_distance(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
+    label_key: Optional[str] = None,
 ) -> float:
     """
     Compute mean cosine distance for different Leiden clustering resolutions
     and report the best (lowest) mean cosine distance.
+    If a label_key is provided, compute the mean cosine distance for that clustering only.
 
     Parameters
     ----------
@@ -83,6 +86,8 @@ def compute_mean_cosine_distance(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
+    label_key : str, optional
+        If provided, compute the mean cosine distance for this clustering only.
 
     Returns
     -------
@@ -95,6 +100,19 @@ def compute_mean_cosine_distance(
         resolution = [resolution]
 
     best_distance = np.inf
+    if label_key is not None:
+        if label_key not in adata.obs:
+            raise ValueError(f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}")
+        labels = adata.obs[label_key].values
+        # remove NaN labels
+        if len(np.unique(labels[~pd.isna(labels)])) > 1:
+            if "X_pca" not in adata.obsm:
+                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
+            distance_val = compute_mean_cosine_distance_for_clustering(adata.obsm["X_pca"], labels)
+            return float(distance_val)
+        else:
+            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+
     for res in resolution:
         key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
