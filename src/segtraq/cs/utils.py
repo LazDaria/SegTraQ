@@ -1,9 +1,9 @@
 import anndata as ad
 import numpy as np
+import pandas as pd
 import scanpy as sc
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
-import pandas as pd
 
 
 def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
@@ -22,7 +22,7 @@ def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> f
     float
         RMSD value (lower means tighter clusters).
     """
-    unique_labels = np.unique(labels)
+    unique_labels = np.unique(labels[~pd.isna(labels)])
     total_rmsd = 0.0
     total_points = 0
 
