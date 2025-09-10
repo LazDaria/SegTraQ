@@ -75,7 +75,7 @@ def centroid_mean_coord_diff(
     y_mean = pd.DataFrame(y_mean)
 
     # extract the centroids
-    gdf = sdata[shape_key].copy() 
+    gdf = sdata[shape_key].copy()
     gdf.set_index(gdf[cell_key], inplace=True)
     df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
@@ -162,7 +162,7 @@ def distance_to_membrane(
     gdf = sdata["cell_boundaries"]
 
     # make the cell key the index for joining the two dataframes
-    #df = df.set_index(df[cell_key])
+    # df = df.set_index(df[cell_key])
 
     # merge the geopandas dataframe with the dataframe from above
     gdf = gdf.merge(df, how="inner", on=cell_key)

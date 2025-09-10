@@ -76,7 +76,10 @@ def test_proseg_cell_boundaries():
 
 @pytest.fixture(scope="session", name="bidcell_cell_labels")
 def test_bidcell_cell_labels():
-    path = Path(__file__).parent / "data/bidcell/model_outputs/2025_08_15_17_16_41/test_output/epoch_4_step_100_connected.tif"
+    path = (
+        Path(__file__).parent
+        / "data/bidcell/model_outputs/2025_08_15_17_16_41/test_output/epoch_4_step_100_connected.tif"
+    )
     return tifffile.imread(path)
 
 
