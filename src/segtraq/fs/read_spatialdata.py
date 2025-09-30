@@ -26,6 +26,8 @@ from spatialdata.models import (
     TableModel,
 )
 
+from ..fs import create_spatialdata
+
 # -----------------------------------------------------------------------------
 # Helper: build polygons from per-vertex rows
 # -----------------------------------------------------------------------------
@@ -221,49 +223,35 @@ def read_xenium(path_to_data: Path) -> SpatialData:
 
     adata = ad.AnnData(X=X.T, obs=obs, var=var)
 
-    table_sd = TableModel.parse(
-        adata,
-        region_key="region",
-        region="cell_labels",
-        instance_key="label_id",
-    )
-
     # Image for sdata
     dapi = tiff.imread(path_to_data / "dapi_um.tif")
     if dapi.ndim == 2:  # add channel axis if single-channel
         dapi = dapi[None, ...]
-    image_sd = Image2DModel.parse(dapi, scale_factors=(2, 2, 2), dims=["c", "y", "x"])
 
     # Label for sdata
     cell_labels = tiff.imread(path_to_data / "cell_mask_um.tif")
-    cell_labels_sd = Labels2DModel.parse(cell_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
-
     nucleus_labels = tiff.imread(path_to_data / "nuc_mask_um.tif")
-    nucleus_labels_sd = Labels2DModel.parse(nucleus_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
 
     # Shapes for sdata
     cell_shapes = pd.read_parquet(path_to_data / "cell_boundaries.parquet")
     cell_shapes_gpd = build_cell_polygons_from_vertices(cell_shapes)
-    cell_shapes_sd = ShapesModel.parse(cell_shapes_gpd)
 
     nucleus_shapes = pd.read_parquet(path_to_data / "nucleus_boundaries.parquet")
     nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
-    nucleus_shapes_sd = ShapesModel.parse(nucleus_shapes_gpd)
 
     # Points for sdata
     transcripts_df = pq.read_table(path_to_data / "transcripts.parquet").to_pandas()
     transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
     transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("str")
     transcripts_df = transcripts_df.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
-    transcripts_sd = PointsModel.parse(transcripts_df)
 
     # --- assemble SpatialData
-    sdata_object = SpatialData(
-        images={"morphology_focus": image_sd},
-        labels={"cell_labels": cell_labels_sd, "nucleus_labels": nucleus_labels_sd},
-        shapes={"cell_boundaries": cell_shapes_sd, "nucleus_boundaries": nucleus_shapes_sd},
-        points={"transcripts": transcripts_sd},
-        tables={"table": table_sd},
+    sdata_object = create_spatialdata(
+        points=transcripts_df,
+        labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
+        shapes={"cell_boundaries": cell_shapes_gpd, "nucleus_boundaries": nucleus_shapes_gpd},
+        tables=adata,
+        images=dapi,
     )
     return sdata_object
 
