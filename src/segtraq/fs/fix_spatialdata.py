@@ -50,7 +50,7 @@ def create_spatialdata(
     labels : np.ndarray or None, optional
         Segmentation label image (2D or 3D array) with cell IDs. Default is None.
         If a dictionary is provided, it should contain a key 'cell_labels' with the DataFrame.
-    tables : pd.DataFrame or None, optional
+    tables : pd.DataFrame, AnnData or None, optional
         DataFrame containing per-cell features. Must include the column specified by `cell_key_tables`. Default is None.
     images : np.ndarray or None, optional
         Image data (2D or 3D array). Default is None.
@@ -170,7 +170,7 @@ def create_spatialdata(
                 shapes[cell_key_shapes] = shapes[cell_key_shapes] + 1
 
         transcript_ids = set(points[cell_key_points].unique())
-        missing_in_polygons = transcript_ids - shapes_cell_ids
+        missing_in_polygons = transcript_ids - shapes_cell_ids - {background_cell_id}
         if not consolidate_shapes:
             assert not missing_in_polygons, (
                 f"Missing {len(missing_in_polygons)} cell IDs from polygons: {missing_in_polygons}. "
@@ -233,37 +233,53 @@ def create_spatialdata(
     # === TABLES ===
     tables_sd = None
     if tables is not None:
-        table_metadata = list(table_metadata)
-        # Prepare obs DataFrame with string index
-        obs_df = tables[table_metadata].copy()
-        obs_df.index = obs_df.index.astype(str)  # ensure AnnData-compatible index
-
-        # Prepare X matrix and var names
-        X_df = tables.drop(columns=table_metadata)
-        var_names = [str(col) for col in X_df.columns]  # force string var names
-
-        # Create AnnData
-        adata = ad.AnnData(
-            X=X_df.values,
-            obs=obs_df,
-        )
-        adata.var_names = var_names
-
-        if not relabel_tables:
-            assert tables[cell_key_tables].min() >= 1, (
-                f"Cell IDs in tables must start at 1. "
-                f"Found minimum cell ID: {tables[cell_key_tables].min()}. "
-                f"If you want to relabel the tables by adding 1, set relabel_tables=True."
-            )
+        if isinstance(tables, ad.AnnData):
+            adata = tables
+            if adata.obs[cell_key_tables].dtype.kind in "iu":
+                if not relabel_tables:
+                    assert adata.obs[cell_key_tables].min() >= 1, (
+                        f"Cell IDs in tables must start at 1. "
+                        f"Found minimum cell ID: {adata.obs[cell_key_tables].min()}. "
+                        f"If you want to relabel the tables by adding 1, set relabel_tables=True."
+                    )
+                else:
+                    adata = copy.deepcopy(adata)  # avoid modifying the original AnnData
+                    adata.obs[cell_key_tables] = adata.obs[cell_key_tables] + 1
         else:
-            tables = tables.copy()  # avoid modifying the original DataFrame
-            tables[cell_key_tables] = tables[cell_key_tables] + 1
+            table_metadata = list(table_metadata)
 
-        adata.obs["region"] = pd.Categorical(["cell_labels"] * len(adata))
-        adata.obs["mask_id"] = adata.obs_names.astype("int")
+            # Prepare obs DataFrame with string index
+            obs_df = tables[table_metadata].copy()
+            obs_df.index = obs_df.index.astype(str)  # ensure AnnData-compatible index
+
+            # Prepare X matrix and var names
+            X_df = tables.drop(columns=table_metadata)
+            var_names = [str(col) for col in X_df.columns]  # force string var names
+
+            # Create AnnData
+            adata = ad.AnnData(
+                X=X_df.values,
+                obs=obs_df,
+            )
+            adata.var_names = var_names
+
+            if not relabel_tables:
+                assert tables[cell_key_tables].min() >= 1, (
+                    f"Cell IDs in tables must start at 1. "
+                    f"Found minimum cell ID: {tables[cell_key_tables].min()}. "
+                    f"If you want to relabel the tables by adding 1, set relabel_tables=True."
+                )
+            else:
+                tables = tables.copy()  # avoid modifying the original DataFrame
+                tables[cell_key_tables] = tables[cell_key_tables] + 1
+
+        if "region" not in adata.obs.columns:
+            adata.obs["region"] = pd.Categorical(["cell_labels"] * len(adata))
+        if "label_id" not in adata.obs.columns:
+            adata.obs["label_id"] = adata.obs_names.astype("int")
 
         # check that all cells in points are present in the tables
-        missing_in_tables = set(points[cell_key_points]) - set(adata.obs["mask_id"])
+        missing_in_tables = set(points[cell_key_points]) - set(adata.obs["cell_id"]) - {background_cell_id}
         if not consolidate_tables:
             assert not missing_in_tables, (
                 f"Missing {len(missing_in_tables)} cell IDs from tables: {missing_in_tables}. "
@@ -272,8 +288,15 @@ def create_spatialdata(
             )
         elif len(missing_in_tables) > 0:
             points = points[~points[cell_key_points].isin(missing_in_tables)]
+            # checking if points is empty after removing missing cell IDs
+            assert len(points) > 0, (
+                "No points left after consolidating with tables. "
+                "Please check your data to ensure that your cell IDs in tables match the ones in points."
+            )
 
-        tables_sd = sd.models.TableModel.parse(adata, region_key="region", region="cell_labels", instance_key="mask_id")
+        tables_sd = sd.models.TableModel.parse(
+            adata, region_key="region", region="cell_labels", instance_key="label_id"
+        )
 
     # === IMAGES ===
     images_sd = None
@@ -298,7 +321,7 @@ def create_spatialdata(
     # === FINAL VALIDATION ===
     validate_spatialdata(
         sdata,
-        shape_key=list(shapes_sd_dict.keys()),
+        shape_key="cell_boundaries",  # list(shapes_sd_dict.keys()),
         label_key="cell_labels",
         points_key="transcripts",
         table_key="table",
@@ -437,8 +460,8 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the cell_key_tables parameter."
             )
             tables_cell_ids = set(table.obs[cell_key_tables].values)
-            missing_in_shapes = tables_cell_ids - shapes_cell_ids
-            missing_in_tables = shapes_cell_ids - tables_cell_ids
+            missing_in_shapes = tables_cell_ids - shapes_cell_ids - {background_cell_id}
+            missing_in_tables = shapes_cell_ids - tables_cell_ids - {background_cell_id}
             assert len(missing_in_tables) == 0, (
                 f"Missing {len(missing_in_tables)} cell IDs in tables: {missing_in_tables}. "
                 "These cells are present in shapes, but not in tables. "
