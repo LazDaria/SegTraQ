@@ -440,7 +440,7 @@ If a dictionary is provided, it should contain a key ‘cell_boundaries’ with 
 Default is None.</p></li>
 <li><p><strong>labels</strong> (<em>np.ndarray</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Segmentation label image (2D or 3D array) with cell IDs. Default is None.
 If a dictionary is provided, it should contain a key ‘cell_labels’ with the DataFrame.</p></li>
-<li><p><strong>tables</strong> (<em>pd.DataFrame</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – DataFrame containing per-cell features. Must include the column specified by <cite>cell_key_tables</cite>. Default is None.</p></li>
+<li><p><strong>tables</strong> (<em>pd.DataFrame</em><em>, </em><em>AnnData</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – DataFrame containing per-cell features. Must include the column specified by <cite>cell_key_tables</cite>. Default is None.</p></li>
 <li><p><strong>images</strong> (<em>np.ndarray</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Image data (2D or 3D array). Default is None.</p></li>
 <li><p><strong>cell_key_points</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>points</cite> DataFrame indicating cell assignments. Default is “assignment”.</p></li>
 <li><p><strong>cell_key_shapes</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>shapes</cite> DataFrame indicating cell IDs. Default is “cell_id”.</p></li>
