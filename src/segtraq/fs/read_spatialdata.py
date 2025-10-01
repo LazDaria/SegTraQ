@@ -9,198 +9,60 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import tifffile as tiff
-from pyarrow import parquet as pq
 from rasterio.features import rasterize
 from scipy.io import mmread
 from scipy.sparse import csr_matrix
-from shapely.geometry import MultiPolygon, Polygon, mapping
-from shapely.validation import make_valid
-from skimage.measure import find_contours
+from shapely.geometry import mapping
 from spatialdata import SpatialData
 
 from ..fs import create_spatialdata
-
-# -----------------------------------------------------------------------------
-# Helper: build polygons from per-vertex rows
-# -----------------------------------------------------------------------------
-
-
-def build_cell_polygons_from_vertices(
-    df: pd.DataFrame,
-    id_col: str = "label_id",
-    x_col: str = "vertex_x",
-    y_col: str = "vertex_y",
-    keep_attrs: list[str] = ("cell_id",),
-    drop_closed_duplicate: bool = True,
-    fix_invalid: bool = True,
-) -> gpd.GeoDataFrame:
-    """
-    Convert a Xenium vertex table (one row per boundary vertex) into a GeoDataFrame
-    with one Polygon per unique label_id.
-
-    Parameters
-    ----------
-    df : DataFrame with at least [id_col, x_col, y_col]
-    id_col : identifier of the cell (matches label image IDs)
-    x_col, y_col : vertex coordinates in microns
-    keep_attrs : columns to carry over (first value per id is used)
-    drop_closed_duplicate : drop trailing duplicate point used to close ring
-    fix_invalid : attempt to repair invalid polygons with shapely.make_valid
-
-    Returns
-    -------
-    GeoDataFrame with columns [id_col, keep_attrs..., geometry]
-    """
-
-    rows = []
-    geoms = []
-
-    # groupby preserves input row order; vertices are provided in clockwise order
-    # (10x docs: vertices appear clockwise, first and last point duplicate to close the polygon)
-    for label_id, g in df.groupby(id_col, sort=False):
-        xs = g[x_col].to_numpy()
-        ys = g[y_col].to_numpy()
-
-        # drop last point if it duplicates the first (common in Xenium files)
-        if drop_closed_duplicate and len(xs) >= 2 and xs[0] == xs[-1] and ys[0] == ys[-1]:
-            xs = xs[:-1]
-            ys = ys[:-1]
-
-        # need at least 3 vertices
-        if len(xs) < 3:
-            continue
-
-        poly = Polygon(np.column_stack([xs, ys]))
-
-        if fix_invalid and not poly.is_valid:
-            poly = make_valid(poly)
-            # make_valid can return GeometryCollection; keep polygonal parts
-            if poly.geom_type == "GeometryCollection":
-                polys = [p for p in poly.geoms if p.geom_type in ("Polygon", "MultiPolygon")]
-                if not polys:  # nothing polygonal left
-                    continue
-                poly = polys[0] if len(polys) == 1 else MultiPolygon([p for p in polys if p.geom_type == "Polygon"])
-
-        if poly.is_empty:
-            continue
-
-        # pick representative attributes (first row in the group)
-        row = {id_col: int(label_id) if pd.notna(label_id) else None}
-        for a in keep_attrs:
-            if a in g.columns:
-                row[a] = g[a].iloc[0]
-        rows.append(row)
-        geoms.append(poly)
-
-    gdf = gpd.GeoDataFrame(rows, geometry=geoms)
-    gdf.set_index(id_col, inplace=True)  # set index for labels/boundaries link
-
-    return gdf
-
-
-# -----------------------------------------------------------------------------
-# Helper: mode projection across Z for labels
-# -----------------------------------------------------------------------------
-
-
-def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
-    # stack: (Z, H, W), dtype integer labels
-    Z, H, W = stack.shape
-    flat = stack.reshape(Z, -1).T  # (H*W, Z)
-    max_id = int(stack.max())
-    counts = np.zeros((flat.shape[0], max_id + 1), dtype=np.int32)
-    idx = np.arange(flat.shape[0])
-
-    # count occurrences per pixel across slices
-    for z in range(Z):
-        np.add.at(counts, (idx, flat[:, z]), 1)
-
-    counts[:, 0] = 0
-    winner = counts.argmax(axis=1).astype(np.int32)
-    return winner.reshape(H, W)
-
-
-# -----------------------------------------------------------------------------
-# Helper: extract polygon boundaries from a 2D labels image
-# -----------------------------------------------------------------------------
-
-
-def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
-    """
-    Convert a 2D labels image into polygon boundaries (one polygon per instance).
-    Returns a GeoDataFrame indexed by label_id with a 'geometry' column.
-    """
-    assert label_img.ndim == 2, "label image must be 2D"
-
-    geoms = []
-    ids = []
-
-    # Collect unique labels (excluding background 0)
-    label_ids = np.unique(label_img)
-    label_ids = label_ids[label_ids != 0]
-
-    for lid in label_ids:
-        mask = (label_img == lid).astype(np.uint8)
-        # find contours at level 0.5 around the binary mask
-        contours = find_contours(mask, 0.5)  # list of (N,2) arrays in (row=y, col=x)
-        polys = []
-        for c in contours:
-            # flip to (x, y); ensure polygon is valid
-            poly = Polygon(np.c_[c[:, 1], c[:, 0]])
-            if not poly.is_valid or poly.area == 0:
-                continue
-            if simplify_tolerance is not None and simplify_tolerance > 0:
-                poly = poly.simplify(simplify_tolerance, preserve_topology=True)
-            polys.append(poly)
-        if not polys:
-            continue
-        geom = polys[0] if len(polys) == 1 else MultiPolygon(polys)
-        geoms.append(geom)
-        ids.append(int(lid))
-
-    gdf = gpd.GeoDataFrame({"cell_id": ids, "label_id": ids, "geometry": geoms}).set_index("label_id")
-    return gdf
+from .utils import (
+    build_cell_polygons_from_vertices,
+    labels_mode_projection,
+    labels_to_shapes,
+    make_adata,
+    read_dapi_image,
+    read_labels,
+    read_shapes,
+    read_transcripts,
+)
 
 
 # -----------------------------------------------------------------------------
 # Reader: 10x Xenium
 # -----------------------------------------------------------------------------
-
-
 def read_xenium(path_to_data: Path) -> SpatialData:
     """
-    Create spatialdata object from subset 10x Xenium data.
+    Read 10x Xenium data and assemble a SpatialData object.
 
-    Parameters:
-    path_to_data (Path): Path to the directory containing subset 10x Xenium data.
+    Parameters
+    ----------
+    path_to_data : Path
+        Path to the directory containing subset 10x Xenium data.
 
     Returns
-    SpatialData: A spatialdata object.
+    -------
+    SpatialData
+        SpatialData object containing transcripts, shapes, labels, tables, and DAPI image.
     """
-    # Table for sdata
+    # Table
     with gzip.open(path_to_data / "cell_feature_matrix" / "matrix.mtx.gz", "rt") as f:
-        X = mmread(f).tocsr()  # shape: n_features x n_barcodes
-
+        X = mmread(f).tocsr()
     features = pd.read_csv(
         path_to_data / "cell_feature_matrix" / "features.tsv.gz", sep="\t", header=None, compression="gzip"
     )
-
     barcodes = pd.read_csv(
         path_to_data / "cell_feature_matrix" / "barcodes.tsv.gz", sep="\t", header=None, compression="gzip"
     )[0]
 
     gene_mask = features[2] == "Gene Expression"
-    X = X[gene_mask.values, :]  # subset ROWS (features)
+    X = X[gene_mask.values, :]
     var = pd.DataFrame(index=features.loc[gene_mask, 1].astype(str).values)
     var.index.name = "gene_symbol"
 
     meta_df = pd.read_csv(path_to_data / "cells.csv.gz", compression="gzip")
-    rename_map = {
-        "cell_centroid_x": "x_centroid",
-        "cell_centroid_y": "y_centroid",
-        "cell_area": "cell_area",
-    }
-    for k, v in list(rename_map.items()):
+    rename_map = {"cell_centroid_x": "x_centroid", "cell_centroid_y": "y_centroid", "cell_area": "cell_area"}
+    for k, v in rename_map.items():
         if k in meta_df.columns and v not in meta_df.columns:
             meta_df[v] = meta_df[k]
 
@@ -210,38 +72,32 @@ def read_xenium(path_to_data: Path) -> SpatialData:
     obs.reset_index(drop=True, inplace=True)
     X = X[:, barcodes.isin(meta_df.index).to_numpy()]
 
-    obs["label_id"] = np.arange(1, len(obs) + 1, dtype=np.int32)
+    obs["label_id"] = pd.RangeIndex(start=1, stop=len(obs) + 1, dtype=int)
     obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
 
-    adata = ad.AnnData(X=X.T, obs=obs, var=var)
+    adata = make_adata(X.T, obs, var)
 
-    # Image for sdata
-    dapi = tiff.imread(path_to_data / "dapi_um.tif")
-    if dapi.ndim == 2:  # add channel axis if single-channel
-        dapi = dapi[None, ...]
+    # Image
+    dapi = read_dapi_image(path_to_data / "dapi_um.tif")
 
-    # Label for sdata
-    cell_labels = tiff.imread(path_to_data / "cell_mask_um.tif")
-    nucleus_labels = tiff.imread(path_to_data / "nuc_mask_um.tif")
+    # Labels
+    labels = read_labels(path_to_data / "cell_mask_um.tif", path_to_data / "nuc_mask_um.tif")
 
-    # Shapes for sdata
-    cell_shapes = pd.read_parquet(path_to_data / "cell_boundaries.parquet")
-    cell_shapes_gpd = build_cell_polygons_from_vertices(cell_shapes)
+    # Shapes
+    shapes = {
+        "cell_boundaries": read_shapes(path_to_data / "cell_boundaries.parquet"),
+        "nucleus_boundaries": read_shapes(path_to_data / "nucleus_boundaries.parquet"),
+    }
 
-    nucleus_shapes = pd.read_parquet(path_to_data / "nucleus_boundaries.parquet")
-    nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
+    # Points
+    transcripts = read_transcripts(
+        path_to_data / "transcripts.parquet", rename_map={"x_location": "x", "y_location": "y", "z_location": "z"}
+    )
 
-    # Points for sdata
-    transcripts_df = pq.read_table(path_to_data / "transcripts.parquet").to_pandas()
-    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
-    transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("str")
-    transcripts_df = transcripts_df.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
-
-    # --- assemble SpatialData
     sdata = create_spatialdata(
-        points=transcripts_df,
-        labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
-        shapes={"cell_boundaries": cell_shapes_gpd, "nucleus_boundaries": nucleus_shapes_gpd},
+        points=transcripts,
+        labels=labels,
+        shapes=shapes,
         tables=adata,
         images=dapi,
     )
@@ -251,8 +107,6 @@ def read_xenium(path_to_data: Path) -> SpatialData:
 # -----------------------------------------------------------------------------
 # Reader: Proseg 2.0
 # -----------------------------------------------------------------------------
-
-
 def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
     Build a SpatialData object from Proseg outputs.
