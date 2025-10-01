@@ -117,11 +117,12 @@ def create_spatialdata(
     )
     # check that the minimum cell ID is 1 (if the cell IDs are integer-based)
     if points[cell_key_points].dtype.kind in "iu":
-        if not relabel_points:
+        if not relabel_points and background_cell_id != 0:
             assert points[cell_key_points].min() >= 1, (
                 "Cell IDs in points must start at 1. "
                 f"Found minimum cell ID: {points[cell_key_points].min()}. "
-                f"If you want to relabel the points by adding 1, set relabel_points=True."
+                f"If you want to relabel the points by adding 1, set relabel_points=True. "
+                f"Alternatively, if your unassigned transcripts are labeled with 0, you can set background_cell_id=0."
             )
         else:
             points = points.copy()  # avoid modifying the original DataFrame
@@ -174,12 +175,21 @@ def create_spatialdata(
         if not consolidate_shapes:
             assert not missing_in_polygons, (
                 f"Missing {len(missing_in_polygons)} cell IDs from polygons: {missing_in_polygons}. "
-                "If you want to consolidate the shapes and the transcripts, set consolidate_shapes=True. "
-                "This will remove the missing cell IDs from the points."
+                f"If you want to consolidate the shapes and the transcripts, set consolidate_shapes=True. "
+                f"This will set the cell IDs of these transcripts to {background_cell_id}. "
+                f"You can change this by setting the background_cell_id parameter."
             )
         elif len(missing_in_polygons) > 0:
-            # remove points that are not in the polygons
-            points = points[~points[cell_key_points].isin(missing_in_polygons)]
+            # relabel points with missing cell IDs to background_cell_id
+            points[cell_key_points] = points[cell_key_points].apply(
+                lambda x: background_cell_id if x in missing_in_polygons else x
+            )
+            warnings.warn(
+                f"Missing {len(missing_in_polygons)} cell IDs from points: {missing_in_polygons}. "
+                f"These points have been relabeled to {background_cell_id}.",
+                UserWarning,
+                stacklevel=2,
+            )
 
         # check if shapes contains cell IDs that occur multiple times
         # if there are, this likely means that there are multiple layers that should be split into separate polygons
@@ -462,16 +472,20 @@ def validate_spatialdata(
             tables_cell_ids = set(table.obs[cell_key_tables].values)
             missing_in_shapes = tables_cell_ids - shapes_cell_ids - {background_cell_id}
             missing_in_tables = shapes_cell_ids - tables_cell_ids - {background_cell_id}
-            assert len(missing_in_tables) == 0, (
-                f"Missing {len(missing_in_tables)} cell IDs in tables: {missing_in_tables}. "
-                "These cells are present in shapes, but not in tables. "
-                "This might lead to inconsistencies in the spatialdata object."
-            )
-            assert len(missing_in_shapes) == 0, (
-                f"Missing {len(missing_in_shapes)} cell IDs in shapes: {missing_in_shapes}. "
-                "These cells are present in tables, but not in shapes. "
-                "This might lead to inconsistencies in the spatialdata object."
-            )
+            if len(missing_in_tables) != 0:
+                warnings.warn(
+                    f"Missing {len(missing_in_tables)} cell IDs in tables: {missing_in_tables}. "
+                    "These cells are present in shapes, but not in tables. "
+                    "This might lead to inconsistencies in the spatialdata object.",
+                    stacklevel=2,
+                )
+            if len(missing_in_shapes) != 0:
+                warnings.warn(
+                    f"Missing {len(missing_in_shapes)} cell IDs in shapes: {missing_in_shapes}. "
+                    "These cells are present in tables, but not in shapes. "
+                    "This might lead to inconsistencies in the spatialdata object.",
+                    stacklevel=2,
+                )
 
     # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
     if contains_labels:
