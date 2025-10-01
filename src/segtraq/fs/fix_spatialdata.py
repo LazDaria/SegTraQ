@@ -186,7 +186,8 @@ def create_spatialdata(
             )
             warnings.warn(
                 f"Missing {len(missing_in_polygons)} cell IDs from points: {missing_in_polygons}. "
-                f"These points have been relabeled to {background_cell_id}.",
+                f"These cells are present in the points, but not in the shapes. "
+                f"The points have been relabeled to {background_cell_id}.",
                 UserWarning,
                 stacklevel=2,
             )
