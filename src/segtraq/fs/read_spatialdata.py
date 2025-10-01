@@ -261,7 +261,7 @@ def read_xenium(path_to_data: Path) -> SpatialData:
 # -----------------------------------------------------------------------------
 
 
-def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialData:
+def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
     Build a SpatialData object from Proseg outputs.
 
@@ -295,12 +295,6 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
 
     adata = ad.AnnData(X=X, obs=obs, var=var)
     adata.layers["X_estimated"] = X_est
-    table_sd = TableModel.parse(
-        adata,
-        region_key="region",
-        region="cell_labels",
-        instance_key="label_id",
-    )
 
     # ---------------------------
     # Image (DAPI image from 10x)
@@ -308,7 +302,6 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     dapi = tiff.imread(path_to_10xdata / "dapi_um.tif")
     if dapi.ndim == 2:  # add channel axis if single-channel
         dapi = dapi[None, ...]
-    image_sd = Image2DModel.parse(dapi, scale_factors=(2, 2, 2), dims=["c", "y", "x"])
 
     # -------------------------
     # Polygons -> per-layer shapes + raster labels (2D per z) + MIP + 3D
@@ -333,10 +326,10 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
 
     # Per-layer shapes and labels + accumulate for 3D stack & MIP
     z_levels = sorted(gdf["layer"].unique())
-    # stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
-    # max_proj = np.zeros((H, W), dtype=np.uint32)
+    stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
+    max_proj = np.zeros((H, W), dtype=np.uint32)
 
-    for _zi, z in enumerate(z_levels):
+    for zi, z in enumerate(z_levels):
         layer_gdf = gdf[gdf["layer"] == z]
 
         # Shapes (index must be instance ids to join with table.instance_key)
@@ -344,7 +337,7 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
         layer_shapes.index.name = "label_id"
         layer_shapes.index += 1
         layer_shapes["cell_id"] = layer_shapes.index
-        shapes_dict[f"cell_boundaries_z{int(z)}"] = ShapesModel.parse(layer_shapes)
+        shapes_dict[f"cell_boundaries_z{int(z)}"] = layer_shapes
 
         # Labels via rasterize (value == cell id, background 0)
         shapes_iter = (
@@ -352,16 +345,14 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
         )
         img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
 
-        labels_dict[f"cell_labels_z{int(z)}"] = Labels2DModel.parse(img, scale_factors=(2, 2, 2), dims=["y", "x"])
+        labels_dict[f"cell_labels_z{int(z)}"] = img
 
-        # stack[zi] = img
-        # max_proj = np.maximum(max_proj, img)
-    # proj = labels_mode_projection(stack)  # more representative than MIP
+        stack[zi] = img
+        max_proj = np.maximum(max_proj, img)
+    proj = labels_mode_projection(stack)  # more representative than MIP
 
     # MIP label (2D)
-    # labels_dict["cell_labels"] = Labels2DModel.parse(
-    #     proj, scale_factors=(2, 2, 2), dims=["y", "x"]
-    # )
+    labels_dict["cell_labels"] = proj
 
     # # 3D label stack: (z, y, x)
     # labels_dict["cell_labels_3d"] = Labels3DModel.parse(
@@ -370,28 +361,27 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     #     dims=["z", "y", "x"]
     # )
 
-    # # Generate 2D cell_boundaries from label projection
-    # polys2d = labels_to_shapes(proj, simplify_tolerance=0.5)
-
-    # shapes_dict["cell_boundaries"] = ShapesModel.parse(polys2d)
+    # Generate 2D cell_boundaries from label projection
+    polys2d = labels_to_shapes(proj, simplify_tolerance=0.5)
+    shapes_dict["cell_boundaries"] = polys2d
 
     # nucleus boundaries from 10x
     nucleus_shapes = pd.read_parquet(path_to_10xdata / "nucleus_boundaries.parquet")
     nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
-    shapes_dict["nucleus_boundaries"] = ShapesModel.parse(nucleus_shapes_gpd)
+    shapes_dict["nucleus_boundaries"] = nucleus_shapes_gpd
 
     # -------------------------
     # Nuc labels (from 10x)
     # -------------------------
 
     nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
-    labels_dict["nucleus_labels"] = Labels2DModel.parse(nucleus_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
+    labels_dict["nucleus_labels"] = nucleus_labels
 
     # -------------------------
     # Points (transcripts)
     # -------------------------
-    tx = pd.read_csv(path_to_proseg_data / "transcript-metadata.csv.gz", compression="gzip")
-    tx = tx.rename(columns={"gene": "feature_name", "assignment": "cell_id"})
+    transcripts_df = pd.read_csv(path_to_proseg_data / "transcript-metadata.csv.gz", compression="gzip")
+    transcripts_df = transcripts_df.rename(columns={"gene": "feature_name", "assignment": "cell_id"})
 
     keep_cols = [
         c
@@ -408,28 +398,27 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
             "qv",
             "probability",
         ]
-        if c in tx.columns
+        if c in transcripts_df.columns
     ]
-    tx = tx[keep_cols].copy()
+    transcripts_df = transcripts_df[keep_cols].copy()
 
-    tx["cell_id"] = (tx["cell_id"] + 1).astype(int)
-    tx["feature_name"] = tx["feature_name"].astype("category")
+    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
+    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
 
-    tx.loc[tx["cell_id"] == 2**32, "cell_id"] = 0  # uint32_max placeholder meaning “no assignment / background”
+    transcripts_df.loc[transcripts_df["cell_id"] == 2**32, "cell_id"] = (
+        0  # uint32_max placeholder meaning “no assignment / background”
+    )
 
-    transcripts_sd = PointsModel.parse(tx)
-
-    # -------------------------
-    # Assemble SpatialData
-    # -------------------------
-    sdata = SpatialData(
-        images={"morphology_focus": image_sd},
+    sdata_object = create_spatialdata(
+        points=transcripts_df,
         labels=labels_dict,
         shapes=shapes_dict,
-        points={"transcripts": transcripts_sd},
-        tables={"table": table_sd},
+        tables=adata,
+        images=dapi,
+        background_cell_id=0,
+        consolidate_shapes=consolidate_shapes,
     )
-    return sdata
+    return sdata_object
 
 
 # -----------------------------------------------------------------------------
