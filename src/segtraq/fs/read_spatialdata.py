@@ -563,7 +563,7 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
 # -----------------------------------------------------------------------------
 
 
-def read_bidcell(path_to_data: Path) -> SpatialData:
+def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
     Create spatialdata object from subset BIDCell data.
 
@@ -611,27 +611,14 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
 
     adata = ad.AnnData(X=X, obs=obs, var=var)
 
-    table_sd = TableModel.parse(
-        adata,
-        region_key="region",
-        region="cell_labels",
-        instance_key="label_id",
-    )
-
     # Labels for sdata
     cell_labels_path = list(bidcell_path.glob("model_outputs/202*/test_output/epoch_4_step_100_connected.tif"))
     cell_labels = tiff.imread(cell_labels_path[0])
-    cell_labels_sd = Labels2DModel.parse(cell_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
-
     nucleus_labels = tiff.imread(bidcell_path / "nuclei.tif")
-    nucleus_labels_sd = Labels2DModel.parse(nucleus_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
 
     # Shapes for sdata
     cell_shapes_gdf = labels_to_shapes(cell_labels, simplify_tolerance=0.5)
     nucleus_shapes_gdf = labels_to_shapes(nucleus_labels, simplify_tolerance=0.5)
-
-    cell_shapes_sd = ShapesModel.parse(cell_shapes_gdf)
-    nucleus_shapes_sd = ShapesModel.parse(nucleus_shapes_gdf)
 
     dapi = tiff.imread(bidcell_path / "dapi_resized.tif")
 
@@ -640,33 +627,30 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
     else:
         raise ValueError("Unexpected DAPI image ndim; expected 2D or 3D")
 
-    image_sd = Image2DModel.parse(dapi, scale_factors=(2, 2, 2), dims=["c", "y", "x"])
-
     # Points for sdata
-    transcripts = pd.read_csv(bidcell_path / "transcripts_processed.csv", index_col=0)
+    transcripts_df = pd.read_csv(bidcell_path / "transcripts_processed.csv", index_col=0)
     # Round to pixel grid (as provided)
-    x = np.rint(transcripts["x_location"]).astype(int)
-    y = np.rint(transcripts["y_location"]).astype(int)
+    x = np.rint(transcripts_df["x_location"]).astype(int)
+    y = np.rint(transcripts_df["y_location"]).astype(int)
 
-    transcripts = transcripts.copy()
-    transcripts["cell_id"] = cell_labels[y, x]
+    transcripts_df = transcripts_df.copy()
+    transcripts_df["cell_id"] = cell_labels[y, x]
 
-    transcripts = transcripts.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
+    transcripts_df = transcripts_df.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
 
-    transcripts["feature_name"] = transcripts["feature_name"].astype("category")
-    transcripts["is_gene"] = transcripts["is_gene"].astype("string")
-
-    transcripts_sd = PointsModel.parse(transcripts)
+    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
+    transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("string")
 
     # assemble spatialdata
-    sdata = SpatialData(
-        images={"morphology_focus": image_sd},
-        labels={"cell_labels": cell_labels_sd, "nucleus_labels": nucleus_labels_sd},
-        shapes={"cell_boundaries": cell_shapes_sd, "nucleus_boundaries": nucleus_shapes_sd},
-        points={"transcripts": transcripts_sd},
-        tables={"table": table_sd},
+    sdata = create_spatialdata(
+        points=transcripts_df,
+        labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
+        shapes={"cell_boundaries": cell_shapes_gdf, "nucleus_boundaries": nucleus_shapes_gdf},
+        tables=adata,
+        images=dapi,
+        background_cell_id=0,
+        consolidate_shapes=consolidate_shapes,
     )
-
     return sdata
 
 
