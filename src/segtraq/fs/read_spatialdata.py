@@ -17,13 +17,6 @@ from shapely.geometry import MultiPolygon, Polygon, mapping
 from shapely.validation import make_valid
 from skimage.measure import find_contours
 from spatialdata import SpatialData
-from spatialdata.models import (
-    Image2DModel,
-    Labels2DModel,
-    PointsModel,
-    ShapesModel,
-    TableModel,
-)
 
 from ..fs import create_spatialdata
 
@@ -524,7 +517,7 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
     # nucleus boundaries from 10x
     nucleus_shapes = pd.read_parquet(path_to_10xdata / "nucleus_boundaries.parquet")
     nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
-    shapes_dict["nucleus_boundaries"] = ShapesModel.parse(nucleus_shapes_gpd)
+    shapes_dict["nucleus_boundaries"] = nucleus_shapes_gpd
 
     # -------------------------
     # Nuc labels (from 10x)
@@ -669,7 +662,6 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     Returns
     SpatialData: A spatialdata object.
     """
-
     # -------------------------
     # Table (AnnData)
     # -------------------------
@@ -689,7 +681,6 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     dapi = tiff.imread(path_to_10xdata / "dapi_um.tif")
     if dapi.ndim == 2:  # add channel axis if single-channel
         dapi = dapi[None, ...]
-    image_sd = Image2DModel.parse(dapi, scale_factors=(2, 2, 2), dims=["c", "y", "x"])
 
     # -------------------------
     # Boundaries from transcripts
@@ -704,15 +695,13 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     gdf["label_id"] = gdf["cell_id"].map(id_str_to_int)
     gdf = gdf.drop(columns=["length"])
 
-    shapes_gdf = gdf.set_index("label_id").copy()
+    cell_shapes_gdf = gdf.set_index("label_id").copy()
     # There are shapes that are not present in the adata object - is segger prefiltering?
-    shapes_gdf = shapes_gdf[shapes_gdf["cell_id"].isin(adata.obs["cell_id"])]
-    cell_shapes_sd = ShapesModel.parse(shapes_gdf)
+    cell_shapes_gdf = cell_shapes_gdf[cell_shapes_gdf["cell_id"].isin(adata.obs["cell_id"])]
 
     # nucleus boundaries from 10x
     nucleus_shapes = pd.read_parquet(path_to_10xdata / "nucleus_boundaries.parquet")
-    nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
-    nucleus_shapes_sd = ShapesModel.parse(nucleus_shapes_gpd)
+    nucleus_shapes_gdf = build_cell_polygons_from_vertices(nucleus_shapes)
 
     # -------------------------
     # Rasterize to 2D label image
@@ -720,36 +709,33 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     H = dapi.shape[1]
     W = dapi.shape[2]
 
-    shapes_iter = ((mapping(geom), int(cid)) for cid, geom in zip(shapes_gdf.index, shapes_gdf.geometry, strict=False))
-    label_img = rasterize(
-        shapes_iter,
+    cell_shapes_iter = (
+        (mapping(geom), int(cid)) for cid, geom in zip(cell_shapes_gdf.index, cell_shapes_gdf.geometry, strict=False)
+    )
+    cell_labels = rasterize(
+        cell_shapes_iter,
         out_shape=(H, W),
         fill=0,
         dtype=np.uint32,
     )
-    # fewer labels than shapes - why?
-    cell_labels_sd = Labels2DModel.parse(label_img, scale_factors=(2, 2, 2), dims=["y", "x"])
 
     # nucleus labels from 10x
     nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
-    nucleus_labels_sd = Labels2DModel.parse(nucleus_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
 
     # -------------------------
     # Points from transcripts
     # -------------------------
-    transcripts = pd.read_parquet(path_to_data / "segger_transcripts.parquet")
-    transcripts.drop(columns=["score", "bound", "cell_id"], inplace=True)
-    transcripts = transcripts.rename(
+    transcripts_df = pd.read_parquet(path_to_data / "segger_transcripts.parquet")
+    transcripts_df.drop(columns=["score", "bound", "cell_id"], inplace=True)
+    transcripts_df = transcripts_df.rename(
         columns={"x_location": "x", "y_location": "y", "z_location": "z", "segger_cell_id": "cell_id"}
     )
 
-    transcripts["feature_name"] = transcripts["feature_name"].astype("category")
-    transcripts["is_gene"] = transcripts["is_gene"].astype("string")
-    transcripts[transcripts["cell_id"].isin(adata.obs["cell_id"])]
+    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
+    transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("string")
+    transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])]
     # there are cells in the transcripts that are not present in the boundaries - check why - invalid shapes?
-    transcripts = transcripts[transcripts["cell_id"].isin(adata.obs["cell_id"])]
-
-    transcripts_sd = PointsModel.parse(transcripts)
+    transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])]
 
     # -------------------------
     # Finalize table metadata now that we know label ids
@@ -758,22 +744,15 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     adata.obs["label_id"] = adata.obs["cell_id"].map(id_str_to_int)
     adata.obs["region"] = pd.Categorical(["cell_labels"] * adata.n_obs)
 
-    table_sd = TableModel.parse(
-        adata,
-        region_key="region",
-        region="cell_labels",
-        instance_key="label_id",
-    )
-
     # -------------------------
     # Assemble SpatialData
     # -------------------------
-    sdata = SpatialData(
-        images={"morphology_focus": image_sd},
-        labels={"cell_labels": cell_labels_sd, "nucleus_labels": nucleus_labels_sd},
-        shapes={"cell_boundaries": cell_shapes_sd, "nucleus_boundaries": nucleus_shapes_sd},
-        points={"transcripts": transcripts_sd},
-        tables={"table": table_sd},
+    sdata = create_spatialdata(
+        points=transcripts_df,
+        labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
+        shapes={"cell_boundaries": cell_shapes_gdf, "nucleus_boundaries": nucleus_shapes_gdf},
+        tables=adata,
+        images=dapi,
     )
 
     return sdata
