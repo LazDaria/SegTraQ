@@ -1,6 +1,3 @@
-import segtraq as st
-
-
 # def test_create_spatialdata(
 #     bidcell_image,
 #     bidcell_cell_labels,
