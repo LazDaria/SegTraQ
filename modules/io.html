@@ -313,8 +313,6 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_bidcell"><code class="docutils literal notranslate"><span class="pre">read_bidcell()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_proseg_2"><code class="docutils literal notranslate"><span class="pre">read_proseg_2()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_proseg_3"><code class="docutils literal notranslate"><span class="pre">read_proseg_3()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_segger"><code class="docutils literal notranslate"><span class="pre">read_segger()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_xenium"><code class="docutils literal notranslate"><span class="pre">read_xenium()</span></code></a></li>
 </ul>
@@ -358,48 +356,6 @@ document.write(`
 <li><p><strong>FileNotFoundError</strong> – If required CSV or segmentation files are missing.</p></li>
 <li><p><strong>ValueError</strong> – If DAPI image has unsupported dimensions.</p></li>
 </ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.io.io.read_proseg_2">
-<span class="sig-prename descclassname"><span class="pre">segtraq.io.io.</span></span><span class="sig-name descname"><span class="pre">read_proseg_2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_proseg_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_to_10xdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.io.io.read_proseg_2" title="Link to this definition">#</a></dt>
-<dd><p>Build a SpatialData object from Proseg 2.0 outputs.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>path_to_proseg_data</strong> (<em>Path</em>) – Path to the directory containing Proseg 2.0 outputs.</p></li>
-<li><p><strong>path_to_10xdata</strong> (<em>Path</em>) – Path to the directory containing 10x DAPI and nucleus images.</p></li>
-<li><p><strong>consolidate_shapes</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to consolidate shape layers when creating the SpatialData object.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>SpatialData object containing tables, images, labels, shapes, and transcript points.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>SpatialData</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.io.io.read_proseg_3">
-<span class="sig-prename descclassname"><span class="pre">segtraq.io.io.</span></span><span class="sig-name descname"><span class="pre">read_proseg_3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_proseg_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_to_10xdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.io.io.read_proseg_3" title="Link to this definition">#</a></dt>
-<dd><p>Build a SpatialData object from Proseg 3.0 outputs.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>path_to_proseg_data</strong> (<em>Path</em>) – Path to the directory containing Proseg 3.0 outputs.</p></li>
-<li><p><strong>path_to_10xdata</strong> (<em>Path</em>) – Path to the directory containing 10x DAPI and nucleus images.</p></li>
-<li><p><strong>consolidate_shapes</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to consolidate shape layers when creating the SpatialData object.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>SpatialData object containing tables, images, labels, shapes, and transcript points.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>SpatialData</p>
 </dd>
 </dl>
 </dd></dl>
@@ -477,8 +433,6 @@ document.write(`
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_bidcell"><code class="docutils literal notranslate"><span class="pre">read_bidcell()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_proseg_2"><code class="docutils literal notranslate"><span class="pre">read_proseg_2()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_proseg_3"><code class="docutils literal notranslate"><span class="pre">read_proseg_3()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_segger"><code class="docutils literal notranslate"><span class="pre">read_segger()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_xenium"><code class="docutils literal notranslate"><span class="pre">read_xenium()</span></code></a></li>
 </ul>
