@@ -1,21 +1,17 @@
-# TODO: reactivate this test and add tests for all technology readers
-# def test_create_spatialdata(
-#     xenium_image, xenium_transcripts, proseg_cell_metadata, proseg_cell_boundaries
-# ):  # this dictionary maps from a cell ID (e. g. bfnbkogm-1) to a numeric ID (e. g. 1)
-#     cell_id_dict = dict(zip(proseg_cell_metadata["original_cell_id"], proseg_cell_metadata["cell"], strict=False))
-#     # copying the transcripts dataframe to avoid modifying the original
-#     xenium_transcripts = xenium_transcripts.copy()
-#     # adding the mapped ID into the dataframe
-#     xenium_transcripts["cell_id_numeric"] = xenium_transcripts["cell_id"].map(cell_id_dict).astype("Int64")
+import segtraq as st
 
-#     st.fs.create_spatialdata(
-#         points=xenium_transcripts,
-#         images=xenium_image,
-#         shapes=proseg_cell_boundaries,
-#         coord_columns=["x_location", "y_location", "z_location"],
-#         cell_key_points="cell_id_numeric",
-#         cell_key_shapes="cell",
-#         relabel_points=True,
-#         relabel_shapes=True,
-#         consolidate_shapes=True,
-#     )
+
+def test_read_proseg_v2(proseg_v2_directory, xenium_directory):
+    sdata = st.io.read_proseg_2(proseg_v2_directory, xenium_directory)
+    assert "cell_labels" in sdata.labels, "Cell labels should be present in the SpatialData object"
+    assert len(sdata.points["transcripts"]) > 0, "There should be some transcript points"
+    assert sdata.tables["table"].n_vars > 0, "There should be some genes in the AnnData object"
+    assert sdata.tables["table"].n_obs > 0, "There should be some cells in the AnnData object"
+
+
+def test_read_proseg_v3(proseg_v3_directory, xenium_directory):
+    sdata = st.io.read_proseg_3(proseg_v3_directory, xenium_directory)
+    assert "cell_labels" in sdata.labels, "Cell labels should be present in the SpatialData object"
+    assert len(sdata.points["transcripts"]) > 0, "There should be some transcript points"
+    assert sdata.tables["table"].n_vars > 0, "There should be some genes in the AnnData object"
+    assert sdata.tables["table"].n_obs > 0, "There should be some cells in the AnnData object"

@@ -99,3 +99,33 @@ def test_bidcell_nucleus_labels():
 def test_bidcell_transcripts():
     path = Path(__file__).parent / "data/bidcell/transcripts_processed.csv"
     return pd.read_csv(path)
+
+
+@pytest.fixture(scope="session", name="bidcell_directory")
+def test_bidcell_directory():
+    path = Path(__file__).parent / "data/bidcell"
+    return path
+
+
+@pytest.fixture(scope="session", name="xenium_directory")
+def test_xenium_directory():
+    path = Path(__file__).parent / "data/xenium"
+    return path
+
+
+@pytest.fixture(scope="session", name="segger_directory")
+def test_segger_directory():
+    path = list((Path(__file__).parent / "data/segger").glob("benchmarks/segger*"))[0]
+    return path
+
+
+@pytest.fixture(scope="session", name="proseg_v2_directory")
+def test_proseg_v2_directory():
+    path = Path(__file__).parent / "data/proseg_v2"
+    return path
+
+
+@pytest.fixture(scope="session", name="proseg_v3_directory")
+def test_proseg_v3_directory():
+    path = Path(__file__).parent / "data/proseg_v3"
+    return path
