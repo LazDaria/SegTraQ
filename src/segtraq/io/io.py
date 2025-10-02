@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import gzip
-import shutil
 from pathlib import Path
 
 import anndata as ad
@@ -15,9 +14,9 @@ from scipy.sparse import csr_matrix
 from shapely.geometry import mapping
 from spatialdata import SpatialData
 
-from ..fs import create_spatialdata
 from .utils import (
-    build_cell_polygons_from_vertices,
+    create_spatialdata,
+    decompress_geojson,
     labels_mode_projection,
     labels_to_shapes,
     make_adata,
@@ -109,147 +108,104 @@ def read_xenium(path_to_data: Path) -> SpatialData:
 # -----------------------------------------------------------------------------
 def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
-    Build a SpatialData object from Proseg outputs.
+    Build a SpatialData object from Proseg 2.0 outputs.
 
-    Assumes the following files & columns exist:
-      expected-counts.csv.gz            -> cells x genes
-      cell-metadata.csv.gz               -> 'cell_id','cell_centroid_x','cell_centroid_y','cell_area'
-      cell-polygons-layers.geojson(.gz)  -> 'cell','layer','geometry'
-      transcript-metadata.csv.gz         -> 'x_location','y_location','z_location','gene'  (optional 'cell')
+    Parameters
+    ----------
+    path_to_proseg_data : Path
+        Path to the directory containing Proseg 2.0 outputs.
+    path_to_10xdata : Path
+        Path to the directory containing 10x DAPI and nucleus images.
+    consolidate_shapes : bool, default=True
+        Whether to consolidate shape layers when creating the SpatialData object.
+
+    Returns
+    -------
+    SpatialData
+        SpatialData object containing tables, images, labels, shapes, and transcript points.
     """
-
     # -------------------------
     # Table (counts + metadata)
     # -------------------------
     counts_df = pd.read_csv(path_to_proseg_data / "expected-counts.csv.gz", compression="gzip")
-    gene_cols = counts_df.columns.astype(str)
-    var = pd.DataFrame(index=gene_cols)
+    var = pd.DataFrame(index=counts_df.columns.astype(str))
     var.index.name = "gene_symbol"
-    X_est = counts_df.values
-    X_est = csr_matrix(X_est)
 
-    # Round to nearest int and convert to CSR
-    X = np.rint(counts_df.values).astype(np.int32, copy=False)
-    X = csr_matrix(X)
+    X_est = csr_matrix(counts_df.values)
+    X = csr_matrix(np.rint(counts_df.values).astype(int, copy=False))
 
     obs = pd.read_csv(path_to_proseg_data / "cell-metadata.csv.gz", compression="gzip")
-    obs.drop(columns=["cluster", "scale", "original_cell_id", "population", "fov"], inplace=True)
+    obs.drop(columns=["cluster", "scale", "original_cell_id", "population", "fov"], errors="ignore", inplace=True)
     obs.rename(columns={"cell": "cell_id"}, inplace=True)
     obs["cell_id"] = obs["cell_id"] + 1
     obs["label_id"] = obs["cell_id"]
     obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
 
-    adata = ad.AnnData(X=X, obs=obs, var=var)
+    adata = make_adata(X, obs, var)
     adata.layers["X_estimated"] = X_est
 
-    # ---------------------------
-    # Image (DAPI image from 10x)
-    # ---------------------------
-    dapi = tiff.imread(path_to_10xdata / "dapi_um.tif")
-    if dapi.ndim == 2:  # add channel axis if single-channel
-        dapi = dapi[None, ...]
+    # -------------------------
+    # Image (DAPI from 10x)
+    # -------------------------
+    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
+    H, W = dapi.shape[1:]
 
     # -------------------------
-    # Polygons -> per-layer shapes + raster labels (2D per z) + MIP + 3D
+    # Polygons → shapes + labels
     # -------------------------
-    gz_path = path_to_proseg_data / "cell-polygons-layers.geojson.gz"
-    json_path = path_to_proseg_data / "cell-polygons-layers.geojson"
-    if gz_path.exists() and not json_path.exists():
-        with gzip.open(gz_path, "rt") as f_in, open(json_path, "w") as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    geojson_path = decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz")
+    gdf = gpd.read_file(geojson_path)
 
-    gdf = gpd.read_file(json_path if json_path.exists() else gz_path)
-    # Expect columns: 'cell', 'layer', 'geometry'
     gdf["cell"] = gdf["cell"].astype(int)
     gdf["layer"] = gdf["layer"].astype(int)
 
-    # Canvas from dapi image
-    H = dapi.shape[1]
-    W = dapi.shape[2]
-
-    labels_dict = {}
-    shapes_dict = {}
-
-    # Per-layer shapes and labels + accumulate for 3D stack & MIP
+    labels_dict, shapes_dict = {}, {}
     z_levels = sorted(gdf["layer"].unique())
     stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
-    max_proj = np.zeros((H, W), dtype=np.uint32)
 
     for zi, z in enumerate(z_levels):
         layer_gdf = gdf[gdf["layer"] == z]
 
-        # Shapes (index must be instance ids to join with table.instance_key)
+        # Shapes
         layer_shapes = layer_gdf.set_index("cell")["geometry"].to_frame().copy()
         layer_shapes.index.name = "label_id"
         layer_shapes.index += 1
         layer_shapes["cell_id"] = layer_shapes.index
         shapes_dict[f"cell_boundaries_z{int(z)}"] = layer_shapes
 
-        # Labels via rasterize (value == cell id, background 0)
+        # Labels via rasterize
         shapes_iter = (
             (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry, strict=False)
         )
         img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
-
         labels_dict[f"cell_labels_z{int(z)}"] = img
-
         stack[zi] = img
-        max_proj = np.maximum(max_proj, img)
-    proj = labels_mode_projection(stack)  # more representative than MIP
 
-    # MIP label (2D)
+    # Projection to 2D
+    proj = labels_mode_projection(stack)
     labels_dict["cell_labels"] = proj
+    shapes_dict["cell_boundaries"] = labels_to_shapes(proj, simplify_tolerance=0.5)
 
-    # Generate 2D cell_boundaries from label projection
-    polys2d = labels_to_shapes(proj, simplify_tolerance=0.5)
-    shapes_dict["cell_boundaries"] = polys2d
-
-    # nucleus boundaries from 10x
-    nucleus_shapes = pd.read_parquet(path_to_10xdata / "nucleus_boundaries.parquet")
-    nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
-    shapes_dict["nucleus_boundaries"] = nucleus_shapes_gpd
-
-    # -------------------------
-    # Nuc labels (from 10x)
-    # -------------------------
-
+    # Add nucleus labels and shapes
     nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
     labels_dict["nucleus_labels"] = nucleus_labels
+    nucleus_shapes = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
+    shapes_dict["nucleus_boundaries"] = nucleus_shapes
 
     # -------------------------
-    # Points (transcripts)
+    # Transcripts
     # -------------------------
-    transcripts_df = pd.read_csv(path_to_proseg_data / "transcript-metadata.csv.gz", compression="gzip")
-    transcripts_df = transcripts_df.rename(columns={"gene": "feature_name", "assignment": "cell_id"})
-
-    keep_cols = [
-        c
-        for c in [
-            "transcript_id",
-            "x",
-            "y",
-            "z",
-            "observed_x",
-            "observed_y",
-            "observed_z",
-            "feature_name",
-            "cell_id",
-            "qv",
-            "probability",
-        ]
-        if c in transcripts_df.columns
-    ]
-    transcripts_df = transcripts_df[keep_cols].copy()
-
-    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
-    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
-
-    transcripts_df.loc[transcripts_df["cell_id"] == 2**32, "cell_id"] = (
-        0  # uint32_max placeholder meaning “no assignment / background”
+    transcripts = read_transcripts(
+        path_to_proseg_data / "transcript-metadata.csv.gz",
+        rename_map={"gene": "feature_name", "assignment": "cell_id"},
+        uint32_max_placeholder=2**32,
     )
 
+    # -------------------------
+    # Assemble SpatialData
+    # -------------------------
     sdata = create_spatialdata(
-        points=transcripts_df,
+        points=transcripts,
         labels=labels_dict,
         shapes=shapes_dict,
         tables=adata,
@@ -263,40 +219,42 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
 # -----------------------------------------------------------------------------
 # Reader: Proseg 3.0
 # -----------------------------------------------------------------------------
-
-
 def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
-    Build a SpatialData object from Proseg outputs.
+    Build a SpatialData object from Proseg 3.0 outputs.
 
-    Assumes the following files & columns exist:
-      counts.mtx.gz                      -> cells x genes (Matrix Market)
-      gene-metadata.csv.gz               -> 'gene_symbol'
-      cell-metadata.csv.gz               -> 'cell_id','cell_centroid_x','cell_centroid_y','cell_area'
-      cell-polygons-layers.geojson(.gz)  -> 'cell','layer','geometry'
-      transcript-metadata.csv.gz         -> 'x_location','y_location','z_location','gene'  (optional 'cell')
+    Parameters
+    ----------
+    path_to_proseg_data : Path
+        Path to the directory containing Proseg 3.0 outputs.
+    path_to_10xdata : Path
+        Path to the directory containing 10x DAPI and nucleus images.
+    consolidate_shapes : bool, default=True
+        Whether to consolidate shape layers when creating the SpatialData object.
+
+    Returns
+    -------
+    SpatialData
+        SpatialData object containing tables, images, labels, shapes, and transcript points.
     """
-
     # -------------------------
     # Table (counts + metadata)
     # -------------------------
     with gzip.open(path_to_proseg_data / "counts.mtx.gz", "rt") as f:
-        X = mmread(f).tocsr()  # cells x genes
-
-    X = X.astype(np.int32)
+        X = mmread(f).tocsr().astype(np.int32)  # cells x genes
 
     var_df = pd.read_csv(path_to_proseg_data / "gene-metadata.csv.gz", compression="gzip")
     var = pd.DataFrame(index=var_df["gene"].astype(str).values)
     var.index.name = "gene_symbol"
 
     obs = pd.read_csv(path_to_proseg_data / "cell-metadata.csv.gz", compression="gzip")
-    obs.drop(columns=["cluster", "scale", "original_cell_id"], inplace=True)
+    obs.drop(columns=["cluster", "scale", "original_cell_id"], errors="ignore", inplace=True)
     obs.rename(
         columns={
             "cell": "cell_id",
-            "centroid_x": "centroid_x",
+            "cell_centroid_x": "centroid_x",
             "cell_centroid_y": "centroid_y",
-            "surface_area": "cell_area",
+            "cell_area": "cell_area",
         },
         inplace=True,
     )
@@ -304,97 +262,70 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
     obs["label_id"] = obs["cell_id"]
     obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
 
-    adata = ad.AnnData(X=X, obs=obs, var=var)
-
-    # ---------------------------
-    # Image (DAPI image from 10x)
-    # ---------------------------
-    dapi = tiff.imread(path_to_10xdata / "dapi_um.tif")
-    if dapi.ndim == 2:  # add channel axis if single-channel
-        dapi = dapi[None, ...]
+    adata = make_adata(X, obs, var)
 
     # -------------------------
-    # Polygons -> per-layer shapes + raster labels (2D per z) + MIP + 3D
+    # Image (DAPI from 10x)
     # -------------------------
-    gz_path = path_to_proseg_data / "cell-polygons-layers.geojson.gz"
-    json_path = path_to_proseg_data / "cell-polygons-layers.geojson"
-    if gz_path.exists() and not json_path.exists():
-        with gzip.open(gz_path, "rt") as f_in, open(json_path, "w") as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
+    H, W = dapi.shape[1:]
 
-    gdf = gpd.read_file(json_path if json_path.exists() else gz_path)
-    # Expect columns: 'cell', 'layer', 'geometry'
+    # -------------------------
+    # Polygons → shapes + labels
+    # -------------------------
+    geojson_path = decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz")
+    gdf = gpd.read_file(geojson_path)
+
     gdf["cell"] = gdf["cell"].astype(int)
     gdf["layer"] = gdf["layer"].astype(int)
 
-    # Canvas from dapi image
-    H = dapi.shape[1]
-    W = dapi.shape[2]
-
-    labels_dict = {}
-    shapes_dict = {}
-
-    # Per-layer shapes and labels + accumulate for 3D stack & MIP
+    labels_dict, shapes_dict = {}, {}
     z_levels = sorted(gdf["layer"].unique())
     stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
-    # max_proj = np.zeros((H, W), dtype=np.uint32)
 
     for zi, z in enumerate(z_levels):
         layer_gdf = gdf[gdf["layer"] == z]
 
-        # Shapes (index must be instance ids to join with table.instance_key)
+        # Shapes
         layer_shapes = layer_gdf.set_index("cell")["geometry"].to_frame().copy()
         layer_shapes.index.name = "label_id"
         layer_shapes.index += 1
         layer_shapes["cell_id"] = layer_shapes.index
         shapes_dict[f"cell_boundaries_z{int(z)}"] = layer_shapes
 
-        # Labels via rasterize (value == cell id, background 0)
+        # Labels via rasterize
         shapes_iter = (
             (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry, strict=False)
         )
         img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
-
         labels_dict[f"cell_labels_z{int(z)}"] = img
-
         stack[zi] = img
-        # max_proj = np.maximum(max_proj, img)
-    proj = labels_mode_projection(stack)  # more representative than MIP
 
-    # MIP label (2D)
+    # Projection to 2D
+    proj = labels_mode_projection(stack)
     labels_dict["cell_labels"] = proj
+    shapes_dict["cell_boundaries"] = labels_to_shapes(proj, simplify_tolerance=0.5)
 
-    # Generate 2D cell_boundaries from label projection
-    polys2d = labels_to_shapes(proj, simplify_tolerance=0.5)
-    shapes_dict["cell_boundaries"] = polys2d
-
-    # nucleus boundaries from 10x
-    nucleus_shapes = pd.read_parquet(path_to_10xdata / "nucleus_boundaries.parquet")
-    nucleus_shapes_gpd = build_cell_polygons_from_vertices(nucleus_shapes)
-    shapes_dict["nucleus_boundaries"] = nucleus_shapes_gpd
-
-    # -------------------------
-    # Nuc labels (from 10x)
-    # -------------------------
+    # Add nucleus labels and shapes
     nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
     labels_dict["nucleus_labels"] = nucleus_labels
+    nucleus_shapes = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
+    shapes_dict["nucleus_boundaries"] = nucleus_shapes
 
     # -------------------------
-    # Points (transcripts)
+    # Transcripts
     # -------------------------
-    transcripts_df = pd.read_csv(path_to_proseg_data / "transcript-metadata.csv.gz", compression="gzip")
-    transcripts_df = transcripts_df.rename(columns={"gene": "feature_name", "assignment": "cell_id"})
-    keep_cols = [c for c in ["transcript_id", "x", "y", "z", "feature_name", "cell_id"] if c in transcripts_df.columns]
-    transcripts_df = transcripts_df[keep_cols].copy()
-    transcripts_df["cell_id"] = transcripts_df["cell_id"].fillna(0)
-    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
-    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
+    transcripts = read_transcripts(
+        path_to_proseg_data / "transcript-metadata.csv.gz",
+        rename_map={"gene": "feature_name", "assignment": "cell_id"},
+        uint32_max_placeholder=2**32,
+    )
 
     # -------------------------
     # Assemble SpatialData
     # -------------------------
     sdata = create_spatialdata(
-        points=transcripts_df,
+        points=transcripts,
         labels=labels_dict,
         shapes=shapes_dict,
         tables=adata,
@@ -408,30 +339,46 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
 # -----------------------------------------------------------------------------
 # Reader: BIDCell
 # -----------------------------------------------------------------------------
-
-
 def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
-    Create spatialdata object from subset BIDCell data.
+    Build a SpatialData object from BIDCell subset data using utility functions.
 
-    Parameters:
-    path_to_data (Path): Path to the directory containing subset BIDCell data.
+    Parameters
+    ----------
+    path_to_data : Path
+        Path to the directory containing BIDCell data.
+    consolidate_shapes : bool, optional, default=True
+        Whether to consolidate shape layers when creating the SpatialData object.
 
     Returns
-    SpatialData: A spatialdata object.
+    -------
+    SpatialData
+        SpatialData object containing:
+        - `tables`: AnnData with expression matrix, cell metadata, and gene metadata
+        - `labels`: cell and nucleus segmentation masks
+        - `shapes`: cell and nucleus boundaries derived from labels
+        - `images`: DAPI reference image
+        - `points`: transcript coordinates and assignments
+
+    Raises
+    ------
+    FileNotFoundError
+        If required CSV or segmentation files are missing.
+    ValueError
+        If DAPI image has unsupported dimensions.
     """
-
-    bidcell_path = path_to_data
-
-    # Table for sdata
-    all_files = list(bidcell_path.glob("cell_gene_matrices/202*/cell*.csv"))
-    if len(all_files) == 0:
+    # -------------------------
+    # Table (expression + metadata)
+    # -------------------------
+    csv_files = list(path_to_data.glob("cell_gene_matrices/202*/cell*.csv"))
+    if not csv_files:
         raise FileNotFoundError("No CSVs found under cell_gene_matrices/202*/cell*.csv")
 
-    dfs = [pd.read_csv(f) for f in all_files]
-    merged_df = pd.concat(dfs, ignore_index=True)
-    merged_df = merged_df.sort_values("cell_id").reset_index(drop=True)
+    dfs = [pd.read_csv(f) for f in csv_files]
+    merged_df = pd.concat(dfs, ignore_index=True).sort_values("cell_id").reset_index(drop=True)
     merged_df["cell_id"] = merged_df["cell_id"].astype(int)
+
+    # Standardize column names
     merged_df = merged_df.rename(
         columns={
             "cell_size": "cell_area",
@@ -441,54 +388,62 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
     )
 
     meta_cols = ["cell_id", "centroid_x", "centroid_y", "cell_area"]
-
     expr_cols = [c for c in merged_df.columns if c not in meta_cols]
 
     obs = merged_df[meta_cols].copy()
-
     obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
     obs["label_id"] = obs["cell_id"].astype(np.int32)
 
     var = pd.DataFrame(index=pd.Index(expr_cols, name="gene_symbol"))
-
-    from scipy import sparse  # keep local to avoid altering behavior elsewhere
-
     X = merged_df[expr_cols].to_numpy()
-    X = sparse.csr_matrix(X)
+    adata = make_adata(X, obs, var)
 
-    adata = ad.AnnData(X=X, obs=obs, var=var)
+    # -------------------------
+    # Labels (cells + nuclei)
+    # -------------------------
+    cell_label_files = list(path_to_data.glob("model_outputs/202*/test_output/epoch_4_step_100_connected.tif"))
+    if not cell_label_files:
+        raise FileNotFoundError("No cell label TIFF found under model_outputs/202*/test_output/")
+    cell_labels_path = cell_label_files[0]
 
-    # Labels for sdata
-    cell_labels_path = list(bidcell_path.glob("model_outputs/202*/test_output/epoch_4_step_100_connected.tif"))
-    cell_labels = tiff.imread(cell_labels_path[0])
-    nucleus_labels = tiff.imread(bidcell_path / "nuclei.tif")
+    nucleus_labels_path = path_to_data / "nuclei.tif"
+    if not nucleus_labels_path.exists():
+        raise FileNotFoundError("Missing nucleus labels: nuclei.tif")
 
-    # Shapes for sdata
+    labels = read_labels(cell_labels_path, nucleus_labels_path)
+    cell_labels = labels["cell_labels"]
+    nucleus_labels = labels["nucleus_labels"]
+
+    # -------------------------
+    # Shapes (from labels)
+    # -------------------------
     cell_shapes_gdf = labels_to_shapes(cell_labels, simplify_tolerance=0.5)
     nucleus_shapes_gdf = labels_to_shapes(nucleus_labels, simplify_tolerance=0.5)
 
-    dapi = tiff.imread(bidcell_path / "dapi_resized.tif")
+    # -------------------------
+    # Image (DAPI)
+    # -------------------------
+    dapi_path = path_to_data / "dapi_resized.tif"
+    if not dapi_path.exists():
+        raise FileNotFoundError("Missing DAPI image: dapi_resized.tif")
+    dapi = read_dapi_image(dapi_path)
 
-    if dapi.ndim == 2:
-        dapi = dapi[None, ...]  # (c, y, x)
-    else:
-        raise ValueError("Unexpected DAPI image ndim; expected 2D or 3D")
+    # -------------------------
+    # Transcripts (points)
+    # -------------------------
+    transcripts_path = path_to_data / "transcripts_processed.csv"
+    if not transcripts_path.exists():
+        raise FileNotFoundError("Missing transcripts file: transcripts_processed.csv")
 
-    # Points for sdata
-    transcripts_df = pd.read_csv(bidcell_path / "transcripts_processed.csv", index_col=0)
-    # Round to pixel grid (as provided)
-    x = np.rint(transcripts_df["x_location"]).astype(int)
-    y = np.rint(transcripts_df["y_location"]).astype(int)
-
-    transcripts_df = transcripts_df.copy()
+    transcripts_df = read_transcripts(transcripts_path)
+    # Map transcripts to cell labels
+    x = np.rint(transcripts_df["x"]).astype(int)
+    y = np.rint(transcripts_df["y"]).astype(int)
     transcripts_df["cell_id"] = cell_labels[y, x]
 
-    transcripts_df = transcripts_df.rename(columns={"x_location": "x", "y_location": "y", "z_location": "z"})
-
-    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
-    transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("string")
-
-    # assemble spatialdata
+    # -------------------------
+    # Assemble SpatialData
+    # -------------------------
     sdata = create_spatialdata(
         points=transcripts_df,
         labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
@@ -504,97 +459,81 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
 # -----------------------------------------------------------------------------
 # Reader: Segger
 # -----------------------------------------------------------------------------
-
-
-def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
+def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
-    Create spatialdata object from subset Segger data.
+    Build a SpatialData object from Segger outputs.
 
-    Parameters:
-    path_to_data (Path): Path to the directory containing subset Segger data.
+    Parameters
+    ----------
+    path_to_data : Path
+        Path to the directory containing Segger output files.
+    path_to_10xdata : Path
+        Path to the directory containing 10x DAPI and nucleus images.
+    consolidate_shapes : bool, optional, default=True
+        Whether to consolidate shape layers when creating the SpatialData object.
 
     Returns
-    SpatialData: A spatialdata object.
+    -------
+    SpatialData
+        SpatialData object containing:
+        - `tables`: AnnData with expression matrix and cell metadata
+        - `labels`: cell and nucleus segmentation masks
+        - `shapes`: cell and nucleus boundaries
+        - `images`: DAPI reference image
+        - `points`: transcript coordinates and assignments
     """
+
     # -------------------------
     # Table (AnnData)
     # -------------------------
     adata = ad.read_h5ad(path_to_data / "segger_adata.h5ad")
     adata.obs.index.name = "cell_id"
     adata.obs.reset_index(inplace=True)
-
-    adata.obs.sort_values("cell_id", ascending=True, inplace=True)
+    adata.obs.sort_values("cell_id", inplace=True)
     adata.obs.reset_index(drop=True, inplace=True)
     adata = adata[adata.obs.index, :].copy()
-
-    adata.obs.drop(columns=["transcripts", "unique_transcripts"], inplace=True)
-
-    # ---------------------------
-    # Image (DAPI image from 10x)
-    # ---------------------------
-    dapi = tiff.imread(path_to_10xdata / "dapi_um.tif")
-    if dapi.ndim == 2:  # add channel axis if single-channel
-        dapi = dapi[None, ...]
+    adata.obs.drop(columns=["transcripts", "unique_transcripts"], errors="ignore", inplace=True)
 
     # -------------------------
-    # Boundaries from transcripts
+    # Images
     # -------------------------
-    boundaries_gdf = gpd.read_parquet(path_to_data / "segger_boundaries.parquet")
+    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
 
-    gdf = boundaries_gdf[boundaries_gdf.geometry.notnull()].copy()
+    # -------------------------
+    # Shapes and labels
+    # -------------------------
+    # Cell boundaries
+    boundaries_gdf = read_shapes(path_to_data / "segger_boundaries.parquet", build_from_vertices=False, backend="gpd")
+    boundaries_gdf = boundaries_gdf[boundaries_gdf.geometry.notnull()].copy()
 
-    unique_ids = gdf["cell_id"].unique()
+    unique_ids = boundaries_gdf["cell_id"].unique()
     id_str_to_int = {cell_id: i + 1 for i, cell_id in enumerate(unique_ids)}
+    boundaries_gdf["label_id"] = boundaries_gdf["cell_id"].map(id_str_to_int)
 
-    gdf["label_id"] = gdf["cell_id"].map(id_str_to_int)
-    gdf = gdf.drop(columns=["length"])
-
-    cell_shapes_gdf = gdf.set_index("label_id").copy()
-    # There are shapes that are not present in the adata object - is segger prefiltering?
+    cell_shapes_gdf = boundaries_gdf.set_index("label_id")
     cell_shapes_gdf = cell_shapes_gdf[cell_shapes_gdf["cell_id"].isin(adata.obs["cell_id"])]
 
-    # nucleus boundaries from 10x
-    nucleus_shapes = pd.read_parquet(path_to_10xdata / "nucleus_boundaries.parquet")
-    nucleus_shapes_gdf = build_cell_polygons_from_vertices(nucleus_shapes)
-
-    # -------------------------
-    # Rasterize to 2D label image
-    # -------------------------
-    H = dapi.shape[1]
-    W = dapi.shape[2]
-
+    # Rasterize cell labels
+    H, W = dapi.shape[1:]
     cell_shapes_iter = (
         (mapping(geom), int(cid)) for cid, geom in zip(cell_shapes_gdf.index, cell_shapes_gdf.geometry, strict=False)
     )
-    cell_labels = rasterize(
-        cell_shapes_iter,
-        out_shape=(H, W),
-        fill=0,
-        dtype=np.uint32,
-    )
+    cell_labels = rasterize(cell_shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
 
-    # nucleus labels from 10x
+    # Nucleus shapes and labels
+    nucleus_shapes_gdf = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
     nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
 
     # -------------------------
-    # Points from transcripts
+    # Transcripts
     # -------------------------
-    transcripts_df = pd.read_parquet(path_to_data / "segger_transcripts.parquet")
-    transcripts_df.drop(columns=["score", "bound", "cell_id"], inplace=True)
-    transcripts_df = transcripts_df.rename(
-        columns={"x_location": "x", "y_location": "y", "z_location": "z", "segger_cell_id": "cell_id"}
-    )
-
-    transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
-    transcripts_df["is_gene"] = transcripts_df["is_gene"].astype("string")
-    transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])]
-    # there are cells in the transcripts that are not present in the boundaries - check why - invalid shapes?
+    transcripts_df = read_transcripts(path_to_data / "segger_transcripts.parquet")
+    # Align transcripts with obs
     transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])]
 
     # -------------------------
-    # Finalize table metadata now that we know label ids
+    # Finalize table metadata
     # -------------------------
-
     adata.obs["label_id"] = adata.obs["cell_id"].map(id_str_to_int)
     adata.obs["region"] = pd.Categorical(["cell_labels"] * adata.n_obs)
 
@@ -607,6 +546,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
         shapes={"cell_boundaries": cell_shapes_gdf, "nucleus_boundaries": nucleus_shapes_gdf},
         tables=adata,
         images=dapi,
+        consolidate_shapes=consolidate_shapes,
     )
 
     return sdata

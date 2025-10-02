@@ -1,15 +1,364 @@
 import copy
+import gzip
+import shutil
 import warnings
+from collections.abc import Sequence
+from pathlib import Path
 
 import anndata as ad
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+import tifffile as tiff
 import xarray as xr
+from scipy.sparse import csr_matrix
 from shapely.geometry import MultiPolygon, Polygon
-from skimage import measure
-from skimage.draw import polygon
+from shapely.validation import make_valid
+from skimage.measure import find_contours
+
+
+def build_cell_polygons_from_vertices(
+    df: pd.DataFrame,
+    id_col: str = "label_id",
+    x_col: str = "vertex_x",
+    y_col: str = "vertex_y",
+    keep_attrs: Sequence[str] = ("cell_id",),
+    drop_closed_duplicate: bool = True,
+    fix_invalid: bool = True,
+) -> gpd.GeoDataFrame:
+    """
+    Convert a vertex table (one row per boundary vertex) into a GeoDataFrame of cell polygons.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input dataframe with at least [id_col, x_col, y_col] columns.
+    id_col : str, default="label_id"
+        Column name identifying cells (e.g. segmentation label ID).
+    x_col : str, default="vertex_x"
+        Column containing vertex x-coordinates (microns).
+    y_col : str, default="vertex_y"
+        Column containing vertex y-coordinates (microns).
+    keep_attrs : sequence of str, default=("cell_id",)
+        Additional columns to retain in the output. For each cell,
+        the first row value is taken.
+    drop_closed_duplicate : bool, default=True
+        If True, drop the trailing vertex if it duplicates the first
+        (common in Xenium files).
+    fix_invalid : bool, default=True
+        If True, attempt to repair invalid polygons using `shapely.make_valid`.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame indexed by `id_col`, with columns `[id_col, keep_attrs..., geometry]`.
+        Each row corresponds to one cell polygon. Invalid or empty geometries are skipped.
+    """
+    rows = []
+    geometries = []
+
+    for label_id, group in df.groupby(id_col, sort=False):
+        xs = group[x_col].to_numpy()
+        ys = group[y_col].to_numpy()
+
+        # Drop last duplicate closing point if present
+        if drop_closed_duplicate and len(xs) >= 2 and xs[0] == xs[-1] and ys[0] == ys[-1]:
+            xs = xs[:-1]
+            ys = ys[:-1]
+
+        if len(xs) < 3:
+            continue  # not enough points to form a polygon
+
+        poly = Polygon(np.column_stack([xs, ys]))
+
+        # Repair invalid polygons
+        if fix_invalid and not poly.is_valid:
+            poly = make_valid(poly)
+            if poly.geom_type == "GeometryCollection":
+                polys = [p for p in poly.geoms if p.geom_type in ("Polygon", "MultiPolygon")]
+                if not polys:
+                    continue
+                poly = polys[0] if len(polys) == 1 else MultiPolygon(polys)
+
+        if poly.is_empty:
+            continue
+
+        row = {id_col: int(label_id) if pd.notna(label_id) else None}
+        for attr in keep_attrs:
+            if attr in group.columns:
+                row[attr] = group[attr].iloc[0]
+
+        rows.append(row)
+        geometries.append(poly)
+
+    gdf = gpd.GeoDataFrame(rows, geometry=geometries)
+    gdf.set_index(id_col, inplace=True)
+    return gdf
+
+
+def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
+    """
+    Compute a mode projection of a 3D label image along the Z axis.
+
+    For each pixel (x, y), the label most frequently occurring across
+    Z slices is assigned. Background (0) is ignored in the count.
+
+    Parameters
+    ----------
+    stack : np.ndarray
+        Integer label array of shape (Z, H, W).
+
+    Returns
+    -------
+    np.ndarray
+        2D array of shape (H, W) with the modal label per pixel.
+    """
+    if stack.ndim != 3:
+        raise ValueError("Input stack must be 3D (Z, H, W).")
+
+    Z, H, W = stack.shape
+    flat = stack.reshape(Z, -1).T  # (H*W, Z)
+    max_label = int(stack.max())
+    counts = np.zeros((flat.shape[0], max_label + 1), dtype=np.int32)
+    idx = np.arange(flat.shape[0])
+
+    # Count occurrences per pixel
+    for z in range(Z):
+        np.add.at(counts, (idx, flat[:, z]), 1)
+
+    counts[:, 0] = 0  # ignore background
+    winner = counts.argmax(axis=1).astype(np.int32)
+    return winner.reshape(H, W)
+
+
+def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
+    """
+    Convert a 2D label image into polygon boundaries.
+
+    Each connected label is represented by one Polygon or MultiPolygon.
+
+    Parameters
+    ----------
+    label_img : np.ndarray
+        2D array of integer labels. Background should be 0.
+    simplify_tolerance : float or None, default=0.5
+        Simplification tolerance for polygon boundaries. Set to None or 0
+        to disable simplification.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame with columns ["cell_id", "label_id", "geometry"],
+        indexed by "label_id". Each row corresponds to one labeled region.
+    """
+    if label_img.ndim != 2:
+        raise ValueError("Input label_img must be 2D.")
+
+    geometries = []
+    label_ids = []
+
+    unique_labels = np.unique(label_img)
+    unique_labels = unique_labels[unique_labels != 0]  # skip background
+
+    for lid in unique_labels:
+        mask = (label_img == lid).astype(np.uint8)
+        contours = find_contours(mask, 0.5)
+
+        polys = []
+        for contour in contours:
+            poly = Polygon(np.c_[contour[:, 1], contour[:, 0]])
+            if not poly.is_valid or poly.area == 0:
+                continue
+            if simplify_tolerance and simplify_tolerance > 0:
+                poly = poly.simplify(simplify_tolerance, preserve_topology=True)
+            polys.append(poly)
+
+        if not polys:
+            continue
+
+        geom = polys[0] if len(polys) == 1 else MultiPolygon(polys)
+        geometries.append(geom)
+        label_ids.append(int(lid))
+
+    gdf = gpd.GeoDataFrame({"cell_id": label_ids, "label_id": label_ids, "geometry": geometries}).set_index("label_id")
+
+    return gdf
+
+
+def make_adata(X, obs: pd.DataFrame, var: pd.DataFrame, X_est: np.ndarray | None = None) -> ad.AnnData:
+    """
+    Build an AnnData object with optional estimated counts.
+
+    Parameters
+    ----------
+    X : array-like or csr_matrix
+        Expression matrix (cells x genes).
+    obs : pd.DataFrame
+        Cell metadata. Index should be cell IDs.
+    var : pd.DataFrame
+        Gene metadata. Index should be gene symbols.
+    X_est : array-like or csr_matrix, optional
+        Estimated expression values (same shape as X).
+
+    Returns
+    -------
+    AnnData
+        Annotated data matrix with optional "X_estimated" layer.
+    """
+    if not isinstance(X, csr_matrix):
+        X = csr_matrix(X)
+
+    adata = ad.AnnData(X=X, obs=obs, var=var)
+    if X_est is not None:
+        adata.layers["X_estimated"] = csr_matrix(X_est)
+    return adata
+
+
+def read_dapi_image(path: Path) -> np.ndarray:
+    """
+    Read a DAPI image from TIFF and ensure correct dimensions.
+
+    Parameters
+    ----------
+    path : Path
+        Path to the DAPI TIFF file.
+
+    Returns
+    -------
+    np.ndarray
+        DAPI image with shape (c, y, x). Adds a channel axis if necessary.
+    """
+    dapi = tiff.imread(path)
+    if dapi.ndim == 2:  # add channel axis if single-channel
+        dapi = dapi[None, ...]
+    return dapi
+
+
+def read_labels(cell_mask_path: Path, nuc_mask_path: Path) -> dict[str, np.ndarray]:
+    """
+    Read cell and nucleus label masks from TIFF.
+
+    Parameters
+    ----------
+    cell_mask_path : Path
+        Path to the cell mask TIFF.
+    nuc_mask_path : Path
+        Path to the nucleus mask TIFF.
+
+    Returns
+    -------
+    dict of {str: np.ndarray}
+        Dictionary with keys 'cell_labels' and 'nucleus_labels'.
+    """
+    cell_labels = tiff.imread(cell_mask_path)
+    nucleus_labels = tiff.imread(nuc_mask_path)
+    return {"cell_labels": cell_labels, "nucleus_labels": nucleus_labels}
+
+
+def read_shapes(path: Path, build_from_vertices: bool = True, backend: str = "pd"):
+    """
+    Read cell or nucleus shapes from Parquet or GeoJSON.
+
+    Parameters
+    ----------
+    path : Path
+        Path to a parquet or geojson file with shape definitions.
+    build_from_vertices : bool, default=True
+        If True and file is parquet, use build_cell_polygons_from_vertices.
+
+    Returns
+    -------
+    GeoDataFrame
+        Shape geometries indexed by label ID.
+    """
+    if path.suffix == ".parquet":
+        if backend == "pd":
+            df = pd.read_parquet(path)
+        elif backend == "gpd":
+            df = gpd.read_parquet(path)
+        else:
+            raise ValueError(f"Unsupported backend: {backend}. Please use 'pd' or 'gpd'.")
+        if build_from_vertices:
+            return build_cell_polygons_from_vertices(df)
+        return df
+    else:
+        return gpd.read_file(path)
+
+
+def read_transcripts(
+    path: Path, rename_map: dict[str, str] | None = None, uint32_max_placeholder: int | None = None
+) -> pd.DataFrame:
+    """
+    Read transcript coordinates and attributes from Parquet or CSV.
+
+    Parameters
+    ----------
+    path : Path
+        Path to transcripts file (.parquet, .csv, or .csv.gz).
+    rename_map : dict, optional
+        Optional column renaming dictionary.
+    uint32_max_placeholder : int, optional
+        If provided, replace this value with 0 in integer columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        Transcript dataframe with standardized columns:
+        ['x', 'y', 'z', 'feature_name', 'cell_id', ...]
+    """
+    if path.suffix == ".parquet":
+        df = pd.read_parquet(path)
+    else:
+        df = pd.read_csv(path, compression="gzip" if path.suffix.endswith(".gz") else None)
+
+    if rename_map is not None:
+        df = df.rename(columns=rename_map)
+
+    # Standardize coordinate columns
+    for old, new in [("x_location", "x"), ("y_location", "y"), ("z_location", "z")]:
+        if old in df.columns:
+            df = df.rename(columns={old: new})
+
+    if "feature_name" in df.columns:
+        df["feature_name"] = df["feature_name"].astype("category")
+
+    if uint32_max_placeholder is not None:
+        # uint32_max placeholder meaning “no assignment / background”
+        df.loc[df["cell_id"] == uint32_max_placeholder, "cell_id"] = 0
+
+    # replacing NaN cell_id with 0 (background)
+    if "cell_id" in df.columns:
+        # if cell_id is categorical or string, replace NaN with "UNASSIGNED"
+        if df["cell_id"].dtype.name == "category" or df["cell_id"].dtype == object or df["cell_id"].dtype == str:
+            df["cell_id"] = df["cell_id"].fillna("UNASSIGNED")
+        else:
+            df["cell_id"] = df["cell_id"].fillna(0)
+
+    return df
+
+
+def decompress_geojson(gz_path: Path) -> Path:
+    """
+    Decompress a .geojson.gz to .geojson if needed.
+
+    Parameters
+    ----------
+    gz_path : Path
+        Path to the compressed geojson.gz file.
+
+    Returns
+    -------
+    Path
+        Path to the decompressed .geojson file.
+    """
+    if gz_path.suffix == ".gz":
+        json_path = gz_path.with_suffix("")  # strip .gz
+        if not json_path.exists():
+            with gzip.open(gz_path, "rt") as f_in, open(json_path, "w") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        return json_path
+    return gz_path
 
 
 def create_spatialdata(
@@ -532,328 +881,3 @@ def validate_spatialdata(
             )
 
     return True
-
-
-def compute_shapes(
-    sdata: sd.SpatialData, labels_key: str = "labels", shape_key: str = "cell_boundaries"
-) -> sd.SpatialData:
-    """
-    Compute cell shapes from the labels in the SpatialData object.
-    This function extracts cell boundaries from the segmentation labels and stores them as polygons in
-    the shapes of the SpatialData object.
-
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing segmentation labels.
-    labels_key : str, optional
-        Key for accessing the labels in the SpatialData. Default is "labels".
-    shape_key : str, optional
-        Key for storing the computed shapes in the SpatialData. Default is "cell_boundaries".
-
-    Returns
-    -------
-    sd.SpatialData
-        The updated SpatialData object with computed shapes added.
-
-    Raises
-    ------
-    AssertionError
-        If the labels are not present or if the shape_key already exists in the shapes of the SpatialData.
-    TypeError
-        If the labels are not in the expected format (e.g., not a numpy array or DataFrame).
-    """
-    assert shape_key not in sdata.shapes, (
-        f"Shapes with key '{shape_key}' already exist in SpatialData. "
-        "Please choose a different key by setting the shape_key parameter or remove the existing shapes."
-    )
-
-    # Ensure labels are present
-    assert labels_key in sdata.labels, (
-        f"Labels DataFrame must contain key: {labels_key}. "
-        f"Available keys: {list(sdata.labels.keys())}. "
-        f"If you want to use a different key, set the labels_key parameter."
-    )
-
-    # Get numpy array from sdata.labels
-    labels = (
-        sdata.labels[labels_key].values if hasattr(sdata.labels[labels_key], "values") else sdata.labels[labels_key]
-    )
-
-    # Ensure it's an integer mask
-    labels = np.asarray(labels, dtype=np.int32)
-
-    polygons = []
-    cell_ids = []
-
-    for cell_id in np.unique(labels):
-        if cell_id == 0:  # skip background
-            continue
-
-        # Find contours for this cell (connectivity 1)
-        contours = measure.find_contours(labels == cell_id, level=0.5)
-        for contour in contours:
-            # contour coordinates are (row, col), flip to (x, y)
-            poly = Polygon(contour[:, ::-1])
-            if not poly.is_valid or poly.is_empty:
-                continue
-            polygons.append(poly)
-            cell_ids.append(cell_id)
-
-    # Build DataFrame with cell_id and geometry
-    shapes_df = pd.DataFrame({"cell_id": cell_ids, "geometry": polygons})
-
-    # Convert DataFrame to a GeoDataFrame if SpatialData expects it
-    try:
-        import geopandas as gpd
-
-        shapes_gdf = gpd.GeoDataFrame(shapes_df, geometry="geometry", crs="EPSG:4326")
-    except ImportError:
-        shapes_gdf = shapes_df
-
-    # Add to SpatialData
-    sdata.shapes[shape_key] = sd.models.ShapesModel.parse(shapes_gdf)
-
-    return sdata
-
-
-def compute_labels(
-    sdata: sd.SpatialData,
-    labels_key: str = "cell_labels",
-    shapes_key: str = "cell_boundaries",
-    cell_key_shapes: str = "cell_id",
-) -> sd.SpatialData:
-    """
-    Compute labels from the shapes in the SpatialData object.
-    This function generates a label array from the cell boundaries stored in the shapes of the SpatialData object.
-
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing cell boundaries.
-    labels_key : str, optional
-        Key for storing the generated labels in the SpatialData. Default is "cell_labels".
-    shapes_key : str, optional
-        Key for accessing the shapes in the SpatialData. Default is "cell_boundaries".
-    cell_key_shapes : str, optional
-        Key for accessing the cell IDs in the shapes. Default is "cell_id".
-
-    Returns
-    -------
-    sd.SpatialData
-        The updated SpatialData object with generated labels added.
-
-    Raises
-    ------
-    AssertionError
-        If the labels are not present or if the shapes_key does not exist in the shapes of the SpatialData.
-    TypeError
-        If the shapes are not in the expected format (e.g., not a DataFrame).
-    """
-    assert labels_key not in sdata.labels, (
-        f"Labels with key '{labels_key}' already exist in SpatialData. "
-        "Please choose a different key by setting the labels_key parameter or remove the existing labels."
-    )
-
-    # Ensure shapes are present
-    assert shapes_key in sdata.shapes, (
-        f"Shapes DataFrame must contain key: {shapes_key}. "
-        f"Available keys: {list(sdata.shapes.keys())}. "
-        f"If you want to use a different key, set the shapes_key parameter."
-    )
-
-    # Get shapes DataFrame
-    shapes = sdata.shapes[shapes_key]
-    assert cell_key_shapes in shapes.columns, (
-        f"Shapes DataFrame must contain column: {cell_key_shapes}. "
-        f"Available columns: {shapes.columns.tolist()}. "
-        f"If you want to use a different column, set the cell_key_shapes parameter."
-    )
-
-    # if an image is present, we can use the image to figure out the size of the labels
-    if len(sdata.images) > 0:
-        image = next(iter(sdata.images.values())).squeeze()
-        height, width = image.data.shape
-    else:
-        # if no image is present, we get the minimum and maximum coordinates from the shapes
-        max_x = shapes["geometry"].apply(lambda geom: geom.bounds[2]).max()
-        max_y = shapes["geometry"].apply(lambda geom: geom.bounds[3]).max()
-
-        height = int(max_y)
-        width = int(max_x)
-
-    # Create an empty label array
-    labels = np.zeros((height, width), dtype=np.int32)
-
-    # Fill the label array with cell IDs from shapes
-    for _, row in shapes.iterrows():
-        cell_id = row[cell_key_shapes]
-        geom = row["geometry"]
-
-        # Ensure we have only polygons
-        if isinstance(geom, Polygon):
-            polygons = [geom]
-        elif isinstance(geom, MultiPolygon):
-            polygons = list(geom.geoms)
-        else:
-            continue  # skip unsupported geometries
-
-        for poly in polygons:
-            coords = np.array(poly.exterior.coords)
-            rr, cc = polygon(coords[:, 1], coords[:, 0], shape=labels.shape)
-            labels[rr, cc] = cell_id
-
-    # copying the sdata object to avoid modifying the original
-    # TODO: should make it possible to run this in-place
-    sdata = copy.deepcopy(sdata)
-    # Add labels to SpatialData
-    sdata.labels[labels_key] = sd.models.Labels2DModel.parse(labels)
-
-    return sdata
-
-
-def compute_tables(
-    sdata: sd.SpatialData,
-    tables_key: str = "table",
-    shapes_key: str = "cell_boundaries",
-    points_key: str = "transcripts",
-    cell_key_shapes: str = "cell_id",
-    cell_key_points: str = "assignment",
-    gene_key: str = "gene",
-) -> sd.SpatialData:
-    """
-    Compute tables from the shapes and points in the SpatialData object.
-    This function generates a table of gene expression values for each cell based on the transcript points.
-    It creates an AnnData object with the expression matrix and cell metadata, and stores it in the SpatialData object.
-
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing shapes and points.
-    tables_key : str, optional
-        Key for storing the generated tables in the SpatialData. Default is "table".
-    shapes_key : str, optional
-        Key for accessing the shapes in the SpatialData. Default is "cell_boundaries".
-    points_key : str, optional
-        Key for accessing the points in the SpatialData. Default is "transcripts".
-    cell_key_shapes : str, optional
-        Key for accessing the cell IDs in the shapes. Default is "cell_id".
-    cell_key_points : str, optional
-        Key for accessing the cell assignments in the points. Default is "assignment".
-    gene_key : str, optional
-        Key for accessing the gene names in the points. Default is "gene".
-
-    Returns
-    -------
-    sd.SpatialData
-        The updated SpatialData object with generated tables added.
-
-    Raises
-    ------
-    AssertionError
-        If the tables already exist or if required keys or columns are missing.
-    TypeError
-        If the shapes or points are not in the expected format (e.g., not a DataFrame).
-    """
-    assert tables_key not in sdata.tables, (
-        f"Tables with key '{tables_key}' already exist in SpatialData. "
-        f"Available tables: {list(sdata.tables.keys())}. "
-        "Please choose a different key by setting the tables_key parameter or remove the existing table."
-    )
-
-    # Ensure shapes are present
-    assert shapes_key in sdata.shapes, (
-        f"Shapes DataFrame must contain key: {shapes_key}. "
-        f"Available keys: {list(sdata.shapes.keys())}. "
-        "If you want to use a different key, set the shapes_key parameter."
-    )
-
-    # Ensure points are present
-    assert points_key in sdata.points, (
-        f"Points DataFrame must contain key: {points_key}. "
-        f"Available keys: {list(sdata.points.keys())}. "
-        "If you want to use a different key, set the points_key parameter."
-    )
-
-    shapes = sdata.shapes[shapes_key]
-    shapes = shapes.set_crs(None, allow_override=True)  # explicitly say “no CRS”
-    points = sdata.points[points_key]
-
-    # Check required columns in shapes
-    assert cell_key_shapes in shapes.columns, (
-        f"Shapes DataFrame must contain column: {cell_key_shapes}. "
-        f"Available columns: {shapes.columns.tolist()}. "
-        "If you want to use a different column, set the cell_key_shapes parameter."
-    )
-
-    # Check required columns in points
-    assert cell_key_points in points.columns, (
-        f"Points DataFrame must contain column: {cell_key_points}. "
-        f"Available columns: {points.columns.tolist()}. "
-        "If you want to use a different column, set the cell_key_points parameter."
-    )
-    assert gene_key in points.columns, (
-        f"Points DataFrame must contain column: {gene_key}. "
-        f"Available columns: {points.columns.tolist()}. "
-        "If you want to use a different column, set the gene_key parameter."
-    )
-
-    # 1. Build expression matrix from points
-    expr_df = (
-        points[[cell_key_points, gene_key]]  # just the columns we need
-        .compute()  # force into Pandas
-        .groupby([cell_key_points, gene_key])
-        .size()
-        .unstack(fill_value=0)
-    )
-
-    # 2. Create obs from shapes
-    obs_df = shapes.set_index(cell_key_shapes)[["geometry"]].copy()
-    obs_df["cell_id"] = obs_df.index
-    obs_df["centroid_x"] = obs_df.geometry.centroid.x
-    obs_df["centroid_y"] = obs_df.geometry.centroid.y
-    obs_df["cell_size"] = obs_df.geometry.area
-    obs_df.drop(columns=["geometry"], inplace=True)
-
-    # 3. Align obs and X
-    all_cells = obs_df.index.union(expr_df.index)
-    obs_df = obs_df.reindex(all_cells)
-    expr_df = expr_df.reindex(all_cells, fill_value=0)
-    expr_df.columns = expr_df.columns.astype(str)
-
-    obs_df.index = obs_df.index.astype(str)
-    expr_df.index = expr_df.index.astype(str)
-    expr_df.columns = expr_df.columns.astype(str)
-
-    # 4. Create AnnData
-    adata = ad.AnnData(X=expr_df.to_numpy(), obs=obs_df, var=pd.DataFrame(index=expr_df.columns))
-
-    # 5. Store in SpatialData
-    sdata = copy.deepcopy(sdata)
-    sdata.tables[tables_key] = adata
-    return sdata
-
-
-def create_geopandas_df(df: pd.DataFrame) -> gpd.GeoDataFrame:
-    polygons = []
-    ids = []
-
-    assert "cell_id" in df.columns, "DataFrame must contain 'cell_id' column to group by cell IDs."
-    assert "vertex_x" in df.columns and "vertex_y" in df.columns, (
-        "DataFrame must contain 'vertex_x' and 'vertex_y' columns for polygon coordinates."
-    )
-
-    for cell_id, group in df.groupby("cell_id"):
-        # Group by label_id if you may have multiple polygons per cell
-        polys = []
-        for _, sub in group.groupby("label_id"):
-            coords = list(zip(sub["vertex_x"], sub["vertex_y"], strict=False))
-            if len(coords) >= 3:  # valid polygon
-                polys.append(Polygon(coords))
-        if len(polys) == 1:
-            polygons.append(polys[0])
-        else:
-            polygons.append(MultiPolygon(polys))
-        ids.append(cell_id)
-
-    return gpd.GeoDataFrame({"cell_id": ids, "geometry": polygons}, crs="EPSG:4326")  # or your actual CRS
