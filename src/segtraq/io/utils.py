@@ -12,8 +12,9 @@ import pandas as pd
 import spatialdata as sd
 import tifffile as tiff
 import xarray as xr
+from rasterio.features import rasterize
 from scipy.sparse import csr_matrix
-from shapely.geometry import MultiPolygon, Polygon
+from shapely.geometry import MultiPolygon, Polygon, mapping
 from shapely.validation import make_valid
 from skimage.measure import find_contours
 
@@ -209,9 +210,18 @@ def make_adata(X, obs: pd.DataFrame, var: pd.DataFrame, X_est: np.ndarray | None
     if not isinstance(X, csr_matrix):
         X = csr_matrix(X)
 
+    # Ensure indices are strings to avoid ImplicitModificationWarning
+    obs = obs.copy()
+    obs.index = obs.index.astype(str)
+
+    var = var.copy()
+    var.index = var.index.astype(str)
+
     adata = ad.AnnData(X=X, obs=obs, var=var)
+
     if X_est is not None:
         adata.layers["X_estimated"] = csr_matrix(X_est)
+
     return adata
 
 
@@ -359,6 +369,105 @@ def decompress_geojson(gz_path: Path) -> Path:
                 shutil.copyfileobj(f_in, f_out)
         return json_path
     return gz_path
+
+
+def build_spatialdata_from_proseg(
+    adata: ad.AnnData,
+    path_to_10xdata: Path,
+    path_to_proseg_data: Path,
+    polygons_gdf: gpd.GeoDataFrame,
+    consolidate_shapes: bool = True,
+) -> sd.SpatialData:
+    """
+    Builds a SpatialData object from processed segmentation and transcriptomics data.
+    This function integrates segmentation polygons, DAPI images, nucleus masks, and transcript metadata
+    to construct a comprehensive SpatialData object suitable for spatial transcriptomics analysis.
+    It processes multi-layer polygon data, rasterizes cell boundaries, projects label stacks to 2D,
+    and incorporates transcript and nucleus information.
+    Parameters
+    ----------
+    adata : ad.AnnData
+        Annotated data matrix containing gene expression and cell metadata.
+    path_to_10xdata : Path
+        Path to the directory containing 10x Genomics image and mask files.
+    path_to_proseg_data : Path
+        Path to the directory containing processed segmentation and transcriptomics data.
+    polygons_gdf : gpd.GeoDataFrame
+        GeoDataFrame containing cell segmentation polygons with layer and cell identifiers.
+    consolidate_shapes : bool, optional
+        Whether to consolidate shapes across layers into a single shape layer (default is True).
+    Returns
+    -------
+    sd.SpatialData
+        A SpatialData object containing integrated images, labels, shapes, transcript points, and tables.
+    Notes
+    -----
+    - The function expects specific file names in the provided directories:
+        - DAPI image: "dapi_um.tif"
+        - Nucleus mask: "nuc_mask_um.tif"
+        - Nucleus boundaries: "nucleus_boundaries.parquet"
+        - Transcript metadata: "transcript-metadata.csv.gz"
+    - Cell and nucleus labels are rasterized and projected to 2D for downstream analysis.
+    """
+    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
+    H, W = dapi.shape[1:]
+
+    # Polygon layers → labels + shapes
+    labels_dict, shapes_dict = {}, {}
+    z_levels = sorted(polygons_gdf["layer"].unique())
+    stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
+
+    for zi, z in enumerate(z_levels):
+        # select the current layer first
+        layer_gdf = polygons_gdf[polygons_gdf["layer"] == z]
+
+        # then filter out empty or missing geometries
+        layer_gdf = layer_gdf[~layer_gdf.geometry.is_empty & layer_gdf.geometry.notna()]
+
+        # Shapes
+        layer_shapes = layer_gdf.set_index("cell")["geometry"].to_frame().copy()
+        layer_shapes.index.name = "label_id"
+        layer_shapes.index += 1
+        layer_shapes["cell_id"] = layer_shapes.index
+        shapes_dict[f"cell_boundaries_z{int(z)}"] = layer_shapes
+
+        # Labels via rasterize
+        shapes_iter = (
+            (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry, strict=False)
+        )
+        img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
+        labels_dict[f"cell_labels_z{int(z)}"] = img
+        stack[zi] = img
+
+    # Projection to 2D
+    proj = labels_mode_projection(stack)
+    labels_dict["cell_labels"] = proj
+    shapes_dict["cell_boundaries"] = labels_to_shapes(proj, simplify_tolerance=0.5)
+
+    # Nucleus
+    nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
+    labels_dict["nucleus_labels"] = nucleus_labels
+    nucleus_shapes = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
+    shapes_dict["nucleus_boundaries"] = nucleus_shapes
+
+    # Transcripts
+    transcripts = read_transcripts(
+        path_to_proseg_data / "transcript-metadata.csv.gz",
+        rename_map={"gene": "feature_name", "assignment": "cell_id"},
+        uint32_max_placeholder=2**32,
+    )
+
+    # Assemble SpatialData
+    sdata = create_spatialdata(
+        points=transcripts,
+        labels=labels_dict,
+        shapes=shapes_dict,
+        tables=adata,
+        images=dapi,
+        background_cell_id=0,
+        consolidate_shapes=consolidate_shapes,
+    )
+    return sdata
 
 
 def create_spatialdata(
@@ -576,7 +685,7 @@ def create_spatialdata(
         other_keys = set(labels.keys()) - {"cell_labels"}
         if len(other_keys) > 0:
             for key in other_keys:
-                labels_sd = sd.models.Labels2DModel.parse(labels[key])
+                labels_sd = sd.models.Labels2DModel.parse(labels[key], dims=["y", "x"])
                 labels_sd_dict[key] = labels_sd
 
             labels = labels["cell_labels"]  # use the cell labels for further processing
@@ -585,7 +694,7 @@ def create_spatialdata(
     # block following the `if` statement will be executed.
     if labels is not None:
         if len(labels_sd_dict) == 0:
-            labels_sd = sd.models.Labels2DModel.parse(labels)
+            labels_sd = sd.models.Labels2DModel.parse(labels, dims=["y", "x"])
             labels_sd_dict = {"cell_labels": labels_sd}
         else:
             labels_sd_dict["cell_labels"] = labels_sd
@@ -664,7 +773,7 @@ def create_spatialdata(
         if images.ndim == 2:
             # If images are 2D, we need to expand dimensions to fit the Image2DModel
             images = np.expand_dims(images, axis=0)
-        images_sd = sd.models.Image2DModel.parse(images)
+        images_sd = sd.models.Image2DModel.parse(images, dims=["c", "y", "x"])
 
     # we only add these at the end of the method to ensure that the points are relabeled and filtered correctly
     points_sd = sd.models.PointsModel.parse(points)
