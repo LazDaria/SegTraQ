@@ -272,7 +272,6 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
         tables=adata,
         images=dapi,
         background_cell_id=0,
-        consolidate_shapes=consolidate_shapes,
     )
     return sdata
 
@@ -312,6 +311,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     adata.obs.reset_index(inplace=True)
     adata.obs.sort_values("cell_id", inplace=True)
     adata.obs.reset_index(drop=True, inplace=True)
+    adata.obs.index = adata.obs.index.astype(str)
     adata = adata[adata.obs.index, :].copy()
     adata.obs.drop(columns=["transcripts", "unique_transcripts"], errors="ignore", inplace=True)
 

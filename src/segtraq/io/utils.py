@@ -575,13 +575,15 @@ def create_spatialdata(
     )
     # check that the minimum cell ID is 1 (if the cell IDs are integer-based)
     if points[cell_key_points].dtype.kind in "iu":
-        if not relabel_points and background_cell_id != 0:
-            assert points[cell_key_points].min() >= 1, (
-                "Cell IDs in points must start at 1. "
-                f"Found minimum cell ID: {points[cell_key_points].min()}. "
-                f"If you want to relabel the points by adding 1, set relabel_points=True. "
-                f"Alternatively, if your unassigned transcripts are labeled with 0, you can set background_cell_id=0."
-            )
+        if not relabel_points:
+            if background_cell_id != 0:
+                assert points[cell_key_points].min() >= 1, (
+                    "Cell IDs in points must start at 1. "
+                    f"Found minimum cell ID: {points[cell_key_points].min()}. "
+                    f"If you want to relabel the points by adding 1, set relabel_points=True. "
+                    f"Alternatively, if your unassigned transcripts are labeled with 0, "
+                    f"you can set background_cell_id=0."
+                )
         else:
             points = points.copy()  # avoid modifying the original DataFrame
             points[cell_key_points] = points[cell_key_points] + 1
@@ -643,9 +645,9 @@ def create_spatialdata(
                 lambda x: background_cell_id if x in missing_in_polygons else x
             )
             warnings.warn(
-                f"Missing {len(missing_in_polygons)} cell IDs from points: {missing_in_polygons}. "
+                f"Missing {len(missing_in_polygons)} cell IDs from shapes: {missing_in_polygons}. "
                 f"These cells are present in the points, but not in the shapes. "
-                f"The points have been relabeled to {background_cell_id}.",
+                f"The points have been relabeled to {background_cell_id} (unassigned).",
                 UserWarning,
                 stacklevel=2,
             )
@@ -682,22 +684,16 @@ def create_spatialdata(
         assert "cell_labels" in labels.keys(), "Labels dictionary must contain key: 'cell_labels'."
         # if there are multiple keys (e. g. from a nuclear and a whole cell mask), we only check the whole cell mask
         # the other one goes into the spatialdata dict directly
-        other_keys = set(labels.keys()) - {"cell_labels"}
-        if len(other_keys) > 0:
-            for key in other_keys:
+        if len(labels.keys()) > 0:
+            for key in labels.keys():
                 labels_sd = sd.models.Labels2DModel.parse(labels[key], dims=["y", "x"])
                 labels_sd_dict[key] = labels_sd
 
-            labels = labels["cell_labels"]  # use the cell labels for further processing
-
     # The code is checking if the variable `labels` is not `None`. If `labels` is not `None`, the code
     # block following the `if` statement will be executed.
-    if labels is not None:
-        if len(labels_sd_dict) == 0:
-            labels_sd = sd.models.Labels2DModel.parse(labels, dims=["y", "x"])
-            labels_sd_dict = {"cell_labels": labels_sd}
-        else:
-            labels_sd_dict["cell_labels"] = labels_sd
+    if labels is not None and len(labels_sd_dict) == 0:
+        labels_sd = sd.models.Labels2DModel.parse(labels, dims=["y", "x"])
+        labels_sd_dict = {"cell_labels": labels_sd}
 
     # === TABLES ===
     tables_sd = None
