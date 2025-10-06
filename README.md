@@ -5,3 +5,6 @@ SegTraQ - **Seg**mentation and **Tra**nscript Assignment **Q**uality Control - A
 * PyPI package:  
 * Free software: MIT License
 * Documentation: https://lazdaria.github.io/SegTraQ
+
+> ⚠️ Note: SegTraQ is under active development. 
+> Features, interfaces, and functionality may change in upcoming releases.
