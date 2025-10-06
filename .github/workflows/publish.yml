@@ -33,13 +33,13 @@ jobs:
         run: twine check dist/*
 
       - name: Publish to TestPyPI
-        id: testpypi
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        continue-on-error: false
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          twine upload --repository testpypi dist/* --verbose
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
 
       - name: Publish to PyPI
         if: steps.testpypi.outcome == 'success'
