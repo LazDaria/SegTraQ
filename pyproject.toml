@@ -62,8 +62,9 @@ homepage = "https://github.com/LazDaria/segtraq"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
-[tool.setuptools.package-data]
-"*" = ["*.*"]
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests", "tests.*", "docs", "examples", "data", "data.*"]
 
 [project.scripts]
 segtraq = "segtraq.cli:app"
