@@ -1,10 +1,12 @@
-include CONTRIBUTING.md
-include HISTORY.md
-include LICENSE
 include README.md
+include LICENSE
+include HISTORY.md
+include CONTRIBUTING.md
 
-recursive-include tests *
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]
+# Include all Python files and package data
+recursive-include src/segtraq *.py
+recursive-include src/segtraq *.json *.csv *.txt  # any necessary package data
 
-recursive-include docs *.md Makefile *.jpg *.png *.gif
+# Exclude tests, docs, and large files
+recursive-exclude tests *
+recursive-exclude docs *
