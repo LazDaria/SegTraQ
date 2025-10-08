@@ -20,9 +20,11 @@ def compute_rmsd(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
+    label_key: str | None = None,
 ) -> float:
     """
     Compute RMSD for different Leiden clustering resolutions and report the best (lowest) RMSD.
+    If a label_key is provided, compute the RMSD for that clustering only.
 
     Parameters
     ----------
@@ -34,6 +36,8 @@ def compute_rmsd(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
+    label_key : str, optional
+        If provided, compute the RMSD for this clustering only.
 
     Returns
     -------
@@ -44,6 +48,21 @@ def compute_rmsd(
 
     if isinstance(resolution, float):
         resolution = [resolution]
+
+    if label_key is not None:
+        if label_key not in adata.obs:
+            raise ValueError(
+                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+            )
+        labels = adata.obs[label_key].values
+        # remove NaN labels
+        if len(np.unique(labels[~pd.isna(labels)])) > 1:
+            if "X_pca" not in adata.obsm:
+                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
+            rmsd_val = compute_rmsd_for_clustering(adata.obsm["X_pca"], labels)
+            return float(rmsd_val)
+        else:
+            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
 
     best_rmsd = np.inf
     for res in resolution:
@@ -68,10 +87,12 @@ def compute_mean_cosine_distance(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
+    label_key: str | None = None,
 ) -> float:
     """
     Compute mean cosine distance for different Leiden clustering resolutions
     and report the best (lowest) mean cosine distance.
+    If a label_key is provided, compute the mean cosine distance for that clustering only.
 
     Parameters
     ----------
@@ -83,6 +104,8 @@ def compute_mean_cosine_distance(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
+    label_key : str, optional
+        If provided, compute the mean cosine distance for this clustering only.
 
     Returns
     -------
@@ -95,6 +118,21 @@ def compute_mean_cosine_distance(
         resolution = [resolution]
 
     best_distance = np.inf
+    if label_key is not None:
+        if label_key not in adata.obs:
+            raise ValueError(
+                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+            )
+        labels = adata.obs[label_key].values
+        # remove NaN labels
+        if len(np.unique(labels[~pd.isna(labels)])) > 1:
+            if "X_pca" not in adata.obsm:
+                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
+            distance_val = compute_mean_cosine_distance_for_clustering(adata.obsm["X_pca"], labels)
+            return float(distance_val)
+        else:
+            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+
     for res in resolution:
         key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
@@ -116,12 +154,13 @@ def compute_silhouette_score(
     sdata: sd.SpatialData,
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     metric: str = "euclidean",
-    ncomps: int = 50,
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
+    label_key: str | None = None,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
+    If a label_key is provided, compute the silhouette score for that clustering only.
 
     Parameters
     ----------
@@ -131,12 +170,12 @@ def compute_silhouette_score(
         The resolution parameter for Leiden clustering, by default 1.0.
     metric : str, optional
         The metric to use for silhouette score calculation, by default "euclidean".
-    ncomps : int, optional
-        The number of principal components to use, by default 50.
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
+    label_key : str, optional
+        If provided, compute the silhouette score for this clustering only.
 
     Returns
     -------
@@ -148,6 +187,23 @@ def compute_silhouette_score(
     best_silhouette_score = -1
     if isinstance(resolution, float):
         resolution = [resolution]
+
+    if label_key is not None:
+        if label_key not in adata.obs:
+            raise ValueError(
+                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+            )
+        labels = adata.obs[label_key]
+        if len(set(labels)) > 1:  # Ensure more than one cluster exists
+            if "X_pca" not in adata.obsm:
+                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
+            # remove NaN labels
+            adata_subset = adata[~pd.isna(adata.obs[label_key]), :]
+            labels = adata_subset.obs[label_key].values
+            silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
+            return float(silhouette_avg)
+        else:
+            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
 
     for res in resolution:
         # Run clustering for each resolution
