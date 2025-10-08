@@ -838,7 +838,7 @@
             "encoding-type": "anndata",
             "encoding-version": "0.1.0",
             "instance_key": "label_id",
-            "region": "cell_labels",
+            "region": "cell_boundaries",
             "region_key": "region",
             "spatialdata-encoding-type": "ngff:regions_table",
             "version": "0.1"
@@ -1474,7 +1474,7 @@
             "chunks": [],
             "compressor": null,
             "dimension_separator": "/",
-            "dtype": "<U11",
+            "dtype": "<U15",
             "fill_value": "",
             "filters": null,
             "order": "C",
