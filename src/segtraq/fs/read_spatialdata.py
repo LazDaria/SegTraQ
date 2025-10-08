@@ -299,7 +299,8 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path) -> SpatialDa
     X = csr_matrix(X)
 
     obs = pd.read_csv(path_to_proseg_data / "cell-metadata.csv.gz", compression="gzip")
-    obs.drop(columns=["cluster", "scale", "original_cell_id", "population", "fov"], inplace=True)
+    #obs.drop(columns=["cluster", "scale", "original_cell_id", "population", "fov"], inplace=True)
+    obs.drop(columns=["cluster", "scale", "population", "fov"], inplace=True)
     obs.rename(columns={"cell": "cell_id"}, inplace=True)
     obs["cell_id"] = obs["cell_id"] + 1
     obs["label_id"] = obs["cell_id"]
@@ -661,7 +662,7 @@ def read_bidcell(path_to_data: Path) -> SpatialData:
     )
 
     # Labels for sdata
-    cell_labels_path = list(bidcell_path.glob("model_outputs/202*/test_output/epoch_4_step_100_connected.tif"))
+    cell_labels_path = list(bidcell_path.glob(f"model_outputs/202*/test_output/*_connected.tif"))
     cell_labels = tiff.imread(cell_labels_path[0])
     cell_labels_sd = Labels2DModel.parse(cell_labels, scale_factors=(2, 2, 2), dims=["y", "x"])
 
@@ -731,7 +732,8 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     # -------------------------
     # Table (AnnData)
     # -------------------------
-    adata = ad.read_h5ad(path_to_data / "segger_adata.h5ad")
+    benchmark_dir = list(path_to_data.glob(f"benchmarks/segger*"))[0]
+    adata = ad.read_h5ad(benchmark_dir / "segger_adata.h5ad")
     adata.obs.index.name = "cell_id"
     adata.obs.reset_index(inplace=True)
 
@@ -752,7 +754,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     # -------------------------
     # Boundaries from transcripts
     # -------------------------
-    boundaries_gdf = gpd.read_parquet(path_to_data / "segger_boundaries.parquet")
+    boundaries_gdf = gpd.read_parquet(benchmark_dir / "segger_boundaries.parquet")
 
     gdf = boundaries_gdf[boundaries_gdf.geometry.notnull()].copy()
 
@@ -795,7 +797,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path) -> SpatialData:
     # -------------------------
     # Points from transcripts
     # -------------------------
-    transcripts = pd.read_parquet(path_to_data / "segger_transcripts.parquet")
+    transcripts = pd.read_parquet(benchmark_dir / "segger_transcripts.parquet")
     transcripts.drop(columns=["score", "bound", "cell_id"], inplace=True)
     transcripts = transcripts.rename(
         columns={"x_location": "x", "y_location": "y", "z_location": "z", "segger_cell_id": "cell_id"}
