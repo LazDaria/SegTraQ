@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import scanpy as sc
 
-from .. import bl, cs, fs, nc, pl, sp
+from .. import bl, cs, io, nc, pl, sp
 from ..utils import run_label_transfer
 
 
@@ -64,7 +64,7 @@ class SegTraqer:
         self.y = y_coordinate
 
         if validate:
-            fs.validate_spatialdata(
+            io.validate_spatialdata(
                 sdata,
                 shape_key=self.shape_keys,
                 label_key=self.label_keys_nc,
