@@ -2,6 +2,7 @@
     "_index": "_index",
     "column-order": [
         "cell_id",
+        "original_cell_id",
         "centroid_x",
         "centroid_y",
         "centroid_z",

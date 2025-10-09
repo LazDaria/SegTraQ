@@ -1597,7 +1597,7 @@
             "encoding-type": "anndata",
             "encoding-version": "0.1.0",
             "instance_key": "label_id",
-            "region": "cell_labels",
+            "region": "cell_boundaries_z0",
             "region_key": "region",
             "spatialdata-encoding-type": "ngff:regions_table",
             "version": "0.1"
@@ -1764,6 +1764,7 @@
             "_index": "_index",
             "column-order": [
                 "cell_id",
+                "original_cell_id",
                 "centroid_x",
                 "centroid_y",
                 "centroid_z",
@@ -1931,6 +1932,35 @@
             "encoding-type": "array",
             "encoding-version": "0.2.0"
         },
+        "tables/table/obs/original_cell_id/.zarray": {
+            "chunks": [
+                2074
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dimension_separator": "/",
+            "dtype": "|O",
+            "fill_value": 0,
+            "filters": [
+                {
+                    "id": "vlen-utf8"
+                }
+            ],
+            "order": "C",
+            "shape": [
+                2074
+            ],
+            "zarr_format": 2
+        },
+        "tables/table/obs/original_cell_id/.zattrs": {
+            "encoding-type": "string-array",
+            "encoding-version": "0.2.0"
+        },
         "tables/table/obs/region/.zattrs": {
             "encoding-type": "categorical",
             "encoding-version": "0.2.0",
@@ -2065,7 +2095,7 @@
             "chunks": [],
             "compressor": null,
             "dimension_separator": "/",
-            "dtype": "<U11",
+            "dtype": "<U18",
             "fill_value": "",
             "filters": null,
             "order": "C",

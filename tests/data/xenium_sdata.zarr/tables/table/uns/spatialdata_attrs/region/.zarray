@@ -2,7 +2,7 @@
     "chunks": [],
     "compressor": null,
     "dimension_separator": "/",
-    "dtype": "<U11",
+    "dtype": "<U15",
     "fill_value": "",
     "filters": null,
     "order": "C",
