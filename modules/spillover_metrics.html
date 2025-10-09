@@ -44,7 +44,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'modules/spillover_metrics';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Creating spatialdata objects using method-specific readers" href="../notebooks/io.html" />
+    <link rel="next" title="Baseline metrics" href="../notebooks/baseline.html" />
     <link rel="prev" title="The nuclear correlation (nc) accessor" href="nuclear_correlation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -151,7 +151,6 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="io.html">The (<code class="code docutils literal notranslate"><span class="pre">io</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
@@ -159,12 +158,12 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Creating spatialdata objects using method-specific readers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/labeling_via_correlation.html">Label transfer from scRNA-seq dataset via Pearson correlation</a></li>
+
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/spillover_metrics_supervised.html">Supervised spillover metrics</a></li>
 </ul>
 
     </div>
@@ -313,19 +312,8 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.spillover_metrics">Spillover metrics (unsupervised)</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.spillover_metrics_supervised">Spillover metrics (supervised)</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.calculate_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_contamination()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.get_mut_excl_markers"><code class="docutils literal notranslate"><span class="pre">get_mut_excl_markers()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.get_ref_markers"><code class="docutils literal notranslate"><span class="pre">get_ref_markers()</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -340,13 +328,11 @@ document.write(`
   <section id="the-spillover-metrics-sp-accessor">
 <h1>The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-spillover-metrics-sp-accessor" title="Link to this heading">#</a></h1>
 <p>The spillover metrics accessor provides metrics to compare the mean spatial distribution of transcripts in relation to the centroid and the segmented outline of the cell.</p>
-<section id="module-segtraq.sp.spillover_metrics">
-<span id="spillover-metrics-unsupervised"></span><h2>Spillover metrics (unsupervised)<a class="headerlink" href="#module-segtraq.sp.spillover_metrics" title="Link to this heading">#</a></h2>
-<dl class="py function">
+<dl class="py function" id="module-segtraq.sp.spillover_metrics">
 <dt class="sig sig-object py" id="segtraq.sp.spillover_metrics.centroid_mean_coord_diff">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics.</span></span><span class="sig-name descname"><span class="pre">centroid_mean_coord_diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('x',</span> <span class="pre">'y')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('centroid_x',</span> <span class="pre">'centroid_y')</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff" title="Link to this definition">#</a></dt>
-<dd><p>Calculates the euclidean distance between the mean x,y coordinate of the transcripts
-indicated by the feature variable and the centroid of each cell.</p>
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics.</span></span><span class="sig-name descname"><span class="pre">centroid_mean_coord_diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transcript_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['x',</span> <span class="pre">'y']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['centroid_x',</span> <span class="pre">'centroid_y']</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff" title="Link to this definition">#</a></dt>
+<dd><p>Calculates the euclidean distance between the mean x,y coordinate of the transcripts indicated by the feature variable
+and the centroid of each cell. This</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -401,155 +387,6 @@ where “distance” is the euclidean distance between the coordinates <a href="
 </dd></dl>
 
 </section>
-<section id="module-segtraq.sp.spillover_metrics_supervised">
-<span id="spillover-metrics-supervised"></span><h2>Spillover metrics (supervised)<a class="headerlink" href="#module-segtraq.sp.spillover_metrics_supervised" title="Link to this heading">#</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.spillover_metrics_supervised.calculate_contamination">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics_supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">celltype_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_neighs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_cells</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics_supervised.calculate_contamination" title="Link to this definition">#</a></dt>
-<dd><p>Compute directional contamination (“leakage”) between cell types from spatial neighbors using
-ct-specific positive markers: for each ct cell and neighbor ct2, measure the fraction of ct-marker
-signal in ct2 neighbors relative to the ct neighborhood total, then average over interactions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[table_key]</cite> as AnnData with expression and coordinates.</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str] (optional)}}, using only “positive”.</p></li>
-<li><p><strong>celltype_column</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>table_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>radius</strong> (<em>float</em><em>, </em><em>optional</em>) – Radius for spatial neighbor construction.</p></li>
-<li><p><strong>n_neighs</strong> (<em>int</em><em>, </em><em>optional</em>) – Max number of neighbors per cell (used with <cite>radius</cite>).</p></li>
-<li><p><strong>num_cells</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of cells to sample (speed/precision trade-off).</p></li>
-<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – RNG seed for reproducible sampling.</p></li>
-<li><p><strong>cell_centroid_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – <cite>.obs</cite> key for x-coordinates (used to build <cite>.obsm[“spatial”]</cite> if needed).</p></li>
-<li><p><strong>cell_centroid_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – <cite>.obs</cite> key for y-coordinates (used to build <cite>.obsm[“spatial”]</cite> if needed).</p></li>
-<li><p><strong>weight_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Weight neighbor contributions by graph edge weights if True.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><strong>out</strong> (<em>pandas.DataFrame</em>) – Rows = source types (ct), columns = target types (ct2); entry is the mean fraction of
-ct-specific marker counts found in ct2 neighbors relative to ct neighborhood totals (directional).</p></li>
-<li><p><strong>records_df</strong> (<em>pandas.DataFrame</em>) – Pandas dataframe with per-cell cell_id (ct), cell_type (ct), neighbor_id (ct2), neigbhor_type (ct2) and ratio
-(ct-specific markers counts found in ct2 neighbors relative to ct neighborhood total counts).</p></li>
-</ul>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.spillover_metrics_supervised.calculate_marker_purity">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics_supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_marker_purity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">celltype_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_quantiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics_supervised.calculate_marker_purity" title="Link to this definition">#</a></dt>
-<dd><p>Compute per-cell marker purity: for each cell’s annotated type, evaluate Precision/Recall/F1
-using its positive and negative marker lists, then summarize into an overall <cite>F1_purity</cite>
-that rewards high positive-F1 and low negative-F1.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[table_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
-<li><p><strong>celltype_column</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}; both lists are required.</p></li>
-<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, define predictions by the top-<a href="#id3"><span class="problematic" id="id4">|markers|</span></a> fraction per cell (rank-based);
-if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
-<li><p><strong>table_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Columns: [‘positive_precision’,’positive_recall’,’positive_F1’,</dt><dd><p>’negative_precision’,’negative_recall’,’negative_F1’,
-‘F1_purity’,’cell_type’] indexed by cell.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pandas.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.spillover_metrics_supervised.compute_MECR">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics_supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics_supervised.compute_MECR" title="Link to this definition">#</a></dt>
-<dd><p>Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[table_key]</cite> as AnnData.</p></li>
-<li><p><strong>gene_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Collection of (gene1, gene2) pairs.</p></li>
-<li><p><strong>table_key</strong> (<em>str</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Mapping {(gene1, gene2): MECR}, where MECR = P(both&gt;0) / P(at least one&gt;0).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.spillover_metrics_supervised.get_mut_excl_markers">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics_supervised.</span></span><span class="sig-name descname"><span class="pre">get_mut_excl_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neg_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_codetect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics_supervised.get_mut_excl_markers" title="Link to this definition">#</a></dt>
-<dd><p>Finds mutually exclusive markers (presence-based specificity)</p>
-<p>For each cell type c, scan its positive markers and keep genes that are present
-in &gt; pos_threshold of cells of c and &lt; neg_threshold of cells in all other types.
-From these candidates, retain only genes that satisfy the rule for a single cell type;
-finally, return all cross-type pairs formed by these type-unique genes.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>adata_ref</strong> (<em>AnnData</em>) – Reference single-cell dataset (cells × genes).</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – Marker dictionary as returned by <cite>find_markers</cite>; only the “positive” list is used.</p></li>
-<li><p><strong>cell_type_column</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> containing cell-type labels.</p></li>
-<li><p><strong>pos_threshold</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.20</em><em>)</em>) – Minimum fraction of cells within the target type where a gene must be present (&gt;0).</p></li>
-<li><p><strong>neg_threshold</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.05</em><em>)</em>) – Maximum fraction of cells in the complement (all other types) where the gene may be present.</p></li>
-<li><p><strong>max_codetect</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.01</em><em>)</em>) – Maximum fraction of cells in which mutually exclusive gene pairs may be co-detected.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list of tuple</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.spillover_metrics_supervised.get_ref_markers">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.spillover_metrics_supervised.</span></span><span class="sig-name descname"><span class="pre">get_ref_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_neg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.spillover_metrics_supervised.get_ref_markers" title="Link to this definition">#</a></dt>
-<dd><p>BIDCell/CellSPA-style marker discovery.</p>
-<dl class="simple">
-<dt>For each cell type c:</dt><dd><p>w_g = mean(expression of gene g in cells of c) - mean(expression of g in all other cells)
-- positive markers(c): genes with w_g &gt; quantile(w, q)
-- negative markers(c): genes with w_g &lt; quantile(w, 1 - q)</p>
-</dd>
-</dl>
-<p>After building per-type lists, remove genes that occur in &gt;= t * n_types lists
-(done separately for positives and negatives) to keep type-specific markers.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>adata_ref</strong> (<em>AnnData</em>) – Reference single-cell dataset (cells x genes).</p></li>
-<li><p><strong>cell_type_column</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> containing cell type labels.</p></li>
-<li><p><strong>q_pos</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.95</em><em>)</em>) – Upper quantile for positives.</p></li>
-<li><p><strong>q_neg</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.10</em><em>)</em>) – Lower quantile for negatives.</p></li>
-<li><p><strong>t</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.25</em><em>)</em>) – Overlap filter: drop genes that appear in &gt;= t * n_types marker lists.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>{cell_type: {“positive”: [genes], “negative”: [genes]}}</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict</p>
-</dd>
-</dl>
-</dd></dl>
-
-</section>
-</section>
 
 
                 </article>
@@ -572,11 +409,11 @@ finally, return all cross-type pairs formed by these type-unique genes.</p>
       </div>
     </a>
     <a class="right-next"
-       href="../notebooks/io.html"
+       href="../notebooks/baseline.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Creating spatialdata objects using method-specific readers</p>
+        <p class="prev-next-title">Baseline metrics</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -596,19 +433,8 @@ finally, return all cross-type pairs formed by these type-unique genes.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.spillover_metrics">Spillover metrics (unsupervised)</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.spillover_metrics_supervised">Spillover metrics (supervised)</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.calculate_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_contamination()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.get_mut_excl_markers"><code class="docutils literal notranslate"><span class="pre">get_mut_excl_markers()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics_supervised.get_ref_markers"><code class="docutils literal notranslate"><span class="pre">get_ref_markers()</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.spillover_metrics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
 </ul>
   </nav></div>
 
