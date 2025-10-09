@@ -222,7 +222,7 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
     # -------------------------
     # Labels (cells + nuclei)
     # -------------------------
-    cell_label_files = list(path_to_data.glob("model_outputs/202*/test_output/epoch_4_step_100_connected.tif"))
+    cell_label_files = list(path_to_data.glob("model_outputs/202*/test_output/*_connected.tif"))
     if not cell_label_files:
         raise FileNotFoundError("No cell label TIFF found under model_outputs/202*/test_output/")
     cell_labels_path = cell_label_files[0]
@@ -352,7 +352,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     # -------------------------
     transcripts_df = read_transcripts(path_to_data / "segger_transcripts.parquet")
     # Align transcripts with obs
-    transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])]
+    transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])] #this excludes background transcripts!
 
     # -------------------------
     # Finalize table metadata
