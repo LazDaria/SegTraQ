@@ -3021,9 +3021,11 @@ dependencies = [
 
 [package.optional-dependencies]
 docs = [
+    { name = "ipython" },
     { name = "myst-parser" },
     { name = "nbsphinx" },
     { name = "pandoc" },
+    { name = "pygments" },
     { name = "sphinx" },
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-book-theme" },
@@ -3047,10 +3049,12 @@ requires-dist = [
     { name = "geopandas" },
     { name = "igraph" },
     { name = "ipdb", marker = "extra == 'test'" },
+    { name = "ipython", marker = "extra == 'docs'" },
     { name = "joblib" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
     { name = "pandoc", marker = "extra == 'docs'" },
+    { name = "pygments", marker = "extra == 'docs'" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "rasterio" },
