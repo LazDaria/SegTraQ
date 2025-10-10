@@ -34,3 +34,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+
+# Enable Pygments syntax highlighting
+highlight_language = "python"  # or 'none', 'bash', etc.
+pygments_style = "default"  # or 'default', 'friendly', 'monokai', etc.
