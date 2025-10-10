@@ -352,7 +352,9 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     # -------------------------
     transcripts_df = read_transcripts(path_to_data / "segger_transcripts.parquet")
     # Align transcripts with obs
-    transcripts_df = transcripts_df[transcripts_df["cell_id"].isin(adata.obs["cell_id"])] #this excludes background transcripts!
+    transcripts_df = transcripts_df[
+        transcripts_df["cell_id"].isin(adata.obs["cell_id"])
+    ]  # this excludes background transcripts!
 
     # -------------------------
     # Finalize table metadata
