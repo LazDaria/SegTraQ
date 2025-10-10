@@ -22,6 +22,6 @@ def test_centroid_mean_coord_diff_structure(sdata_new):
 def test_centroid_mean_coord_diff_values(sdata_new):
     df = st.sp.centroid_mean_coord_diff(sdata_new, feature="LUM")
 
-    assert sum(df["distance"] < df["cell_area"]) == df.shape[0], (
-        "The distance metric is not always smaller than the area"
-    )
+    assert (
+        sum(df["distance"] < df["cell_area"]) == df.shape[0]
+    ), "The distance metric is not always smaller than the area"
