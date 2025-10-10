@@ -52,6 +52,7 @@ docs = [
     "sphinx-copybutton",  # for copy buttons in code blocks
     "pandoc",
     "pygments",
+    "ipython",
 ]
 
 [project.urls]

@@ -36,7 +36,16 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 html_title = project
-
+html_favicon = "_static/img/icon.png"
+html_theme_options = {
+    "logo_only": True,
+    "home_page_in_toc": False,
+    "navigation_with_keys": True,
+    "logo": {
+        "image_light": "_static/img/logo_light.png",
+        "image_dark": "_static/img/logo_dark.png",
+    },
+}
 # Enable Pygments syntax highlighting
 highlight_language = "python"  # or 'none', 'bash', etc.
 pygments_style = "default"  # or 'default', 'friendly', 'monokai', etc.
