@@ -31,9 +31,9 @@ def test_morphological_features(sdata_new):
         assert feature in morphological_features.columns, f"Feature '{feature}' should be present in DataFrame columns"
         feature_values = morphological_features[feature]
         assert not feature_values.empty, f"Feature '{feature}' should have values"
-        assert all(isinstance(value, (int | float)) for value in feature_values), (
-            f"Values for '{feature}' should be numeric"
-        )
+        assert all(
+            isinstance(value, (int | float)) for value in feature_values
+        ), f"Values for '{feature}' should be numeric"
         if feature in ["cell_area", "perimeter", "bbox_width", "bbox_height"]:
             assert all(value >= 0 for value in feature_values), f"Values for '{feature}' should be non-negative"
         elif feature in [

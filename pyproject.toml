@@ -51,6 +51,8 @@ docs = [
     "sphinx-autodoc-typehints",  # for better type hint rendering in
     "sphinx-copybutton",  # for copy buttons in code blocks
     "pandoc",
+    "pygments",
+    "ipython",
 ]
 
 [project.urls]
