@@ -3021,6 +3021,7 @@ dependencies = [
 
 [package.optional-dependencies]
 docs = [
+    { name = "ipython" },
     { name = "myst-parser" },
     { name = "nbsphinx" },
     { name = "pandoc" },
@@ -3048,6 +3049,7 @@ requires-dist = [
     { name = "geopandas" },
     { name = "igraph" },
     { name = "ipdb", marker = "extra == 'test'" },
+    { name = "ipython", marker = "extra == 'docs'" },
     { name = "joblib" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
