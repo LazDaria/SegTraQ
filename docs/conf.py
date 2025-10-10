@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.napoleon",  # Optional but useful for Google/Numpy-style docstrings
     "nbsphinx",
     "myst_parser",
+    "IPython.sphinxext.ipython_console_highlighting",
 ]
 
 templates_path = ["_templates"]
@@ -34,6 +35,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+html_title = project
 
 # Enable Pygments syntax highlighting
 highlight_language = "python"  # or 'none', 'bash', etc.
