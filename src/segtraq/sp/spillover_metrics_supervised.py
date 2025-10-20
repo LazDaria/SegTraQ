@@ -125,14 +125,12 @@ def get_mut_excl_markers(
     pos_threshold: float = 0.20,
     neg_threshold: float = 0.05,
     max_codetect: float = 0.01,
+    cell_types: tuple[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     """
-    Finds mutually exclusive markers (presence-based specificity)
+    Finds mutually exclusive markers (presence-based specificity) between cell types.
 
-    For each cell type c, scan its positive markers and keep genes that are present
-    in > pos_threshold of cells of c and < neg_threshold of cells in all other types.
-    From these candidates, retain only genes that satisfy the rule for a single cell type;
-    finally, return all cross-type pairs formed by these type-unique genes.
+    Optionally restricts computation to a specified pair of cell types.
 
     Parameters
     ----------
@@ -142,44 +140,65 @@ def get_mut_excl_markers(
         Marker dictionary as returned by `find_markers`; only the "positive" list is used.
     cell_type_column : str
         Column in `adata_ref.obs` containing cell-type labels.
-    pos_threshold : float, optional (default: 0.20)
+    pos_threshold : float, optional
         Minimum fraction of cells within the target type where a gene must be present (>0).
-    neg_threshold : float, optional (default: 0.05)
+    neg_threshold : float, optional
         Maximum fraction of cells in the complement (all other types) where the gene may be present.
-    max_codetect: float, optional (default: 0.01)
+    max_codetect : float, optional
         Maximum fraction of cells in which mutually exclusive gene pairs may be co-detected.
+    cell_types : tuple[str, str], optional
+        If provided, restrict computation to this pair of cell types.
+
     Returns
     -------
     list of tuple
         Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.
     """
+    # Extract positive marker genes for each cell type
     pos_by_ct = {ct: m.get("positive", []) for ct, m in markers.items()}
+
+    # Flatten all genes across cell types, remove duplicates, and sort alphabetically
     all_genes = sorted({g for gs in pos_by_ct.values() for g in gs})
+
+    # Keep only genes present in the AnnData object
     var_index = pd.Index(adata_ref.var_names)
     genes = [g for g in all_genes if g in var_index]
     if not genes:
         return []
 
+    # Extract expression matrix for selected genes
     X = adata_ref[:, genes].X
     if sparse.issparse(X):
         X = X.tocsr()
+        # Convert to binary presence/absence matrix (0/1)
         B = (X > 0).astype(np.uint8).tocsr()
     else:
         B = sparse.csr_matrix((np.asarray(X) > 0).astype(np.uint8))
 
-    gene2col = {g: i for i, g in enumerate(genes)}
+    gene2col = {g: i for i, g in enumerate(genes)}  # map gene to column index
     labels = np.asarray(adata_ref.obs[cell_type_column])
-    cell_types = list(pos_by_ct.keys())
+    cell_types_all = list(pos_by_ct.keys())  # all available cell types
 
-    exclusive_genes = {ct: [] for ct in cell_types}
+    # === Restrict to user-specified cell types if provided ===
+    if cell_types is not None:
+        ct_subset = [ct for ct in cell_types if ct in cell_types_all]
+        if len(ct_subset) != 2:
+            raise ValueError(f"cell_types must contain exactly two valid types from: {cell_types_all}")
+        cell_types_all = ct_subset
+
+    # Dictionary to hold exclusive genes per cell type
+    exclusive_genes = {ct: [] for ct in cell_types_all}
     all_exclusive = []
 
-    n_cells = B.shape[0]
-    for ct in cell_types:
-        pos_genes = [g for g in pos_by_ct[ct] if g in gene2col]
+    n_cells = B.shape[0]  # total number of cells
+
+    # === Step 1: Identify candidate exclusive genes per cell type ===
+    for ct in cell_types_all:
+        pos_genes = [g for g in pos_by_ct[ct] if g in gene2col]  # only genes in adata
         if not pos_genes:
             continue
 
+        # Boolean masks for cells of this type vs all others
         mask_ct = labels == ct
         n_ct = int(mask_ct.sum())
         if n_ct == 0:
@@ -187,15 +206,19 @@ def get_mut_excl_markers(
         mask_other = ~mask_ct
         n_other = int(mask_other.sum())
 
+        # Subset binary matrix
         B_ct = B[mask_ct]
         B_other = B[mask_other]
 
+        # Count number of cells where each gene is expressed
         ct_counts = np.asarray(B_ct.getnnz(axis=0)).ravel()
         other_counts = np.asarray(B_other.getnnz(axis=0)).ravel()
 
+        # Fraction of cells expressing each gene
         frac_ct = ct_counts / max(n_ct, 1)
         frac_other = other_counts / max(n_other, 1)
 
+        # Keep genes that are frequent in this type but rare in others
         idx = [gene2col[g] for g in pos_genes]
         keep = (frac_ct[idx] > pos_threshold) & (frac_other[idx] < neg_threshold)
         kept_genes = [g for g, k in zip(pos_genes, keep, strict=False) if k]
@@ -203,19 +226,28 @@ def get_mut_excl_markers(
         exclusive_genes[ct] = kept_genes
         all_exclusive.extend(kept_genes)
 
-    # keep genes that are exclusive to exactly one type
+    # === Step 2: Keep only genes that are exclusive to exactly one type ===
     freq = Counter(all_exclusive)
     unique_exclusive = {g for g, c in freq.items() if c == 1}
     filtered = {ct: [g for g in gs if g in unique_exclusive] for ct, gs in exclusive_genes.items()}
 
-    pairs = [(g1, g2) for ct1, ct2 in combinations(filtered.keys(), 2) for g1 in filtered[ct1] for g2 in filtered[ct2]]
+    # === Step 3: Form gene pairs ===
+    if cell_types is not None:
+        # Only generate pairs between the two user-specified types
+        ct1, ct2 = cell_types
+        pairs = [(g1, g2) for g1 in filtered.get(ct1, []) for g2 in filtered.get(ct2, [])]
+    else:
+        # Generate all cross-type pairs
+        pairs = [
+            (g1, g2) for ct1, ct2 in combinations(filtered.keys(), 2) for g1 in filtered[ct1] for g2 in filtered[ct2]
+        ]
 
-    # filter out genes that are co-detected in >=max_codetect
+    # === Step 4: Filter pairs that are co-detected above threshold ===
     col_counts = np.asarray(B.getnnz(axis=0)).ravel()
     frac_overall = col_counts / max(n_cells, 1)
 
-    # pre-filter (if either gene is present in <= max_codetect of cells, pair cannot exceed the threshold)
     def auto_pass(g1, g2):
+        # If either gene is very rare overall, pair automatically passes
         return (frac_overall[gene2col[g1]] <= max_codetect) or (frac_overall[gene2col[g2]] <= max_codetect)
 
     trivial = [p for p in pairs if auto_pass(*p)]
@@ -223,14 +255,15 @@ def get_mut_excl_markers(
     if not to_check:
         return trivial
 
+    # Subset matrix to relevant columns for co-detection check
     B_csc = B.tocsc()
-
     cols_needed = np.array(sorted({gene2col[g] for p in to_check for g in p}), dtype=int)
     B_sub = B_csc[:, cols_needed]
 
+    # Compute co-detection counts
     co_counts = (B_sub.T @ B_sub).tocsr()
-
     idx_map = {c: i for i, c in enumerate(cols_needed)}
+
     passed = []
     for g1, g2 in to_check:
         i = idx_map[gene2col[g1]]
@@ -239,6 +272,7 @@ def get_mut_excl_markers(
         if both <= max_codetect:
             passed.append((g1, g2))
 
+    # Return all passing mutually exclusive gene pairs
     return trivial + passed
 
 
