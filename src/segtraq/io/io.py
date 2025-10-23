@@ -20,11 +20,11 @@ from .utils import (
     decompress_geojson,
     labels_to_shapes,
     make_adata,
+    make_points,
     read_dapi_image,
     read_labels,
     read_shapes,
     read_transcripts,
-    make_points,
 )
 
 
@@ -90,9 +90,7 @@ def read_xenium(path_to_data: Path) -> SpatialData:
     }
 
     transcripts_df = read_transcripts(path_to_data / "transcripts.parquet")
-    transcripts = make_points(
-        transcripts_df, rename_map={"x_location": "x", "y_location": "y", "z_location": "z"}
-    )
+    transcripts = make_points(transcripts_df, rename_map={"x_location": "x", "y_location": "y", "z_location": "z"})
 
     sdata = create_spatialdata(
         points=transcripts,
@@ -258,7 +256,7 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
         raise FileNotFoundError("Missing transcripts file: transcripts_processed.csv")
 
     transcripts_df = read_transcripts(transcripts_path)
-    
+
     # Map transcripts to cell labels
     x = np.rint(transcripts_df["x_location"]).astype(int)
     y = np.rint(transcripts_df["y_location"]).astype(int)
@@ -354,27 +352,20 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     # -------------------------
     transcripts = read_transcripts(path_to_data / "segger_transcripts.parquet")
     transcripts.drop(columns=["score", "bound", "cell_id"], inplace=True)
-    transcripts = transcripts.rename(
-        columns={
-            "segger_cell_id": "cell_id"
-        }
-    )
+    transcripts = transcripts.rename(columns={"segger_cell_id": "cell_id"})
     transcripts["transcript_id"] = transcripts["transcript_id"].astype(np.uint64)
     # there are cells in the transcripts that are not present in the boundaries - check why - invalid shapes?
     transcripts = transcripts.loc[
-        transcripts["cell_id"].isin(adata.obs["cell_id"]) |
-        (transcripts["cell_id"] == "UNASSIGNED")
+        transcripts["cell_id"].isin(adata.obs["cell_id"]) | (transcripts["cell_id"] == "UNASSIGNED")
     ].copy()
-    
+
     # add background transcripts to segger_transcripts
     transcripts_10x = pd.read_parquet(path_to_10xdata / "transcripts.parquet")
     new_rows = transcripts_10x[~transcripts_10x["transcript_id"].isin(transcripts["transcript_id"])]
     new_rows["cell_id"] = "UNASSIGNED"
     transcripts = pd.concat([transcripts, new_rows], ignore_index=True)
 
-    transcripts_df = make_points(
-        transcripts
-    )
+    transcripts_df = make_points(transcripts)
 
     # -------------------------
     # Finalize table metadata

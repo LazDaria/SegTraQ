@@ -296,10 +296,7 @@ def read_shapes(path: Path, build_from_vertices: bool = True, backend: str = "pd
         return gpd.read_file(path)
 
 
-def read_transcripts(
-    path: Path
-) -> pd.DataFrame:
-    
+def read_transcripts(path: Path) -> pd.DataFrame:
     """
     Read transcript coordinates and attributes from Parquet or CSV.
 
@@ -320,6 +317,7 @@ def read_transcripts(
         df = pd.read_csv(path, compression="gzip" if path.suffix.endswith(".gz") else None)
 
     return df
+
 
 def make_points(
     df: pd.DataFrame, rename_map: dict[str, str] | None = None, uint32_max_placeholder: int | None = None
@@ -355,7 +353,7 @@ def make_points(
         df["feature_name"] = df["feature_name"].astype("category")
 
     if "is_gene" in df.columns:
-        df['is_gene'] = df['is_gene'].astype('str')
+        df["is_gene"] = df["is_gene"].astype("str")
 
     if uint32_max_placeholder is not None:
         # uint32_max placeholder meaning “no assignment / background”
@@ -475,9 +473,7 @@ def build_spatialdata_from_proseg(
     shapes_dict["nucleus_boundaries"] = nucleus_shapes
 
     # Transcripts
-    transcripts_df = read_transcripts(
-        path_to_proseg_data / "transcript-metadata.csv.gz"
-    )
+    transcripts_df = read_transcripts(path_to_proseg_data / "transcript-metadata.csv.gz")
     transcripts_df = transcripts_df.rename(columns={"assignment": "cell_id", "gene": "feature_name"})
     transcripts_df["cell_id"] = transcripts_df["cell_id"].fillna(0)
     transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
