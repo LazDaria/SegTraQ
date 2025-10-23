@@ -617,9 +617,9 @@ def create_spatialdata(
     shapes_sd = None
     shapes_sd_dict = dict()
 
-    assert shapes is None or isinstance(shapes, pd.DataFrame) or isinstance(shapes, dict), (
-        "Shapes must be a pandas DataFrame or dictionary or None"
-    )
+    assert (
+        shapes is None or isinstance(shapes, pd.DataFrame) or isinstance(shapes, dict)
+    ), "Shapes must be a pandas DataFrame or dictionary or None"
 
     # if shapes is a dictionary, we assess if it contains valid keys
     if isinstance(shapes, dict):
@@ -700,9 +700,9 @@ def create_spatialdata(
     labels_sd = None
     labels_sd_dict = dict()
 
-    assert labels is None or isinstance(labels, np.ndarray) or isinstance(labels, dict), (
-        "Labels must be a numpy array or dictionary or None"
-    )
+    assert (
+        labels is None or isinstance(labels, np.ndarray) or isinstance(labels, dict)
+    ), "Labels must be a numpy array or dictionary or None"
 
     # if labels is a dictionary, we assess if it contains valid keys
     if isinstance(labels, dict):
@@ -977,9 +977,9 @@ def validate_spatialdata(
                 f"It looks like your labels are stored as a DataTree. "
                 f"Please provide a data_key to access the labels data. Available keys are: {list(labels.keys())}."
             )
-            assert data_key.split("/")[0] in labels.keys(), (
-                f"Data key {data_key} not found in the labels data. Available keys: {list(labels.keys())}"
-            )
+            assert (
+                data_key.split("/")[0] in labels.keys()
+            ), f"Data key {data_key} not found in the labels data. Available keys: {list(labels.keys())}"
 
             labels = labels[data_key]  # Get the dataset node
 
