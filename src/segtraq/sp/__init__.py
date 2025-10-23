@@ -4,6 +4,7 @@ from .spillover_metrics import (
 )
 from .spillover_metrics_supervised import (
     calculate_contamination,
+    calculate_diff_abundance,
     calculate_marker_purity,
     compute_MECR,
     get_mut_excl_markers,
@@ -18,4 +19,5 @@ __all__ = [
     "compute_MECR",
     "calculate_contamination",
     "calculate_marker_purity",
+    "calculate_diff_abundance",
 ]
