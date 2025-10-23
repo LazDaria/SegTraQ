@@ -297,8 +297,9 @@ def read_shapes(path: Path, build_from_vertices: bool = True, backend: str = "pd
 
 
 def read_transcripts(
-    path: Path, rename_map: dict[str, str] | None = None, uint32_max_placeholder: int | None = None
+    path: Path
 ) -> pd.DataFrame:
+    
     """
     Read transcript coordinates and attributes from Parquet or CSV.
 
@@ -306,6 +307,30 @@ def read_transcripts(
     ----------
     path : Path
         Path to transcripts file (.parquet, .csv, or .csv.gz).
+
+    Returns
+    ----------
+    pd.DataFrame
+        DataFrame containing transcript data.
+    """
+
+    if path.suffix == ".parquet":
+        df = pd.read_parquet(path)
+    else:
+        df = pd.read_csv(path, compression="gzip" if path.suffix.endswith(".gz") else None)
+
+    return df
+
+def make_points(
+    df: pd.DataFrame, rename_map: dict[str, str] | None = None, uint32_max_placeholder: int | None = None
+) -> pd.DataFrame:
+    """
+    Create a standardized transcript dataframe from a file.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        DataFrame containing transcript data.
     rename_map : dict, optional
         Optional column renaming dictionary.
     uint32_max_placeholder : int, optional
@@ -317,10 +342,6 @@ def read_transcripts(
         Transcript dataframe with standardized columns:
         ['x', 'y', 'z', 'feature_name', 'cell_id', ...]
     """
-    if path.suffix == ".parquet":
-        df = pd.read_parquet(path)
-    else:
-        df = pd.read_csv(path, compression="gzip" if path.suffix.endswith(".gz") else None)
 
     if rename_map is not None:
         df = df.rename(columns=rename_map)
@@ -332,6 +353,9 @@ def read_transcripts(
 
     if "feature_name" in df.columns:
         df["feature_name"] = df["feature_name"].astype("category")
+
+    if "is_gene" in df.columns:
+        df['is_gene'] = df['is_gene'].astype('str')
 
     if uint32_max_placeholder is not None:
         # uint32_max placeholder meaning “no assignment / background”
@@ -451,9 +475,14 @@ def build_spatialdata_from_proseg(
     shapes_dict["nucleus_boundaries"] = nucleus_shapes
 
     # Transcripts
-    transcripts = read_transcripts(
-        path_to_proseg_data / "transcript-metadata.csv.gz",
-        rename_map={"gene": "feature_name", "assignment": "cell_id"},
+    transcripts_df = read_transcripts(
+        path_to_proseg_data / "transcript-metadata.csv.gz"
+    )
+    transcripts_df = transcripts_df.rename(columns={"assignment": "cell_id", "gene": "feature_name"})
+    transcripts_df["cell_id"] = transcripts_df["cell_id"].fillna(0)
+    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
+    transcripts = make_points(
+        transcripts_df,
         uint32_max_placeholder=2**32,
     )
 
