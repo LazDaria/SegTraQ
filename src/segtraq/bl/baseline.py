@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon, Polygon
 
 
 def num_cells(sdata: sd.SpatialData, table_key: str = "table") -> int:
@@ -337,16 +337,33 @@ def morphological_features(
 
     # Parallelized elongation and eccentricity calculation
     def compute_elong_ecc(poly):
-        if not isinstance(poly, Polygon) or poly.is_empty:
+        if poly.is_empty:
             return np.nan, np.nan
 
+        # Handle MultiPolygon by selecting the largest polygon by area
+        if isinstance(poly, MultiPolygon):
+            if len(poly.geoms) == 0:
+                return np.nan, np.nan
+            poly = max(poly.geoms, key=lambda p: p.area)
+
+        # Skip invalid or degenerate geometries
+        if not isinstance(poly, Polygon) or poly.area == 0:
+            return np.nan, np.nan
+
+        # Compute minimum rotated rectangle
         min_rect = poly.minimum_rotated_rectangle
         coords = list(min_rect.exterior.coords)
-        edges = [np.linalg.norm(np.array(coords[i]) - np.array(coords[i + 1])) for i in range(4)]
-        edges = sorted(edges)
-        if len(edges) < 2 or edges[1] == 0:
+
+        if len(coords) < 4:
             return np.nan, np.nan
 
+        # Compute edge lengths
+        edges = [np.linalg.norm(np.array(coords[i]) - np.array(coords[i + 1])) for i in range(4)]
+        edges = sorted(edges)
+        if edges[1] == 0:
+            return np.nan, np.nan
+
+        # Elongation and eccentricity
         elongation = edges[2] / edges[1]
         a = edges[2] / 2
         b = edges[1] / 2
