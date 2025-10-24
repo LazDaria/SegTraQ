@@ -12,9 +12,10 @@ import pandas as pd
 import spatialdata as sd
 import tifffile as tiff
 import xarray as xr
-from rasterio.features import rasterize
+from rasterio.features import rasterize, shapes
 from scipy.sparse import csr_matrix
-from shapely.geometry import MultiPolygon, Polygon, mapping
+from shapely.affinity import translate
+from shapely.geometry import MultiPolygon, Polygon, mapping, shape
 from shapely.validation import make_valid
 from skimage.measure import find_contours
 
@@ -133,6 +134,8 @@ def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
     return winner.reshape(H, W)
 
 
+# this is the old method which we should delete soon
+# (once the bug in spatialdata-plot that prevents MultiPolygons with holes from being displayed is fixed)
 def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
     """
     Convert a 2D label image into polygon boundaries.
@@ -179,10 +182,71 @@ def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0
             continue
 
         geom = polys[0] if len(polys) == 1 else MultiPolygon(polys)
+
         geometries.append(geom)
         label_ids.append(int(lid))
 
     gdf = gpd.GeoDataFrame({"cell_id": label_ids, "label_id": label_ids, "geometry": geometries}).set_index("label_id")
+
+    return gdf
+
+
+# this method should ultimately replace the old one,
+# but we will not use it for now since it can introduce shapes with two holes,
+# which spatialdata-plot cannot handle at the moment
+def labels_to_shapes_new(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
+    """
+    Convert a 2D label image into polygon boundaries.
+
+    Each connected label is represented by one Polygon or MultiPolygon.
+
+    Parameters
+    ----------
+    label_img : np.ndarray
+        2D array of integer labels. Background should be 0.
+    simplify_tolerance : float or None, default=0.5
+        Simplification tolerance for polygon boundaries. Set to None or 0
+        to disable simplification.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame with columns ["cell_id", "label_id", "geometry"],
+        indexed by "label_id". Each row corresponds to one labeled region.
+    """
+    if label_img.ndim != 2:
+        raise ValueError("Input label_img must be 2D.")
+
+    mask = (label_img != 0).astype(np.uint8)
+    geometries = []
+    label_ids = []
+
+    # shapes() only accepts either of these dtypes: int16, int32, uint8, uint16, float32, float64, int8
+    # if our labels are in uint32, and we have label_img.max() < 2_147_483_647, we need to convert to int32
+    if label_img.dtype == np.uint32 and label_img.max() < np.iinfo(np.int32).max:
+        label_img = label_img.astype(np.int32)
+
+    for geom, value in shapes(label_img, mask=mask, connectivity=8):
+        if value == 0:
+            continue
+        poly = shape(geom)
+        # this turns disconnected polygons into MultiPolygons (which are valid)
+        if not poly.is_valid:
+            poly = poly.buffer(0)
+        if not poly.is_valid or poly.area == 0:
+            continue
+        if simplify_tolerance and simplify_tolerance > 0:
+            poly = poly.simplify(simplify_tolerance, preserve_topology=True)
+        geometries.append(poly)
+        label_ids.append(int(value))
+
+    gdf = gpd.GeoDataFrame({"cell_id": label_ids, "label_id": label_ids, "geometry": geometries})
+    # Merge multiple geometries per label into a single MultiPolygon
+    gdf = gdf.dissolve(by="label_id", as_index=True)
+    # rasterio operates on the pixel centroids instead of the corners
+    # to get sub-pixel accurate geometries, we need to shift the geometries by -0.5 in x and y
+    gdf["geometry"] = gdf["geometry"].apply(lambda p: translate(p, xoff=-0.5, yoff=-0.5))
+    gdf["cell_id"] = gdf.index  # restore cell_id column
 
     return gdf
 
