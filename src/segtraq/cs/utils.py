@@ -91,6 +91,7 @@ def run_leiden_clustering_on_adata(
     adata_input,
     resolution: float = 1.0,
     key_added: str = "leiden",
+    recompute_neighbors: bool = True,
 ):
     """
     Run Leiden clustering on a provided AnnData object. Leiden clustering is performed on the PCA-reduced data.
@@ -103,6 +104,8 @@ def run_leiden_clustering_on_adata(
         Resolution parameter for Leiden.
     key_added : str
         Key under which to store clustering result in `.obs`.
+    recompute_neighbors : bool
+        Whether to recompute neighbors before clustering.
 
     Returns
     -------
@@ -110,8 +113,9 @@ def run_leiden_clustering_on_adata(
         The Leiden cluster labels.
     """
     adata = adata_input.copy()
-    sc.pp.pca(adata)
-    sc.pp.neighbors(adata)
+    if recompute_neighbors or "X_pca" not in adata.obsm or "neighbors" not in adata.uns:
+        sc.pp.pca(adata)
+        sc.pp.neighbors(adata)
 
     sc.tl.leiden(
         adata,
@@ -130,6 +134,7 @@ def run_leiden_clustering_on_random_gene_subset(
     n_genes_subset: int | None = 100,
     key_prefix: str = "leiden",
     random_state: int = 42,
+    recompute_neighbors: bool = True,
 ):
     """
     Run Leiden clustering on either a random subset of genes or all genes.
@@ -146,6 +151,8 @@ def run_leiden_clustering_on_random_gene_subset(
         Prefix for result key in .obs.
     random_state : int
         Seed for reproducibility (when subsetting genes).
+    recompute_neighbors : bool
+        Whether to recompute neighbors before clustering.
 
     Returns
     -------
@@ -172,7 +179,9 @@ def run_leiden_clustering_on_random_gene_subset(
         key_added = f"{key_prefix}_{n_genes_subset}_res{resolution}_seed{random_state}"
 
     # Run Leiden and store in original object
-    labels, pca = run_leiden_clustering_on_adata(adata_subset, resolution=resolution, key_added=key_added)
+    labels, pca = run_leiden_clustering_on_adata(
+        adata_subset, resolution=resolution, key_added=key_added, recompute_neighbors=recompute_neighbors
+    )
     adata.obs[key_added] = labels.values
 
     return key_added, pca
