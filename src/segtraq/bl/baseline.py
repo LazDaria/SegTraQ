@@ -5,6 +5,8 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from shapely.geometry import MultiPolygon, Polygon
 
+from .utils import count_polygons
+
 
 def num_cells(sdata: sd.SpatialData, table_key: str = "table") -> int:
     """
@@ -221,7 +223,7 @@ def morphological_features(
     features_to_compute : list of str, optional
         List of morphological features to compute. If None, all available features are computed.
         Available features: "cell_area", "perimeter", "circularity", "bbox_width", "bbox_height",
-        "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "sphericity".
+        "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "num_polygons".
     n_jobs : int, optional
         Number of parallel jobs to use for computation. -1 uses all available CPUs (default is -1).
 
@@ -254,6 +256,7 @@ def morphological_features(
         "elongation",
         "eccentricity",
         "compactness",
+        "num_polygons",
     ]
 
     # If no features specified, compute all
@@ -385,5 +388,8 @@ def morphological_features(
         if areas is None:
             areas = geom.area
         features["compactness"] = (perimeters**2) / (areas + 1e-6)
+
+    if "num_polygons" in features_to_compute:
+        features["num_polygons"] = geom.apply(count_polygons)
 
     return features
