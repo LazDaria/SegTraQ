@@ -25,6 +25,7 @@ def test_morphological_features(sdata_new):
         "elongation",
         "eccentricity",
         "compactness",
+        "num_polygons",
     ]
     # asserts for the different features (that they are present and of correct type, also in the right range)
     for feature in all_features:
@@ -34,7 +35,7 @@ def test_morphological_features(sdata_new):
         assert all(
             isinstance(value, (int | float)) for value in feature_values
         ), f"Values for '{feature}' should be numeric"
-        if feature in ["cell_area", "perimeter", "bbox_width", "bbox_height"]:
+        if feature in ["cell_area", "perimeter", "bbox_width", "bbox_height", "num_polygons"]:
             assert all(value >= 0 for value in feature_values), f"Values for '{feature}' should be non-negative"
         elif feature in [
             "circularity",
