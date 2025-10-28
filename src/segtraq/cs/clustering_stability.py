@@ -64,6 +64,11 @@ def compute_rmsd(
         else:
             raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
 
+    if "neighbors" not in adata.uns:
+        raise ValueError(
+            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+        )
+
     best_rmsd = np.inf
     for res in resolution:
         key_added, pca = run_leiden_clustering_on_random_gene_subset(
@@ -72,6 +77,7 @@ def compute_rmsd(
             n_genes_subset=None,  # Use all genes
             key_prefix=key_prefix,
             random_state=random_state,
+            recompute_neighbors=False,
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
@@ -133,6 +139,11 @@ def compute_mean_cosine_distance(
         else:
             raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
 
+    if "neighbors" not in adata.uns:
+        raise ValueError(
+            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+        )
+
     for res in resolution:
         key_added, pca = run_leiden_clustering_on_random_gene_subset(
             sdata,
@@ -140,6 +151,7 @@ def compute_mean_cosine_distance(
             n_genes_subset=None,  # Use all genes
             key_prefix=key_prefix,
             random_state=random_state,
+            recompute_neighbors=False,
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
@@ -205,6 +217,13 @@ def compute_silhouette_score(
         else:
             raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
 
+    # ensure that we already have neighbors computed
+    # this way we avoid recomputing neighbors multiple times (for the different resolutions)
+    if "neighbors" not in adata.uns:
+        raise ValueError(
+            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+        )
+
     for res in resolution:
         # Run clustering for each resolution
         key_added, pca = run_leiden_clustering_on_random_gene_subset(
@@ -213,6 +232,7 @@ def compute_silhouette_score(
             n_genes_subset=None,  # Use all genes
             key_prefix=key_prefix,
             random_state=random_state,
+            recompute_neighbors=False,
         )
 
         # Compute silhouette score
