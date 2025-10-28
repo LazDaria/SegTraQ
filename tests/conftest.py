@@ -4,6 +4,7 @@ import anndata as ad
 import geopandas as gpd
 import pandas as pd
 import pytest
+import scanpy as sc
 import tifffile
 from spatialdata import SpatialData
 
@@ -14,6 +15,17 @@ def test_sdata_new():
 
     test_data_path = Path(__file__).parent / "data" / "xenium_sdata.zarr"
     sdata_new = SpatialData.read(test_data_path)
+
+    # adding raw counts etc.
+    adata = sdata_new.tables["table"]
+    adata.layers["counts"] = adata.X.copy()
+    # normalizing and log-transforming the counts
+    sc.pp.normalize_total(adata, inplace=True)
+    sc.pp.log1p(adata)
+    # computing a PCA and neighbors
+    sc.pp.pca(adata)
+    sc.pp.neighbors(adata)
+
     return sdata_new
 
 
