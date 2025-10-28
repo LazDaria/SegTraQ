@@ -113,7 +113,7 @@ def run_leiden_clustering_on_adata(
         The Leiden cluster labels.
     """
     adata = adata_input.copy()
-    if recompute_neighbors or "X_pca" not in adata.obsm or "neighbors" not in adata.uns:
+    if recompute_neighbors:
         sc.pp.pca(adata)
         sc.pp.neighbors(adata)
 
