@@ -4,6 +4,7 @@ import spatialdata as sd
 from scipy.stats import pearsonr
 from sklearn.metrics import silhouette_score
 
+from ..utils import merge_into_obs
 from .utils import (
     compute_mean_ari,
     compute_mean_cosine_distance_for_clustering,
@@ -21,6 +22,7 @@ def compute_rmsd(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     label_key: str | None = None,
+    inplace: bool = True,
 ) -> float:
     """
     Compute RMSD for different Leiden clustering resolutions and report the best (lowest) RMSD.
@@ -38,6 +40,8 @@ def compute_rmsd(
         Seed for reproducibility, by default 42.
     label_key : str, optional
         If provided, compute the RMSD for this clustering only.
+    inplace : bool, optional
+        Whether to store the computed RMSD in sdata.uns, by default True.
 
     Returns
     -------
@@ -85,7 +89,12 @@ def compute_rmsd(
             if rmsd_val < best_rmsd:
                 best_rmsd = float(rmsd_val)
 
-    return best_rmsd if best_rmsd != np.inf else np.nan
+    best_rmsd = best_rmsd if best_rmsd != np.inf else np.nan
+
+    if inplace:
+        sdata.tables["table"].uns["rmsd"] = best_rmsd
+
+    return best_rmsd
 
 
 def compute_mean_cosine_distance(
@@ -94,6 +103,7 @@ def compute_mean_cosine_distance(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     label_key: str | None = None,
+    inplace: bool = True,
 ) -> float:
     """
     Compute mean cosine distance for different Leiden clustering resolutions
@@ -112,6 +122,8 @@ def compute_mean_cosine_distance(
         Seed for reproducibility, by default 42.
     label_key : str, optional
         If provided, compute the mean cosine distance for this clustering only.
+    inplace : bool, optional
+        Whether to store the computed mean cosine distance in sdata.uns, by default True.
 
     Returns
     -------
@@ -159,7 +171,12 @@ def compute_mean_cosine_distance(
             if distance_val < best_distance:
                 best_distance = float(distance_val)
 
-    return best_distance if best_distance != np.inf else np.nan
+    best_distance = best_distance if best_distance != np.inf else np.nan
+
+    if inplace:
+        sdata.tables["table"].uns["mean_cosine_distance"] = best_distance
+
+    return best_distance
 
 
 def compute_silhouette_score(
@@ -169,6 +186,7 @@ def compute_silhouette_score(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     label_key: str | None = None,
+    inplace: bool = True,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
@@ -188,6 +206,8 @@ def compute_silhouette_score(
         Seed for reproducibility, by default 42.
     label_key : str, optional
         If provided, compute the silhouette score for this clustering only.
+    inplace : bool, optional
+        Whether to store the computed silhouette score in sdata.uns, by default True.
 
     Returns
     -------
@@ -242,6 +262,9 @@ def compute_silhouette_score(
             if silhouette_avg > best_silhouette_score:
                 best_silhouette_score = silhouette_avg
 
+    if inplace:
+        sdata.tables["table"].uns["silhouette_score"] = best_silhouette_score
+
     return best_silhouette_score
 
 
@@ -250,6 +273,7 @@ def compute_purity(
     resolution: float = 1.0,
     n_genes_subset: int = 100,
     key_prefix: str = "leiden_subset",
+    inplace: bool = True,
 ) -> float:
     """
     Compute the clustering consistency using pairwise purity scores across
@@ -265,6 +289,8 @@ def compute_purity(
         Number of genes to use per clustering run.
     key_prefix : str
         Prefix for storing cluster labels in .obs.
+    inplace : bool, optional
+        Whether to store the computed purity score in sdata.uns, by default True.
 
     Returns
     -------
@@ -285,7 +311,12 @@ def compute_purity(
         cluster_keys.append(key_added)
 
     purity_matrix = compute_pairwise_purity(adata, cluster_keys)
-    return float(compute_mean_purity(purity_matrix))
+    mean_purity = float(compute_mean_purity(purity_matrix))
+
+    if inplace:
+        sdata.tables["table"].uns["mean_purity"] = mean_purity
+
+    return mean_purity
 
 
 def compute_ari(
@@ -293,6 +324,7 @@ def compute_ari(
     resolution: float = 1.0,
     n_genes_subset: int = 100,
     key_prefix: str = "leiden_subset",
+    inplace: bool = True,
 ) -> float:
     """
     Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subsets of genes.
@@ -307,6 +339,8 @@ def compute_ari(
         The number of genes to subset for clustering, by default 100.
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
+    inplace : bool, optional
+        Whether to store the computed ARI in sdata.uns, by default True.
 
     Returns
     -------
@@ -326,8 +360,12 @@ def compute_ari(
         )
         cluster_keys.append(key_added)
     pairwise_aris = compute_pairwise_ari(adata, cluster_keys)
-    mean_ari = compute_mean_ari(pairwise_aris)
-    return float(mean_ari)
+    mean_ari = float(compute_mean_ari(pairwise_aris))
+
+    if inplace:
+        sdata.tables["table"].uns["mean_ari"] = mean_ari
+
+    return mean_ari
 
 
 # this should probably go into a different module, but for now I will put it here until we have a better structure
@@ -337,6 +375,7 @@ def compute_z_plane_correlation(
     transcript_key: str = "transcripts",
     cell_key: str = "cell_id",
     gene_key: str = "feature_name",
+    inplace: bool = True,
 ) -> pd.DataFrame:
     """
     Compute the Pearson correlation between the top and bottom quantiles of transcripts in the z-plane.
@@ -357,6 +396,8 @@ def compute_z_plane_correlation(
         The key for cell IDs in sdata.points, by default "cell_id".
     gene_key : str, optional
         The key for gene names in sdata.points, by default "feature_name".
+    inplace : bool, optional
+        Whether to store the computed correlations in sdata.uns, by default True.
 
     Returns
     -------
@@ -415,5 +456,8 @@ def compute_z_plane_correlation(
 
     # Create the result dataframe
     correlation_df = pd.DataFrame({"cell_id": common_cells, "correlation": correlations}).set_index("cell_id")
+
+    if inplace:
+        merge_into_obs(sdata, "table", correlation_df, cell_key, fillna_cols=["correlation"])
 
     return correlation_df

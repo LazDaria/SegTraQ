@@ -5,7 +5,8 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from shapely.geometry import MultiPolygon, Polygon
 
-from .utils import count_polygons, merge_into_obs
+from ..utils import merge_into_obs
+from .utils import count_polygons
 
 
 def num_cells(sdata: sd.SpatialData, table_key: str = "table", inplace: bool = True) -> int:
