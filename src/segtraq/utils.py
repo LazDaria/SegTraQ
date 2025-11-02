@@ -142,15 +142,8 @@ def run_label_transfer(
     need_gn = "gene_count" not in tbl.obs.columns
 
     if need_tx or need_gn:
-        tpc = bl.transcripts_per_cell(sdata).set_index("cell_id")
-        gpc = bl.genes_per_cell(sdata).set_index("cell_id").rename(columns={"n_unique_genes": "gene_count"})
-        to_join = gpc.join(tpc, how="outer")
-        tbl.obs = tbl.obs.merge(
-            to_join,
-            how="left",
-            left_on="cell_id",
-            right_on="cell_id",
-        ).reset_index(drop=True)
+        bl.transcripts_per_cell(sdata)
+        bl.genes_per_cell(sdata)
 
     # QC filter
     qc_range = {"transcript_count": (tx_min, tx_max), "gene_count": (gn_min, gn_max)}
@@ -189,3 +182,23 @@ def run_label_transfer(
         return None
     else:
         return ct_corr
+
+
+def merge_into_obs(sdata, table_key, df_to_merge, on_key, fillna_cols=None):
+    obs = sdata.tables[table_key].obs
+
+    # Drop overlapping columns, but keep the merge key
+    overlapping = [c for c in df_to_merge.columns if c in obs.columns and c != on_key]
+    if overlapping:
+        obs = obs.drop(columns=overlapping)
+
+    # Merge
+    df = obs.merge(df_to_merge, on=on_key, how="left")
+
+    # Optionally fill numeric columns with zeros
+    if fillna_cols:
+        for c in fillna_cols:
+            if c in df:
+                df[c] = df[c].fillna(0)
+
+    sdata.tables[table_key].obs = df
