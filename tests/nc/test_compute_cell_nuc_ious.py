@@ -9,3 +9,4 @@ def test_compute_cell_nuc_ious_structure(sdata_new):
     assert isinstance(df, pd.DataFrame), f"compute_cell_nuc_ious should return a DataFrame, got {type(df)}"
     expected_cols = {"cell_id", "best_nuc_id", "IoU"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {set(df.columns)}"
+    assert "IoU" in sdata_new.tables["table"].obs.columns, "IoU column not found in sdata_new.tables['table'].obs"
