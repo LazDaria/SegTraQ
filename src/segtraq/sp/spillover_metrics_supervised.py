@@ -10,17 +10,8 @@ import squidpy as sq
 from scipy import sparse
 from tqdm.auto import tqdm
 
-from ..utils import _looks_like_counts
-
-
-def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[str, list[str]]:
-    all_genes = [g for gl in marker_dict.values() for g in gl]
-    if not all_genes:
-        return {k: [] for k in marker_dict}
-    counts = pd.Series(all_genes).value_counts()
-    # drop genes appearing in >= t * n_types lists
-    drop_genes = set(counts[counts >= (t * n_ct)].index)
-    return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
+from ..utils import _looks_like_counts, merge_into_obs
+from .utils import _apply_overlap_filter, _score_one_list
 
 
 def get_ref_markers(
@@ -34,9 +25,9 @@ def get_ref_markers(
     BIDCell/CellSPA-style marker discovery.
 
     For each cell type c:
-      w_g = mean(expression of gene g in cells of c) - mean(expression of g in all other cells)
-      - positive markers(c): genes with w_g > quantile(w, q)
-      - negative markers(c): genes with w_g < quantile(w, 1 - q)
+        w_g = mean(expression of gene g in cells of c) - mean(expression of g in all other cells)
+        - positive markers(c): genes with w_g > quantile(w, q)
+        - negative markers(c): genes with w_g < quantile(w, 1 - q)
 
     After building per-type lists, remove genes that occur in >= t * n_types lists
     (done separately for positives and negatives) to keep type-specific markers.
@@ -116,6 +107,7 @@ def get_ref_markers(
     neg_lists = _apply_overlap_filter(neg_lists, t=1, n_ct=n_types)
 
     markers = {ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in types}
+
     return markers
 
 
@@ -274,10 +266,14 @@ def get_mut_excl_markers(
             passed.append((g1, g2))
 
     # Return all passing mutually exclusive gene pairs
-    return trivial + passed
+    result = trivial + passed
+
+    return result
 
 
-def compute_MECR(sdata, gene_pairs: list[tuple[str, str]], table_key: str = "table") -> dict[tuple[str, str], float]:
+def compute_MECR(
+    sdata, gene_pairs: list[tuple[str, str]], table_key: str = "table", inplace: bool = True
+) -> dict[tuple[str, str], float]:
     """
     Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.
 
@@ -289,6 +285,8 @@ def compute_MECR(sdata, gene_pairs: list[tuple[str, str]], table_key: str = "tab
         Collection of (gene1, gene2) pairs.
     table_key : str
         Key of the AnnData table in `sdata.tables`.
+    inplace : bool, optional
+        If True, store MECR results in `sdata.tables['table'].uns['MECR']`.
 
     Returns
     -------
@@ -305,6 +303,11 @@ def compute_MECR(sdata, gene_pairs: list[tuple[str, str]], table_key: str = "tab
         p_any = (e1 | e2).mean()
         mecr[(g1, g2)] = (p_both / p_any) if p_any > 0 else 0.0
 
+    if inplace:
+        if "MECR" not in sdata.tables[table_key].uns:
+            sdata.tables[table_key].uns["MECR"] = {}
+        sdata.tables[table_key].uns["MECR"].update(mecr)
+
     return mecr
 
 
@@ -320,6 +323,7 @@ def calculate_contamination(
     cell_centroid_x_key: str = "cell_centroid_x",
     cell_centroid_y_key: str = "cell_centroid_y",
     weight_edges: bool = False,
+    inplace: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Compute directional contamination (“leakage”) between cell types from spatial neighbors using
@@ -350,6 +354,8 @@ def calculate_contamination(
         `.obs` key for y-coordinates (used to build `.obsm["spatial"]` if needed).
     weight_edges : bool, optional
         Weight neighbor contributions by graph edge weights if True.
+    inplace : bool, optional
+        If True, store contamination matrix in `sdata.tables['table'].uns['contamination']`.
 
     Returns
     -------
@@ -466,32 +472,14 @@ def calculate_contamination(
 
     out.index.name = "Source Cell Type"
     out.columns.name = "Target Cell Type"
+
+    if inplace:
+        if "contamination" not in adata.uns:
+            adata.uns["contamination"] = out
+        else:
+            adata.uns["contamination"].update(out)
+
     return C_cnt, out, records_df  # delete C_cnt later!!!
-
-
-def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_quantiles: bool) -> tuple:
-    """Precision, recall, F1 for one list using upper-quantile rule (CellSPA)."""
-    if marker_idx.size == 0:
-        return 0.0, 0.0, 0.0
-
-    actual = np.zeros(n_genes, dtype=bool)
-    actual[marker_idx] = True
-    frac = actual.mean()
-
-    if use_quantiles:
-        thr = np.quantile(expr, 1.0 - frac)
-        predicted = expr > thr
-    else:
-        predicted = expr > 0
-
-    tp = int((predicted & actual).sum())
-    fp = int((predicted & ~actual).sum())
-    fn = int((~predicted & actual).sum())
-
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    F1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
-    return precision, recall, F1
 
 
 def calculate_marker_purity(
@@ -500,6 +488,7 @@ def calculate_marker_purity(
     markers: dict[str, dict[str, list[str]]],
     use_quantiles: bool = True,
     table_key: str = "table",
+    inplace: bool = True,
 ) -> pd.DataFrame:
     """
     Compute per-cell marker purity: for each cell's annotated type, evaluate Precision/Recall/F1
@@ -519,15 +508,16 @@ def calculate_marker_purity(
         if False, use direct expression-based criteria (e.g., >0).
     table_key : str, optional
         Key of the AnnData table in `sdata.tables`.
+    inplace : bool, optional
+        If True, store marker purity results in `sdata.tables[table_key].obs`.
 
     Returns
     -------
     pandas.DataFrame
         Columns: ['positive_precision','positive_recall','positive_F1',
-                  'negative_precision','negative_recall','negative_F1',
-                  'F1_purity','cell_type'] indexed by cell.
+                'negative_precision','negative_recall','negative_F1',
+                'F1_purity','cell_type'] indexed by cell.
     """
-
     adata = sdata.tables[table_key]
 
     # dense view for quantiles; adjust if you need to stay sparse
@@ -571,7 +561,10 @@ def calculate_marker_purity(
             }
         )
 
-    return pd.DataFrame(rows, index=adata.obs["cell_id"])
+    result = pd.DataFrame(rows, index=adata.obs["cell_id"])
+    if inplace:
+        merge_into_obs(sdata, table_key, result, "cell_id")
+    return result
 
 
 def calculate_diff_abundance(
@@ -586,6 +579,7 @@ def calculate_diff_abundance(
     seed: int = 0,
     cell_centroid_x_key: str = "cell_centroid_x",
     cell_centroid_y_key: str = "cell_centroid_y",
+    inplace: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Calculate differential transcript abundance between bordering and non-bordering cells
@@ -624,6 +618,8 @@ def calculate_diff_abundance(
     cell_centroid_x_key, cell_centroid_y_key : str, optional
         Column names in adata.obs that contain the X and Y cell centroids used to
         construct the spatial graph (default: "cell_centroid_x", "cell_centroid_y").
+    inplace : bool, optional
+        If True, store differential abundance results in `sdata.tables[table_key].uns['diff_abundance']`.
 
     Returns
     -------
@@ -767,5 +763,11 @@ def calculate_diff_abundance(
     # we are only interested in positive log2FC here, since we want to find genes that originate from spillover events
     sig = de_results.query("log2FC >= @lfc_thresh and pval <= @pval_thresh")
     summary = sig.groupby(["ct1", "ct2"]).size().unstack(fill_value=0)
+
+    if inplace:
+        if "diff_abundance" not in sdata.tables[table_key].uns:
+            sdata.tables[table_key].uns["diff_abundance"] = {}
+        sdata.tables[table_key].uns["diff_abundance"]["de_results"] = de_results
+        sdata.tables[table_key].uns["diff_abundance"]["summary"] = summary
 
     return de_results, summary
