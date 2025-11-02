@@ -10,6 +10,9 @@ def test_transcripts_per_cell(sdata_new):
     assert not transcripts_per_cell.empty, "Transcripts per cell DataFrame should not be empty"
     assert "cell_id" in transcripts_per_cell.columns, "DataFrame should contain 'cell_id' column"
     assert "transcript_count" in transcripts_per_cell.columns, "DataFrame should contain 'transcript_count' column"
+    assert (
+        "transcript_count" in sdata_new.tables["table"].obs.columns
+    ), "'transcript_count' should be in the observation columns of the table"
 
     # TODO: reactivate once the test data is updated
     # num_cells = st.bl.num_cells(sdata_new)
