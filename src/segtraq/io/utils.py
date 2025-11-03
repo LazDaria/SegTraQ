@@ -12,7 +12,9 @@ import pandas as pd
 import spatialdata as sd
 import tifffile as tiff
 import xarray as xr
+import cv2
 from rasterio.features import rasterize, shapes
+from numba import njit, prange, set_num_threads
 from scipy.sparse import csr_matrix
 from shapely.affinity import translate
 from shapely.geometry import MultiPolygon, Polygon, mapping, shape
@@ -99,7 +101,7 @@ def build_cell_polygons_from_vertices(
     return gdf
 
 
-def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
+def labels_mode_projection_memory_ineff(stack: np.ndarray) -> np.ndarray:
     """
     Compute a mode projection of a 3D label image along the Z axis.
 
@@ -133,6 +135,33 @@ def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
     winner = counts.argmax(axis=1).astype(np.int32)
     return winner.reshape(H, W)
 
+#@njit(parallel=True)
+def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
+    """
+    Mode projection along Z, ignoring background 0.
+    Returns a 2D (H, W) array of modal labels for each pixel.
+    """
+    #set_num_threads(8)
+    if stack.ndim != 3:
+        raise ValueError("Input stack must be 3D (Z, H, W).")
+
+    Z, H, W = stack.shape
+    out = np.zeros((H, W), np.int32) 
+
+    #for i in prange(H):   
+    for i in range(H):           
+        for j in range(W):
+            col = stack[:, i, j]
+            nz = col[col != 0]
+            if nz.size == 0:
+                out[i, j] = 0
+                continue
+
+            vals, counts = np.unique(nz, return_counts=True)
+
+            out[i, j] = vals[np.argmax(counts)]
+
+    return out
 
 # this is the old method which we should delete soon
 # (once the bug in spatialdata-plot that prevents MultiPolygons with holes from being displayed is fixed)
@@ -289,7 +318,7 @@ def make_adata(X, obs: pd.DataFrame, var: pd.DataFrame, X_est: np.ndarray | None
     return adata
 
 
-def read_dapi_image(path: Path) -> np.ndarray:
+def read_dapi_image(path: Path, scale_x: float = None, scale_y: float = None) -> np.ndarray:
     """
     Read a DAPI image from TIFF and ensure correct dimensions.
 
@@ -304,6 +333,12 @@ def read_dapi_image(path: Path) -> np.ndarray:
         DAPI image with shape (c, y, x). Adds a channel axis if necessary.
     """
     dapi = tiff.imread(path)
+
+    if scale_x is not None and scale_y is not None:
+        dapi = cv2.resize(
+            dapi,
+            (int(round(dapi.shape[1] * scale_x)), int(round(dapi.shape[0] * scale_y)))
+        )
     if dapi.ndim == 2:  # add channel axis if single-channel
         dapi = dapi[None, ...]
     return dapi
@@ -457,69 +492,60 @@ def decompress_geojson(gz_path: Path) -> Path:
     return gz_path
 
 
-def build_spatialdata_from_proseg(
-    adata: ad.AnnData,
-    path_to_10xdata: Path,
-    path_to_proseg_data: Path,
+def build_shapes_labels_zstack(
+    nuclei_image: np.ndarray,
     polygons_gdf: gpd.GeoDataFrame,
-    consolidate_shapes: bool = True,
+    z_key: str,
+    path_to_nuc_shapes: Path = None,
+    path_to_nuc_labels: Path = None,
 ) -> sd.SpatialData:
     """
-    Builds a SpatialData object from processed segmentation and transcriptomics data.
-    This function integrates segmentation polygons, DAPI images, nucleus masks, and transcript metadata
-    to construct a comprehensive SpatialData object suitable for spatial transcriptomics analysis.
-    It processes multi-layer polygon data, rasterizes cell boundaries, projects label stacks to 2D,
-    and incorporates transcript and nucleus information.
+    This function processes multi-layer (z-stack) polygon data, rasterizes cell boundaries, projects label stacks to 2D,
+    and incorporates nucleus shapes and labels, if available.
     Parameters
     ----------
-    adata : ad.AnnData
-        Annotated data matrix containing gene expression and cell metadata.
-    path_to_10xdata : Path
-        Path to the directory containing 10x Genomics image and mask files.
-    path_to_proseg_data : Path
-        Path to the directory containing processed segmentation and transcriptomics data.
+    nuclei_image : np.ndarray
+        2D nuclear image (e.g. DAPI).
     polygons_gdf : gpd.GeoDataFrame
-        GeoDataFrame containing cell segmentation polygons with layer and cell identifiers.
-    consolidate_shapes : bool, optional
-        Whether to consolidate shapes across layers into a single shape layer (default is True).
+        GeoDataFrame containing cell segmentation polygons with z-layer and cell identifiers.
+    z_key : str
+        Column name in polygons_gdf indicating the z-layer.
+    z_layer: int
+        Z-layer to use instead of projection for `cell_boundaries` and `cell_labels`.
+    path_to_nuc_shapes : Path, optional
+        Path to the directory containing nucleus shape files (default is None).
+    path_to_nuc_labels : Path, optional
+        Path to the nucleus label file in TIFF format (default is None).
+
     Returns
     -------
-    sd.SpatialData
-        A SpatialData object containing integrated images, labels, shapes, transcript points, and tables.
-    Notes
-    -----
-    - The function expects specific file names in the provided directories:
-        - DAPI image: "dapi_um.tif"
-        - Nucleus mask: "nuc_mask_um.tif"
-        - Nucleus boundaries: "nucleus_boundaries.parquet"
-        - Transcript metadata: "transcript-metadata.csv.gz"
-    - Cell and nucleus labels are rasterized and projected to 2D for downstream analysis.
+    tuple of (shapes_dict, labels_dict)
+        shapes_dict : dict
+            Dictionary of GeoDataFrames with cell and nucleus (optional) boundaries.
+        labels_dict : dict
+            Dictionary of numpy arrays with cell and nucleus (optional) label images.
     """
-    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
-    H, W = dapi.shape[1:]
+    H, W = nuclei_image.shape[1:]
 
     # Polygon layers → labels + shapes
     labels_dict, shapes_dict = {}, {}
-    z_levels = sorted(polygons_gdf["layer"].unique())
+    z_levels = sorted(polygons_gdf[z_key].unique())
     stack = np.zeros((len(z_levels), H, W), dtype=np.uint32)
 
     for zi, z in enumerate(z_levels):
         # select the current layer first
-        layer_gdf = polygons_gdf[polygons_gdf["layer"] == z]
+        layer_gdf = polygons_gdf[polygons_gdf[z_key] == z]
 
         # then filter out empty or missing geometries
         layer_gdf = layer_gdf[~layer_gdf.geometry.is_empty & layer_gdf.geometry.notna()]
 
         # Shapes
-        layer_shapes = layer_gdf.set_index("cell")["geometry"].to_frame().copy()
-        layer_shapes.index.name = "label_id"
-        layer_shapes.index += 1
-        layer_shapes["cell_id"] = layer_shapes.index
+        layer_shapes = layer_gdf.set_index("label_id")[["geometry", "cell_id"]].copy()
         shapes_dict[f"cell_boundaries_z{int(z)}"] = layer_shapes
 
         # Labels via rasterize
         shapes_iter = (
-            (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf["cell"], layer_gdf.geometry, strict=False)
+            (mapping(geom), int(cid) + 1) for cid, geom in zip(layer_gdf.index, layer_gdf.geometry, strict=False)
         )
         img = rasterize(shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
         labels_dict[f"cell_labels_z{int(z)}"] = img
@@ -531,32 +557,13 @@ def build_spatialdata_from_proseg(
     shapes_dict["cell_boundaries"] = labels_to_shapes(proj, simplify_tolerance=0.5)
 
     # Nucleus
-    nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
-    labels_dict["nucleus_labels"] = nucleus_labels
-    nucleus_shapes = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
-    shapes_dict["nucleus_boundaries"] = nucleus_shapes
+    if path_to_nuc_shapes is not None:
+        nucleus_shapes = read_shapes(path_to_nuc_shapes)
+        shapes_dict["nucleus_boundaries"] = nucleus_shapes
+        nucleus_labels = tiff.imread(path_to_nuc_labels)
+        labels_dict["nucleus_labels"] = nucleus_labels
 
-    # Transcripts
-    transcripts_df = read_transcripts(path_to_proseg_data / "transcript-metadata.csv.gz")
-    transcripts_df = transcripts_df.rename(columns={"assignment": "cell_id", "gene": "feature_name"})
-    transcripts_df["cell_id"] = transcripts_df["cell_id"].fillna(0)
-    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
-    transcripts = make_points(
-        transcripts_df,
-        uint32_max_placeholder=2**32,
-    )
-
-    # Assemble SpatialData
-    sdata = create_spatialdata(
-        points=transcripts,
-        labels=labels_dict,
-        shapes=shapes_dict,
-        tables=adata,
-        images=dapi,
-        background_cell_id=0,
-        consolidate_shapes=consolidate_shapes,
-    )
-    return sdata
+    return shapes_dict, labels_dict
 
 
 def create_spatialdata(
@@ -696,7 +703,7 @@ def create_spatialdata(
                 shapes_sd = sd.models.ShapesModel.parse(shapes[key])
                 shapes_sd_dict[key] = shapes_sd
 
-            shapes = shapes["cell_boundaries"]  # use the cell boundaries for further processing
+        shapes = shapes["cell_boundaries"]  # use the cell boundaries for further processing
 
     if shapes is not None:
         assert cell_key_shapes in shapes.columns, (

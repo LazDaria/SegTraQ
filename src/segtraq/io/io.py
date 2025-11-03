@@ -11,11 +11,12 @@ import tifffile as tiff
 from rasterio.features import rasterize
 from scipy.io import mmread
 from scipy.sparse import csr_matrix
+from shapely.affinity import translate
 from shapely.geometry import mapping
 from spatialdata import SpatialData
 
 from .utils import (
-    build_spatialdata_from_proseg,
+    build_shapes_labels_zstack,
     create_spatialdata,
     decompress_geojson,
     labels_to_shapes,
@@ -101,11 +102,131 @@ def read_xenium(path_to_data: Path) -> SpatialData:
     )
     return sdata
 
+# -----------------------------------------------------------------------------
+# Reader: Vizgen MERSCOPE
+# -----------------------------------------------------------------------------
+def read_merscope(path_to_data: Path, image_path: Path, consolidate_shapes: bool = True, z_layer: int = 3) -> SpatialData:
+    """
+    Read Vizgen MERSCOPE data and assemble a SpatialData object.
+
+    Parameters
+    ----------
+    path_to_data : Path
+        Path to the directory containing subset Vizgen MERSCOPE data.
+    image_path: Path
+        Path to mosaic image to load. 
+    consolidate_shapes : bool, optional, default=True
+        Whether to consolidate shape layers when creating the SpatialData object.
+    z_layer:         
+        Z-layer to use instead of projection for `cell_boundaries` and `cell_labels`.
+    Returns
+    -------
+    SpatialData
+        SpatialData object containing transcripts, shapes, labels, tables, and DAPI image.
+    """
+
+    # -------------------------
+    # Transform
+    # -------------------------
+    T_micron_to_pixel = pd.read_csv(
+        path_to_data / "images/micron_to_mosaic_pixel_transform.csv",
+        header=None,
+        delim_whitespace=True
+    ).values
+
+    T_pixel_to_micron = np.linalg.inv(T_micron_to_pixel)
+    scale_x = T_pixel_to_micron[0, 0]
+    scale_y = T_pixel_to_micron[1, 1]
+    offset_x = T_pixel_to_micron[0, 2]
+    offset_y = T_pixel_to_micron[1, 2]
+
+    # -------------------------
+    # Table
+    # -------------------------
+    counts_df = pd.read_csv(path_to_data / "cell_by_gene.csv")
+
+    #drop control probes
+    blank_cols = [c for c in counts_df.columns if c.startswith("Blank-")]
+    counts_df = counts_df.drop(columns=blank_cols)
+    counts_df.set_index("cell", inplace=True)
+    X = csr_matrix(counts_df.values)
+
+    obs = pd.read_csv(path_to_data / "cell_metadata.csv")
+    obs.drop(columns=["transcript_count"], errors="ignore", inplace=True)
+
+    unique_ids = obs["EntityID"].unique()
+    id_int_to_int = {cell_id: i + 1 for i, cell_id in enumerate(unique_ids)}
+    id_int_to_int[-1] = 0
+
+    obs["cell_id"] = obs["EntityID"].map(id_int_to_int)
+    obs["label_id"] = obs["EntityID"].map(id_int_to_int)
+    obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
+    obs["center_x"] = obs["center_x"] - offset_x
+    obs["center_y"] = obs["center_y"] - offset_y
+    var = pd.DataFrame(index=counts_df.columns.astype(str))
+    var.index.name = "gene_symbol"
+    adata = make_adata(X, obs, var)
+
+    # -------------------------
+    # Image (DAPI)
+    # -------------------------
+    dapi = read_dapi_image(path_to_data / image_path, scale_x, scale_y)
+
+    # -------------------------
+    # Shapes and labels
+    # -------------------------
+    shapes_gdf = read_shapes(path_to_data / "cell_boundaries.parquet", build_from_vertices=False, backend="gpd")
+
+    shapes_gdf.rename(columns={"Geometry": "geometry"}, inplace=True)
+    shapes_gdf["cell_id"] = shapes_gdf["EntityID"].map(id_int_to_int)
+    shapes_gdf['geometry'] = shapes_gdf['geometry'].apply(lambda geom: translate(geom, xoff=-offset_x, yoff=-offset_y))
+    shapes_gdf = shapes_gdf.set_geometry("geometry")
+    shapes_gdf["label_id"] = shapes_gdf["EntityID"].map(id_int_to_int)
+
+    H, W = dapi.shape[1:]
+    layer_gdf = shapes_gdf[shapes_gdf["ZIndex"] == z_layer]
+    layer_gdf = layer_gdf[~layer_gdf.geometry.is_empty & layer_gdf.geometry.notna()]
+    cell_shapes = layer_gdf.set_index("label_id")[["geometry", "cell_id"]].copy()
+
+    cell_shapes_iter = (
+        (mapping(geom), int(cid)) for cid, geom in zip(cell_shapes.index, cell_shapes.geometry, strict=False)
+    )
+    cell_labels = rasterize(cell_shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
+
+    # -------------------------
+    # Transcripts
+    # -------------------------
+    transcripts_df = read_transcripts(path_to_data / "detected_transcripts.parquet")
+    transcripts_df["cell_id"] = transcripts_df["cell_id"].map(id_int_to_int)
+    transcripts_df["global_x"] = transcripts_df["global_x"] - offset_x
+    transcripts_df["global_y"] = transcripts_df["global_y"] - offset_y
+    transcripts_df = transcripts_df.drop(columns=["barcode_id", "x", "y"])
+    transcripts_df = transcripts_df.rename(columns={"gene": "feature_name"})
+    transcripts = make_points(transcripts_df, rename_map={"global_x": "x", "global_y": "y", "global_z": "z"})
+
+    # -------------------------
+    # Assemble SpatialData
+    # -------------------------
+    sdata = create_spatialdata(
+        points=transcripts,
+        labels={"cell_labels": cell_labels},
+        shapes={"cell_boundaries": cell_shapes},
+        tables=adata,
+        images=dapi,
+        background_cell_id=0,
+        consolidate_shapes=consolidate_shapes,
+    )
+
+    return sdata
 
 # -----------------------------------------------------------------------------
 # Reader: Proseg 2.0
 # -----------------------------------------------------------------------------
-def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
+def read_proseg_2(path_to_proseg_data: Path, path_to_original: Path, image_path: Path, consolidate_shapes: bool = True) -> SpatialData:
+    
+    # -------------------------
+    # Table
+    # -------------------------
     counts_df = pd.read_csv(path_to_proseg_data / "expected-counts.csv.gz", compression="gzip")
     X_est = csr_matrix(counts_df.values)
     X = csr_matrix(np.rint(counts_df.values).astype(int, copy=False))
@@ -121,14 +242,52 @@ def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
     adata = make_adata(X, obs, var)
     adata.layers["X_estimated"] = X_est
 
-    polygons_gdf = gpd.read_file(decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz"))
-    return build_spatialdata_from_proseg(adata, path_to_10xdata, path_to_proseg_data, polygons_gdf, consolidate_shapes)
+    # -------------------------
+    # Image (DAPI)
+    # -------------------------
+    dapi = read_dapi_image(path_to_original / "dapi_um.tif")
+
+    # -------------------------
+    # Shapes and labels
+    # -------------------------
+    shapes_gdf = gpd.read_file(decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz"))
+    shapes_gdf.rename(columns={"cell": "cell_id"}, inplace=True)
+    shapes_gdf["label_id"] = shapes_gdf["cell_id"]
+    shapes_dict, labels_dict = build_shapes_labels_zstack(dapi, shapes_gdf, "layer", path_to_original / "nucleus_boundaries.parquet", path_to_original / "nuc_mask_um.tif")
+
+    # -------------------------
+    # Transcripts
+    # -------------------------
+    transcripts_df = read_transcripts(path_to_proseg_data / "transcript-metadata.csv.gz")
+    transcripts_df = transcripts_df.rename(columns={"assignment": "cell_id", "gene": "feature_name"})
+    transcripts_df["cell_id"] = transcripts_df["cell_id"].fillna(0)
+    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
+    transcripts = make_points(
+        transcripts_df,
+        uint32_max_placeholder=2**32,
+    )
+
+    # -------------------------
+    # Assemble SpatialData
+    # -------------------------
+    sdata = create_spatialdata(
+        points=transcripts,
+        labels=labels_dict,
+        shapes=shapes_dict,
+        tables=adata,
+        images=dapi,
+        background_cell_id=0,
+        consolidate_shapes=consolidate_shapes,
+    )
 
 
 # -----------------------------------------------------------------------------
 # Reader: Proseg 3.0
 # -----------------------------------------------------------------------------
-def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
+def read_proseg_3(path_to_proseg_data: Path, path_to_original: Path, consolidate_shapes: bool = True) -> SpatialData:
+    # -------------------------
+    # Table
+    # -------------------------
     with gzip.open(path_to_proseg_data / "counts.mtx.gz", "rt") as f:
         X = mmread(f).tocsr().astype(np.int32)
 
@@ -152,9 +311,43 @@ def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_
     obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
     adata = make_adata(X, obs, var)
 
-    polygons_gdf = gpd.read_file(decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz"))
-    return build_spatialdata_from_proseg(adata, path_to_10xdata, path_to_proseg_data, polygons_gdf, consolidate_shapes)
+    # -------------------------
+    # Image (DAPI)
+    # -------------------------
+    dapi = read_dapi_image(path_to_original / "dapi_um.tif")
 
+    # -------------------------
+    # Shapes and labels
+    # -------------------------
+    shapes_gdf = gpd.read_file(decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz"))
+    shapes_gdf.rename(columns={"cell": "cell_id"}, inplace=True)
+    shapes_gdf["label_id"] = shapes_gdf["cell_id"]
+    shapes_dict, labels_dict = build_shapes_labels_zstack(dapi, shapes_gdf, "layer", path_to_original / "nucleus_boundaries.parquet", path_to_original / "nuc_mask_um.tif")
+    
+    # -------------------------
+    # Transcripts
+    # -------------------------
+    transcripts_df = read_transcripts(path_to_proseg_data / "transcript-metadata.csv.gz")
+    transcripts_df = transcripts_df.rename(columns={"assignment": "cell_id", "gene": "feature_name"})
+    transcripts_df["cell_id"] = transcripts_df["cell_id"].fillna(0)
+    transcripts_df["cell_id"] = (transcripts_df["cell_id"] + 1).astype(int)
+    transcripts = make_points(
+        transcripts_df,
+        uint32_max_placeholder=2**32,
+    )
+
+    # -------------------------
+    # Assemble SpatialData
+    # -------------------------
+    sdata = create_spatialdata(
+        points=transcripts,
+        labels=labels_dict,
+        shapes=shapes_dict,
+        tables=adata,
+        images=dapi,
+        background_cell_id=0,
+        consolidate_shapes=consolidate_shapes,
+    )
 
 # -----------------------------------------------------------------------------
 # Reader: BIDCell
@@ -243,9 +436,9 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
     # -------------------------
     # Image (DAPI)
     # -------------------------
-    dapi_path = path_to_data / "dapi_resized.tif"
+    dapi_path = path_to_data / "dapi.tif"
     if not dapi_path.exists():
-        raise FileNotFoundError("Missing DAPI image: dapi_resized.tif")
+        raise FileNotFoundError("Missing DAPI image: dapi.tif")
     dapi = read_dapi_image(dapi_path)
 
     # -------------------------
@@ -280,7 +473,7 @@ def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> Spatial
 # -----------------------------------------------------------------------------
 # Reader: Segger
 # -----------------------------------------------------------------------------
-def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
+def read_segger(path_to_data: Path, path_to_original: Path, consolidate_shapes: bool = True) -> SpatialData:
     """
     Build a SpatialData object from Segger outputs.
 
@@ -288,7 +481,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     ----------
     path_to_data : Path
         Path to the directory containing Segger output files.
-    path_to_10xdata : Path
+    path_to_original : Path
         Path to the directory containing 10x DAPI and nucleus images.
     consolidate_shapes : bool, optional, default=True
         Whether to consolidate shape layers when creating the SpatialData object.
@@ -318,7 +511,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     # -------------------------
     # Images
     # -------------------------
-    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
+    dapi = read_dapi_image(path_to_original / "dapi_um.tif")
 
     # -------------------------
     # Shapes and labels
@@ -344,8 +537,8 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     cell_labels = rasterize(cell_shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
 
     # Nucleus shapes and labels
-    nucleus_shapes_gdf = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
-    nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
+    nucleus_shapes_gdf = read_shapes(path_to_original / "nucleus_boundaries.parquet")
+    nucleus_labels = tiff.imread(path_to_original / "nuc_mask_um.tif")
 
     # -------------------------
     # Transcripts
@@ -360,7 +553,7 @@ def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: b
     ].copy()
 
     # add background transcripts to segger_transcripts
-    transcripts_10x = pd.read_parquet(path_to_10xdata / "transcripts.parquet")
+    transcripts_10x = pd.read_parquet(path_to_original / "transcripts.parquet")
     new_rows = transcripts_10x[~transcripts_10x["transcript_id"].isin(transcripts["transcript_id"])]
     new_rows["cell_id"] = "UNASSIGNED"
     transcripts = pd.concat([transcripts, new_rows], ignore_index=True)
