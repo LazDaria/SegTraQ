@@ -26,9 +26,9 @@ dependencies = [
   "igraph",
   "rtree",
   "rasterio",
-  "squidpy",
+  "squidpy>=1.6.2",
   "tqdm",
-  "anndata"
+  "anndata",
 ]
 requires-python = ">= 3.11"
 
