@@ -7,6 +7,7 @@ from pathlib import Path
 
 import anndata as ad
 import geopandas as gpd
+import numba as nb
 import numpy as np
 import pandas as pd
 import spatialdata as sd
@@ -99,39 +100,36 @@ def build_cell_polygons_from_vertices(
     return gdf
 
 
-def labels_mode_projection(stack: np.ndarray) -> np.ndarray:
+@nb.njit(parallel=True)
+def labels_mode_projection(stack):
     """
-    Compute a mode projection of a 3D label image along the Z axis.
-
-    For each pixel (x, y), the label most frequently occurring across
-    Z slices is assigned. Background (0) is ignored in the count.
-
-    Parameters
-    ----------
-    stack : np.ndarray
-        Integer label array of shape (Z, H, W).
-
-    Returns
-    -------
-    np.ndarray
-        2D array of shape (H, W) with the modal label per pixel.
+    Compute per-pixel mode projection along Z axis for integer label stacks.
+    Background (0) is ignored.
+    Very fast and memory efficient.
     """
-    if stack.ndim != 3:
-        raise ValueError("Input stack must be 3D (Z, H, W).")
-
     Z, H, W = stack.shape
-    flat = stack.reshape(Z, -1).T  # (H*W, Z)
-    max_label = int(stack.max())
-    counts = np.zeros((flat.shape[0], max_label + 1), dtype=np.int32)
-    idx = np.arange(flat.shape[0])
+    out = np.zeros((H, W), np.int32)
 
-    # Count occurrences per pixel
-    for z in range(Z):
-        np.add.at(counts, (idx, flat[:, z]), 1)
-
-    counts[:, 0] = 0  # ignore background
-    winner = counts.argmax(axis=1).astype(np.int32)
-    return winner.reshape(H, W)
+    for i in nb.prange(H):
+        for j in range(W):
+            vals = stack[:, i, j]
+            # Count frequencies manually (small loop over Z)
+            max_label = 0
+            max_count = 0
+            for z in range(Z):
+                label = vals[z]
+                if label == 0:
+                    continue
+                # Count how many times this label appears
+                count = 0
+                for k in range(Z):
+                    if vals[k] == label:
+                        count += 1
+                if count > max_count:
+                    max_count = count
+                    max_label = label
+            out[i, j] = max_label
+    return out
 
 
 # this is the old method which we should delete soon
