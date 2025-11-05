@@ -1,389 +1,243 @@
-from __future__ import annotations
+import warnings
 
-import gzip
-from pathlib import Path
-
-import anndata as ad
-import geopandas as gpd
 import numpy as np
 import pandas as pd
-import tifffile as tiff
-from rasterio.features import rasterize
-from scipy.io import mmread
-from scipy.sparse import csr_matrix
-from shapely.geometry import mapping
-from spatialdata import SpatialData
+import spatialdata as sd
+import xarray as xr
 
-from .utils import (
-    build_spatialdata_from_proseg,
-    create_spatialdata,
-    decompress_geojson,
-    labels_to_shapes,
-    make_adata,
-    make_points,
-    read_dapi_image,
-    read_labels,
-    read_shapes,
-    read_transcripts,
-)
+from .utils import _is_missing
 
 
-# -----------------------------------------------------------------------------
-# Reader: 10x Xenium
-# -----------------------------------------------------------------------------
-def read_xenium(path_to_data: Path) -> SpatialData:
+def validate_spatialdata(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    shapes_key: str | list[str] = "cell_boundaries",
+    shapes_cell_id_key: str | None = "cell_id",
+    labels_key: str = "cell_labels",
+    labels_data_key: str = None,
+) -> bool:
     """
-    Read 10x Xenium data and assemble a SpatialData object.
+    Validates the integrity of a SpatialData object by checking the consistency of cell IDs
+    across points, shapes, labels, and tables.
+
+    This function ensures that:
+    - All points have corresponding shapes, labels, and tables.
+    - Cell IDs in points match those in shapes, labels, and tables.
+    - If shapes or labels are present, they contain all cell IDs from the points.
+    - If tables are present, they contain all cell IDs from the shapes.
 
     Parameters
     ----------
-    path_to_data : Path
-        Path to the directory containing subset 10x Xenium data.
-
-    Returns
-    -------
-    SpatialData
-        SpatialData object containing transcripts, shapes, labels, tables, and DAPI image.
-    """
-    # Table
-    with gzip.open(path_to_data / "cell_feature_matrix" / "matrix.mtx.gz", "rt") as f:
-        X = mmread(f).tocsr()
-    features = pd.read_csv(
-        path_to_data / "cell_feature_matrix" / "features.tsv.gz", sep="\t", header=None, compression="gzip"
-    )
-    barcodes = pd.read_csv(
-        path_to_data / "cell_feature_matrix" / "barcodes.tsv.gz", sep="\t", header=None, compression="gzip"
-    )[0]
-
-    gene_mask = features[2] == "Gene Expression"
-    X = X[gene_mask.values, :]
-    var = pd.DataFrame(index=features.loc[gene_mask, 1].astype(str).values)
-    var.index.name = "gene_symbol"
-
-    meta_df = pd.read_csv(path_to_data / "cells.csv.gz", compression="gzip")
-    rename_map = {"cell_centroid_x": "x_centroid", "cell_centroid_y": "y_centroid", "cell_area": "cell_area"}
-    for k, v in rename_map.items():
-        if k in meta_df.columns and v not in meta_df.columns:
-            meta_df[v] = meta_df[k]
-
-    meta_df = meta_df.set_index("cell_id", drop=False)
-    common = barcodes[barcodes.isin(meta_df.index)]
-    obs = meta_df.loc[common].copy()
-    obs.reset_index(drop=True, inplace=True)
-    X = X[:, barcodes.isin(meta_df.index).to_numpy()]
-
-    obs["label_id"] = pd.RangeIndex(start=1, stop=len(obs) + 1, dtype=int)
-    obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
-
-    adata = make_adata(X.T, obs, var)
-
-    # Image
-    dapi = read_dapi_image(path_to_data / "dapi_um.tif")
-
-    # Labels
-    labels = read_labels(path_to_data / "cell_mask_um.tif", path_to_data / "nuc_mask_um.tif")
-
-    # Shapes
-    shapes = {
-        "cell_boundaries": read_shapes(path_to_data / "cell_boundaries.parquet"),
-        "nucleus_boundaries": read_shapes(path_to_data / "nucleus_boundaries.parquet"),
-    }
-
-    transcripts_df = read_transcripts(path_to_data / "transcripts.parquet")
-    transcripts = make_points(transcripts_df, rename_map={"x_location": "x", "y_location": "y", "z_location": "z"})
-
-    sdata = create_spatialdata(
-        points=transcripts,
-        labels=labels,
-        shapes=shapes,
-        tables=adata,
-        images=dapi,
-    )
-    return sdata
-
-
-# -----------------------------------------------------------------------------
-# Reader: Proseg 2.0
-# -----------------------------------------------------------------------------
-def read_proseg_2(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
-    counts_df = pd.read_csv(path_to_proseg_data / "expected-counts.csv.gz", compression="gzip")
-    X_est = csr_matrix(counts_df.values)
-    X = csr_matrix(np.rint(counts_df.values).astype(int, copy=False))
-
-    obs = pd.read_csv(path_to_proseg_data / "cell-metadata.csv.gz", compression="gzip")
-    obs.drop(columns=["cluster", "scale", "original_cell_id", "population", "fov"], errors="ignore", inplace=True)
-    obs.rename(columns={"cell": "cell_id"}, inplace=True)
-    obs["cell_id"] += 1
-    obs["label_id"] = obs["cell_id"]
-    obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
-    var = pd.DataFrame(index=counts_df.columns.astype(str))
-    var.index.name = "gene_symbol"
-    adata = make_adata(X, obs, var)
-    adata.layers["X_estimated"] = X_est
-
-    polygons_gdf = gpd.read_file(decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz"))
-    return build_spatialdata_from_proseg(adata, path_to_10xdata, path_to_proseg_data, polygons_gdf, consolidate_shapes)
-
-
-# -----------------------------------------------------------------------------
-# Reader: Proseg 3.0
-# -----------------------------------------------------------------------------
-def read_proseg_3(path_to_proseg_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
-    with gzip.open(path_to_proseg_data / "counts.mtx.gz", "rt") as f:
-        X = mmread(f).tocsr().astype(np.int32)
-
-    var_df = pd.read_csv(path_to_proseg_data / "gene-metadata.csv.gz", compression="gzip")
-    var = pd.DataFrame(index=var_df["gene"].astype(str))
-    var.index.name = "gene_symbol"
-
-    obs = pd.read_csv(path_to_proseg_data / "cell-metadata.csv.gz", compression="gzip")
-    obs.drop(columns=["cluster", "scale", "original_cell_id"], errors="ignore", inplace=True)
-    obs.rename(
-        columns={
-            "cell": "cell_id",
-            "cell_centroid_x": "centroid_x",
-            "cell_centroid_y": "centroid_y",
-            "cell_area": "cell_area",
-        },
-        inplace=True,
-    )
-    obs["cell_id"] += 1
-    obs["label_id"] = obs["cell_id"]
-    obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
-    adata = make_adata(X, obs, var)
-
-    polygons_gdf = gpd.read_file(decompress_geojson(path_to_proseg_data / "cell-polygons-layers.geojson.gz"))
-    return build_spatialdata_from_proseg(adata, path_to_10xdata, path_to_proseg_data, polygons_gdf, consolidate_shapes)
-
-
-# -----------------------------------------------------------------------------
-# Reader: BIDCell
-# -----------------------------------------------------------------------------
-def read_bidcell(path_to_data: Path, consolidate_shapes: bool = True) -> SpatialData:
-    """
-    Build a SpatialData object from BIDCell subset data using utility functions.
-
-    Parameters
-    ----------
-    path_to_data : Path
-        Path to the directory containing BIDCell data.
-    consolidate_shapes : bool, optional, default=True
-        Whether to consolidate shape layers when creating the SpatialData object.
-
-    Returns
-    -------
-    SpatialData
-        SpatialData object containing:
-        - `tables`: AnnData with expression matrix, cell metadata, and gene metadata
-        - `labels`: cell and nucleus segmentation masks
-        - `shapes`: cell and nucleus boundaries derived from labels
-        - `images`: DAPI reference image
-        - `points`: transcript coordinates and assignments
+    sdata : sd.SpatialData
+        The SpatialData object to validate.
+    tables_key : str, optional
+        Key for accessing tables in the SpatialData. Default is "table".
+    tables_cell_id_key : str, optional
+        Column name in the tables DataFrame (AnnData.obs) that contains cell IDs. Default is "cell_id".
+    points_key : str, optional
+        Key for accessing points (e.g., transcripts) in the SpatialData. Default is "transcripts".
+    points_cell_id_key : str, optional
+        Column name in the points DataFrame indicating cell assignments. Default is "cell_id".
+    points_background_id : str, optional
+        Identifier used for unassigned or background transcripts in the points DataFrame. Default is "UNASSIGNED".
+    shapes_key : str or list of str, optional
+        Key(s) for accessing shapes (e.g., cell boundaries) in the SpatialData. Default is "cell_boundaries".
+        Can be a list if multiple shape layers are present.
+    shapes_cell_id_key : str, optional
+        Column name in the shapes DataFrame indicating cell IDs. Default is "cell_id".
+        If None, the function assumes cell IDs are stored in the index.
+    labels_key : str, optional
+        Key for accessing segmentation labels in the SpatialData. Default is "cell_labels".
+    labels_data_key : str, optional
+        Key for accessing data within labels if they are stored as a DataTree. Default is None.
 
     Raises
     ------
-    FileNotFoundError
-        If required CSV or segmentation files are missing.
+    TypeError
+        If the input is not an instance of sd.SpatialData.
     ValueError
-        If DAPI image has unsupported dimensions.
-    """
-    # -------------------------
-    # Table (expression + metadata)
-    # -------------------------
-    csv_files = list(path_to_data.glob("cell_gene_matrices/202*/cell*.csv"))
-    if not csv_files:
-        raise FileNotFoundError("No CSVs found under cell_gene_matrices/202*/cell*.csv")
-
-    dfs = [pd.read_csv(f) for f in csv_files]
-    merged_df = pd.concat(dfs, ignore_index=True).sort_values("cell_id").reset_index(drop=True)
-    merged_df["cell_id"] = merged_df["cell_id"].astype(int)
-
-    # Standardize column names
-    merged_df = merged_df.rename(
-        columns={
-            "cell_size": "cell_area",
-            "cell_centroid_x": "centroid_x",
-            "cell_centroid_y": "centroid_y",
-        }
-    )
-
-    meta_cols = ["cell_id", "centroid_x", "centroid_y", "cell_area"]
-    expr_cols = [c for c in merged_df.columns if c not in meta_cols]
-
-    obs = merged_df[meta_cols].copy()
-    obs["region"] = pd.Categorical(["cell_labels"] * len(obs))
-    obs["label_id"] = obs["cell_id"].astype(np.int32)
-
-    var = pd.DataFrame(index=pd.Index(expr_cols, name="gene_symbol"))
-    X = merged_df[expr_cols].to_numpy()
-    adata = make_adata(X, obs, var)
-
-    # -------------------------
-    # Labels (cells + nuclei)
-    # -------------------------
-    cell_label_files = list(path_to_data.glob("model_outputs/202*/test_output/*_connected.tif"))
-    if not cell_label_files:
-        raise FileNotFoundError("No cell label TIFF found under model_outputs/202*/test_output/")
-    cell_labels_path = cell_label_files[0]
-
-    nucleus_labels_path = path_to_data / "nuclei.tif"
-    if not nucleus_labels_path.exists():
-        raise FileNotFoundError("Missing nucleus labels: nuclei.tif")
-
-    labels = read_labels(cell_labels_path, nucleus_labels_path)
-    cell_labels = labels["cell_labels"]
-    nucleus_labels = labels["nucleus_labels"]
-
-    # -------------------------
-    # Shapes (from labels)
-    # -------------------------
-    cell_shapes_gdf = labels_to_shapes(cell_labels, simplify_tolerance=0.5)
-    nucleus_shapes_gdf = labels_to_shapes(nucleus_labels, simplify_tolerance=0.5)
-
-    # -------------------------
-    # Image (DAPI)
-    # -------------------------
-    dapi_path = path_to_data / "dapi_resized.tif"
-    if not dapi_path.exists():
-        raise FileNotFoundError("Missing DAPI image: dapi_resized.tif")
-    dapi = read_dapi_image(dapi_path)
-
-    # -------------------------
-    # Transcripts (points)
-    # -------------------------
-    transcripts_path = path_to_data / "transcripts_processed.csv"
-    if not transcripts_path.exists():
-        raise FileNotFoundError("Missing transcripts file: transcripts_processed.csv")
-
-    transcripts_df = read_transcripts(transcripts_path)
-
-    # Map transcripts to cell labels
-    x = np.rint(transcripts_df["x_location"]).astype(int)
-    y = np.rint(transcripts_df["y_location"]).astype(int)
-    transcripts_df["cell_id"] = cell_labels[y, x]
-    transcripts = make_points(transcripts_df)
-
-    # -------------------------
-    # Assemble SpatialData
-    # -------------------------
-    sdata = create_spatialdata(
-        points=transcripts,
-        labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
-        shapes={"cell_boundaries": cell_shapes_gdf, "nucleus_boundaries": nucleus_shapes_gdf},
-        tables=adata,
-        images=dapi,
-        background_cell_id=0,
-    )
-    return sdata
-
-
-# -----------------------------------------------------------------------------
-# Reader: Segger
-# -----------------------------------------------------------------------------
-def read_segger(path_to_data: Path, path_to_10xdata: Path, consolidate_shapes: bool = True) -> SpatialData:
-    """
-    Build a SpatialData object from Segger outputs.
-
-    Parameters
-    ----------
-    path_to_data : Path
-        Path to the directory containing Segger output files.
-    path_to_10xdata : Path
-        Path to the directory containing 10x DAPI and nucleus images.
-    consolidate_shapes : bool, optional, default=True
-        Whether to consolidate shape layers when creating the SpatialData object.
+        If the SpatialData object does not contain points or if there are inconsistencies in cell IDs.
 
     Returns
     -------
-    SpatialData
-        SpatialData object containing:
-        - `tables`: AnnData with expression matrix and cell metadata
-        - `labels`: cell and nucleus segmentation masks
-        - `shapes`: cell and nucleus boundaries
-        - `images`: DAPI reference image
-        - `points`: transcript coordinates and assignments
+    bool
+        True if the SpatialData object passes all validation checks. Otherwise, an error or warning is raised.
     """
+    if not isinstance(sdata, sd.SpatialData):
+        raise TypeError("Input must be an instance of sd.SpatialData")
 
-    # -------------------------
-    # Table (AnnData)
-    # -------------------------
-    adata = ad.read_h5ad(path_to_data / "segger_adata.h5ad")
-    order = np.argsort(adata.obs_names)
-    adata = adata[order, :].copy()
-    adata.obs.index.name = "cell_id"
-    adata.obs.reset_index(inplace=True)
+    contains_points = len(sdata.points) > 0
+    contains_shapes = len(sdata.shapes) > 0
+    contains_labels = len(sdata.labels) > 0
+    contains_tables = len(sdata.tables) > 0
 
-    adata.obs.drop(columns=["transcripts", "unique_transcripts"], inplace=True)
+    # check if there are points in the spatial data
+    if not contains_points:
+        raise ValueError("SpatialData object must contain points (transcripts)")
 
-    # -------------------------
-    # Images
-    # -------------------------
-    dapi = read_dapi_image(path_to_10xdata / "dapi_um.tif")
-
-    # -------------------------
-    # Shapes and labels
-    # -------------------------
-    # Cell boundaries
-    boundaries_gdf = read_shapes(path_to_data / "segger_boundaries.parquet", build_from_vertices=False, backend="gpd")
-    boundaries_gdf = boundaries_gdf[boundaries_gdf.geometry.notnull()].copy()
-
-    unique_ids = boundaries_gdf["cell_id"].unique()
-    id_str_to_int = {cell_id: i + 1 for i, cell_id in enumerate(unique_ids)}
-    boundaries_gdf["label_id"] = boundaries_gdf["cell_id"].map(id_str_to_int)
-
-    cell_shapes_gdf = boundaries_gdf.set_index("label_id")
-    cell_shapes_gdf = cell_shapes_gdf[cell_shapes_gdf["cell_id"].isin(adata.obs["cell_id"])]
-    # Remove empty or missing geometries
-    cell_shapes_gdf = cell_shapes_gdf[~cell_shapes_gdf.geometry.is_empty & cell_shapes_gdf.geometry.notna()]
-
-    # Rasterize cell labels
-    H, W = dapi.shape[1:]
-    cell_shapes_iter = (
-        (mapping(geom), int(cid)) for cid, geom in zip(cell_shapes_gdf.index, cell_shapes_gdf.geometry, strict=False)
+    # get the cell IDs from the points
+    assert points_key in sdata.points, (
+        f"SpatialData must contain points with key: {points_key}. "
+        f"Available keys: {list(sdata.points.keys())}. "
+        f"If you want to use a different key, set the points_key parameter."
     )
-    cell_labels = rasterize(cell_shapes_iter, out_shape=(H, W), fill=0, dtype=np.uint32)
-
-    # Nucleus shapes and labels
-    nucleus_shapes_gdf = read_shapes(path_to_10xdata / "nucleus_boundaries.parquet")
-    nucleus_labels = tiff.imread(path_to_10xdata / "nuc_mask_um.tif")
-
-    # -------------------------
-    # Transcripts
-    # -------------------------
-    transcripts = read_transcripts(path_to_data / "segger_transcripts.parquet")
-    transcripts.drop(columns=["score", "bound", "cell_id"], inplace=True)
-    transcripts = transcripts.rename(columns={"segger_cell_id": "cell_id"})
-    transcripts["transcript_id"] = transcripts["transcript_id"].astype(np.uint64)
-    # there are cells in the transcripts that are not present in the boundaries - check why - invalid shapes?
-    transcripts = transcripts.loc[
-        transcripts["cell_id"].isin(adata.obs["cell_id"]) | (transcripts["cell_id"] == "UNASSIGNED")
-    ].copy()
-
-    # add background transcripts to segger_transcripts
-    transcripts_10x = pd.read_parquet(path_to_10xdata / "transcripts.parquet")
-    new_rows = transcripts_10x[~transcripts_10x["transcript_id"].isin(transcripts["transcript_id"])]
-    new_rows["cell_id"] = "UNASSIGNED"
-    transcripts = pd.concat([transcripts, new_rows], ignore_index=True)
-
-    transcripts_df = make_points(transcripts)
-
-    # -------------------------
-    # Finalize table metadata
-    # -------------------------
-    adata.obs["label_id"] = adata.obs["cell_id"].map(id_str_to_int)
-    adata.obs["region"] = pd.Categorical(["cell_labels"] * adata.n_obs)
-    adata.X = csr_matrix(adata.X)
-
-    # -------------------------
-    # Assemble SpatialData
-    # -------------------------
-    sdata = create_spatialdata(
-        points=transcripts_df,
-        labels={"cell_labels": cell_labels, "nucleus_labels": nucleus_labels},
-        shapes={"cell_boundaries": cell_shapes_gdf, "nucleus_boundaries": nucleus_shapes_gdf},
-        tables=adata,
-        images=dapi,
-        consolidate_shapes=consolidate_shapes,
+    points = sdata.points[points_key]
+    assert points_cell_id_key in points.columns, (
+        f"Points DataFrame must contain column to identify cells: {points_cell_id_key}. "
+        f"Available columns: {points.columns.tolist()}. "
+        f"If you want to use a different column, set the points_cell_id_key parameter."
     )
 
-    return sdata
+    # get unique cell IDs from points
+    transcript_ids = set(points[points_cell_id_key].unique())
+    shapes_cell_ids = set()
+    labels_cell_ids = set()
+
+    # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
+    if contains_shapes:
+        # we can have multiple shape keys (e. g. when using multiple layers in proseg), so we need to handle them here
+        if isinstance(shapes_key, str):
+            assert shapes_key in sdata.shapes, (
+                f"Shapes DataFrame must contain key: {shapes_key}. "
+                f"Available keys: {list(sdata.shapes.keys())}. "
+                f"If you want to use a different key, set the shapes_key parameter."
+            )
+            shapes = sdata.shapes[shapes_key]
+        elif isinstance(shapes_key, list):
+            # if multiple shape keys are provided, we need to check each one
+            shapes = pd.concat([sdata.shapes[key] for key in shapes_key], ignore_index=True)
+        else:
+            raise ValueError("shapes_key must be a string or a list of strings")
+
+        # this part handles the case where cell IDs are stored in the index (as is the case in Xenium)
+        shapes_cell_ids = set()
+        if shapes_cell_id_key is None:
+            shapes_cell_ids = set(shapes.index.tolist())
+        else:
+            assert shapes_cell_id_key in shapes.columns, (
+                f"Shapes DataFrame must contain column: {shapes_cell_id_key}. "
+                f"Available columns: {shapes.columns.tolist()}. "
+                f"If you want to use a different column, set the shapes_cell_id_key parameter. "
+                f"If you want to use the index as cell IDs, set shapes_cell_id_key=None."
+            )
+            shapes_cell_ids = set(shapes[shapes_cell_id_key])
+
+        missing_in_polygons = {
+            x
+            for x in (transcript_ids - shapes_cell_ids - {points_background_id})
+            if not _is_missing(x)  # also removing any NAs (no matter if from pandas, np, or None)
+        }
+        assert len(missing_in_polygons) == 0, (
+            f"Missing {len(missing_in_polygons)} cell IDs from polygons: "
+            f"{list(missing_in_polygons)[:min(5, len(missing_in_polygons))]}... "
+            f"These cell IDs are present in the points, but not in the shapes. "
+            f"If your missing cell ID is indicating an unassigned transcript, "
+            f"you can set the points_background_id parameter."
+        )
+
+        # if shapes and tables are present, ensure that the cell IDs match
+        # checking that the adata and the polygons have the same cell IDs
+        if contains_tables:
+            assert tables_key in sdata.tables, (
+                f"Tables DataFrame must contain key: {tables_key}. "
+                f"Available keys: {list(sdata.tables.keys())}. "
+                f"If you want to use a different key, set the tables_key parameter."
+            )
+            table = sdata.tables[tables_key]
+            assert tables_cell_id_key in table.obs.columns, (
+                f"Tables DataFrame must contain column: {tables_cell_id_key}. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"If you want to use a different column, set the tables_cell_id_key parameter."
+            )
+
+            tables_cell_ids = set(table.obs[tables_cell_id_key].values)
+
+            # --- Ensure consistent types between shapes and tables ---
+            # Ignore missing values (e.g. NaN, None) when checking type
+            non_missing_shapes = [x for x in shapes_cell_ids if not _is_missing(x)]
+            non_missing_tables = [x for x in tables_cell_ids if not _is_missing(x)]
+
+            # Determine dominant type (str or numeric)
+            shapes_has_str = any(isinstance(x, str) for x in non_missing_shapes)
+            tables_has_str = any(isinstance(x, str) for x in non_missing_tables)
+
+            # If one side contains strings, convert both sides to string
+            if shapes_has_str or tables_has_str:
+                shapes_cell_ids = {str(x) for x in shapes_cell_ids if not _is_missing(x)}
+                tables_cell_ids = {str(x) for x in tables_cell_ids if not _is_missing(x)}
+                points_background_id = str(points_background_id)
+            else:
+                # Ensure we drop any NAs (NaN, None, etc.) before comparison
+                shapes_cell_ids = {x for x in shapes_cell_ids if not _is_missing(x)}
+                tables_cell_ids = {x for x in tables_cell_ids if not _is_missing(x)}
+
+            # --- Perform set comparisons ---
+            missing_in_shapes = tables_cell_ids - shapes_cell_ids - {points_background_id}
+            missing_in_tables = shapes_cell_ids - tables_cell_ids - {points_background_id}
+
+            if len(missing_in_tables) != 0:
+                warnings.warn(
+                    f"Missing {len(missing_in_tables)} cell IDs in tables: "
+                    f"{list(missing_in_tables)[:min(5, len(missing_in_tables))]}... "
+                    "These cells are present in shapes, but not in tables. "
+                    "This might lead to inconsistencies in the spatialdata object.",
+                    stacklevel=2,
+                )
+            if len(missing_in_shapes) != 0:
+                warnings.warn(
+                    f"Missing {len(missing_in_shapes)} cell IDs in shapes: "
+                    f"{list(missing_in_shapes)[:min(5, len(missing_in_shapes))]}... "
+                    "These cells are present in tables, but not in shapes. "
+                    "This might lead to inconsistencies in the spatialdata object.",
+                    stacklevel=2,
+                )
+
+    # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
+    if contains_labels:
+        labels = sdata.labels[labels_key]
+
+        # handling weird spatialdata structures
+        if isinstance(labels, xr.DataTree):
+            assert labels_data_key is not None, (
+                f"It looks like your labels are stored as a DataTree. "
+                f"Please provide a labels_data_key to access the labels data. "
+                f"Available keys are: {list(labels.keys())}."
+            )
+            assert (
+                labels_data_key.split("/")[0] in labels.keys()
+            ), f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
+
+            labels = labels[labels_data_key]  # Get the dataset node
+
+            assert isinstance(labels, xr.DataArray), (
+                f"The labels data should be a DataArray. Please provide a valid data key. "
+                f"Available keys are: {[labels_data_key + '/' + x for x in list(labels.keys())]}."
+            )
+
+        # label ID and cell ID are not the same
+        labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
+
+    # if there are both shapes and labels, ensure they are compatible
+    if contains_shapes and contains_labels:
+        num_missing_in_shapes = len(labels_cell_ids) - len(shapes_cell_ids)
+        num_missing_in_labels = len(shapes_cell_ids) - len(labels_cell_ids)
+        if num_missing_in_labels > 0:
+            warnings.warn(
+                f"Missing {num_missing_in_labels} cell IDs in labels."
+                f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
+                f"This might lead to inconsistencies in the spatialdata object.",
+                stacklevel=2,
+            )
+        if num_missing_in_shapes > 0:
+            warnings.warn(
+                f"Missing {num_missing_in_shapes} cell IDs in shapes: "
+                f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
+                f"This might lead to inconsistencies in the spatialdata object.",
+                stacklevel=2,
+            )
+
+    return True
