@@ -12,6 +12,6 @@ def test_num_genes(sdata_new):
 
 def test_num_genes_invalid_key(sdata_new):
     with pytest.raises(KeyError):
-        st.bl.num_genes(sdata_new, transcript_key="invalid_key")
+        st.bl.num_genes(sdata_new, points_key="invalid_key")
     with pytest.raises(KeyError):
-        st.bl.num_genes(sdata_new, gene_key="invalid_key")
+        st.bl.num_genes(sdata_new, points_gene_key="invalid_key")
