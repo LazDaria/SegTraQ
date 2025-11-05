@@ -142,6 +142,7 @@ def perc_unassigned_transcripts(
 
 def transcripts_per_cell(
     sdata: sd.SpatialData,
+    tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     tables_key: str = "table",
@@ -154,6 +155,8 @@ def transcripts_per_cell(
     ----------
     sdata : sd.SpatialData
         A SpatialData object containing transcript and cell assignment information.
+    tables_cell_id_key : str
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
     points_key : str, optional
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
     points_cell_id_key : str, optional
@@ -174,13 +177,14 @@ def transcripts_per_cell(
     counts_df.columns = [points_cell_id_key, "transcript_count"]
 
     if inplace:
-        merge_into_obs(sdata, tables_key, counts_df, points_cell_id_key, fillna_cols=["transcript_count"])
+        merge_into_obs(sdata, tables_key, counts_df, tables_cell_id_key, points_cell_id_key, fillna_cols=["transcript_count"])
 
     return counts_df
 
 
 def genes_per_cell(
     sdata,
+    tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
@@ -194,6 +198,8 @@ def genes_per_cell(
     ----------
     sdata : object
         An object containing spatial transcriptomics data with a `points` attribute.
+    tables_cell_id_key : str
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
     points_key : str, optional
         The key to access the transcript data within `sdata.points` (default is "transcripts").
     points_cell_id_key : str, optional
@@ -216,7 +222,7 @@ def genes_per_cell(
     gene_counts = df.groupby(points_cell_id_key)[points_gene_key].nunique().reset_index()
     gene_counts.columns = [points_cell_id_key, "gene_count"]
     if inplace:
-        merge_into_obs(sdata, tables_key, gene_counts, points_cell_id_key, fillna_cols=["gene_count"])
+        merge_into_obs(sdata, tables_key, gene_counts, tables_cell_id_key, points_cell_id_key, fillna_cols=["gene_count"])
 
     return gene_counts
 
@@ -257,7 +263,7 @@ def transcript_density(
     """
     adata = sdata.tables[tables_key]
     # this will also add the transcript counts inplace
-    counts_df = transcripts_per_cell(sdata, points_key, tables_cell_id_key)
+    counts_df = transcripts_per_cell(sdata, points_key=points_key, tables_cell_id_key=tables_cell_id_key)
     area_df = adata.obs[[tables_cell_id_key, tables_area_volume_key]]
 
     merged = counts_df.merge(area_df, on=tables_cell_id_key, how="left")
@@ -269,6 +275,7 @@ def transcript_density(
             tables_key,
             merged[[tables_cell_id_key, "transcript_density"]],
             tables_cell_id_key,
+            tables_cell_id_key,
             fillna_cols=["transcript_density"],
         )
 
@@ -277,6 +284,7 @@ def transcript_density(
 
 def morphological_features(
     sdata: sd.SpatialData,
+    tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
     shapes_cell_id_key: str = "cell_id",
     features_to_compute: list | None = None,
@@ -291,6 +299,8 @@ def morphological_features(
     ----------
     sdata : object
         Spatial data object containing cell shape information. Must have a `.shapes` attribute with geometries.
+    tables_cell_id_key : str
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
     shapes_key : str, optional
         Key in `sdata.shapes` specifying the geometry column (default is "cell_boundaries").
     shapes_cell_id_key : str, optional
@@ -479,6 +489,6 @@ def morphological_features(
         features["num_polygons"] = geom.apply(count_polygons).values
 
     if inplace:
-        merge_into_obs(sdata, tables_key, features, features_cell_id)
+        merge_into_obs(sdata, tables_key, features, tables_cell_id_key, features_cell_id)
 
     return features
