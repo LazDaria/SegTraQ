@@ -20,13 +20,14 @@ def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
 
 def _process_cell(
     cell_row: Series,
-    cell_id_key_shape: str,
+    shapes_cell_id_key: str | None,
     nuc_boundaries: GeoDataFrame,
     nuc_sindex: Index,
 ) -> dict[str | int, str | int, int | None | float]:
     """For one cell polygon compute the IoU with the best-matching nucleus."""
 
     cell_geom = cell_row.geometry
+    cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
 
     # Get candidate nuclei bounding boxes that overlap this cell's bbox
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
@@ -45,16 +46,16 @@ def _process_cell(
             best_iou = iou
             best_nuc_id = nuc.name
 
-    return {"cell_id": cell_row[cell_id_key_shape], "best_nuc_id": best_nuc_id, "IoU": best_iou}
+    return {"cell_id": cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
 
 
 def _nucleus_by_feature_df(
     sdata: sd.SpatialData,
-    transcripts_key: str = "transcripts",
-    nucleus_by: str = "nucleus_boundaries",
-    feature_column: str = "feature_name",
-    x_coordinate: str = "x",
-    y_coordinate: str = "y",
+    points_key: str = "transcripts",
+    nucleus_shapes_key: str = "nucleus_boundaries",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
 ) -> pd.DataFrame:
     """
     Aggregate feature counts per nucleus, converting transcripts to 2D if needed.
@@ -63,15 +64,15 @@ def _nucleus_by_feature_df(
     ----------
     sdata : SpatialData
         `SpatialData` containing transcript `Points` and nucleus `Shapes`.
-    transcripts_key : str
+    points_key : str
         Name of transcripts `Points` element.
-    nucleus_by : str
+    nucleus_shapes_key : str
         Name of nucleus shape layer to aggregate by.
-    feature_column : str
+    points_gene_key : str
         Column in transcripts pointing to feature (e.g. gene/protein).
-    x_coordinate: str
+    points_x_key: str
         Column in transcripts pointing x coordinate.
-    y_coordinate: str
+    points_y_key: str
         Column in transcripts pointing y coordinate.
 
     Returns
@@ -80,13 +81,13 @@ def _nucleus_by_feature_df(
         DataFrame indexed by nucleus ID, columns = features (genes/proteins), values = counts.
     """
 
-    pts = sdata.points[transcripts_key]
+    pts = sdata.points[points_key]
     # check dimensionality: assume 3D if "z" in actual data columns
     df = pts.compute()
     is_3d = "z" in df.columns  # TODO - maybe there is a better way to check if transcripts are 3D
 
     if is_3d:
-        transcripts_2d_key = transcripts_key + "_2D"
+        transcripts_2d_key = points_key + "_2D"
         df2 = df.drop(columns=["z"])
         coord_sys = "global"  # TODO find an soft coded way to get coordinate system of transcripts
         trans = sd.transformations.get_transformation(pts, to_coordinate_system=coord_sys, get_all=False)
@@ -101,19 +102,19 @@ def _nucleus_by_feature_df(
         pts2 = PointsModel.parse(
             df2,
             name=transcripts_2d_key,
-            coordinates={"x": x_coordinate, "y": y_coordinate},
+            coordinates={"x": points_x_key, "y": points_y_key},
             transformations=trans_dict,
         )
         sdata.points[transcripts_2d_key] = pts2
         value_key = transcripts_2d_key
     else:
-        value_key = transcripts_key
+        value_key = points_key
 
     # perform aggregation
     sdata2 = sdata.aggregate(
         values=value_key,
-        by=nucleus_by,
-        value_key=feature_column,
+        by=nucleus_shapes_key,
+        value_key=points_gene_key,
         agg_func="count",
         deep_copy=False,
     )
