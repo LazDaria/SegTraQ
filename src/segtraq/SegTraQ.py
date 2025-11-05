@@ -5,8 +5,8 @@ import numpy as np
 import scanpy as sc
 import warnings
 
-from . import bl, cs, io, nc, pl, sp
-from .utils import run_label_transfer
+from . import bl, cs, nc, pl, sp
+from .utils import run_label_transfer, validate_spatialdata
 
 
 class SegTraQ:
@@ -114,7 +114,7 @@ class SegTraQ:
         """
 
         # Validate spatialdata object
-        io.validate_spatialdata(
+        validate_spatialdata(
             sdata,
             shapes_key=shapes_key,
             labels_key=labels_key,
@@ -155,6 +155,58 @@ class SegTraQ:
         self.cell_type_key = cell_type_key
 
         self.bl = _BLFacade(self)
+
+    def run_baseline(self, inplace: bool = True):
+        """
+        Compute baseline SegTraQ metrics (via the bound BL facade) and optionally
+        merge them into the cell table.
+
+        Metrics
+        -------
+        - genes_per_cell
+        - transcripts_per_cell
+        - transcript_density (only if `tables_area_volume_key` is set)
+        - morphological features per cell
+        - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
+
+        Parameters
+        ----------
+        inplace : bool, default=True
+            If True, metrics are merged into `sdata.tables[tables_key].obs` and 
+            `sdata.tables[tables_key].uns.
+            If False, returns the computed objects.
+
+        Returns
+        -------
+        None or dict
+            - If `inplace=True`: returns None after writing to `sdata`.
+            - If `inplace=False`: returns a dict with keys:
+            `summary`, `genes_per_cell`, `transcripts_per_cell`, and optionally `transcript_density`.
+        """
+        tbl = self.sdata.tables[self.tables_key]
+
+        gpc = self.bl.genes_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
+        tpc = self.bl.transcripts_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
+        #mrp = self.bl.morphological_features(inplace=inplace).set_index(self.shapes_cell_id_key)
+
+        dens_raw = self.bl.transcript_density(inplace=inplace)
+        dens = None if dens_raw is None else dens_raw.set_index(self.tables_cell_id_key)
+
+        summary = dict(
+            num_cells=self.bl.num_cells(inplace=inplace),
+            num_genes=self.bl.num_genes(inplace=inplace),
+            num_transcripts=self.bl.num_transcripts(inplace=inplace),
+            perc_unassigned_transcripts=self.bl.perc_unassigned_transcripts(inplace=inplace),
+        )
+
+        if inplace:
+            return None
+        else:
+            #out = {"summary": summary, "genes_per_cell": gpc, "transcripts_per_cell": tpc, "morphological_feautres": mrp}
+            out = {"summary": summary, "genes_per_cell": gpc, "transcripts_per_cell": tpc}
+            if dens is not None:
+                out["transcript_density"] = dens
+            return out
 
 class _BLFacade:
     """
@@ -226,7 +278,7 @@ class _BLFacade:
             shapes_key = self._p.shapes_key,
             shapes_cell_id_key = self._p.shapes_cell_id_key,
             features_to_compute = features_to_compute,
-            njobs = n_jobs,
+            n_jobs = n_jobs,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
@@ -249,57 +301,6 @@ class _BLFacade:
             tables_area_volume_key=tavk,
             inplace=inplace,
         )
-
-    def run_baseline(self, inplace: bool = True):
-        """
-        Compute baseline SegTraQ metrics (via the bound BL facade) and optionally
-        merge them into the cell table.
-
-        Metrics
-        -------
-        - genes_per_cell
-        - transcripts_per_cell
-        - transcript_density (only if `tables_area_volume_key` is set)
-        - morphological features per cell
-        - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
-
-        Parameters
-        ----------
-        inplace : bool, default=True
-            If True, metrics are merged into `sdata.tables[tables_key].obs` and 
-            `sdata.tables[tables_key].uns.
-            If False, returns the computed objects.
-
-        Returns
-        -------
-        None or dict
-            - If `inplace=True`: returns None after writing to `sdata`.
-            - If `inplace=False`: returns a dict with keys:
-            `summary`, `genes_per_cell`, `transcripts_per_cell`, and optionally `transcript_density`.
-        """
-        tbl = self.sdata.tables[self.tables_key]
-
-        gpc = self.bl.genes_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
-        tpc = self.bl.transcripts_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
-        mrp = self.bl.morphological_features(inplace=inplace).set_index(self.shapes_cell_id_key)
-
-        dens_raw = self.bl.transcript_density(inplace=inplace)
-        dens = None if dens_raw is None else dens_raw.set_index(self.tables_cell_id_key)
-
-        summary = dict(
-            num_cells=self.bl.num_cells(inplace=inplace),
-            num_genes=self.bl.num_genes(inplace=inplace),
-            num_transcripts=self.bl.num_transcripts(inplace=inplace),
-            perc_unassigned_transcripts=self.bl.perc_unassigned_transcripts(inplace=inplace),
-        )
-
-        if inplace:
-            return None
-        else:
-            out = {"summary": summary, "genes_per_cell": gpc, "transcripts_per_cell": tpc, "morphological_feautres": mrp}
-            if dens is not None:
-                out["transcript_density"] = dens
-            return out
 
     # def run_annotation(self, inplace: bool = True):
     #     return run_label_transfer(
