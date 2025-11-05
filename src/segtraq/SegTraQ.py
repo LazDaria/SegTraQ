@@ -1,6 +1,14 @@
+from pathlib import Path
+from typing import Any, Optional
+from anndata import AnnData
+
+import numpy as np
+import scanpy as sc
 import warnings
 
-from . import bl
+from . import bl, cs, nc, pl, sp
+from .utils import run_label_transfer as _run_label_transfer
+
 from .utils import validate_spatialdata
 
 
@@ -26,8 +34,9 @@ class SegTraQ:
         labels_key: str | None = "cell_labels",
         labels_data_key: str | None = "scale0/image",
         labels_to_cell_id_key: str | None = "cell_labels",
-        cell_type_key: str | None = "cell_type",
-    ):
+        cell_type_key: str | None = "transferred_cell_type",
+    ):       
+
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
         Defaults target 10x Genomics Xenium; override keys for other technologies.
@@ -103,7 +112,7 @@ class SegTraQ:
             Column in `sdata.tables[tables_key]` mapping segmentation label IDs
             (from `labels_key`) to cell IDs.
 
-        cell_type_key : str or None, optional, default="cell_type"
+        cell_type_key : str or None, optional, default="transferred_cell_type"
             Column in the cell table containing cell-type annotations, if available.
             Note: running `segtraq.run_label_transfer()` will overwrite this column.
         """
@@ -216,6 +225,62 @@ class SegTraQ:
             if dens is not None:
                 out["transcript_density"] = dens
             return out
+        
+    def run_label_transfer(self, 
+                           adata_ref = AnnData, 
+                           tx_min: float = 10.0,
+                           tx_max: float = 2000.0,
+                           gn_min: float = 5.0,
+                           gn_max: float = np.inf,
+                           ref_cell_type: str = "cell_type",
+                           ref_ensemble_key: str | None = None,
+                           query_ensemble_key: str | None =  "gene_ids",
+                           inplace: bool = True):
+        """
+        Transfer cell-type labels from a reference AnnData to the current SpatialData table.
+        Cells are optionally filtered by per-cell transcript and gene counts before transfer.
+
+        Parameters
+        ----------
+        adata_ref : AnnData
+            Reference AnnData with cell-type annotations in `.obs[self.ref_cell_type]`.
+        tx_min, tx_max : float, default=(10.0, 2000.0)
+            Inclusive lower and upper bounds for per-cell transcript count filtering.
+        gn_min, gn_max : float, default=(5.0, inf)
+            Inclusive lower and upper bounds for per-cell gene count filtering.
+        ref_cell_type: str, default="cell_type"
+            Column name of cell-type annotations in `adata_ref.obs[ref_cell_type]`.
+        ref_ensemble_key: str or None, default=None
+            Column name in `adata_ref.var` that contains unique gene/ensemble IDs. If None, `adata_ref.var_names` will be used.
+        query_ensemble_key: str or None, default="gene_ids"
+            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        inplace : bool, default=True
+            If True, writes labels/scores into `sdata.tables[tables_key].obs` and returns None.
+            If False, returns a DataFrame with the assignment and scores without writing.
+
+        Returns
+        -------
+        None or pd.DataFrame
+            None when `inplace=True`; otherwise a DataFrame of assignments.
+        """
+
+        # Delegate to utility (aliased to avoid name confusion)
+        result = _run_label_transfer(
+            sdata=self.sdata,
+            adata_ref=adata_ref,
+            ref_cell_type_key=ref_cell_type,
+            tables_key=self.tables_key,
+            tx_min=tx_min,
+            tx_max=tx_max,
+            gn_min=gn_min,
+            gn_max=gn_max,
+            label_key=self.cell_type_key,
+            ref_ensemble_key = ref_ensemble_key,
+            query_ensemble_key =query_ensemble_key,
+            inplace=inplace,
+        )
+
+        return None if inplace else result
 
 
 class _BLFacade:
@@ -312,18 +377,7 @@ class _BLFacade:
             inplace=inplace,
         )
 
-    # def run_annotation(self, inplace: bool = True):
-    #     return run_label_transfer(
-    #         sdata=self.sdata,
-    #         adata_reference=self.adata_ref,
-    #         celltype_key=self.ref_celltype_key,
-    #         table_key=self.table_key,
-    #         tx_min=self.filter_tx_min,
-    #         tx_max=self.filter_tx_max,
-    #         gn_min=self.filter_gn_min,
-    #         gn_max=self.filter_gn_max,
-    #         inplace=inplace,
-    #     )
+
 
     # def run_umap(self, inplace: bool = True):
     #     adata = self.sdata.tables[self.table_key]
