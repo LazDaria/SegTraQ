@@ -351,7 +351,13 @@ def morphological_features(
     cells = cells[cells.geometry.notnull() & cells.geometry.is_valid].copy().reset_index()
 
     features = pd.DataFrame()
-    features[shapes_cell_id_key] = cells[shapes_cell_id_key].values
+    if shapes_cell_id_key is None:
+        features_cell_id = "cell_id"
+        features[features_cell_id] = cells.index.values
+    else:
+        features_cell_id = shapes_cell_id_key
+        features[features_cell_id] = cells[shapes_cell_id_key].values
+
     geom = cells.geometry
 
     # Compute features conditionally
@@ -468,6 +474,6 @@ def morphological_features(
         features["num_polygons"] = geom.apply(count_polygons)
 
     if inplace:
-        merge_into_obs(sdata, tables_key, features, shapes_cell_id_key)
+        merge_into_obs(sdata, tables_key, features, features_cell_id)
 
     return features
