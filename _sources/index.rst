@@ -12,7 +12,6 @@ SegTraQ documentation
    :maxdepth: 1
    :caption: Contents:
 
-   modules/io
    modules/baseline
    modules/clustering_stability
    modules/nuclear_correlation
