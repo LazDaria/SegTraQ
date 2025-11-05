@@ -30,7 +30,7 @@ class SegTraQ:
         nucleus_shapes_cell_id_key: str | None = "cell_id",
         labels_key: str | None = "cell_labels",
         labels_data_key: str | None = "scale0/image",
-        labels_to_cell_id_key: str | None = "label_id",
+        labels_to_cell_id_key: str | None = "cell_labels",
         cell_type_key: str | None = "cell_type",
     ):       
         """
@@ -104,7 +104,7 @@ class SegTraQ:
         labels_data_key : str or None, optional, default="scale0/image"
             Key for accessing data in `sdata.labels` if they are stored as a DataTree. Default is None.
 
-        labels_to_cell_id_key : str or None, optional, default="label_id"
+        labels_to_cell_id_key : str or None, optional, default="cell_labels"
             Column in `sdata.tables[tables_key]` mapping segmentation label IDs
             (from `labels_key`) to cell IDs.
 
