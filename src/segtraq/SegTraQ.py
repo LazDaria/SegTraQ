@@ -1,18 +1,13 @@
-from pathlib import Path
-from typing import Any, Optional
-
-import numpy as np
-import scanpy as sc
 import warnings
 
-from . import bl, cs, nc, pl, sp
-from .utils import run_label_transfer, validate_spatialdata
+from . import bl
+from .utils import validate_spatialdata
 
 
 class SegTraQ:
     def __init__(
         self,
-        sdata, 
+        sdata,
         images_key: str | None = "morphology_focus",
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
@@ -32,7 +27,7 @@ class SegTraQ:
         labels_data_key: str | None = "scale0/image",
         labels_to_cell_id_key: str | None = "cell_labels",
         cell_type_key: str | None = "cell_type",
-    ):       
+    ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
         Defaults target 10x Genomics Xenium; override keys for other technologies.
@@ -59,7 +54,7 @@ class SegTraQ:
 
         tables_area_volume_key : str or None, optional, default="cell_area"
             Column in the cell table with cell area (2D) or volume (3D/quasi-3D).
-            If `None`, area/volume-based metrics will be computed via 
+            If `None`, area/volume-based metrics will be computed via
             `segtraq.bl.morphological_features`.
 
         points_key : str, default="transcripts"
@@ -116,15 +111,25 @@ class SegTraQ:
         # Validate spatialdata object
         validate_spatialdata(
             sdata,
-            shapes_key=shapes_key,
-            labels_key=labels_key,
-            points_key=points_key,
+            images_key=images_key,
             tables_key=tables_key,
-            points_cell_id_key=points_cell_id_key,
-            shapes_cell_id_key=shapes_cell_id_key,
             tables_cell_id_key=tables_cell_id_key,
+            tables_area_volume_key=tables_area_volume_key,
+            points_key=points_key,
+            points_cell_id_key=points_cell_id_key,
             points_background_id=points_background_id,
-            labels_data_key = labels_data_key
+            points_x_key=points_x_key,
+            points_y_key=points_y_key,
+            points_z_key=points_z_key,
+            points_gene_key=points_gene_key,
+            shapes_key=shapes_key,
+            shapes_cell_id_key=shapes_cell_id_key,
+            nucleus_shapes_key=nucleus_shapes_key,
+            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
+            labels_key=labels_key,
+            labels_to_cell_id_key=labels_to_cell_id_key,
+            cell_type_key=cell_type_key,
+            labels_data_key=labels_data_key,
         )
 
         self.sdata = sdata
@@ -172,7 +177,7 @@ class SegTraQ:
         Parameters
         ----------
         inplace : bool, default=True
-            If True, metrics are merged into `sdata.tables[tables_key].obs` and 
+            If True, metrics are merged into `sdata.tables[tables_key].obs` and
             `sdata.tables[tables_key].uns.
             If False, returns the computed objects.
 
@@ -187,7 +192,7 @@ class SegTraQ:
 
         gpc = self.bl.genes_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
         tpc = self.bl.transcripts_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
-        #mrp = self.bl.morphological_features(inplace=inplace).set_index(self.shapes_cell_id_key)
+        mrp = self.bl.morphological_features(inplace=inplace).set_index(self.shapes_cell_id_key)
 
         dens_raw = self.bl.transcript_density(inplace=inplace)
         dens = None if dens_raw is None else dens_raw.set_index(self.tables_cell_id_key)
@@ -202,11 +207,16 @@ class SegTraQ:
         if inplace:
             return None
         else:
-            #out = {"summary": summary, "genes_per_cell": gpc, "transcripts_per_cell": tpc, "morphological_feautres": mrp}
-            out = {"summary": summary, "genes_per_cell": gpc, "transcripts_per_cell": tpc}
+            out = {
+                "summary": summary,
+                "genes_per_cell": gpc,
+                "transcripts_per_cell": tpc,
+                "morphological_feautres": mrp,
+            }
             if dens is not None:
                 out["transcript_density"] = dens
             return out
+
 
 class _BLFacade:
     """
@@ -271,14 +281,14 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
-    
-    def morphological_features(self, features_to_compute: list= None, n_jobs: int = 1, inplace: bool = True):
+
+    def morphological_features(self, features_to_compute: list | None = None, n_jobs: int = 1, inplace: bool = True):
         return bl.morphological_features(
-            sdata = self._p.sdata,
-            shapes_key = self._p.shapes_key,
-            shapes_cell_id_key = self._p.shapes_cell_id_key,
-            features_to_compute = features_to_compute,
-            n_jobs = n_jobs,
+            sdata=self._p.sdata,
+            shapes_key=self._p.shapes_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            features_to_compute=features_to_compute,
+            n_jobs=n_jobs,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
@@ -443,7 +453,7 @@ class _BLFacade:
     #     ari = cs.clustering_stability.compute_ari(
     #         self.sdata,
     #         resolution=(resolution if isinstance(resolution, int | float) else 1.0),
-    #         n_genes_subset=n_genes_subset, 
+    #         n_genes_subset=n_genes_subset,
     #         key_prefix=key_prefix,
     #     )
     #     print("ARI computed.")
