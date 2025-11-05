@@ -265,17 +265,21 @@ def transcript_density(
 
     if inplace:
         merge_into_obs(
-            sdata, tables_key, merged[[tables_cell_id_key, "transcript_density"]], tables_cell_id_key, fillna_cols=["transcript_density"]
+            sdata,
+            tables_key,
+            merged[[tables_cell_id_key, "transcript_density"]],
+            tables_cell_id_key,
+            fillna_cols=["transcript_density"],
         )
 
     return merged[[tables_cell_id_key, "transcript_density"]].dropna()
 
 
 def morphological_features(
-    sdata,
+    sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
     shapes_cell_id_key: str = "cell_id",
-    features_to_compute: list = None,
+    features_to_compute: list | None = None,
     n_jobs: int = -1,  # number of parallel jobs, -1 uses all CPUs
     tables_key: str = "table",
     inplace: bool = True,
@@ -339,6 +343,7 @@ def morphological_features(
         features_to_compute = all_features
     else:
         # Validate features requested
+        print(features_to_compute)
         invalid_feats = set(features_to_compute) - set(all_features)
         if invalid_feats:
             raise ValueError(f"Unknown features requested: {invalid_feats}")
@@ -348,7 +353,7 @@ def morphological_features(
         cells = cells.to_gdf()
 
     # Filter valid geometries
-    cells = cells[cells.geometry.notnull() & cells.geometry.is_valid].copy().reset_index()
+    cells = cells[cells.geometry.notnull() & cells.geometry.is_valid].copy()
 
     features = pd.DataFrame()
     if shapes_cell_id_key is None:
@@ -364,7 +369,7 @@ def morphological_features(
     if "cell_area" in features_to_compute or any(
         f in features_to_compute for f in ["circularity", "extent", "solidity", "compactness", "sphericity"]
     ):
-        areas = geom.area
+        areas = geom.area.values
         if "cell_area" in features_to_compute:
             features["cell_area"] = areas
     else:
@@ -380,7 +385,7 @@ def morphological_features(
             "sphericity",
         ]
     ):
-        perimeters = geom.length
+        perimeters = geom.length.values
         if "perimeter" in features_to_compute:
             features["perimeter"] = perimeters
     else:
@@ -388,36 +393,36 @@ def morphological_features(
 
     if "circularity" in features_to_compute:
         if areas is None:
-            areas = geom.area
+            areas = geom.area.values
         if perimeters is None:
-            perimeters = geom.length
+            perimeters = geom.length.values
         features["circularity"] = 4 * np.pi * areas / (perimeters**2 + 1e-6)
 
     if any(f in features_to_compute for f in ["bbox_width", "bbox_height", "extent"]):
         bounds = geom.bounds
         if "bbox_width" in features_to_compute:
-            features["bbox_width"] = bounds["maxx"] - bounds["minx"]
+            features["bbox_width"] = (bounds["maxx"] - bounds["minx"]).values
         if "bbox_height" in features_to_compute:
-            features["bbox_height"] = bounds["maxy"] - bounds["miny"]
+            features["bbox_height"] = (bounds["maxy"] - bounds["miny"]).values
         if "extent" in features_to_compute:
-            width = bounds["maxx"] - bounds["minx"]
-            height = bounds["maxy"] - bounds["miny"]
+            width = (bounds["maxx"] - bounds["minx"]).values
+            height = (bounds["maxy"] - bounds["miny"]).values
             if areas is None:
-                areas = geom.area
+                areas = geom.area.values
             features["extent"] = areas / (width * height + 1e-6)
 
     if "solidity" in features_to_compute or "convexity" in features_to_compute:
         convex_hull = geom.convex_hull
         if "solidity" in features_to_compute:
-            convex_areas = convex_hull.area
+            convex_areas = convex_hull.area.values
             if areas is None:
-                areas = geom.area
+                areas = geom.area.values
             features["solidity"] = areas / (convex_areas + 1e-6)
         if "convexity" in features_to_compute:
             convex_perimeters = convex_hull.length
             if perimeters is None:
-                perimeters = geom.length
-            features["convexity"] = convex_perimeters / (perimeters + 1e-6)
+                perimeters = geom.length.values
+            features["convexity"] = (convex_perimeters / (perimeters + 1e-6)).values
 
     # Parallelized elongation and eccentricity calculation
     def compute_elong_ecc(poly):
@@ -465,13 +470,13 @@ def morphological_features(
 
     if "compactness" in features_to_compute:
         if perimeters is None:
-            perimeters = geom.length
+            perimeters = geom.length.values
         if areas is None:
-            areas = geom.area
+            areas = geom.area.values
         features["compactness"] = (perimeters**2) / (areas + 1e-6)
 
     if "num_polygons" in features_to_compute:
-        features["num_polygons"] = geom.apply(count_polygons)
+        features["num_polygons"] = geom.apply(count_polygons).values
 
     if inplace:
         merge_into_obs(sdata, tables_key, features, features_cell_id)

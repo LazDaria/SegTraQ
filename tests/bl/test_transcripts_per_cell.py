@@ -22,6 +22,6 @@ def test_transcripts_per_cell(sdata_new):
 
 def test_transcripts_per_cell_invalid_key(sdata_new):
     with pytest.raises(KeyError):
-        st.bl.transcripts_per_cell(sdata_new, transcript_key="invalid_key")
+        st.bl.transcripts_per_cell(sdata_new, points_key="invalid_key")
     with pytest.raises(KeyError):
-        st.bl.transcripts_per_cell(sdata_new, cell_key="invalid_key")
+        st.bl.transcripts_per_cell(sdata_new, points_cell_id_key="invalid_key")
