@@ -298,7 +298,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
 </div></div>
       
     </div>
@@ -314,6 +316,16 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_bidcell"><code class="docutils literal notranslate"><span class="pre">read_bidcell()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_segger"><code class="docutils literal notranslate"><span class="pre">read_segger()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_xenium"><code class="docutils literal notranslate"><span class="pre">read_xenium()</span></code></a></li>
+</ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -326,6 +338,80 @@ document.write(`
   <section id="the-io-accessor">
 <h1>The (<code class="code docutils literal notranslate"><span class="pre">io</span></code>) accessor<a class="headerlink" href="#the-io-accessor" title="Link to this heading">#</a></h1>
 <p>The io accessor provides functions for reading and validating spatial transcriptomics data.</p>
+<dl class="py function" id="module-segtraq.io.io">
+<dt class="sig sig-object py" id="segtraq.io.io.read_bidcell">
+<span class="sig-prename descclassname"><span class="pre">segtraq.io.io.</span></span><span class="sig-name descname"><span class="pre">read_bidcell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.io.io.read_bidcell" title="Link to this definition">#</a></dt>
+<dd><p>Build a SpatialData object from BIDCell subset data using utility functions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path_to_data</strong> (<em>Path</em>) – Path to the directory containing BIDCell data.</p></li>
+<li><p><strong>consolidate_shapes</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – Whether to consolidate shape layers when creating the SpatialData object.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>SpatialData object containing:
+- <cite>tables</cite>: AnnData with expression matrix, cell metadata, and gene metadata
+- <cite>labels</cite>: cell and nucleus segmentation masks
+- <cite>shapes</cite>: cell and nucleus boundaries derived from labels
+- <cite>images</cite>: DAPI reference image
+- <cite>points</cite>: transcript coordinates and assignments</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SpatialData</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>FileNotFoundError</strong> – If required CSV or segmentation files are missing.</p></li>
+<li><p><strong>ValueError</strong> – If DAPI image has unsupported dimensions.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.io.io.read_segger">
+<span class="sig-prename descclassname"><span class="pre">segtraq.io.io.</span></span><span class="sig-name descname"><span class="pre">read_segger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_to_10xdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consolidate_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.io.io.read_segger" title="Link to this definition">#</a></dt>
+<dd><p>Build a SpatialData object from Segger outputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path_to_data</strong> (<em>Path</em>) – Path to the directory containing Segger output files.</p></li>
+<li><p><strong>path_to_10xdata</strong> (<em>Path</em>) – Path to the directory containing 10x DAPI and nucleus images.</p></li>
+<li><p><strong>consolidate_shapes</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – Whether to consolidate shape layers when creating the SpatialData object.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>SpatialData object containing:
+- <cite>tables</cite>: AnnData with expression matrix and cell metadata
+- <cite>labels</cite>: cell and nucleus segmentation masks
+- <cite>shapes</cite>: cell and nucleus boundaries
+- <cite>images</cite>: DAPI reference image
+- <cite>points</cite>: transcript coordinates and assignments</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SpatialData</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.io.io.read_xenium">
+<span class="sig-prename descclassname"><span class="pre">segtraq.io.io.</span></span><span class="sig-name descname"><span class="pre">read_xenium</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_to_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SpatialData</span></span></span><a class="headerlink" href="#segtraq.io.io.read_xenium" title="Link to this definition">#</a></dt>
+<dd><p>Read 10x Xenium data and assemble a SpatialData object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path_to_data</strong> (<em>Path</em>) – Path to the directory containing subset 10x Xenium data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>SpatialData object containing transcripts, shapes, labels, tables, and DAPI image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SpatialData</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -363,6 +449,23 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_bidcell"><code class="docutils literal notranslate"><span class="pre">read_bidcell()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_segger"><code class="docutils literal notranslate"><span class="pre">read_segger()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.io.io.read_xenium"><code class="docutils literal notranslate"><span class="pre">read_xenium()</span></code></a></li>
+</ul>
+  </nav></div>
+
+</div></div>
               
             
           </div>
