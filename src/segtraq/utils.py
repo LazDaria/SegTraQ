@@ -76,6 +76,7 @@ def run_label_transfer(
     adata_ref: AnnData,
     ref_cell_type_key: str,
     tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
     tx_min: float = 10.0,
     tx_max: float = 2000.0,
     gn_min: float = 5.0,
@@ -102,6 +103,8 @@ def run_label_transfer(
         Column in `adata_ref.obs` with reference cell types.
     tables_key : str
         Key of the AnnData table in `sdata.tables`.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
     tx_min, tx_max : float
         Min/max transcripts per cell for pre-filtering.
     gn_min, gn_max : float
@@ -184,23 +187,23 @@ def run_label_transfer(
     if inplace:
         # Write back only to the filtered subset cells
         out = ct_corr.rename(columns={"celltype": label_key})
-        tbl.obs = tbl.obs.merge(out, how="left", left_on="cell_id", right_on="cell_id")
+        tbl.obs = tbl.obs.merge(out, how="left", left_on=tables_cell_id_key, right_on=tables_cell_id_key)
         tbl.obs[label_key] = tbl.obs[label_key].astype("category")
         return None
     else:
         return out
 
 
-def merge_into_obs(sdata, table_key, df_to_merge, on_key, fillna_cols=None):
+def merge_into_obs(sdata, table_key, df_to_merge, table_cell_id_key, df_cell_id_key, fillna_cols=None):
     obs = sdata.tables[table_key].obs
 
     # Drop overlapping columns, but keep the merge key
-    overlapping = [c for c in df_to_merge.columns if c in obs.columns and c != on_key]
+    overlapping = [c for c in df_to_merge.columns if c in obs.columns and c != table_cell_id_key]
     if overlapping:
         obs = obs.drop(columns=overlapping)
 
     # Merge
-    df = obs.merge(df_to_merge, on=on_key, how="left")
+    df = obs.merge(df_to_merge, left_on=table_cell_id_key, right_on=df_cell_id_key, how="left")
 
     # Optionally fill numeric columns with zeros
     if fillna_cols:
@@ -239,7 +242,6 @@ def validate_spatialdata(
     nucleus_shapes_cell_id_key: str | None = "cell_id",
     labels_key: str = "cell_labels",
     labels_to_cell_id_key: str | None = "label_id",
-    cell_type_key: str | None = "transferred_cell_type",
     labels_data_key: str = None,
 ) -> bool:
     """
@@ -276,6 +278,9 @@ def validate_spatialdata(
         Key for accessing segmentation labels in the SpatialData. Default is "cell_labels".
     labels_data_key : str, optional
         Key for accessing data within labels if they are stored as a DataTree. Default is None.
+    labels_to_cell_id_key : str or None, optional
+        Column in `sdata.tables[tables_key]` mapping segmentation label IDs
+        (from `labels_key`) to cell IDs.
 
     Raises
     ------
@@ -356,12 +361,11 @@ def validate_spatialdata(
                 f"Available columns: {table.obs.columns.tolist()}. "
                 f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
             )
-
-        if cell_type_key is not None:
-            assert cell_type_key in table.obs.columns, (
-                f"Tables DataFrame must contain cell type column '{cell_type_key}'. "
+        if labels_to_cell_id_key is not None:
+            assert labels_to_cell_id_key in table.obs.columns, (
+                f"Tables DataFrame must contain mapping to segmentation label IDs - '{tables_area_volume_key}'. "
                 f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'cell_type_key' argument (set to None if you do not have this)."
+                f"You can set this with the 'labels_to_cell_id_key' argument (set to None if you do not have this)."
             )
 
     # get unique cell IDs from points
@@ -528,13 +532,5 @@ def validate_spatialdata(
                 f"You can set this with the 'nucleus_shapes_cell_id_key' argument "
                 f"(set to None if you do not have this)."
             )
-
-    # check labels-to-cell-id mapping key if labels exist
-    if contains_labels and labels_to_cell_id_key is not None:
-        assert labels_to_cell_id_key in getattr(labels, "attrs", {}), (
-            f"Expected key '{labels_to_cell_id_key}' in labels attributes, "
-            f"but found {list(getattr(labels, 'attrs', {}).keys())}. "
-            f"You can set this with the 'labels_to_cell_id_key' argument (set to None if you do not have this)."
-        )
 
     return True

@@ -34,7 +34,6 @@ class SegTraQ:
         labels_key: str | None = "cell_labels",
         labels_data_key: str | None = "scale0/image",
         labels_to_cell_id_key: str | None = "cell_labels",
-        cell_type_key: str | None = "transferred_cell_type",
     ):       
 
         """
@@ -111,10 +110,6 @@ class SegTraQ:
         labels_to_cell_id_key : str or None, optional, default="cell_labels"
             Column in `sdata.tables[tables_key]` mapping segmentation label IDs
             (from `labels_key`) to cell IDs.
-
-        cell_type_key : str or None, optional, default="transferred_cell_type"
-            Column in the cell table containing cell-type annotations, if available.
-            Note: running `segtraq.run_label_transfer()` will overwrite this column.
         """
 
         # Validate spatialdata object
@@ -137,7 +132,6 @@ class SegTraQ:
             nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
             labels_key=labels_key,
             labels_to_cell_id_key=labels_to_cell_id_key,
-            cell_type_key=cell_type_key,
             labels_data_key=labels_data_key,
         )
 
@@ -166,9 +160,8 @@ class SegTraQ:
         self.labels_data_key = labels_data_key
         self.labels_to_cell_id_key = labels_to_cell_id_key
 
-        self.cell_type_key = cell_type_key
-
         self.bl = _BLFacade(self)
+        self.nc: NCFacade = NCFacade(self)
 
     def run_baseline(self, inplace: bool = True):
         """
@@ -197,14 +190,13 @@ class SegTraQ:
             - If `inplace=False`: returns a dict with keys:
             `summary`, `genes_per_cell`, `transcripts_per_cell`, and optionally `transcript_density`.
         """
-        tbl = self.sdata.tables[self.tables_key]
 
-        gpc = self.bl.genes_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
-        tpc = self.bl.transcripts_per_cell(inplace=inplace).set_index(self.tables_cell_id_key)
-        mrp = self.bl.morphological_features(inplace=inplace).set_index(self.shapes_cell_id_key)
+        gpc = self.bl.genes_per_cell(inplace=inplace)
+        tpc = self.bl.transcripts_per_cell(inplace=inplace)
+        mrp = self.bl.morphological_features(inplace=inplace)
 
         dens_raw = self.bl.transcript_density(inplace=inplace)
-        dens = None if dens_raw is None else dens_raw.set_index(self.tables_cell_id_key)
+        dens = None if dens_raw is None else dens_raw
 
         summary = dict(
             num_cells=self.bl.num_cells(inplace=inplace),
@@ -226,12 +218,64 @@ class SegTraQ:
                 out["transcript_density"] = dens
             return out
         
+    def run_nuclear_correlation(self, inplace: bool = True):
+        """
+        Compute nuclear-correlation metrics and optionally merge them into the cell table.
+
+        This runs, in order:
+        1) IoU between each cell and its best-matching nucleus
+        2) Correlation between per-cell expression and its matched nucleus (Pearson)
+        3) Correlation between the cell's nucleus-overlap part vs. remainder (vectorized)
+
+        Parameters
+        ----------
+        inplace : bool, default=True
+            If True, writes results into `sdata.tables[tables_key].obs` and returns None.
+            If False, returns a dictionary of DataFrames without writing.
+
+        Returns
+        -------
+        None or dict
+            - If `inplace=True`: returns None after writing to `sdata`.
+            - If `inplace=False`: returns a dict with keys:
+                * "ious"                : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU]
+                * "cell_nuc_correlation": DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_nc_cell]
+                * "parts_correlation"   : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_cell_parts]
+
+        Notes
+        -----
+        - Requires `self.nucleus_shapes_key` (nucleus boundaries).
+        """
+        assert self.nucleus_shapes_key is not None, (
+            "Cannot run nuclear correlation: `nucleus_shapes_key` is None. "
+            "Define the nucleus shape layer when initializing SegTraQ."
+        )
+
+        tbl = self.sdata.tables[self.tables_key]
+
+        ious = self.nc.compute_cell_nuc_ious()
+        cell_nuc_corr = self.nc.compute_cell_nuc_correlation()
+        parts_corr = self.nc.compute_correlation_between_parts()
+
+
+        if inplace:
+            return None
+
+        else:
+            return {
+                "ious": ious,
+                "cell_nuc_correlation": cell_nuc_corr,
+                "parts_correlation": parts_corr,
+            }
+
+        
     def run_label_transfer(self, 
                            adata_ref = AnnData, 
                            tx_min: float = 10.0,
                            tx_max: float = 2000.0,
                            gn_min: float = 5.0,
                            gn_max: float = np.inf,
+                           label_key: str = "transferred_cell_type",
                            ref_cell_type: str = "cell_type",
                            ref_ensemble_key: str | None = None,
                            query_ensemble_key: str | None =  "gene_ids",
@@ -248,6 +292,8 @@ class SegTraQ:
             Inclusive lower and upper bounds for per-cell transcript count filtering.
         gn_min, gn_max : float, default=(5.0, inf)
             Inclusive lower and upper bounds for per-cell gene count filtering.
+        label_key : str
+            Column name to store transferred labels in `.obs` when `inplace=True`.
         ref_cell_type: str, default="cell_type"
             Column name of cell-type annotations in `adata_ref.obs[ref_cell_type]`.
         ref_ensemble_key: str or None, default=None
@@ -270,17 +316,19 @@ class SegTraQ:
             adata_ref=adata_ref,
             ref_cell_type_key=ref_cell_type,
             tables_key=self.tables_key,
+            tables_cell_id_key = self.tables_cell_id_key,
             tx_min=tx_min,
             tx_max=tx_max,
             gn_min=gn_min,
             gn_max=gn_max,
-            label_key=self.cell_type_key,
+            label_key=label_key,
             ref_ensemble_key = ref_ensemble_key,
             query_ensemble_key =query_ensemble_key,
             inplace=inplace,
         )
 
         return None if inplace else result
+    run_label_transfer.__doc__ = _run_label_transfer.__doc__  
 
 
 class _BLFacade:
@@ -300,6 +348,7 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    num_cells.__doc__ = bl.num_cells.__doc__  
 
     def num_genes(self, inplace: bool = True):
         return bl.num_genes(
@@ -309,6 +358,7 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    num_genes.__doc__ = bl.num_genes.__doc__  
 
     def num_transcripts(self, inplace: bool = True):
         return bl.num_transcripts(
@@ -317,6 +367,7 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    num_transcripts.__doc__ = bl.num_transcripts.__doc__  
 
     def perc_unassigned_transcripts(self, inplace: bool = True):
         return bl.perc_unassigned_transcripts(
@@ -327,29 +378,35 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    perc_unassigned_transcripts.__doc__ = bl.perc_unassigned_transcripts.__doc__   
 
     def genes_per_cell(self, inplace: bool = True):
         return bl.genes_per_cell(
             sdata=self._p.sdata,
+            tables_cell_id_key = self._p.tables_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    genes_per_cell.__doc__ = bl.genes_per_cell.__doc__    
 
     def transcripts_per_cell(self, inplace: bool = True):
         return bl.transcripts_per_cell(
             sdata=self._p.sdata,
+            tables_cell_id_key = self._p.tables_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    transcripts_per_cell.__doc__ = bl.transcripts_per_cell.__doc__
 
     def morphological_features(self, features_to_compute: list | None = None, n_jobs: int = 1, inplace: bool = True):
         return bl.morphological_features(
             sdata=self._p.sdata,
+            tables_cell_id_key = self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             features_to_compute=features_to_compute,
@@ -357,6 +414,7 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+    morphological_features.__doc__ = bl.morphological_features.__doc__
 
     def transcript_density(self, inplace: bool = False):
         tavk = self._p.tables_area_volume_key
@@ -376,6 +434,80 @@ class _BLFacade:
             tables_area_volume_key=tavk,
             inplace=inplace,
         )
+    transcript_density.__doc__ = bl.transcript_density.__doc__
+
+class NCFacade:
+    """
+    Bound nuclear-correlation (nc) metrics interface for a SegTraQer instance.
+    Methods use the parent's `sdata` and configured keys.
+    No per-call overrides are allowed.
+    """
+
+    def __init__(self, parent: "SegTraQ") -> None:
+        self._p = parent
+
+    def compute_cell_nuc_ious(self, n_jobs: int = -1, inplace: bool = True):
+        assert self._p.nucleus_shapes_key is not None, (
+            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
+            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
+        )
+        return nc.compute_cell_nuc_ious(
+            sdata=self._p.sdata,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            tables_cell_id_key = self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            n_jobs=n_jobs,
+            use_progress=True,
+            inplace=inplace,
+        )
+
+    compute_cell_nuc_ious.__doc__ = nc.compute_cell_nuc_ious.__doc__
+
+    def compute_cell_nuc_correlation(self, n_jobs_iou: int = -1, inplace: bool = True):
+        assert self._p.nucleus_shapes_key is not None, (
+            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
+            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
+        )
+        return nc.compute_cell_nuc_correlation(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_cell_id_key = self._p.shapes_cell_id_key,
+            metric="pearson",
+            points_key=self._p.points_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            shapes_key=self._p.shapes_key,
+            n_jobs_iou=n_jobs_iou,
+            inplace=inplace,
+        )
+    compute_cell_nuc_correlation.__doc__ = nc.compute_cell_nuc_correlation.__doc__
+
+    def compute_correlation_between_parts(self, inplace: bool = True):
+        assert self._p.nucleus_shapes_key is not None, (
+            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
+            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
+        )
+        return nc.compute_correlation_between_parts(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            n_jobs=1,
+            inplace=inplace,
+        )
+    compute_correlation_between_parts.__doc__ = nc.compute_correlation_between_parts.__doc__
+
 
 
 
@@ -393,93 +525,6 @@ class _BLFacade:
     #         sc.pp.neighbors(adata_copy)
     #         sc.tl.umap(adata_copy)
     #         return adata_copy
-
-    # def run_nuclear_correlation(
-    #     self,
-    #     inplace: bool = True,
-    # ):
-    #     tbl = self.sdata.tables[self.table_key]
-
-    #     # 1) IoU between cell and its best-matching nucleus
-    #     ious = nc.nuclear_correlation.compute_cell_nuc_ious(
-    #         sdata=self.sdata,
-    #         cell_id_key_shape=self.cell_key_shapes,
-    #         cell_shape_key=self.shape_key_nc,
-    #         nuc_shape_key=self.nuc_shape_key,
-    #         n_jobs=-1,
-    #         use_progress=True,
-    #     ).set_index(self.cell_key_tables)
-
-    #     if inplace:
-    #         tbl.obs = tbl.obs.merge(
-    #             ious.reset_index(),
-    #             how="left",
-    #             left_on=self.cell_key_tables,
-    #             right_on=self.cell_key_tables,
-    #         )
-
-    #     print("IoU computed.")
-
-    #     # 2) Cell–nucleus correlation per cell
-    #     cell_nuc_corr = nc.nuclear_correlation.compute_cell_nuc_correlation(
-    #         sdata=self.sdata,
-    #         table_key=self.table_key,
-    #         cell_id_key=self.cell_key_tables,
-    #         transcripts_key=self.points_key,
-    #         nucleus_by=self.nuc_shape_key,
-    #         feature_column=self.gene_key,
-    #         x_coordinate=self.x,
-    #         y_coordinate=self.y,
-    #         cell_shape_key=self.shape_key_nc,
-    #     )
-    #     cell_nuc_corr = cell_nuc_corr.set_index(self.cell_key_tables).rename(
-    #         columns={
-    #             "correlation": "corr_nc_cell",
-    #         }
-    #     )
-    #     print("Cell-nuc correlation computed.")
-
-    #     # 3) Correlation between nuclear-overlap part of cell vs rest of cell
-    #     parts_corr = (
-    #         nc.nuclear_correlation.compute_correlation_between_parts(
-    #             sdata=self.sdata,
-    #             table_key=self.table_key,
-    #             cell_id_key_shape=self.cell_key_shapes,
-    #             cell_shape_key=self.shape_key_nc,
-    #             nuc_shape_key=self.nuc_shape_key,
-    #             transcripts_key=self.points_key,
-    #             feature_column=self.gene_key,
-    #             x_coordinate=self.x,
-    #             y_coordinate=self.y,
-    #         )
-    #         .set_index(self.cell_key_tables)
-    #         .rename(
-    #             columns={
-    #                 "correlation_parts": "corr_cell_parts",
-    #             }
-    #         )
-    #     )
-    #     print("Correlation between parts correlation computed.")
-
-    #     if inplace:
-    #         to_join = (
-    #             cell_nuc_corr.loc[:, ["corr_nc_cell"]]
-    #             .join(parts_corr.loc[:, ["corr_cell_parts"]], how="outer")
-    #             .reset_index()
-    #         )
-    #         tbl.obs = tbl.obs.merge(
-    #             to_join,
-    #             how="left",
-    #             left_on=self.cell_key_tables,
-    #             right_on=self.cell_key_tables,
-    #         )
-    #         return None
-    #     else:
-    #         return {
-    #             "cell_nuc_correlation": cell_nuc_corr.reset_index(),
-    #             "ious": ious.reset_index(),
-    #             "parts_correlation": parts_corr.reset_index(),
-    #         }
 
     # def run_clustering_stability(
     #     self,
@@ -566,15 +611,6 @@ class _BLFacade:
 
     #     else:
     #         return purity_results  # , mecr
-
-    # def run_rastering(self):
-    #     pl.save_mask_to_tiff(
-    #         self.sdata,
-    #         labels_keys=self.label_keys,
-    #         output_dir=self.out_path,
-    #         palette=self.palette,
-    #         unassigned_cell_id=self.background_cell_id,
-    #     )
 
     # def run_all(self):
     #     self.run_baseline()
