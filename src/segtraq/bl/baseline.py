@@ -9,7 +9,7 @@ from ..utils import merge_into_obs
 from .utils import count_polygons
 
 
-def num_cells(sdata: sd.SpatialData, table_key: str = "table", inplace: bool = True) -> int:
+def num_cells(sdata: sd.SpatialData, tables_key: str = "table", inplace: bool = True) -> int:
     """
     Counts the number of cells in the given SpatialData object based on the specified table key.
 
@@ -17,7 +17,7 @@ def num_cells(sdata: sd.SpatialData, table_key: str = "table", inplace: bool = T
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing spatial information and a table.
-    cell_id : str, optional
+    tables_key : str, optional
         The key in the `tables` attribute of `sdata` that corresponds to table.
         Default is "table".
     inplace : bool, optional
@@ -28,14 +28,14 @@ def num_cells(sdata: sd.SpatialData, table_key: str = "table", inplace: bool = T
     int
         The number of cells found under the specified table key.
     """
-    num_cells = len(sdata.tables[table_key])
+    num_cells = len(sdata.tables[tables_key])
     if inplace:
-        sdata.tables[table_key].uns["num_cells"] = num_cells
+        sdata.tables[tables_key].uns["num_cells"] = num_cells
     return num_cells
 
 
 def num_transcripts(
-    sdata: sd.SpatialData, transcript_key: str = "transcripts", table_key: str = "table", inplace: bool = True
+    sdata: sd.SpatialData, points_key: str = "transcripts", tables_key: str = "table", inplace: bool = True
 ) -> int:
     """
     Counts the total number of transcripts in the given SpatialData object.
@@ -44,9 +44,9 @@ def num_transcripts(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing transcript information.
-    transcript_key : str, optional
+    points_key : str, optional
         The key to access transcript data within the spatial data object. Default is "transcripts".
-    table_key : str, optional
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -56,18 +56,18 @@ def num_transcripts(
     int
         The total number of transcripts in the specified SpatialData object.
     """
-    num_transcripts = sdata.points[transcript_key].shape[0].compute()
+    num_transcripts = sdata.points[points_key].shape[0].compute()
     if inplace:
-        sdata.tables[table_key].uns["num_transcripts"] = num_transcripts
+        sdata.tables[tables_key].uns["num_transcripts"] = num_transcripts
 
     return num_transcripts
 
 
 def num_genes(
     sdata: sd.SpatialData,
-    transcript_key: str = "transcripts",
-    gene_key: str = "feature_name",
-    table_key: str = "table",
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    tables_key: str = "table",
     inplace: bool = True,
 ) -> int:
     """
@@ -77,11 +77,11 @@ def num_genes(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing gene information.
-    transcript_key : str, optional
+    points_key : str, optional
         The key to access transcript data within the spatial data object. Default is "transcripts".
-    gene_key : str, optional
+    points_gene_key : str, optional
         The key to access gene names within the transcript data. Default is "feature_name".
-    table_key : str, optional
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -92,18 +92,18 @@ def num_genes(
         The number of unique genes found in the specified SpatialData object.
     """
     # converting from np.int64 to int for consistency
-    num_genes = int(sdata.points[transcript_key][gene_key].nunique().compute())
+    num_genes = int(sdata.points[points_key][points_gene_key].nunique().compute())
     if inplace:
-        sdata.tables[table_key].uns["num_genes"] = num_genes
+        sdata.tables[tables_key].uns["num_genes"] = num_genes
     return num_genes
 
 
 def perc_unassigned_transcripts(
     sdata: sd.SpatialData,
-    transcript_key: str = "transcripts",
-    cell_key: str = "cell_id",
-    unassigned_key: int = -1,
-    table_key: str = "table",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: int = -1,
+    tables_key: str = "table",
     inplace: bool = True,
 ) -> float:
     """
@@ -113,13 +113,15 @@ def perc_unassigned_transcripts(
     ----------
     sdata : sd.SpatialData
         The spatial data object containing transcript information.
-    transcript_key : str, optional
+    points_key : str, optional
         The key to access transcript data within the spatial data object. Default is "transcripts".
-    cell_key : str, optional
+    points_cell_id_key : str, optional
         The key to access cell assignment information within the transcript data. Default is "cell_id".
     unassigned_key : int, optional
         The value indicating an unassigned transcript. Default is -1.
-    table_key : str, optional
+    points_background_id : str, optional
+        The key to access the AnnData table from `sdata.tables`. Default is "table".
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -129,20 +131,20 @@ def perc_unassigned_transcripts(
     float
         The fraction of transcripts that are unassigned.
     """
-    counts = sdata.points[transcript_key][cell_key].compute().value_counts()
-    num_unassigned = counts.get(unassigned_key, 0)
+    counts = sdata.points[points_key][points_cell_id_key].compute().value_counts()
+    num_unassigned = counts.get(points_background_id, 0)
     # converting from np.float64 to float for consistency
     perc_unassigned_transcripts = float(num_unassigned / counts.sum())
     if inplace:
-        sdata.tables[table_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
+        sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
     return perc_unassigned_transcripts
 
 
 def transcripts_per_cell(
     sdata: sd.SpatialData,
-    transcript_key: str = "transcripts",
-    cell_key: str = "cell_id",
-    table_key: str = "table",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    tables_key: str = "table",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -152,11 +154,11 @@ def transcripts_per_cell(
     ----------
     sdata : sd.SpatialData
         A SpatialData object containing transcript and cell assignment information.
-    transcript_key : str, optional
+    points_key : str, optional
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
-    cell_key : str, optional
+    points_cell_id_key : str, optional
         The column name in the transcript data that contains cell assignment information. Default is "cell_id".
-    table_key : str, optional
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -167,22 +169,22 @@ def transcripts_per_cell(
         A DataFrame with two columns: the cell identifier (`cell_key`) and the
         corresponding transcript count ("transcript_count").
     """
-    counts = sdata.points[transcript_key][cell_key].compute().value_counts().astype("int64")
+    counts = sdata.points[points_key][points_cell_id_key].compute().value_counts().astype("int64")
     counts_df = counts.reset_index()
-    counts_df.columns = [cell_key, "transcript_count"]
+    counts_df.columns = [points_cell_id_key, "transcript_count"]
 
     if inplace:
-        merge_into_obs(sdata, table_key, counts_df, cell_key, fillna_cols=["transcript_count"])
+        merge_into_obs(sdata, tables_key, counts_df, points_cell_id_key, fillna_cols=["transcript_count"])
 
     return counts_df
 
 
 def genes_per_cell(
     sdata,
-    transcript_key: str = "transcripts",
-    cell_key: str = "cell_id",
-    gene_key: str = "feature_name",
-    table_key: str = "table",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_gene_key: str = "feature_name",
+    tables_key: str = "table",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -192,13 +194,13 @@ def genes_per_cell(
     ----------
     sdata : object
         An object containing spatial transcriptomics data with a `points` attribute.
-    transcript_key : str, optional
+    points_key : str, optional
         The key to access the transcript data within `sdata.points` (default is "transcripts").
-    cell_key : str, optional
+    points_cell_id_key : str, optional
         The column name in the transcript data representing cell identifiers (default is "cell_id").
-    gene_key : str, optional
+    points_gene_key : str, optional
         The column name in the transcript data representing gene names (default is "feature_name").
-    table_key : str, optional
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -209,22 +211,22 @@ def genes_per_cell(
         A DataFrame with one row per cell, containing the cell identifier and
         the count of unique genes detected in that cell.
     """
-    df = sdata.points[transcript_key].compute()
+    df = sdata.points[points_key].compute()
     # Group by cell and count unique genes
-    gene_counts = df.groupby(cell_key)[gene_key].nunique().reset_index()
-    gene_counts.columns = [cell_key, "gene_count"]
+    gene_counts = df.groupby(points_cell_id_key)[points_gene_key].nunique().reset_index()
+    gene_counts.columns = [points_cell_id_key, "gene_count"]
     if inplace:
-        merge_into_obs(sdata, table_key, gene_counts, cell_key, fillna_cols=["gene_count"])
+        merge_into_obs(sdata, tables_key, gene_counts, points_cell_id_key, fillna_cols=["gene_count"])
 
     return gene_counts
 
 
 def transcript_density(
     sdata: sd.SpatialData,
-    table_key: str = "table",
-    transcript_key: str = "transcripts",
-    cell_key: str = "cell_id",
-    area_key: str = "cell_area",
+    tables_key: str = "table",
+    points_key: str = "transcripts",
+    tables_cell_id_key: str = "cell_id",
+    tables_area_volume_key: str = "cell_area",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -235,13 +237,13 @@ def transcript_density(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing spatial transcriptomics data.
-    table_key : str, optional
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
-    transcript_key : str, optional
+    points_key : str, optional
         The key in the transcript table indicating transcript identifiers. Default is "transcripts".
-    cell_key : str, optional
+    tables_cell_id_key : str, optional
         The key in the table indicating cell identifiers. Default is "cell_id".
-    area_key: str, optional
+    tables_area_volume_key: str, optional
         The key in the table indicating the cell area/volume. Default is "cell_area".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -253,29 +255,29 @@ def transcript_density(
         where "transcript_density" is the number of transcripts per unit area for
         each cell. Rows with missing values are dropped.
     """
-    adata = sdata.tables[table_key]
+    adata = sdata.tables[tables_key]
     # this will also add the transcript counts inplace
-    counts_df = transcripts_per_cell(sdata, transcript_key, cell_key)
-    area_df = adata.obs[[cell_key, area_key]]
+    counts_df = transcripts_per_cell(sdata, points_key, tables_cell_id_key)
+    area_df = adata.obs[[tables_cell_id_key, tables_area_volume_key]]
 
-    merged = counts_df.merge(area_df, on=cell_key, how="left")
-    merged["transcript_density"] = merged["transcript_count"] / merged[area_key]
+    merged = counts_df.merge(area_df, on=tables_cell_id_key, how="left")
+    merged["transcript_density"] = merged["transcript_count"] / merged[tables_area_volume_key]
 
     if inplace:
         merge_into_obs(
-            sdata, table_key, merged[[cell_key, "transcript_density"]], cell_key, fillna_cols=["transcript_density"]
+            sdata, tables_key, merged[[tables_cell_id_key, "transcript_density"]], tables_cell_id_key, fillna_cols=["transcript_density"]
         )
 
-    return merged[[cell_key, "transcript_density"]].dropna()
+    return merged[[tables_cell_id_key, "transcript_density"]].dropna()
 
 
 def morphological_features(
     sdata,
-    shape_key: str = "cell_boundaries",
-    id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    shapes_cell_id_key: str = "cell_id",
     features_to_compute: list = None,
     n_jobs: int = -1,  # number of parallel jobs, -1 uses all CPUs
-    table_key: str = "table",
+    tables_key: str = "table",
     inplace: bool = True,
 ):
     """
@@ -285,9 +287,9 @@ def morphological_features(
     ----------
     sdata : object
         Spatial data object containing cell shape information. Must have a `.shapes` attribute with geometries.
-    shape_key : str, optional
+    shapes_key : str, optional
         Key in `sdata.shapes` specifying the geometry column (default is "cell_boundaries").
-    id_key : str, optional
+    shapes_cell_id_key : str, optional
         Key in `sdata.shapes` specifying the unique cell identifier column (default is "cell_id").
     features_to_compute : list of str, optional
         List of morphological features to compute. If None, all available features are computed.
@@ -295,7 +297,7 @@ def morphological_features(
         "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "num_polygons".
     n_jobs : int, optional
         Number of parallel jobs to use for computation. -1 uses all available CPUs (default is -1).
-    table_key : str, optional
+    tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
@@ -303,7 +305,7 @@ def morphological_features(
     Returns
     -------
     features : pandas.DataFrame
-        DataFrame containing the computed morphological features for each cell, indexed by `id_key`.
+        DataFrame containing the computed morphological features for each cell, indexed by `shapes_cell_id_key`.
 
     Raises
     ------
@@ -341,7 +343,7 @@ def morphological_features(
         if invalid_feats:
             raise ValueError(f"Unknown features requested: {invalid_feats}")
 
-    cells = sdata.shapes[shape_key]
+    cells = sdata.shapes[shapes_key]
     if not isinstance(cells, gpd.GeoDataFrame):
         cells = cells.to_gdf()
 
@@ -349,7 +351,7 @@ def morphological_features(
     cells = cells[cells.geometry.notnull() & cells.geometry.is_valid].copy().reset_index()
 
     features = pd.DataFrame()
-    features[id_key] = cells[id_key].values
+    features[shapes_cell_id_key] = cells[shapes_cell_id_key].values
     geom = cells.geometry
 
     # Compute features conditionally
@@ -466,6 +468,6 @@ def morphological_features(
         features["num_polygons"] = geom.apply(count_polygons)
 
     if inplace:
-        merge_into_obs(sdata, table_key, features, id_key)
+        merge_into_obs(sdata, tables_key, features, shapes_cell_id_key)
 
     return features
