@@ -12,4 +12,4 @@ def test_num_transcripts(sdata_new):
 
 def test_num_transcripts_invalid_key(sdata_new):
     with pytest.raises(KeyError):
-        st.bl.num_transcripts(sdata_new, transcript_key="invalid_key")
+        st.bl.num_transcripts(sdata_new, points_key="invalid_key")

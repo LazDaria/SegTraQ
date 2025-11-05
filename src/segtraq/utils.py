@@ -216,14 +216,24 @@ def _is_missing(x):
 
 def validate_spatialdata(
     sdata: sd.SpatialData,
+    images_key: str | None = "morphology_focus",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_area_volume_key: str | None = "cell_area",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_z_key: str | None = "z",
+    points_gene_key: str = "feature_name",
     shapes_key: str | list[str] = "cell_boundaries",
     shapes_cell_id_key: str | None = "cell_id",
+    nucleus_shapes_key: str | None = "nucleus_boundaries",
+    nucleus_shapes_cell_id_key: str | None = "cell_id",
     labels_key: str = "cell_labels",
+    labels_to_cell_id_key: str | None = "label_id",
+    cell_type_key: str | None = "cell_type",
     labels_data_key: str = None,
 ) -> bool:
     """
@@ -276,6 +286,12 @@ def validate_spatialdata(
     if not isinstance(sdata, sd.SpatialData):
         raise TypeError("Input must be an instance of sd.SpatialData")
 
+    # check if there is an image at the specified key
+    if images_key is not None:
+        assert images_key in sdata.images.keys(), f"{images_key} not found in the image layer. "
+        f"Available keys: {sdata.images.keys()}. "
+        "You can set this with the images_key parameter."
+
     contains_points = len(sdata.points) > 0
     contains_shapes = len(sdata.shapes) > 0
     contains_labels = len(sdata.labels) > 0
@@ -292,11 +308,55 @@ def validate_spatialdata(
         f"If you want to use a different key, set the points_key parameter."
     )
     points = sdata.points[points_key]
+
+    # check gene column in points
     assert points_cell_id_key in points.columns, (
         f"Points DataFrame must contain column to identify cells: {points_cell_id_key}. "
         f"Available columns: {points.columns.tolist()}. "
         f"If you want to use a different column, set the points_cell_id_key parameter."
     )
+
+    # check coordinate columns in points
+    for coord_key in [points_x_key, points_y_key]:
+        assert coord_key in points.columns, (
+            f"Points DataFrame must contain coordinate column '{coord_key}'. "
+            f"Available columns: {points.columns.tolist()}. "
+            f"You can set this with the '{coord_key}' argument."
+        )
+
+    if points_z_key is not None:
+        assert points_z_key in points.columns, (
+            f"Points DataFrame must contain z coordinate column '{points_z_key}'. "
+            f"Available columns: {points.columns.tolist()}. "
+            f"You can set this with the '{coord_key}' argument."
+        )
+
+    # check gene key
+    assert points_gene_key in points.columns, (
+        f"Points DataFrame must contain gene feature column '{points_gene_key}'. "
+        f"Available columns: {points.columns.tolist()}"
+    )
+
+    if contains_tables:
+        assert tables_key in sdata.tables, (
+            f"Tables DataFrame must contain key: {tables_key}. "
+            f"Available keys: {list(sdata.tables.keys())}. "
+            f"If you want to use a different key, set the tables_key parameter."
+        )
+        table = sdata.tables[tables_key]
+        if tables_area_volume_key is not None:
+            assert tables_area_volume_key in table.obs.columns, (
+                f"Tables DataFrame must contain area/volume column '{tables_area_volume_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
+            )
+
+        if cell_type_key is not None:
+            assert cell_type_key in table.obs.columns, (
+                f"Tables DataFrame must contain cell type column '{cell_type_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'cell_type_key' argument (set to None if you do not have this)."
+            )
 
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
@@ -445,5 +505,30 @@ def validate_spatialdata(
                 f"This might lead to inconsistencies in the spatialdata object.",
                 stacklevel=2,
             )
+
+    # check for nucleus shapes
+    if nucleus_shapes_key is not None:
+        assert nucleus_shapes_key in sdata.shapes.keys(), (
+            f"Nucleus shapes key '{nucleus_shapes_key}' not found in shapes. "
+            f"Available keys: {list(sdata.shapes.keys())}. "
+            f"You can set this with the 'nucleus_shapes_key' argument (set to None if you do not have this)."
+        )
+
+        if nucleus_shapes_cell_id_key is not None:
+            nucleus_shapes = sdata.shapes[nucleus_shapes_key]
+            assert nucleus_shapes_cell_id_key in nucleus_shapes.columns, (
+                f"Nucleus shapes DataFrame must contain cell ID column '{nucleus_shapes_cell_id_key}'. "
+                f"Available columns: {nucleus_shapes.columns.tolist()}. "
+                f"You can set this with the 'nucleus_shapes_cell_id_key' argument "
+                f"(set to None if you do not have this)."
+            )
+
+    # check labels-to-cell-id mapping key if labels exist
+    if contains_labels and labels_to_cell_id_key is not None:
+        assert labels_to_cell_id_key in getattr(labels, "attrs", {}), (
+            f"Expected key '{labels_to_cell_id_key}' in labels attributes, "
+            f"but found {list(getattr(labels, 'attrs', {}).keys())}. "
+            f"You can set this with the 'labels_to_cell_id_key' argument (set to None if you do not have this)."
+        )
 
     return True
