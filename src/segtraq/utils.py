@@ -27,7 +27,7 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
 
-def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, cell_id_key: str = "cell_id") -> pd.DataFrame:
+def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id") -> pd.DataFrame:
     """
     Assign cell types to cells in `adata` via Pearson correlation with reference means.
 
@@ -37,6 +37,8 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, cell_i
         Query dataset (log-normalized) with genes in `adata.var_names`.
     ref_mean_df : pd.DataFrame
         Reference matrix (cell_types x genes), log-normalized.
+    query_ensemble_key: str or None, default="gene_ids"
+        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. If None, `self.sdata.tables[self.tables_key].var_names` will be used.
     cell_id_key: str
         Column name in tables DataFrame indicating cell IDs. Default is "cell_id".
 
@@ -45,10 +47,11 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, cell_i
     pd.DataFrame
         DataFrame with columns: ['cell_id', 'celltype', 'pearson_corr'].
     """
+    genes = adata.var_names if q_ensemble_key is None else adata.var[q_ensemble_key]
     X_query = pd.DataFrame(
         _to_ndarray(adata.X),
         index=adata.obs[cell_id_key],
-        columns=adata.var_names,
+        columns=genes,
     )
 
     common_genes = X_query.columns.intersection(ref_mean_df.columns)
@@ -65,20 +68,21 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, cell_i
     best_celltype = cor_df.idxmax(axis=1)
     best_score = cor_df.max(axis=1)
 
-    return pd.DataFrame({"cell_id": X_query.index, "celltype": best_celltype.values, "pearson_corr": best_score.values})
+    return pd.DataFrame({"cell_id": X_query.index, "transferred_cell_type": best_celltype.values, "pearson_score": best_score.values})
 
 
 def run_label_transfer(
     sdata,
-    adata_reference: AnnData,
-    celltype_key: str,
-    table_key: str = "table",
+    adata_ref: AnnData,
+    ref_cell_type_key: str,
+    tables_key: str = "table",
     tx_min: float = 10.0,
     tx_max: float = 2000.0,
     gn_min: float = 5.0,
     gn_max: float = np.inf,
-    label_key: str = "transferred_celltype",
-    score_key: str = "transferred_celltype_corr",
+    label_key: str = "transferred_cell_type",
+    ref_ensemble_key: str | None = None,
+    query_ensemble_key: str | None =  "gene_ids",
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
@@ -94,21 +98,25 @@ def run_label_transfer(
     adata_ref : AnnData
         Reference dataset (ideally normalized & log1p).
         Otherwise transformation will be performed before running label transfer.
-    celltype_key : str
+    ref_cell_type_key : str
         Column in `adata_ref.obs` with reference cell types.
-    table_key : str
+    tables_key : str
         Key of the AnnData table in `sdata.tables`.
     tx_min, tx_max : float
-        Min/max transcripts per cell for QC.
+        Min/max transcripts per cell for pre-filtering.
     gn_min, gn_max : float
-        Min/max genes per cell for QC.
+        Min/max genes per cell for pre-filtering.
     label_key : str
         Column name to store transferred labels in `.obs` when `inplace=True`.
-    score_key : str
-        Column name to store correlation scores in `.obs` when `inplace=True`.
+    ref_ensemble_key: str or None, default=None
+        Column name in `adata_ref.var` that contains unique gene/ensemble IDs. If None, `adata_ref.var_names` will be used.
+    query_ensemble_key: str or None, default="gene_ids"
+        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+    q_gene_key: str
+
     inplace : bool
-        If True, writes labels into `sdata.tables[table_key].obs` and returns None.
-        If False, returns a DataFrame with ['cell_id', 'celltype', 'pearson_corr'].
+        If True, writes labels into `sdata.tables[tables_key].obs` and returns None.
+        If False, returns a DataFrame with ['cell_id', 'transferred_cell_type', 'pearson_score'].
 
     Returns
     -------
@@ -116,28 +124,29 @@ def run_label_transfer(
         None when `inplace=True`; otherwise a DataFrame of assignments.
     """
 
-    if celltype_key not in adata_reference.obs.columns:
-        raise KeyError(f"'{celltype_key}' not found in adata_ref.obs.")
-
-    adata_ref = adata_reference.copy()
+    if ref_cell_type_key not in adata_ref.obs.columns:
+        raise KeyError(f"'{ref_cell_type_key}' not found in adata_ref.obs.")
 
     if _looks_like_counts(adata_ref.X):
         warnings.warn(
             "Reference adata_ref does not appear log-normalized."
-            "Counts will be log1p-transformed before running label transfer.",
+            "Counts will be log1p-transformed before running label transfer."
+            'Raw counts will be stored in `adata_ref.layers["counts"]`.',
             RuntimeWarning,
             stacklevel=2,
         )
+        adata_ref.layers["counts"] = adata_ref.X
         sc.pp.normalize_total(adata_ref, target_sum=1e4)
         sc.pp.log1p(adata_ref)
 
     counts = _to_ndarray(adata_ref.X)
-    celltypes = adata_ref.obs[celltype_key]
-    counts_df = pd.DataFrame(counts, columns=adata_ref.var_names)
+    celltypes = adata_ref.obs[ref_cell_type_key]
+    genes = adata_ref.var_names if ref_ensemble_key is None else adata_ref.var[ref_ensemble_key].values
+    counts_df = pd.DataFrame(counts, columns=genes)
     counts_df["celltype"] = celltypes.values
     ref_mean_df = counts_df.groupby("celltype").mean()
 
-    tbl = sdata.tables[table_key]
+    tbl = sdata.tables[tables_key]
     # Ensure QC columns exist; compute if missing
     need_tx = "transcript_count" not in tbl.obs.columns
     need_gn = "gene_count" not in tbl.obs.columns
@@ -154,35 +163,32 @@ def run_label_transfer(
             raise KeyError(f"QC column '{key}' not found in table.obs.")
         mask &= (tbl.obs[key].to_numpy() >= low) & (tbl.obs[key].to_numpy() <= high)
 
-    # subset query AnnData and keep a copy for processing
-    adata_q = tbl[mask].copy()
-
-    # Ensure obs_names are cell ids (needed for merges/returns)
-    # if "cell_id" in adata_q.obs.columns:
-    #    adata_q.obs_names = adata_q.obs["cell_id"].astype(str)
+    adata_q = tbl[mask]
 
     # Normalize & log1p (query)
     if _looks_like_counts(tbl.X):
         warnings.warn(
             "Spatialdata table appears to contain raw counts. "
-            "Counts will be log1p-transformed before running label transfer.",
+            "Counts will be log1p-transformed before running label transfer."
+            'Raw counts will be stored in `adata_q.layers["counts"]`.',
             RuntimeWarning,
             stacklevel=2,
         )
-        sc.pp.normalize_total(adata_q, target_sum=1e4)
+        adata_q.layers["counts"] = adata_q.X
+        sc.pp.normalize_total(adata_q)
         sc.pp.log1p(adata_q)
 
     # Assign labels
-    ct_corr = assign_celltype_by_pearson(adata_q, ref_mean_df)
+    ct_corr = assign_celltype_by_pearson(adata_q, ref_mean_df, query_ensemble_key)
 
     if inplace:
         # Write back only to the filtered subset cells
-        out = ct_corr.rename(columns={"celltype": label_key, "pearson_corr": score_key})
+        out = ct_corr.rename(columns={"celltype": label_key})
         tbl.obs = tbl.obs.merge(out, how="left", left_on="cell_id", right_on="cell_id")
         tbl.obs[label_key] = tbl.obs[label_key].astype("category")
         return None
     else:
-        return ct_corr
+        return out
 
 
 def merge_into_obs(sdata, table_key, df_to_merge, on_key, fillna_cols=None):
@@ -233,7 +239,7 @@ def validate_spatialdata(
     nucleus_shapes_cell_id_key: str | None = "cell_id",
     labels_key: str = "cell_labels",
     labels_to_cell_id_key: str | None = "label_id",
-    cell_type_key: str | None = "cell_type",
+    cell_type_key: str | None = "transferred_cell_type",
     labels_data_key: str = None,
 ) -> bool:
     """
