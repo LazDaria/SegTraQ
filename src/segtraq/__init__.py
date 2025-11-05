@@ -3,7 +3,8 @@
 __author__ = """Daria Lazic, Matthias Meyer-Bender, Martin Emons"""
 __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh.ch"
 
-from . import bl, cs, io, nc, pl, segtraq_metrics, sp
-from .utils import run_label_transfer  # TODO - maybe move to baseline metrics later?
+from . import bl, cs, io, nc, pl, sp
+from .utils import run_label_transfer
+from .SegTraQ import SegTraQ
 
-__all__ = ["bl", "cs", "nc", "io", "sp", "pl", "segtraq_metrics", "run_label_transfer"]
+__all__ = ["bl", "cs", "nc", "io", "sp", "pl", "segtraq_metrics", "run_label_transfer", "SegTraQ"]
