@@ -1,20 +1,18 @@
 import math
 import warnings
+from collections import Counter
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import spatialdata as sd
-import squidpy as sq
 import xarray as xr
 from anndata import AnnData
+from scipy import sparse
 from scipy.spatial.distance import cdist
 
 from .bl import baseline as bl
-from collections import Counter, defaultdict
-from itertools import combinations
-from scipy import sparse
-from tqdm.auto import tqdm
 
 
 def _to_ndarray(x) -> np.ndarray:
@@ -31,6 +29,7 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     samp = arr if arr.size <= n else np.random.choice(arr, n, replace=False)
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
+
 def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[str, list[str]]:
     all_genes = [g for gl in marker_dict.values() for g in gl]
     if not all_genes:
@@ -39,6 +38,7 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     # drop genes appearing in >= t * n_types lists
     drop_genes = set(counts[counts >= (t * n_ct)].index)
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
+
 
 def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_quantiles: bool) -> tuple:
     """Precision, recall, F1 for one list using upper-quantile rule (CellSPA)."""
@@ -63,6 +63,7 @@ def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     F1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
     return precision, recall, F1
+
 
 def assign_celltype_by_pearson(
     adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id"
@@ -129,14 +130,14 @@ def run_label_transfer(
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
-    Transfer cell labels from a reference AnnData to `sdata.tables[table_key]` by
+    Transfer cell labels from a reference AnnData to `sdata.tables[tables_key]` by
     Pearson correlation to reference mean profiles.
 
     Parameters
     ----------
     sdata : SpatialData-like
-        Container with `.tables[table_key]` as AnnData, and points needed for QC if absent.
-        `sdata.tables[table_key].X` values are ideally normalized and log1p transformed.
+        Container with `.tables[tables_key]` as AnnData, and points needed for QC if absent.
+        `sdata.tables[tables_key].X` values are ideally normalized and log1p transformed.
         Otherwise transformation will be performed before running label transfer.
     adata_ref : AnnData
         Reference dataset (ideally normalized & log1p).
@@ -238,8 +239,8 @@ def run_label_transfer(
         return out
 
 
-def merge_into_obs(sdata, table_key, df_to_merge, table_cell_id_key, df_cell_id_key, fillna_cols=None):
-    obs = sdata.tables[table_key].obs
+def merge_into_obs(sdata, tables_key, df_to_merge, table_cell_id_key, df_cell_id_key, fillna_cols=None):
+    obs = sdata.tables[tables_key].obs
 
     # Drop overlapping columns, but keep the merge key
     overlapping = [c for c in df_to_merge.columns if c in obs.columns and c != table_cell_id_key]
@@ -255,10 +256,10 @@ def merge_into_obs(sdata, table_key, df_to_merge, table_cell_id_key, df_cell_id_
             if c in df:
                 df[c] = df[c].fillna(0)
 
-    sdata.tables[table_key].obs = df
+    sdata.tables[tables_key].obs = df
+
 
 def get_ref_markers(
-        
     adata_ref: AnnData,
     ref_cell_type: str,
     q_pos: float = 0.95,
@@ -353,6 +354,7 @@ def get_ref_markers(
     markers = {ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in types}
 
     return markers
+
 
 def get_mut_excl_markers(
     # Modified from https://github.com/dpeerlab/segger-analysis
@@ -513,6 +515,7 @@ def get_mut_excl_markers(
     result = trivial + passed
 
     return result
+
 
 def _is_missing(x):
     """Return True for any kind of NA / NaN / None."""
@@ -709,7 +712,7 @@ def validate_spatialdata(
         }
         assert len(missing_in_polygons) == 0, (
             f"Missing {len(missing_in_polygons)} cell IDs from polygons: "
-            f"{list(missing_in_polygons)[:min(5, len(missing_in_polygons))]}... "
+            f"{list(missing_in_polygons)[: min(5, len(missing_in_polygons))]}... "
             f"These cell IDs are present in the points, but not in the shapes. "
             f"If your missing cell ID is indicating an unassigned transcript, "
             f"you can set the points_background_id parameter."
@@ -758,7 +761,7 @@ def validate_spatialdata(
             if len(missing_in_tables) != 0:
                 warnings.warn(
                     f"Missing {len(missing_in_tables)} cell IDs in tables: "
-                    f"{list(missing_in_tables)[:min(5, len(missing_in_tables))]}... "
+                    f"{list(missing_in_tables)[: min(5, len(missing_in_tables))]}... "
                     "These cells are present in shapes, but not in tables. "
                     "This might lead to inconsistencies in the spatialdata object.",
                     stacklevel=2,
@@ -766,7 +769,7 @@ def validate_spatialdata(
             if len(missing_in_shapes) != 0:
                 warnings.warn(
                     f"Missing {len(missing_in_shapes)} cell IDs in shapes: "
-                    f"{list(missing_in_shapes)[:min(5, len(missing_in_shapes))]}... "
+                    f"{list(missing_in_shapes)[: min(5, len(missing_in_shapes))]}... "
                     "These cells are present in tables, but not in shapes. "
                     "This might lead to inconsistencies in the spatialdata object.",
                     stacklevel=2,
@@ -790,9 +793,9 @@ def validate_spatialdata(
                     f"Please provide a labels_data_key to access the labels data. "
                     f"Available keys are: {list(labels.keys())}."
                 )
-                assert (
-                    labels_data_key.split("/")[0] in labels.keys()
-                ), f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
+                assert labels_data_key.split("/")[0] in labels.keys(), (
+                    f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
+                )
 
                 labels = labels[labels_data_key]  # Get the dataset node
 

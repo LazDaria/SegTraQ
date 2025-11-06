@@ -3,7 +3,4 @@ from .point_statistics import (
     distance_to_membrane,
 )
 
-__all__ = [
-    "centroid_mean_coord_diff",
-    "distance_to_membrane"
-]
+__all__ = ["centroid_mean_coord_diff", "distance_to_membrane"]

@@ -485,7 +485,7 @@ def save_mask_to_tiff(
     labels_keys: str | Sequence[str],
     output_dir: str | Path,
     scale: str = "scale0",
-    table_key: str = "table",
+    tables_key: str = "table",
     obs_label_col: str = "label_id",
     obs_celltype_col: str = "transferred_celltype",
     palette: dict[str, str] | None = None,
@@ -514,7 +514,7 @@ def save_mask_to_tiff(
     if isinstance(labels_keys, str):
         labels_keys = [labels_keys]
 
-    obs = sdata.tables[table_key].obs
+    obs = sdata.tables[tables_key].obs
 
     label_to_ct = obs.set_index(obs_label_col)[obs_celltype_col]
 

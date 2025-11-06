@@ -1,9 +1,12 @@
 import warnings
+
 import numpy as np
 import spatialdata as sd
 from anndata import AnnData
-from . import bl, cs, nc, sp, ps, vl
-from .utils import run_label_transfer as _run_label_transfer, validate_spatialdata
+
+from . import bl, cs, nc, ps, sp, vl
+from .utils import run_label_transfer as _run_label_transfer
+from .utils import validate_spatialdata
 
 
 class SegTraQ:
@@ -157,8 +160,8 @@ class SegTraQ:
         self.nc = _NCFacade(self)
         self.cs = _CSFacade(self)
         self.vl = _VLFacade(self)
-        self.sp= _SPFacade(self)
-        self.ps= _PSFacade(self)
+        self.sp = _SPFacade(self)
+        self.ps = _PSFacade(self)
 
     @property
     def sdata(self):
@@ -259,8 +262,6 @@ class SegTraQ:
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        tbl = self.sdata.tables[self.tables_key]
-
         ious = self.nc.compute_cell_nuc_ious(inplace=inplace)
         cell_nuc_corr = self.nc.compute_cell_nuc_correlation(inplace=inplace)
         parts_corr = self.nc.compute_correlation_between_parts(inplace=inplace)
@@ -275,18 +276,19 @@ class SegTraQ:
                 "parts_correlation": parts_corr,
             }
 
-        
-    def run_label_transfer(self, 
-                           adata_ref = AnnData, 
-                           tx_min: float = 10.0,
-                           tx_max: float = 2000.0,
-                           gn_min: float = 5.0,
-                           gn_max: float = np.inf,
-                           cell_type_key: str = "transferred_cell_type",
-                           ref_cell_type: str = "cell_type",
-                           ref_ensemble_key: str | None = None,
-                           query_ensemble_key: str | None =  "gene_ids",
-                           inplace: bool = True):
+    def run_label_transfer(
+        self,
+        adata_ref=AnnData,
+        tx_min: float = 10.0,
+        tx_max: float = 2000.0,
+        gn_min: float = 5.0,
+        gn_max: float = np.inf,
+        cell_type_key: str = "transferred_cell_type",
+        ref_cell_type: str = "cell_type",
+        ref_ensemble_key: str | None = None,
+        query_ensemble_key: str | None = "gene_ids",
+        inplace: bool = True,
+    ):
         """
         Transfer cell-type labels from a reference AnnData to the current SpatialData table.
         Cells are optionally filtered by per-cell transcript and gene counts before transfer.
@@ -340,6 +342,17 @@ class SegTraQ:
 
     run_label_transfer.__doc__ = _run_label_transfer.__doc__
 
+    def run_volume(self, inplace: bool = True):
+        """
+        Run volume metrics for SegTraQ.
+        """
+        z_plane_correlation = self.vl.compute_z_plane_correlation(inplace=inplace)
+        if inplace:
+            return None
+        else:
+            return {
+                "z_plane_correlation": z_plane_correlation,
+            }
 
     def run_supervised_metrics(
         self,
@@ -461,14 +474,14 @@ class SegTraQ:
                 "MECR": mecr_res,
                 "contamination": (C_cnt, contamination_df, records_df),
                 "marker_purity": purity_df,
-                "diff_abundance": (de_results, summary)
+                "diff_abundance": (de_results, summary),
             }
             return out
-        
+
     def run_point_statistics(
         self,
         feature: str,
-        inplace: bool = True, #TODO
+        inplace: bool = True,  # TODO
     ):
         """
         Compute point-statistics metrics per feature and optionally merge into the cell table.
@@ -508,7 +521,7 @@ class SegTraQ:
             out = {
                 f"centroid_mean_coord_diff_{feature}": cmd_df[f"distance_{feature}"],
                 f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
-                f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"]
+                f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"],
             }
             return out
 
@@ -626,6 +639,7 @@ class _BLFacade:
 
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
+
 class _NCFacade:
     """
     Bound nuclear-correlation (nc) metrics interface for a SegTraQ instance.
@@ -700,6 +714,7 @@ class _NCFacade:
 
     compute_correlation_between_parts.__doc__ = nc.compute_correlation_between_parts.__doc__
 
+
 class _SPFacade:
     """
     Bound supervised (sp) interface for a SegTraQ instance.
@@ -711,13 +726,13 @@ class _SPFacade:
         self._p = parent
 
     def compute_MECR(self, gene_pairs: list[tuple[str, str]], inplace: bool = True):
-
         return sp.compute_MECR(
             sdata=self._p.sdata,
             gene_pairs=gene_pairs,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+
     compute_MECR.__doc__ = sp.compute_MECR.__doc__
 
     def calculate_contamination(
@@ -747,6 +762,7 @@ class _SPFacade:
             weight_edges=weight_edges,
             inplace=inplace,
         )
+
     calculate_contamination.__doc__ = sp.calculate_contamination.__doc__
 
     def calculate_marker_purity(
@@ -764,6 +780,7 @@ class _SPFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+
     calculate_marker_purity.__doc__ = sp.calculate_marker_purity.__doc__
 
     def calculate_diff_abundance(
@@ -793,7 +810,9 @@ class _SPFacade:
             cell_centroid_y_key=cell_centroid_y_key,
             inplace=inplace,
         )
+
     calculate_diff_abundance.__doc__ = sp.calculate_diff_abundance.__doc__
+
 
 class _PSFacade:
     """
@@ -812,14 +831,15 @@ class _PSFacade:
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
-            tables_cell_id_key = self._p.tables_cell_id_key,
-            shapes_cell_id_key = self._p.shapes_cell_id_key,
-            points_cell_id_key = self._p.points_cell_id_key,
-            points_x_key = self._p.points_x_key,
-            points_y_key = self._p.points_y_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
             shape_key=self._p.shapes_key,
-            centroid_key=["centroid_x", "centroid_y"], 
+            centroid_key=["centroid_x", "centroid_y"],
         )
+
     centroid_mean_coord_diff.__doc__ = ps.centroid_mean_coord_diff.__doc__
 
     def distance_to_membrane(self, feature: str):
@@ -829,11 +849,13 @@ class _PSFacade:
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
-            tables_cell_id_key = self._p.tables_cell_id_key,
-            shapes_cell_id_key = self._p.shapes_cell_id_key,
-            points_cell_id_key = self._p.points_cell_id_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            points_cell_id_key=self._p.points_cell_id_key,
         )
+
     distance_to_membrane.__doc__ = ps.distance_to_membrane.__doc__
+
 
 class _CSFacade:
     """
@@ -961,7 +983,6 @@ class _VLFacade:
     #         sc.pp.neighbors(adata_copy)
     #         sc.tl.umap(adata_copy)
     #         return adata_copy
-
 
     # def run_all(self):
     #     self.run_baseline()
