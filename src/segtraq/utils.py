@@ -27,7 +27,9 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
 
-def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id") -> pd.DataFrame:
+def assign_celltype_by_pearson(
+    adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id"
+) -> pd.DataFrame:
     """
     Assign cell types to cells in `adata` via Pearson correlation with reference means.
 
@@ -38,7 +40,8 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, q_ense
     ref_mean_df : pd.DataFrame
         Reference matrix (cell_types x genes), log-normalized.
     query_ensemble_key: str or None, default="gene_ids"
-        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. 
+        If None, `self.sdata.tables[self.tables_key].var_names` will be used.
     cell_id_key: str
         Column name in tables DataFrame indicating cell IDs. Default is "cell_id".
 
@@ -68,7 +71,9 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, q_ense
     best_celltype = cor_df.idxmax(axis=1)
     best_score = cor_df.max(axis=1)
 
-    return pd.DataFrame({"cell_id": X_query.index, "transferred_cell_type": best_celltype.values, "pearson_score": best_score.values})
+    return pd.DataFrame(
+        {"cell_id": X_query.index, "transferred_cell_type": best_celltype.values, "pearson_score": best_score.values}
+    )
 
 
 def run_label_transfer(
@@ -81,9 +86,9 @@ def run_label_transfer(
     tx_max: float = 2000.0,
     gn_min: float = 5.0,
     gn_max: float = np.inf,
-    label_key: str = "transferred_cell_type",
+    cell_type_key: str = "transferred_cell_type",
     ref_ensemble_key: str | None = None,
-    query_ensemble_key: str | None =  "gene_ids",
+    query_ensemble_key: str | None = "gene_ids",
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
@@ -112,9 +117,11 @@ def run_label_transfer(
     label_key : str
         Column name to store transferred labels in `.obs` when `inplace=True`.
     ref_ensemble_key: str or None, default=None
-        Column name in `adata_ref.var` that contains unique gene/ensemble IDs. If None, `adata_ref.var_names` will be used.
+        Column name in `adata_ref.var` that contains unique gene/ensemble IDs. 
+        If None, `adata_ref.var_names` will be used.
     query_ensemble_key: str or None, default="gene_ids"
-        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. 
+        If None, `self.sdata.tables[self.tables_key].var_names` will be used.
     q_gene_key: str
 
     inplace : bool
@@ -186,9 +193,9 @@ def run_label_transfer(
 
     if inplace:
         # Write back only to the filtered subset cells
-        out = ct_corr.rename(columns={"celltype": label_key})
+        out = ct_corr.rename(columns={"celltype": cell_type_key})
         tbl.obs = tbl.obs.merge(out, how="left", left_on=tables_cell_id_key, right_on=tables_cell_id_key)
-        tbl.obs[label_key] = tbl.obs[label_key].astype("category")
+        tbl.obs[cell_type_key] = tbl.obs[cell_type_key].astype("category")
         return None
     else:
         return out
