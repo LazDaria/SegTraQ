@@ -4,7 +4,6 @@ from .clustering_stability import (
     compute_purity,
     compute_rmsd,
     compute_silhouette_score,
-    compute_z_plane_correlation,
 )
 
 __all__ = [
@@ -13,5 +12,4 @@ __all__ = [
     "compute_purity",
     "compute_rmsd",
     "compute_mean_cosine_distance",
-    "compute_z_plane_correlation",
 ]

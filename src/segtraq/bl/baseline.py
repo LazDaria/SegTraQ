@@ -177,7 +177,9 @@ def transcripts_per_cell(
     counts_df.columns = [points_cell_id_key, "transcript_count"]
 
     if inplace:
-        merge_into_obs(sdata, tables_key, counts_df, tables_cell_id_key, points_cell_id_key, fillna_cols=["transcript_count"])
+        merge_into_obs(
+            sdata, tables_key, counts_df, tables_cell_id_key, points_cell_id_key, fillna_cols=["transcript_count"]
+        )
 
     return counts_df
 
@@ -222,7 +224,9 @@ def genes_per_cell(
     gene_counts = df.groupby(points_cell_id_key)[points_gene_key].nunique().reset_index()
     gene_counts.columns = [points_cell_id_key, "gene_count"]
     if inplace:
-        merge_into_obs(sdata, tables_key, gene_counts, tables_cell_id_key, points_cell_id_key, fillna_cols=["gene_count"])
+        merge_into_obs(
+            sdata, tables_key, gene_counts, tables_cell_id_key, points_cell_id_key, fillna_cols=["gene_count"]
+        )
 
     return gene_counts
 
