@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from scipy.stats import pearsonr
 from sklearn.metrics import silhouette_score
 
-from ..utils import merge_into_obs
 from .utils import (
     compute_mean_ari,
     compute_mean_cosine_distance_for_clustering,
@@ -21,12 +19,12 @@ def compute_rmsd(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
-    label_key: str | None = None,
+    cell_type_key: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
     Compute RMSD for different Leiden clustering resolutions and report the best (lowest) RMSD.
-    If a label_key is provided, compute the RMSD for that clustering only.
+    If a cell_type_key is provided, compute the RMSD for that clustering only.
 
     Parameters
     ----------
@@ -38,7 +36,7 @@ def compute_rmsd(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
-    label_key : str, optional
+    cell_type_key : str, optional
         If provided, compute the RMSD for this clustering only.
     inplace : bool, optional
         Whether to store the computed RMSD in sdata.uns, by default True.
@@ -53,12 +51,12 @@ def compute_rmsd(
     if isinstance(resolution, float):
         resolution = [resolution]
 
-    if label_key is not None:
-        if label_key not in adata.obs:
+    if cell_type_key is not None:
+        if cell_type_key not in adata.obs:
             raise ValueError(
-                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[label_key].values
+        labels = adata.obs[cell_type_key].values
         # remove NaN labels
         if len(np.unique(labels[~pd.isna(labels)])) > 1:
             if "X_pca" not in adata.obsm:
@@ -66,7 +64,7 @@ def compute_rmsd(
             rmsd_val = compute_rmsd_for_clustering(adata.obsm["X_pca"], labels)
             return float(rmsd_val)
         else:
-            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     if "neighbors" not in adata.uns:
         raise ValueError(
@@ -102,13 +100,13 @@ def compute_mean_cosine_distance(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
-    label_key: str | None = None,
+    cell_type_key: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
     Compute mean cosine distance for different Leiden clustering resolutions
     and report the best (lowest) mean cosine distance.
-    If a label_key is provided, compute the mean cosine distance for that clustering only.
+    If a cell_type_key is provided, compute the mean cosine distance for that clustering only.
 
     Parameters
     ----------
@@ -120,7 +118,7 @@ def compute_mean_cosine_distance(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
-    label_key : str, optional
+    cell_type_key : str, optional
         If provided, compute the mean cosine distance for this clustering only.
     inplace : bool, optional
         Whether to store the computed mean cosine distance in sdata.uns, by default True.
@@ -136,12 +134,12 @@ def compute_mean_cosine_distance(
         resolution = [resolution]
 
     best_distance = np.inf
-    if label_key is not None:
-        if label_key not in adata.obs:
+    if cell_type_key is not None:
+        if cell_type_key not in adata.obs:
             raise ValueError(
-                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[label_key].values
+        labels = adata.obs[cell_type_key].values
         # remove NaN labels
         if len(np.unique(labels[~pd.isna(labels)])) > 1:
             if "X_pca" not in adata.obsm:
@@ -149,7 +147,7 @@ def compute_mean_cosine_distance(
             distance_val = compute_mean_cosine_distance_for_clustering(adata.obsm["X_pca"], labels)
             return float(distance_val)
         else:
-            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     if "neighbors" not in adata.uns:
         raise ValueError(
@@ -185,12 +183,12 @@ def compute_silhouette_score(
     metric: str = "euclidean",
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
-    label_key: str | None = None,
+    cell_type_key: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
-    If a label_key is provided, compute the silhouette score for that clustering only.
+    If a cell_type_key is provided, compute the silhouette score for that clustering only.
 
     Parameters
     ----------
@@ -204,7 +202,7 @@ def compute_silhouette_score(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
-    label_key : str, optional
+    cell_type_key : str, optional
         If provided, compute the silhouette score for this clustering only.
     inplace : bool, optional
         Whether to store the computed silhouette score in sdata.uns, by default True.
@@ -220,22 +218,22 @@ def compute_silhouette_score(
     if isinstance(resolution, float):
         resolution = [resolution]
 
-    if label_key is not None:
-        if label_key not in adata.obs:
+    if cell_type_key is not None:
+        if cell_type_key not in adata.obs:
             raise ValueError(
-                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[label_key]
+        labels = adata.obs[cell_type_key]
         if len(set(labels)) > 1:  # Ensure more than one cluster exists
             if "X_pca" not in adata.obsm:
                 raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
             # remove NaN labels
-            adata_subset = adata[~pd.isna(adata.obs[label_key]), :]
-            labels = adata_subset.obs[label_key].values
+            adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
+            labels = adata_subset.obs[cell_type_key].values
             silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
             return float(silhouette_avg)
         else:
-            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     # ensure that we already have neighbors computed
     # this way we avoid recomputing neighbors multiple times (for the different resolutions)
@@ -366,98 +364,3 @@ def compute_ari(
         sdata.tables["table"].uns["mean_ari"] = mean_ari
 
     return mean_ari
-
-
-# this should probably go into a different module, but for now I will put it here until we have a better structure
-def compute_z_plane_correlation(
-    sdata: sd.SpatialData,
-    quantile: float = 25,
-    transcript_key: str = "transcripts",
-    cell_key: str = "cell_id",
-    gene_key: str = "feature_name",
-    inplace: bool = True,
-) -> pd.DataFrame:
-    """
-    Compute the Pearson correlation between the top and bottom quantiles of transcripts in the z-plane.
-
-    This function computes the Pearson correlation between the top and bottom quantiles of transcripts
-    in the z-plane for each cell. It subsets the transcripts based on the z-coordinate and calculates
-    the correlation for each cell.
-
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing transcript data.
-    quantile : float, optional
-        The quantile to use for bottom and top subsets, by default 25.
-    transcript_key : str, optional
-        The key for transcripts in sdata.points, by default "transcripts".
-    cell_key : str, optional
-        The key for cell IDs in sdata.points, by default "cell_id".
-    gene_key : str, optional
-        The key for gene names in sdata.points, by default "feature_name".
-    inplace : bool, optional
-        Whether to store the computed correlations in sdata.uns, by default True.
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame with cell IDs as index and Pearson correlations as values.
-    """
-    z = sdata.points[transcript_key]["z"]
-
-    # Compute percentiles (assuming z is a dask array or similar)
-    z_bottom = np.percentile(z.compute(), quantile)
-    z_top = np.percentile(z.compute(), 100 - quantile)
-
-    # Subset the original transcripts DataFrame
-    transcripts = sdata.points[transcript_key]
-
-    # Bottom subset (z <= quantile percentile)
-    bottom_df = transcripts[transcripts["z"] <= z_bottom]
-
-    # Top subset (z >= 1 - quantile percentile)
-    top_df = transcripts[transcripts["z"] >= z_top]
-
-    # Force compute if it's a Dask DataFrame
-    top_df_pd = top_df.compute() if hasattr(top_df, "compute") else top_df
-    bottom_df_pd = bottom_df.compute() if hasattr(bottom_df, "compute") else bottom_df
-
-    top_counts = (
-        top_df_pd.groupby([cell_key, gene_key])
-        .size()
-        .rename("count")
-        .reset_index()
-        .pivot(index=cell_key, columns=gene_key, values="count")
-        .fillna(0)
-        .astype(int)
-    )
-
-    bottom_counts = (
-        bottom_df_pd.groupby([cell_key, gene_key])
-        .size()
-        .rename("count")
-        .reset_index()
-        .pivot(index=cell_key, columns=gene_key, values="count")
-        .fillna(0)
-        .astype(int)
-    )
-
-    # Ensure same order of cell_ids and same set of features
-    common_cells = top_counts.index.intersection(bottom_counts.index)
-    common_features = top_counts.columns.intersection(bottom_counts.columns)
-
-    # Align both dataframes
-    top_aligned = top_counts.loc[common_cells, common_features]
-    bottom_aligned = bottom_counts.loc[common_cells, common_features]
-
-    # Compute Pearson correlation for each row (cell_id)
-    correlations = [pearsonr(top_aligned.loc[cell_id], bottom_aligned.loc[cell_id])[0] for cell_id in common_cells]
-
-    # Create the result dataframe
-    correlation_df = pd.DataFrame({"cell_id": common_cells, "correlation": correlations}).set_index("cell_id")
-
-    if inplace:
-        merge_into_obs(sdata, "table", correlation_df, cell_key, fillna_cols=["correlation"])
-
-    return correlation_df

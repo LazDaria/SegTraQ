@@ -144,7 +144,12 @@ def compute_cell_nuc_correlation(
     df = sdata.tables[tables_key].obs.copy()
     if "best_nuc_id" not in df.columns:
         iou_df = compute_cell_nuc_ious(
-            sdata, shapes_cell_id_key, tables_cell_id_key, shapes_key=shapes_key, nucleus_shapes_key=nucleus_shapes_key, n_jobs=n_jobs_iou
+            sdata,
+            shapes_cell_id_key,
+            tables_cell_id_key,
+            shapes_key=shapes_key,
+            nucleus_shapes_key=nucleus_shapes_key,
+            n_jobs=n_jobs_iou,
         )
         df = df.merge(
             iou_df,
@@ -264,7 +269,9 @@ def compute_correlation_between_parts(
     """
 
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
-        iou_df = compute_cell_nuc_ious(sdata, shapes_cell_id_key, tables_cell_id_key, shapes_key, nucleus_shapes_key, n_jobs=n_jobs)
+        iou_df = compute_cell_nuc_ious(
+            sdata, shapes_cell_id_key, tables_cell_id_key, shapes_key, nucleus_shapes_key, n_jobs=n_jobs
+        )
     else:
         iou_df = sdata.tables[tables_key].obs[["cell_id", "best_nuc_id", "IoU"]].copy()
 
