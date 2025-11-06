@@ -40,7 +40,7 @@ def assign_celltype_by_pearson(
     ref_mean_df : pd.DataFrame
         Reference matrix (cell_types x genes), log-normalized.
     query_ensemble_key: str or None, default="gene_ids"
-        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. 
+        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
         If None, `self.sdata.tables[self.tables_key].var_names` will be used.
     cell_id_key: str
         Column name in tables DataFrame indicating cell IDs. Default is "cell_id".
@@ -117,10 +117,10 @@ def run_label_transfer(
     label_key : str
         Column name to store transferred labels in `.obs` when `inplace=True`.
     ref_ensemble_key: str or None, default=None
-        Column name in `adata_ref.var` that contains unique gene/ensemble IDs. 
+        Column name in `adata_ref.var` that contains unique gene/ensemble IDs.
         If None, `adata_ref.var_names` will be used.
     query_ensemble_key: str or None, default="gene_ids"
-        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. 
+        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
         If None, `self.sdata.tables[self.tables_key].var_names` will be used.
     q_gene_key: str
 
@@ -481,28 +481,55 @@ def validate_spatialdata(
 
     # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
     if contains_labels:
-        labels = sdata.labels[labels_key]
-
-        # handling weird spatialdata structures
-        if isinstance(labels, xr.DataTree):
-            assert labels_data_key is not None, (
-                f"It looks like your labels are stored as a DataTree. "
-                f"Please provide a labels_data_key to access the labels data. "
-                f"Available keys are: {list(labels.keys())}."
+        # we can have multiple labels keys (e. g. when using multiple layers in proseg), so we need to handle them here
+        if isinstance(labels_key, str):
+            assert labels_key in sdata.labels, (
+                f"Labels DataFrame must contain key: {labels_key}. "
+                f"Available keys: {list(sdata.labels.keys())}. "
+                f"If you want to use a different key, set the labels_key parameter."
             )
-            assert (
-                labels_data_key.split("/")[0] in labels.keys()
-            ), f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
+            labels = sdata.labels[labels_key]
 
-            labels = labels[labels_data_key]  # Get the dataset node
+            # handling weird spatialdata structures
+            if isinstance(labels, xr.DataTree):
+                assert labels_data_key is not None, (
+                    f"It looks like your labels are stored as a DataTree. "
+                    f"Please provide a labels_data_key to access the labels data. "
+                    f"Available keys are: {list(labels.keys())}."
+                )
+                assert (
+                    labels_data_key.split("/")[0] in labels.keys()
+                ), f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
 
-            assert isinstance(labels, xr.DataArray), (
-                f"The labels data should be a DataArray. Please provide a valid data key. "
-                f"Available keys are: {[labels_data_key + '/' + x for x in list(labels.keys())]}."
-            )
+                labels = labels[labels_data_key]  # Get the dataset node
 
-        # label ID and cell ID are not the same
-        labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
+                assert isinstance(labels, xr.DataArray), (
+                    f"The labels data should be a DataArray. Please provide a valid data key. "
+                    f"Available keys are: {[labels_data_key + '/' + x for x in list(labels.keys())]}."
+                )
+
+                # label ID and cell ID are not the same
+                labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
+        elif isinstance(labels_key, list):
+            # if multiple labels keys are provided, we need to check each one
+            labels_cell_ids = set()
+            for key in labels_key:
+                labels_tmp = sdata.labels[key]
+                if isinstance(labels_tmp, xr.DataTree):
+                    assert labels_data_key is not None, (
+                        f"It looks like your labels are stored as a DataTree. "
+                        f"Please provide a labels_data_key to access the labels data. "
+                        f"Available keys are: {list(labels.keys())}."
+                    )
+                    labels_tmp = labels_tmp[labels_data_key]
+                    assert isinstance(labels_tmp, xr.DataArray)
+                # add nonzero unique labels
+                labels_cell_ids.update(np.unique(labels_tmp).tolist())
+
+            # Remove background label (e.g. 0)
+            labels_cell_ids.discard(0)
+        else:
+            raise ValueError("labels_key must be a string or a list of strings")
 
     # if there are both shapes and labels, ensure they are compatible
     if contains_shapes and contains_labels:

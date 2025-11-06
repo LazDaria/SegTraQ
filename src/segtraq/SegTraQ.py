@@ -4,7 +4,7 @@ import numpy as np
 import spatialdata as sd
 from anndata import AnnData
 
-from . import bl, cs, nc
+from . import bl, cs, nc, vl
 from .utils import run_label_transfer as _run_label_transfer
 from .utils import validate_spatialdata
 
@@ -159,6 +159,7 @@ class SegTraQ:
         self.bl = _BLFacade(self)
         self.nc = _NCFacade(self)
         self.cs = _CSFacade(self)
+        self.vl = _VLFacade(self)
 
     @property
     def sdata(self):
@@ -305,10 +306,10 @@ class SegTraQ:
         ref_cell_type: str, default="cell_type"
             Column name of cell-type annotations in `adata_ref.obs[ref_cell_type]`.
         ref_ensemble_key: str or None, default=None
-            Column name in `adata_ref.var` that contains unique gene/ensemble IDs. 
+            Column name in `adata_ref.var` that contains unique gene/ensemble IDs.
             If None, `adata_ref.var_names` will be used.
         query_ensemble_key: str or None, default="gene_ids"
-            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. 
+            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
             If None, `self.sdata.tables[self.tables_key].var_names` will be used.
         inplace : bool, default=True
             If True, writes labels/scores into `sdata.tables[tables_key].obs` and returns None.
@@ -616,7 +617,32 @@ class _CSFacade:
             self._p.sdata, resolution=resolution, n_genes_subset=n_genes_subset, key_prefix=key_prefix, inplace=inplace
         )
 
-    # TODO: I DID NOT PUT THE Z-PLANE CORRELATION IN HERE, SINCE THIS SHOULD BE MOVED TO A DIFFERENT MODULE!!!
+
+class _VLFacade:
+    """
+    Thin facade over segtraq.vl bound to a SegTraQ instance.
+    Methods use the parent's sdata and configured keys exclusively.
+    No per-call overrides are allowed.
+    """
+
+    def __init__(self, parent: "SegTraQ") -> None:
+        self._p = parent
+
+    def compute_z_plane_correlation(
+        self,
+        quantile: float = 25,
+        inplace: bool = True,
+    ):
+        return vl.compute_z_plane_correlation(
+            self._p.sdata,
+            quantile=quantile,
+            points_key=self._p.points_key,
+            points_z_key=self._p.points_z_key,
+            tables_key=self._p.tables_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_gene_key=self._p.points_gene_key,
+            inplace=inplace,
+        )
 
     # def run_umap(self, inplace: bool = True):
     #     adata = self.sdata.tables[self.table_key]
@@ -674,7 +700,8 @@ class _CSFacade:
 
     #     tbl = self.sdata.tables[self.table_key]
     #     to_drop = [
-    #         c for c in tbl.obs.columns if (c.startswith("leiden_subset_100") or c.startswith("leiden_subset_allgenes"))
+    #         c for c in tbl.obs.columns if (c.startswith("leiden_subset_100") 
+    # or c.startswith("leiden_subset_allgenes"))
     #     ]
     #     tbl.obs.drop(columns=to_drop, inplace=True, errors="ignore")
 
