@@ -8,9 +8,9 @@ def test_get_ref_markers_real_adata_structure_and_overlap(adata_ref):
     n_types = adata_ref.obs["celltype_major"].nunique()
     assert n_types >= 2, "Need >= 2 types for differential markers"
 
-    markers = st.sp.get_ref_markers(
+    markers = st.get_ref_markers(
         adata_ref.copy(),
-        cell_type_column="celltype_major",
+        ref_cell_type="celltype_major",
     )
 
     # Basic structure
@@ -38,8 +38,8 @@ def test_get_ref_markers_real_adata_structure_and_overlap(adata_ref):
 
 
 def test_overlap_filter_effect_without_internals(adata_ref):
-    markers_loose = st.sp.get_ref_markers(adata_ref.copy(), cell_type_column="celltype_major", t=0.5)
-    markers_strict = st.sp.get_ref_markers(adata_ref.copy(), cell_type_column="celltype_major", t=0.1)
+    markers_loose = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t=0.5)
+    markers_strict = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t=0.1)
 
     n_types = adata_ref.obs["celltype_major"].nunique()
 
