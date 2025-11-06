@@ -19,6 +19,6 @@ def test_distance_to_membrane_structure(sdata_new):
 def test_distance_to_membrane_structure_values(sdata_new):
     df = st.sp.distance_to_membrane(sdata_new, feature="LUM")
 
-    assert (
-        sum(df["distance_to_outline"] < df["cell_area"]) == df.shape[0]
-    ), "The distance metric is not always smaller than the area"
+    assert sum(df["distance_to_outline"] < df["cell_area"]) == df.shape[0], (
+        "The distance metric is not always smaller than the area"
+    )

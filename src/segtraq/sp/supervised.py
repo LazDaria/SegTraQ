@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -6,7 +7,7 @@ import squidpy as sq
 from scipy import sparse
 from tqdm.auto import tqdm
 
-from ..utils import merge_into_obs, _score_one_list
+from ..utils import _score_one_list, merge_into_obs
 
 
 def compute_MECR(
@@ -230,6 +231,7 @@ def calculate_marker_purity(
     markers: dict[str, dict[str, list[str]]],
     use_quantiles: bool = True,
     tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -252,6 +254,8 @@ def calculate_marker_purity(
         if False, use direct expression-based criteria (e.g., >0).
     tables_key : str, optional
         Key of the AnnData table in `sdata.tables`.
+    tables_cell_id_key : str, optional
+        Column in the AnnData `.obs` with unique cell IDs.
     inplace : bool, optional
         If True, store marker purity results in `sdata.tables[tables_key].obs`.
 
@@ -305,9 +309,15 @@ def calculate_marker_purity(
             }
         )
 
-    result = pd.DataFrame(rows, index=adata.obs["cell_id"])
+    result = pd.DataFrame(rows, index=adata.obs[tables_cell_id_key])
     if inplace:
-        merge_into_obs(sdata, tables_key, result, "cell_id")
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=result,
+            table_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
     return result
 
 
