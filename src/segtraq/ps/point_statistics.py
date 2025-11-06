@@ -103,8 +103,12 @@ def centroid_mean_coord_diff(
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner merge on the cell ids - some cells have no transcripts
-    df_total_x = df_centroids_x.merge(x_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner")
-    df_total_y = df_centroids_y.merge(y_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner")
+    df_total_x = df_centroids_x.merge(
+        x_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner"
+    )
+    df_total_y = df_centroids_y.merge(
+        y_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner"
+    )
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
 
@@ -124,7 +128,13 @@ def centroid_mean_coord_diff(
     df_total = df_total.reset_index(drop=True)
 
     if inplace:
-        merge_into_obs(sdata, tables_key, df_total[[points_cell_id_key, f"distance_{feature}"]], tables_cell_id_key, points_cell_id_key)
+        merge_into_obs(
+            sdata,
+            tables_key,
+            df_total[[points_cell_id_key, f"distance_{feature}"]],
+            tables_cell_id_key,
+            points_cell_id_key,
+        )
 
     return df_total
 
@@ -248,6 +258,14 @@ def distance_to_membrane(
     )
 
     if inplace:
-        merge_into_obs(sdata, tables_key, mean_distance_to_outline[[shapes_cell_id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]], tables_cell_id_key, shapes_cell_id_key)
+        merge_into_obs(
+            sdata,
+            tables_key,
+            mean_distance_to_outline[
+                [shapes_cell_id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
+            ],
+            tables_cell_id_key,
+            shapes_cell_id_key,
+        )
 
     return mean_distance_to_outline
