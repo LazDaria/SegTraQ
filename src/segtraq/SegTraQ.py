@@ -6,7 +6,7 @@ import numpy as np
 import scanpy as sc
 import warnings
 
-from . import bl, cs, nc, pl, sp
+from . import bl, cs, nc, sp, ps
 from .utils import run_label_transfer as _run_label_transfer
 
 from .utils import validate_spatialdata
@@ -161,7 +161,9 @@ class SegTraQ:
         self.labels_to_cell_id_key = labels_to_cell_id_key
 
         self.bl = _BLFacade(self)
-        self.nc: NCFacade = NCFacade(self)
+        self.nc = _NCFacade(self)
+        self.sp= _SPFacade(self)
+        self.ps= _PSFacade(self)
 
     def run_baseline(self, inplace: bool = True):
         """
@@ -253,9 +255,9 @@ class SegTraQ:
 
         tbl = self.sdata.tables[self.tables_key]
 
-        ious = self.nc.compute_cell_nuc_ious()
-        cell_nuc_corr = self.nc.compute_cell_nuc_correlation()
-        parts_corr = self.nc.compute_correlation_between_parts()
+        ious = self.nc.compute_cell_nuc_ious(inplace=inplace)
+        cell_nuc_corr = self.nc.compute_cell_nuc_correlation(inplace=inplace)
+        parts_corr = self.nc.compute_correlation_between_parts(inplace=inplace)
 
 
         if inplace:
@@ -275,7 +277,7 @@ class SegTraQ:
                            tx_max: float = 2000.0,
                            gn_min: float = 5.0,
                            gn_max: float = np.inf,
-                           label_key: str = "transferred_cell_type",
+                           cell_type_key: str = "transferred_cell_type",
                            ref_cell_type: str = "cell_type",
                            ref_ensemble_key: str | None = None,
                            query_ensemble_key: str | None =  "gene_ids",
@@ -314,14 +316,14 @@ class SegTraQ:
         result = _run_label_transfer(
             sdata=self.sdata,
             adata_ref=adata_ref,
-            ref_cell_type_key=ref_cell_type,
+            ref_cell_type=ref_cell_type,
             tables_key=self.tables_key,
             tables_cell_id_key = self.tables_cell_id_key,
             tx_min=tx_min,
             tx_max=tx_max,
             gn_min=gn_min,
             gn_max=gn_max,
-            label_key=label_key,
+            cell_type_key=cell_type_key,
             ref_ensemble_key = ref_ensemble_key,
             query_ensemble_key =query_ensemble_key,
             inplace=inplace,
@@ -329,6 +331,178 @@ class SegTraQ:
 
         return None if inplace else result
     run_label_transfer.__doc__ = _run_label_transfer.__doc__  
+
+
+    def run_supervised_metrics(
+        self,
+        markers: dict[str, dict[str, list[str]]],
+        mut_exclusive_pairs: list[tuple[str, str]],
+        cell_type_key: str = "transferred_cell_type",
+        radius: float = 15,
+        n_neighs: int = 10,
+        num_cells: int = 10_000,
+        seed: int = 0,
+        cell_centroid_x_key: str = "cell_centroid_x",
+        cell_centroid_y_key: str = "cell_centroid_y",
+        weight_edges: bool = False,
+        lfc_thresh: float = 1.0,
+        pval_thresh: float = 0.05,
+        min_n_cells: int = 20,
+        min_n_transcripts: int = 20,
+        use_quantiles: bool = True,
+        inplace: bool = True,
+    ):
+        """
+        Run supervised metrics (SP) for SegTraQ.
+
+        This function executes supervised metrics that require externally
+        provided markers and mutually exclusive gene pairs.
+
+        This runs, in order:
+            1) MECR per mutually-exclusive gene pair
+            2) Spatial contamination (directional leakage)
+            3) Per-cell marker purity
+            4) Differential abundance between bordering/non-bordering cells
+
+        Parameters
+        ----------
+        markers : dict
+            Required. Precomputed marker dictionary:
+            {cell_type: {"positive": [...], "negative": [...]}}
+
+        mut_exclusive_pairs : list of tuple
+            Precomputed mutually exclusive gene pairs.
+
+        cell_type_key : str
+            Cell-type column in `sdata.tables[tables_key].obs`.
+
+        radius, n_neighs, num_cells, seed, cell_centroid_x_key, cell_centroid_y_key, weight_edges :
+            Passed to SP.calculate_contamination.
+
+        lfc_thresh, pval_thresh, min_n_cells, min_n_transcripts :
+            Passed to SP.calculate_diff_abundance.
+
+        use_quantiles : bool, optional
+            Passed to SP.calculate_marker_purity.
+
+        inplace : bool, default=True
+            If True: write results into the `sdata.tables[...]` object.
+            If False: return a dictionary of all computed results.
+
+        Returns
+        -------
+        None or dict
+            - None if inplace=True
+            - dict with keys:
+                {
+                "MECR": ...,
+                "contamination": ...,
+                "marker_purity": ...,
+                "diff_abundance": ...,
+                }
+        """
+
+        out = {}
+
+        assert mut_exclusive_pairs is not None and len(mut_exclusive_pairs) > 0, (
+            "MECR requires `mut_exclusive_pairs`. Please compute them externally "
+            "with `segtraq.get_mut_excl_markers` and pass them here."
+        )
+        mecr_res = self.sp.compute_MECR(
+            gene_pairs=mut_exclusive_pairs,
+            inplace=inplace,
+        )
+
+        C_cnt, contamination_df, records_df = self.sp.calculate_contamination(
+            markers=markers,
+            cell_type_key=cell_type_key,
+            radius=radius,
+            n_neighs=n_neighs,
+            num_cells=num_cells,
+            seed=seed,
+            cell_centroid_x_key=cell_centroid_x_key,
+            cell_centroid_y_key=cell_centroid_y_key,
+            weight_edges=weight_edges,
+            inplace=inplace,
+        )
+
+        purity_df = self.sp.calculate_marker_purity(
+            cell_type_key=cell_type_key,
+            markers=markers,
+            use_quantiles=use_quantiles,
+            inplace=inplace,
+        )
+
+        de_results, summary = self.sp.calculate_diff_abundance(
+            cell_type_key=cell_type_key,
+            markers=markers,
+            lfc_thresh=lfc_thresh,
+            pval_thresh=pval_thresh,
+            min_n_cells=min_n_cells,
+            min_n_transcripts=min_n_transcripts,
+            seed=seed,
+            cell_centroid_x_key=cell_centroid_x_key,
+            cell_centroid_y_key=cell_centroid_y_key,
+            inplace=inplace,
+        )
+
+        if inplace:
+            return None
+        else:
+            out = {
+                "MECR": mecr_res,
+                "contamination": (C_cnt, contamination_df, records_df),
+                "marker_purity": purity_df,
+                "diff_abundance": (de_results, summary)
+            }
+            return out
+        
+    def run_point_statistics(
+        self,
+        feature: str,
+        inplace: bool = True, #TODO
+    ):
+        """
+        Compute point-statistics metrics per feature and optionally merge into the cell table.
+
+        This runs:
+        1) `centroid_mean_coord_diff`  → per-cell distance between mean transcript coords and cell centroid
+        2) `distance_to_membrane`      → per-cell mean distance of transcripts to the cell boundary
+
+        Parameters
+        ----------
+        feature : str
+            Feature (gene) name to evaluate.
+        inplace : bool, default=True
+            If True, merges a compact set of columns into `sdata.tables[tables_key].obs`:
+                - ps_cmd_dist__{feature}    : distance from centroid_mean_coord_diff
+                - ps_dtm_dist__{feature}    : distance_to_outline from distance_to_membrane
+                - ps_dtm_inv__{feature}     : distance_to_outline_inverse from distance_to_membrane
+            If False, returns a dictionary with raw DataFrames for each metric and feature.
+
+        Returns
+        -------
+        None or dict
+            - If `inplace=True`: returns None (results written to `.obs`).
+            - If `inplace=False`: returns
+                {
+                "centroid_mean_coord_diff": {feature: DataFrame, ...},
+                "distance_to_membrane":    {feature: DataFrame, ...},
+                }
+        """
+
+        cmd_df = self.ps.centroid_mean_coord_diff(feature=feature, inplace=inplace)
+        dtm_df = self.ps.distance_to_membrane(feature=feature, inplace=inplace)
+
+        if inplace:
+            return None
+        else:
+            out = {
+                f"centroid_mean_coord_diff_{feature}": cmd_df[f"distance_{feature}"],
+                f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
+                f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"]
+            }
+            return out
 
 
 class _BLFacade:
@@ -436,7 +610,7 @@ class _BLFacade:
         )
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
-class NCFacade:
+class _NCFacade:
     """
     Bound nuclear-correlation (nc) metrics interface for a SegTraQer instance.
     Methods use the parent's `sdata` and configured keys.
@@ -508,11 +682,144 @@ class NCFacade:
         )
     compute_correlation_between_parts.__doc__ = nc.compute_correlation_between_parts.__doc__
 
+class _SPFacade:
+    """
+    Bound supervised (sp) interface for a SegTraQ instance.
+    Methods use the parent's `sdata` and configured `tables_key`.
+    No per-call overrides are allowed.
+    """
 
+    def __init__(self, parent: "SegTraQ") -> None:
+        self._p = parent
+
+    def compute_MECR(self, gene_pairs: list[tuple[str, str]], inplace: bool = True):
+
+        return sp.compute_MECR(
+            sdata=self._p.sdata,
+            gene_pairs=gene_pairs,
+            tables_key=self._p.tables_key,
+            inplace=inplace,
+        )
+    compute_MECR.__doc__ = sp.compute_MECR.__doc__
+
+    def calculate_contamination(
+        self,
+        markers: dict,
+        cell_type_key: str,
+        radius: float = 15,
+        n_neighs: int = 10,
+        num_cells: int = 10_000,
+        seed: int = 0,
+        cell_centroid_x_key: str = "cell_centroid_x",
+        cell_centroid_y_key: str = "cell_centroid_y",
+        weight_edges: bool = False,
+        inplace: bool = True,
+    ):
+        return sp.calculate_contamination(
+            sdata=self._p.sdata,
+            markers=markers,
+            cell_type_key=cell_type_key,
+            tables_key=self._p.tables_key,
+            radius=radius,
+            n_neighs=n_neighs,
+            num_cells=num_cells,
+            seed=seed,
+            cell_centroid_x_key=cell_centroid_x_key,
+            cell_centroid_y_key=cell_centroid_y_key,
+            weight_edges=weight_edges,
+            inplace=inplace,
+        )
+    calculate_contamination.__doc__ = sp.calculate_contamination.__doc__
+
+    def calculate_marker_purity(
+        self,
+        cell_type_key: str,
+        markers: dict[str, dict[str, list[str]]],
+        use_quantiles: bool = True,
+        inplace: bool = True,
+    ):
+        return sp.calculate_marker_purity(
+            sdata=self._p.sdata,
+            cell_type_key=cell_type_key,
+            markers=markers,
+            use_quantiles=use_quantiles,
+            tables_key=self._p.tables_key,
+            inplace=inplace,
+        )
+    calculate_marker_purity.__doc__ = sp.calculate_marker_purity.__doc__
+
+    def calculate_diff_abundance(
+        self,
+        cell_type_key: str,
+        markers: dict[str, dict[str, list[str]]],
+        lfc_thresh: float = 1.0,
+        pval_thresh: float = 0.05,
+        min_n_cells: int = 20,
+        min_n_transcripts: int = 20,
+        seed: int = 0,
+        cell_centroid_x_key: str = "cell_centroid_x",
+        cell_centroid_y_key: str = "cell_centroid_y",
+        inplace: bool = True,
+    ):
+        return sp.calculate_diff_abundance(
+            sdata=self._p.sdata,
+            cell_type_key=cell_type_key,
+            markers=markers,
+            tables_key=self._p.tables_key,
+            lfc_thresh=lfc_thresh,
+            pval_thresh=pval_thresh,
+            min_n_cells=min_n_cells,
+            min_n_transcripts=min_n_transcripts,
+            seed=seed,
+            cell_centroid_x_key=cell_centroid_x_key,
+            cell_centroid_y_key=cell_centroid_y_key,
+            inplace=inplace,
+        )
+    calculate_diff_abundance.__doc__ = sp.calculate_diff_abundance.__doc__
+
+class _PSFacade:
+    """
+    Bound points-statistics (ps) interface for a SegTraQ instance.
+    Methods use the parent's `sdata` and configured keys.
+    No per-call overrides are allowed.
+    """
+
+    def __init__(self, parent: "SegTraQ") -> None:
+        self._p = parent
+
+    def centroid_mean_coord_diff(self, feature: str):
+        return ps.centroid_mean_coord_diff(
+            sdata=self._p.sdata,
+            feature=feature,
+            tables_key=self._p.tables_key,
+            points_gene_key=self._p.points_gene_key,
+            points_key=self._p.points_key,
+            tables_cell_id_key = self._p.tables_cell_id_key,
+            shapes_cell_id_key = self._p.shapes_cell_id_key,
+            points_cell_id_key = self._p.points_cell_id_key,
+            points_x_key = self._p.points_x_key,
+            points_y_key = self._p.points_y_key,
+            shape_key=self._p.shapes_key,
+            centroid_key=["centroid_x", "centroid_y"], 
+        )
+    centroid_mean_coord_diff.__doc__ = ps.centroid_mean_coord_diff.__doc__
+
+    def distance_to_membrane(self, feature: str):
+        return ps.distance_to_membrane(
+            sdata=self._p.sdata,
+            feature=feature,
+            tables_key=self._p.tables_key,
+            points_gene_key=self._p.points_gene_key,
+            points_key=self._p.points_key,
+            tables_cell_id_key = self._p.tables_cell_id_key,
+            shapes_cell_id_key = self._p.shapes_cell_id_key,
+            points_cell_id_key = self._p.points_cell_id_key,
+        )
+    distance_to_membrane.__doc__ = ps.distance_to_membrane.__doc__
 
 
     # def run_umap(self, inplace: bool = True):
-    #     adata = self.sdata.tables[self.table_key]
+    #     adata = self.sdata.tables[self.tables_key]
 
     #     if inplace:
     #         sc.pp.pca(adata)
@@ -526,91 +833,6 @@ class NCFacade:
     #         sc.tl.umap(adata_copy)
     #         return adata_copy
 
-    # def run_clustering_stability(
-    #     self,
-    #     inplace: bool = True,
-    #     resolution: float | tuple[float, ...] = (0.6, 0.8, 1.0),
-    #     key_prefix: str = "leiden_subset",
-    #     n_genes_subset: int = 100,
-    #     metric: str = "euclidean",
-    #     ncomps: int = 30,
-    #     random_state: int = 42,
-    # ):
-    #     rmsd = cs.clustering_stability.compute_rmsd(
-    #         self.sdata, resolution=resolution, key_prefix=key_prefix, random_state=random_state
-    #     )
-    #     print("RMSD computed.")
-    #     sil = cs.clustering_stability.compute_silhouette_score(
-    #         self.sdata,
-    #         resolution=resolution,
-    #         metric=metric,
-    #         ncomps=ncomps,
-    #         key_prefix=key_prefix,
-    #         random_state=random_state,
-    #     )
-    #     print("Silhouette Score computed.")
-    #     ari = cs.clustering_stability.compute_ari(
-    #         self.sdata,
-    #         resolution=(resolution if isinstance(resolution, int | float) else 1.0),
-    #         n_genes_subset=n_genes_subset,
-    #         key_prefix=key_prefix,
-    #     )
-    #     print("ARI computed.")
-    #     purity = cs.clustering_stability.compute_purity(
-    #         self.sdata,
-    #         resolution=(resolution if isinstance(resolution, int | float) else 1.0),
-    #         n_genes_subset=n_genes_subset,
-    #         key_prefix=key_prefix,
-    #     )
-    #     print("Purity computed.")
-    #     result = {"rmsd": float(rmsd), "silhouette": float(sil), "ari": float(ari), "purity": float(purity)}
-
-    #     tbl = self.sdata.tables[self.table_key]
-    #     to_drop = [
-    #         c for c in tbl.obs.columns if (c.startswith("leiden_subset_100") or c.startswith("leiden_subset_allgenes"))
-    #     ]
-    #     tbl.obs.drop(columns=to_drop, inplace=True, errors="ignore")
-
-    #     if inplace:
-    #         tbl.uns.setdefault("segtraq", {}).setdefault("cs", {}).update(result)
-    #         return None
-    #     else:
-    #         return result
-
-    # def run_supervised_spillover_metrics(self, inplace: bool = True):
-    #     tbl = self.sdata.tables[self.table_key]
-    #     common_genes = tbl.var_names[tbl.var_names.isin(self.adata_ref.var_names)]
-    #     self.adata_ref = self.adata_ref[:, common_genes].copy()
-
-    #     markers_dict = sp.find_markers_cellspa(self.adata_ref, self.ref_celltype_key)
-    #     print("Identified positive and negative markers.")
-
-    #     # mut_markers_dict = sp.find_mutually_exclusive_genes(self.adata_ref, markers_dict, self.ref_celltype_key)
-    #     # - this blows up memory - TODO find out how to store in sdata differently
-    #     # print("Identified mutually exclusive markers.")
-
-    #     # mecr = sp.compute_MECR(self.sdata, mut_markers_dict)
-    #     # print("Computed mutually exclusive co-expression rate.")
-
-    #     if "transferred_celltype" not in tbl.obs.columns:
-    #         self.run_annotation()
-
-    #     purity_results = sp.calculate_marker_purity(self.sdata, "transferred_celltype", markers_dict)
-    #     print("Computed signal purity scores.")
-
-    #     if inplace:
-    #         tbl.obs = tbl.obs.merge(
-    #             purity_results.reset_index(),
-    #             how="left",
-    #             left_on="cell_id",
-    #             right_on="cell_id",
-    #         )
-
-    #         # mecr_flat = {f"{g1}__{g2}": float(v) for (g1, g2), v in mecr.items()}
-    #         # tbl.uns.setdefault("segtraq", {})["sp"] = mecr_flat
-
-    #     else:
-    #         return purity_results  # , mecr
 
     # def run_all(self):
     #     self.run_baseline()

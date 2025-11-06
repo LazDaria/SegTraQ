@@ -5,11 +5,16 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import spatialdata as sd
+import squidpy as sq
 import xarray as xr
 from anndata import AnnData
 from scipy.spatial.distance import cdist
 
 from .bl import baseline as bl
+from collections import Counter, defaultdict
+from itertools import combinations
+from scipy import sparse
+from tqdm.auto import tqdm
 
 
 def _to_ndarray(x) -> np.ndarray:
@@ -26,6 +31,38 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     samp = arr if arr.size <= n else np.random.choice(arr, n, replace=False)
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
+def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[str, list[str]]:
+    all_genes = [g for gl in marker_dict.values() for g in gl]
+    if not all_genes:
+        return {k: [] for k in marker_dict}
+    counts = pd.Series(all_genes).value_counts()
+    # drop genes appearing in >= t * n_types lists
+    drop_genes = set(counts[counts >= (t * n_ct)].index)
+    return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
+
+def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_quantiles: bool) -> tuple:
+    """Precision, recall, F1 for one list using upper-quantile rule (CellSPA)."""
+    if marker_idx.size == 0:
+        return 0.0, 0.0, 0.0
+
+    actual = np.zeros(n_genes, dtype=bool)
+    actual[marker_idx] = True
+    frac = actual.mean()
+
+    if use_quantiles:
+        thr = np.quantile(expr, 1.0 - frac)
+        predicted = expr > thr
+    else:
+        predicted = expr > 0
+
+    tp = int((predicted & actual).sum())
+    fp = int((predicted & ~actual).sum())
+    fn = int((~predicted & actual).sum())
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    F1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    return precision, recall, F1
 
 def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id") -> pd.DataFrame:
     """
@@ -74,14 +111,14 @@ def assign_celltype_by_pearson(adata: AnnData, ref_mean_df: pd.DataFrame, q_ense
 def run_label_transfer(
     sdata,
     adata_ref: AnnData,
-    ref_cell_type_key: str,
+    ref_cell_type: str,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tx_min: float = 10.0,
     tx_max: float = 2000.0,
     gn_min: float = 5.0,
     gn_max: float = np.inf,
-    label_key: str = "transferred_cell_type",
+    cell_type_key: str = "transferred_cell_type",
     ref_ensemble_key: str | None = None,
     query_ensemble_key: str | None =  "gene_ids",
     inplace: bool = True,
@@ -99,7 +136,7 @@ def run_label_transfer(
     adata_ref : AnnData
         Reference dataset (ideally normalized & log1p).
         Otherwise transformation will be performed before running label transfer.
-    ref_cell_type_key : str
+    ref_cell_type : str
         Column in `adata_ref.obs` with reference cell types.
     tables_key : str
         Key of the AnnData table in `sdata.tables`.
@@ -109,7 +146,7 @@ def run_label_transfer(
         Min/max transcripts per cell for pre-filtering.
     gn_min, gn_max : float
         Min/max genes per cell for pre-filtering.
-    label_key : str
+    cell_type_key : str
         Column name to store transferred labels in `.obs` when `inplace=True`.
     ref_ensemble_key: str or None, default=None
         Column name in `adata_ref.var` that contains unique gene/ensemble IDs. If None, `adata_ref.var_names` will be used.
@@ -127,23 +164,23 @@ def run_label_transfer(
         None when `inplace=True`; otherwise a DataFrame of assignments.
     """
 
-    if ref_cell_type_key not in adata_ref.obs.columns:
-        raise KeyError(f"'{ref_cell_type_key}' not found in adata_ref.obs.")
+    if ref_cell_type not in adata_ref.obs.columns:
+        raise KeyError(f"'{ref_cell_type}' not found in adata_ref.obs.")
 
     if _looks_like_counts(adata_ref.X):
         warnings.warn(
             "Reference adata_ref does not appear log-normalized."
             "Counts will be log1p-transformed before running label transfer."
-            'Raw counts will be stored in `adata_ref.layers["counts"]`.',
+            'Raw counts will be stored in `adata_ref.layers["raw"]`.',
             RuntimeWarning,
             stacklevel=2,
         )
-        adata_ref.layers["counts"] = adata_ref.X
+        adata_ref.layers["raw"] = adata_ref.X
         sc.pp.normalize_total(adata_ref, target_sum=1e4)
         sc.pp.log1p(adata_ref)
 
     counts = _to_ndarray(adata_ref.X)
-    celltypes = adata_ref.obs[ref_cell_type_key]
+    celltypes = adata_ref.obs[ref_cell_type]
     genes = adata_ref.var_names if ref_ensemble_key is None else adata_ref.var[ref_ensemble_key].values
     counts_df = pd.DataFrame(counts, columns=genes)
     counts_df["celltype"] = celltypes.values
@@ -173,11 +210,11 @@ def run_label_transfer(
         warnings.warn(
             "Spatialdata table appears to contain raw counts. "
             "Counts will be log1p-transformed before running label transfer."
-            'Raw counts will be stored in `adata_q.layers["counts"]`.',
+            'Raw counts will be stored in `adata_q.layers["raw"]`.',
             RuntimeWarning,
             stacklevel=2,
         )
-        adata_q.layers["counts"] = adata_q.X
+        adata_q.layers["raw"] = adata_q.X
         sc.pp.normalize_total(adata_q)
         sc.pp.log1p(adata_q)
 
@@ -186,9 +223,9 @@ def run_label_transfer(
 
     if inplace:
         # Write back only to the filtered subset cells
-        out = ct_corr.rename(columns={"celltype": label_key})
+        out = ct_corr.rename(columns={"celltype": cell_type_key})
         tbl.obs = tbl.obs.merge(out, how="left", left_on=tables_cell_id_key, right_on=tables_cell_id_key)
-        tbl.obs[label_key] = tbl.obs[label_key].astype("category")
+        tbl.obs[cell_type_key] = tbl.obs[cell_type_key].astype("category")
         return None
     else:
         return out
@@ -213,6 +250,262 @@ def merge_into_obs(sdata, table_key, df_to_merge, table_cell_id_key, df_cell_id_
 
     sdata.tables[table_key].obs = df
 
+def get_ref_markers(
+        
+    adata_ref: AnnData,
+    ref_cell_type: str,
+    q_pos: float = 0.95,
+    q_neg: float = 0.10,
+    t: float = 0.25,
+) -> dict[str, dict[str, list[str]]]:
+    """
+    Translated and modified from https://github.com/SydneyBioX/CellSPA
+
+    For each cell type c:
+        w_g = mean(expression of gene g in cells of c) - mean(expression of g in all other cells)
+        - positive markers(c): genes with w_g > quantile(w, q)
+        - negative markers(c): genes with w_g < quantile(w, 1 - q)
+
+    After building per-type lists, remove genes that occur in >= t * n_types lists
+    (done separately for positives and negatives) to keep type-specific markers.
+
+    Parameters
+    ----------
+    adata_ref : AnnData
+        Reference single-cell dataset (cells x genes).
+    ref_cell_type : str
+        Column in `adata_ref.obs` containing cell type labels.
+    q_pos : float, optional (default: 0.95)
+        Upper quantile for positives.
+    q_neg : float, optional (default: 0.10)
+        Lower quantile for negatives.
+    t : float, optional (default: 0.25)
+        Overlap filter: drop genes that appear in >= t * n_types marker lists.
+
+    Returns
+    -------
+    dict
+        {cell_type: {"positive": [genes], "negative": [genes]}}
+    """
+
+    if _looks_like_counts(adata_ref.X):
+        warnings.warn(
+            "Reference adata_ref does not appear log-normalized."
+            "Counts will be log1p-transformed before running label transfer.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        sc.pp.normalize_total(adata_ref, target_sum=1e4)
+        sc.pp.log1p(adata_ref)
+
+    X = adata_ref.X
+    X = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
+    genes = np.asarray(adata_ref.var_names)
+    ctypes = pd.Categorical(adata_ref.obs[ref_cell_type])
+    types = list(ctypes.categories)
+    n_types = len(types)
+    if n_types < 2:
+        raise ValueError("Need at least two cell types to compute differential markers.")
+
+    # compute per-type mean expression (genes x types)
+    means = {}
+    for ct in types:
+        mask = ctypes == ct
+        if mask.sum() == 0:
+            means[ct] = np.zeros(adata_ref.n_vars, dtype=float)
+        else:
+            means[ct] = X[mask].mean(axis=0)
+    ref_exprs = pd.DataFrame(means, index=genes)
+
+    # differential score w = mean_in_type - mean_in_others
+    pos_lists: dict[str, list[str]] = {}
+    neg_lists: dict[str, list[str]] = {}
+    type_cols = ref_exprs.columns.to_list()
+
+    for ct in type_cols:
+        in_ct = ref_exprs[ct].to_numpy()
+        others = ref_exprs.drop(columns=[ct]).mean(axis=1).to_numpy()
+        w = in_ct - others
+
+        # quantile cutoffs
+        q_hi = np.quantile(w, q_pos)
+        q_lo = np.quantile(w, q_neg)
+
+        # positives = top-q
+        pos_genes = ref_exprs.index[w > q_hi].tolist()
+        # negatives = bottom-q
+        neg_genes = ref_exprs.index[w < q_lo].tolist()
+
+        pos_lists[ct] = pos_genes
+        neg_lists[ct] = neg_genes
+
+    # overlap filter (remove ubiquitous markers)
+    pos_lists = _apply_overlap_filter(pos_lists, t=t, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=1, n_ct=n_types)
+
+    markers = {ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in types}
+
+    return markers
+
+def get_mut_excl_markers(
+    # Modified from https://github.com/dpeerlab/segger-analysis
+    adata_ref,
+    markers,
+    ref_cell_type: str,
+    pos_threshold: float = 0.20,
+    neg_threshold: float = 0.05,
+    max_codetect: float = 0.01,
+    cell_types: tuple[str, str] | None = None,
+) -> list[tuple[str, str]]:
+    """
+    Finds mutually exclusive markers (presence-based specificity) between cell types.
+
+    Optionally restricts computation to a specified pair of cell types.
+
+    Parameters
+    ----------
+    adata_ref : AnnData
+        Reference single-cell dataset (cells × genes).
+    markers : dict
+        Marker dictionary as returned by `find_markers`; only the "positive" list is used.
+    ref_cell_type : str
+        Column in `adata_ref.obs` containing cell-type labels.
+    pos_threshold : float, optional
+        Minimum fraction of cells within the target type where a gene must be present (>0).
+    neg_threshold : float, optional
+        Maximum fraction of cells in the complement (all other types) where the gene may be present.
+    max_codetect : float, optional
+        Maximum fraction of cells in which mutually exclusive gene pairs may be co-detected.
+    cell_types : tuple[str, str], optional
+        If provided, restrict computation to this pair of cell types.
+
+    Returns
+    -------
+    list of tuple
+        Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.
+    """
+    # Extract positive marker genes for each cell type
+    pos_by_ct = {ct: m.get("positive", []) for ct, m in markers.items()}
+
+    # Flatten all genes across cell types, remove duplicates, and sort alphabetically
+    all_genes = sorted({g for gs in pos_by_ct.values() for g in gs})
+
+    # Keep only genes present in the AnnData object
+    var_index = pd.Index(adata_ref.var_names)
+    genes = [g for g in all_genes if g in var_index]
+    if not genes:
+        return []
+
+    # Extract expression matrix for selected genes
+    X = adata_ref[:, genes].X
+    if sparse.issparse(X):
+        X = X.tocsr()
+        # Convert to binary presence/absence matrix (0/1)
+        B = (X > 0).astype(np.uint8).tocsr()
+    else:
+        B = sparse.csr_matrix((np.asarray(X) > 0).astype(np.uint8))
+
+    gene2col = {g: i for i, g in enumerate(genes)}  # map gene to column index
+    labels = np.asarray(adata_ref.obs[ref_cell_type])
+    cell_types_all = list(pos_by_ct.keys())  # all available cell types
+
+    # === Restrict to user-specified cell types if provided ===
+    if cell_types is not None:
+        ct_subset = [ct for ct in cell_types if ct in cell_types_all]
+        if len(ct_subset) != 2:
+            raise ValueError(f"cell_types must contain exactly two valid types from: {cell_types_all}")
+        cell_types_all = ct_subset
+
+    # Dictionary to hold exclusive genes per cell type
+    exclusive_genes = {ct: [] for ct in cell_types_all}
+    all_exclusive = []
+
+    n_cells = B.shape[0]  # total number of cells
+
+    # === Step 1: Identify candidate exclusive genes per cell type ===
+    for ct in cell_types_all:
+        pos_genes = [g for g in pos_by_ct[ct] if g in gene2col]  # only genes in adata
+        if not pos_genes:
+            continue
+
+        # Boolean masks for cells of this type vs all others
+        mask_ct = labels == ct
+        n_ct = int(mask_ct.sum())
+        if n_ct == 0:
+            continue
+        mask_other = ~mask_ct
+        n_other = int(mask_other.sum())
+
+        # Subset binary matrix
+        B_ct = B[mask_ct]
+        B_other = B[mask_other]
+
+        # Count number of cells where each gene is expressed
+        ct_counts = np.asarray(B_ct.getnnz(axis=0)).ravel()
+        other_counts = np.asarray(B_other.getnnz(axis=0)).ravel()
+
+        # Fraction of cells expressing each gene
+        frac_ct = ct_counts / max(n_ct, 1)
+        frac_other = other_counts / max(n_other, 1)
+
+        # Keep genes that are frequent in this type but rare in others
+        idx = [gene2col[g] for g in pos_genes]
+        keep = (frac_ct[idx] > pos_threshold) & (frac_other[idx] < neg_threshold)
+        kept_genes = [g for g, k in zip(pos_genes, keep, strict=False) if k]
+
+        exclusive_genes[ct] = kept_genes
+        all_exclusive.extend(kept_genes)
+
+    # === Step 2: Keep only genes that are exclusive to exactly one type ===
+    freq = Counter(all_exclusive)
+    unique_exclusive = {g for g, c in freq.items() if c == 1}
+    filtered = {ct: [g for g in gs if g in unique_exclusive] for ct, gs in exclusive_genes.items()}
+
+    # === Step 3: Form gene pairs ===
+    if cell_types is not None:
+        # Only generate pairs between the two user-specified types
+        ct1, ct2 = cell_types
+        pairs = [(g1, g2) for g1 in filtered.get(ct1, []) for g2 in filtered.get(ct2, [])]
+    else:
+        # Generate all cross-type pairs
+        pairs = [
+            (g1, g2) for ct1, ct2 in combinations(filtered.keys(), 2) for g1 in filtered[ct1] for g2 in filtered[ct2]
+        ]
+
+    # === Step 4: Filter pairs that are co-detected above threshold ===
+    col_counts = np.asarray(B.getnnz(axis=0)).ravel()
+    frac_overall = col_counts / max(n_cells, 1)
+
+    def auto_pass(g1, g2):
+        # If either gene is very rare overall, pair automatically passes
+        return (frac_overall[gene2col[g1]] <= max_codetect) or (frac_overall[gene2col[g2]] <= max_codetect)
+
+    trivial = [p for p in pairs if auto_pass(*p)]
+    to_check = [p for p in pairs if not auto_pass(*p)]
+    if not to_check:
+        return trivial
+
+    # Subset matrix to relevant columns for co-detection check
+    B_csc = B.tocsc()
+    cols_needed = np.array(sorted({gene2col[g] for p in to_check for g in p}), dtype=int)
+    B_sub = B_csc[:, cols_needed]
+
+    # Compute co-detection counts
+    co_counts = (B_sub.T @ B_sub).tocsr()
+    idx_map = {c: i for i, c in enumerate(cols_needed)}
+
+    passed = []
+    for g1, g2 in to_check:
+        i = idx_map[gene2col[g1]]
+        j = idx_map[gene2col[g2]]
+        both = co_counts[i, j] / n_cells
+        if both <= max_codetect:
+            passed.append((g1, g2))
+
+    # Return all passing mutually exclusive gene pairs
+    result = trivial + passed
+
+    return result
 
 def _is_missing(x):
     """Return True for any kind of NA / NaN / None."""
