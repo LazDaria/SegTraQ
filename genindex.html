@@ -161,15 +161,14 @@
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/spillover_metrics_supervised.html">Supervised spillover metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/z_plane_correlation.html">Correlations between the top and bottom of the slice</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/spillover_metrics_supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 </ul>
 
@@ -278,7 +277,6 @@ document.write(`
 
 <div class="genindex-jumpbox">
  <a href="#C"><strong>C</strong></a>
- | <a href="#D"><strong>D</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -290,27 +288,17 @@ document.write(`
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics_supervised.calculate_contamination">calculate_contamination() (in module segtraq.sp.spillover_metrics_supervised)</a>
-</li>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics_supervised.calculate_diff_abundance">calculate_diff_abundance() (in module segtraq.sp.spillover_metrics_supervised)</a>
-</li>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics_supervised.calculate_marker_purity">calculate_marker_purity() (in module segtraq.sp.spillover_metrics_supervised)</a>
-</li>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics.centroid_mean_coord_diff">centroid_mean_coord_diff() (in module segtraq.sp.spillover_metrics)</a>
-</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
-</li>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics_supervised.compute_MECR">compute_MECR() (in module segtraq.sp.spillover_metrics_supervised)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_purity">compute_purity() (in module segtraq.cs.clustering_stability)</a>
 </li>
@@ -318,15 +306,7 @@ document.write(`
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_silhouette_score">compute_silhouette_score() (in module segtraq.cs.clustering_stability)</a>
 </li>
-      <li><a href="modules/volume.html#segtraq.vl.volume.compute_z_plane_correlation">compute_z_plane_correlation() (in module segtraq.vl.volume)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics.distance_to_membrane">distance_to_membrane() (in module segtraq.sp.spillover_metrics)</a>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_z_plane_correlation">compute_z_plane_correlation() (in module segtraq.cs.clustering_stability)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -335,12 +315,6 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.genes_per_cell">genes_per_cell() (in module segtraq.bl.baseline)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics_supervised.get_mut_excl_markers">get_mut_excl_markers() (in module segtraq.sp.spillover_metrics_supervised)</a>
-</li>
-      <li><a href="modules/spillover_metrics.html#segtraq.sp.spillover_metrics_supervised.get_ref_markers">get_ref_markers() (in module segtraq.sp.spillover_metrics_supervised)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -357,12 +331,6 @@ document.write(`
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">segtraq.cs.clustering_stability</a>
 </li>
         <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">segtraq.nc.nuclear_correlation</a>
-</li>
-        <li><a href="modules/spillover_metrics.html#module-segtraq.sp.spillover_metrics">segtraq.sp.spillover_metrics</a>
-</li>
-        <li><a href="modules/spillover_metrics.html#module-segtraq.sp.spillover_metrics_supervised">segtraq.sp.spillover_metrics_supervised</a>
-</li>
-        <li><a href="modules/volume.html#module-segtraq.vl.volume">segtraq.vl.volume</a>
 </li>
       </ul></li>
   </ul></td>
@@ -411,34 +379,13 @@ document.write(`
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     segtraq.nc.nuclear_correlation
 
       <ul>
         <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">module</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    segtraq.sp.spillover_metrics
-
-      <ul>
-        <li><a href="modules/spillover_metrics.html#module-segtraq.sp.spillover_metrics">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.sp.spillover_metrics_supervised
-
-      <ul>
-        <li><a href="modules/spillover_metrics.html#module-segtraq.sp.spillover_metrics_supervised">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.vl.volume
-
-      <ul>
-        <li><a href="modules/volume.html#module-segtraq.vl.volume">module</a>
 </li>
       </ul></li>
   </ul></td>
