@@ -805,7 +805,7 @@ class _PSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def centroid_mean_coord_diff(self, feature: str):
+    def centroid_mean_coord_diff(self, feature: str, inplace: bool=True):
         return ps.centroid_mean_coord_diff(
             sdata=self._p.sdata,
             feature=feature,
@@ -817,21 +817,25 @@ class _PSFacade:
             points_cell_id_key = self._p.points_cell_id_key,
             points_x_key = self._p.points_x_key,
             points_y_key = self._p.points_y_key,
-            shape_key=self._p.shapes_key,
+            shapes_key=self._p.shapes_key,
             centroid_key=["centroid_x", "centroid_y"], 
+            inplace=inplace
         )
     centroid_mean_coord_diff.__doc__ = ps.centroid_mean_coord_diff.__doc__
 
-    def distance_to_membrane(self, feature: str):
+    def distance_to_membrane(self, feature: str, inplace: bool=True):
         return ps.distance_to_membrane(
             sdata=self._p.sdata,
             feature=feature,
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
+            points_x_key = self._p.points_x_key,
+            points_y_key = self._p.points_y_key,
             tables_cell_id_key = self._p.tables_cell_id_key,
             shapes_cell_id_key = self._p.shapes_cell_id_key,
             points_cell_id_key = self._p.points_cell_id_key,
+            inplace=inplace
         )
     distance_to_membrane.__doc__ = ps.distance_to_membrane.__doc__
 
