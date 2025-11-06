@@ -26,15 +26,15 @@ def test_get_ref_markers_real_adata_structure_and_overlap(adata_ref):
     pos_all = [g for genes in (markers[ct]["positive"] for ct in markers) for g in genes]
     pos_counts = pd.Series(pos_all, dtype="object").value_counts()
     if len(pos_counts) > 0:
-        assert (
-            pos_counts < (0.25 * n_types)
-        ).all(), "Positive overlap filter failed: some genes appear in too many types"
+        assert (pos_counts < (0.25 * n_types)).all(), (
+            "Positive overlap filter failed: some genes appear in too many types"
+        )
     neg_all = [g for genes in (markers[ct]["negative"] for ct in markers) for g in genes]
     neg_counts = pd.Series(neg_all, dtype="object").value_counts()
     if len(neg_counts) > 0:
-        assert (
-            neg_counts < n_types
-        ).all(), "Negative overlap filter failed: a gene appears in all types' negative lists"
+        assert (neg_counts < n_types).all(), (
+            "Negative overlap filter failed: a gene appears in all types' negative lists"
+        )
 
 
 def test_overlap_filter_effect_without_internals(adata_ref):

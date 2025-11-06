@@ -1,9 +1,4 @@
-from .supervised import (
-    calculate_contamination,
-    calculate_diff_abundance,
-    calculate_marker_purity,
-    compute_MECR
-)
+from .supervised import calculate_contamination, calculate_diff_abundance, calculate_marker_purity, compute_MECR
 
 __all__ = [
     "compute_MECR",
