@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The spillover metrics (sp) accessor &#8212; SegTraQ</title>
+    <title>The volume (vl) accessor &#8212; SegTraQ</title>
   
   
   
@@ -41,12 +41,12 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'modules/spillover_metrics';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'modules/volume';</script>
     <link rel="icon" href="../_static/icon.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="The volume (vl) accessor" href="volume.html" />
-    <link rel="prev" title="The nuclear correlation (nc) accessor" href="nuclear_correlation.html" />
+    <link rel="next" title="Baseline metrics" href="../notebooks/baseline.html" />
+    <link rel="prev" title="The spillover metrics (sp) accessor" href="spillover_metrics.html" />
     <link href="../_static/style.css" rel="stylesheet" type="text/css">
 
   </head>
@@ -161,8 +161,8 @@
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
@@ -226,7 +226,7 @@
       
       
       
-      <li><a href="../_sources/modules/spillover_metrics.rst" target="_blank"
+      <li><a href="../_sources/modules/volume.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -310,7 +310,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>The spillover metrics (sp) accessor</h1>
+    <h1>The volume (vl) accessor</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -320,8 +320,7 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spillover-metrics-unsupervised">Spillover metrics (unsupervised)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spillover-metrics-supervised">Spillover metrics (supervised)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_z_plane_correlation"><code class="docutils literal notranslate"><span class="pre">compute_z_plane_correlation()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -333,15 +332,38 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="the-spillover-metrics-sp-accessor">
-<h1>The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-spillover-metrics-sp-accessor" title="Link to this heading">#</a></h1>
-<p>The spillover metrics accessor provides metrics to compare the mean spatial distribution of transcripts in relation to the centroid and the segmented outline of the cell.</p>
-<section id="spillover-metrics-unsupervised">
-<h2>Spillover metrics (unsupervised)<a class="headerlink" href="#spillover-metrics-unsupervised" title="Link to this heading">#</a></h2>
-</section>
-<section id="spillover-metrics-supervised">
-<h2>Spillover metrics (supervised)<a class="headerlink" href="#spillover-metrics-supervised" title="Link to this heading">#</a></h2>
-</section>
+  <section id="the-volume-vl-accessor">
+<h1>The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor<a class="headerlink" href="#the-volume-vl-accessor" title="Link to this heading">#</a></h1>
+<p>The volume accessor provides metrics about the 3D spatial distribution of transcripts.</p>
+<dl class="py function" id="module-segtraq.vl.volume">
+<dt class="sig sig-object py" id="segtraq.vl.volume.compute_z_plane_correlation">
+<span class="sig-prename descclassname"><span class="pre">segtraq.vl.volume.</span></span><span class="sig-name descname"><span class="pre">compute_z_plane_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_z_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.vl.volume.compute_z_plane_correlation" title="Link to this definition">#</a></dt>
+<dd><p>Compute the Pearson correlation between the top and bottom quantiles of transcripts in the z-plane.</p>
+<p>This function computes the Pearson correlation between the top and bottom quantiles of transcripts
+in the z-plane for each cell. It subsets the transcripts based on the z-coordinate and calculates
+the correlation for each cell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing transcript data.</p></li>
+<li><p><strong>quantile</strong> (<em>float</em><em>, </em><em>optional</em>) – The quantile to use for bottom and top subsets, by default 25.</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for transcripts in sdata.points, by default “transcripts”.</p></li>
+<li><p><strong>points_z_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for z-coordinates in sdata.points, by default “z”.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for tables in sdata.tables, by default “table”.</p></li>
+<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for cell IDs in sdata.points, by default “cell_id”.</p></li>
+<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key for gene names in sdata.points, by default “feature_name”.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to store the computed correlations in sdata.uns, by default True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame with cell IDs as index and Pearson correlations as values.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -356,20 +378,20 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="nuclear_correlation.html"
+       href="spillover_metrics.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</p>
+        <p class="prev-next-title">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</p>
       </div>
     </a>
     <a class="right-next"
-       href="volume.html"
+       href="../notebooks/baseline.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</p>
+        <p class="prev-next-title">Baseline metrics</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -389,8 +411,7 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spillover-metrics-unsupervised">Spillover metrics (unsupervised)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#spillover-metrics-supervised">Spillover metrics (supervised)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_z_plane_correlation"><code class="docutils literal notranslate"><span class="pre">compute_z_plane_correlation()</span></code></a></li>
 </ul>
   </nav></div>
 
