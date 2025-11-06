@@ -21,12 +21,12 @@ def compute_rmsd(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
-    label_key: str | None = None,
+    cell_type_key: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
     Compute RMSD for different Leiden clustering resolutions and report the best (lowest) RMSD.
-    If a label_key is provided, compute the RMSD for that clustering only.
+    If a cell_type_key is provided, compute the RMSD for that clustering only.
 
     Parameters
     ----------
@@ -38,7 +38,7 @@ def compute_rmsd(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
-    label_key : str, optional
+    cell_type_key : str, optional
         If provided, compute the RMSD for this clustering only.
     inplace : bool, optional
         Whether to store the computed RMSD in sdata.uns, by default True.
@@ -53,12 +53,12 @@ def compute_rmsd(
     if isinstance(resolution, float):
         resolution = [resolution]
 
-    if label_key is not None:
-        if label_key not in adata.obs:
+    if cell_type_key is not None:
+        if cell_type_key not in adata.obs:
             raise ValueError(
-                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[label_key].values
+        labels = adata.obs[cell_type_key].values
         # remove NaN labels
         if len(np.unique(labels[~pd.isna(labels)])) > 1:
             if "X_pca" not in adata.obsm:
@@ -66,7 +66,7 @@ def compute_rmsd(
             rmsd_val = compute_rmsd_for_clustering(adata.obsm["X_pca"], labels)
             return float(rmsd_val)
         else:
-            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     if "neighbors" not in adata.uns:
         raise ValueError(
@@ -102,13 +102,13 @@ def compute_mean_cosine_distance(
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
-    label_key: str | None = None,
+    cell_type_key: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
     Compute mean cosine distance for different Leiden clustering resolutions
     and report the best (lowest) mean cosine distance.
-    If a label_key is provided, compute the mean cosine distance for that clustering only.
+    If a cell_type_key is provided, compute the mean cosine distance for that clustering only.
 
     Parameters
     ----------
@@ -120,7 +120,7 @@ def compute_mean_cosine_distance(
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
-    label_key : str, optional
+    cell_type_key : str, optional
         If provided, compute the mean cosine distance for this clustering only.
     inplace : bool, optional
         Whether to store the computed mean cosine distance in sdata.uns, by default True.
@@ -136,12 +136,12 @@ def compute_mean_cosine_distance(
         resolution = [resolution]
 
     best_distance = np.inf
-    if label_key is not None:
-        if label_key not in adata.obs:
+    if cell_type_key is not None:
+        if cell_type_key not in adata.obs:
             raise ValueError(
-                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[label_key].values
+        labels = adata.obs[cell_type_key].values
         # remove NaN labels
         if len(np.unique(labels[~pd.isna(labels)])) > 1:
             if "X_pca" not in adata.obsm:
@@ -149,7 +149,7 @@ def compute_mean_cosine_distance(
             distance_val = compute_mean_cosine_distance_for_clustering(adata.obsm["X_pca"], labels)
             return float(distance_val)
         else:
-            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     if "neighbors" not in adata.uns:
         raise ValueError(
@@ -185,12 +185,12 @@ def compute_silhouette_score(
     metric: str = "euclidean",
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
-    label_key: str | None = None,
+    cell_type_key: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
-    If a label_key is provided, compute the silhouette score for that clustering only.
+    If a cell_type_key is provided, compute the silhouette score for that clustering only.
 
     Parameters
     ----------
@@ -204,7 +204,7 @@ def compute_silhouette_score(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     random_state : int, optional
         Seed for reproducibility, by default 42.
-    label_key : str, optional
+    cell_type_key : str, optional
         If provided, compute the silhouette score for this clustering only.
     inplace : bool, optional
         Whether to store the computed silhouette score in sdata.uns, by default True.
@@ -220,22 +220,22 @@ def compute_silhouette_score(
     if isinstance(resolution, float):
         resolution = [resolution]
 
-    if label_key is not None:
-        if label_key not in adata.obs:
+    if cell_type_key is not None:
+        if cell_type_key not in adata.obs:
             raise ValueError(
-                f"label_key '{label_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
+                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[label_key]
+        labels = adata.obs[cell_type_key]
         if len(set(labels)) > 1:  # Ensure more than one cluster exists
             if "X_pca" not in adata.obsm:
                 raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
             # remove NaN labels
-            adata_subset = adata[~pd.isna(adata.obs[label_key]), :]
-            labels = adata_subset.obs[label_key].values
+            adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
+            labels = adata_subset.obs[cell_type_key].values
             silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
             return float(silhouette_avg)
         else:
-            raise ValueError(f"label_key '{label_key}' must contain more than one cluster")
+            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     # ensure that we already have neighbors computed
     # this way we avoid recomputing neighbors multiple times (for the different resolutions)
