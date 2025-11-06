@@ -3,9 +3,9 @@
 __author__ = """Daria Lazic, Matthias Meyer-Bender, Martin Emons"""
 __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh.ch"
 
-from . import bl, cs, nc, pl, sp, vl
+from . import bl, cs, nc, pl, sp, vl, ps
 from .SegTraQ import SegTraQ
-from .utils import run_label_transfer, validate_spatialdata
+from .utils import run_label_transfer, validate_spatialdata, get_ref_markers, get_mut_excl_markers
 
 __all__ = [
     "bl",
@@ -14,7 +14,9 @@ __all__ = [
     "sp",
     "pl",
     "vl",
-    "segtraq_metrics",
+    "ps",
+    "get_ref_markers", 
+    "get_mut_excl_markers",
     "run_label_transfer",
     "validate_spatialdata",
     "SegTraQ",
