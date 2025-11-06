@@ -243,7 +243,9 @@ def merge_into_obs(sdata, tables_key, df_to_merge, table_cell_id_key, df_cell_id
     obs = sdata.tables[tables_key].obs
 
     # Drop overlapping columns, but keep the merge key
-    overlapping = [c for c in df_to_merge.columns if c in obs.columns and c != table_cell_id_key and c != df_cell_id_key]
+    overlapping = [
+        c for c in df_to_merge.columns if c in obs.columns and c != table_cell_id_key and c != df_cell_id_key
+    ]
     if overlapping:
         obs = obs.drop(columns=overlapping)
 
