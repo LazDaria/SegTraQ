@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 from shapely import LinearRing, Point
+
 from ..utils import merge_into_obs
+
 
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
@@ -17,7 +19,7 @@ def centroid_mean_coord_diff(
     points_y_key: str = "y",
     shapes_key: str = "cell_boundaries",
     centroid_key: list = ("centroid_x", "centroid_y"),
-    inplace: bool = True
+    inplace: bool = True,
 ) -> pd.DataFrame:
     """
     Calculates the euclidean distance between the mean x,y coordinate of the transcripts
@@ -86,7 +88,7 @@ def centroid_mean_coord_diff(
 
     x_mean = pd.DataFrame(x_mean)
     y_mean = pd.DataFrame(y_mean)
-    
+
     gdf = sdata[shapes_key].copy()
 
     if shapes_cell_id_key is None:
@@ -134,7 +136,7 @@ def distance_to_membrane(
     points_cell_id_key: str = "cell_id",
     tables_cell_id_key: str = "cell_id",
     shapes_cell_id_key: str = "cell_id",
-    inplace: bool = True
+    inplace: bool = True,
 ):
     """
     Calculates the mean distance of the transcript of a feature of interest to the outline of the cell segmentation
@@ -212,7 +214,9 @@ def distance_to_membrane(
     gdf = gdf.dropna(subset="coordinate_points")
 
     # calculate the distance of the transcript points to the linear segment
-    gdf[f"distance_to_outline_{feature}"] = gdf.apply(lambda x: x["coordinate_points"].distance(x["linear_geometry"]), axis=1)
+    gdf[f"distance_to_outline_{feature}"] = gdf.apply(
+        lambda x: x["coordinate_points"].distance(x["linear_geometry"]), axis=1
+    )
 
     # rename index as this should not have the same name as one of the columns
     gdf.index.name = "index"
@@ -222,7 +226,9 @@ def distance_to_membrane(
 
     # extract the cell area
     area_df = sdata[tables_key].obs[[tables_cell_id_key, "cell_area"]]
-    mean_distance_to_outline = mean_distance_to_outline.merge(area_df, left_on=shapes_cell_id_key, right_on=tables_cell_id_key, how="left")
+    mean_distance_to_outline = mean_distance_to_outline.merge(
+        area_df, left_on=shapes_cell_id_key, right_on=tables_cell_id_key, how="left"
+    )
 
     # normalise by area
     mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = (

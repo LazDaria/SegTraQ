@@ -5,6 +5,6 @@ def test_compute_purity(sdata_new):
     purity = st.cs.compute_purity(sdata_new, resolution=1.0, n_genes_subset=100, key_prefix="leiden_subset")
     assert isinstance(purity, float), "Purity should be a float"
     assert 0 <= purity <= 1, "Purity should be in the range [0, 1]"
-    assert (
-        "mean_purity" in sdata_new.tables["table"].uns.keys()
-    ), "Mean purity should be stored in sdata_new.tables['table'].uns"
+    assert "mean_purity" in sdata_new.tables["table"].uns.keys(), (
+        "Mean purity should be stored in sdata_new.tables['table'].uns"
+    )
