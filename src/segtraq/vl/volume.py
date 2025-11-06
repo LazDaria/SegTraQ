@@ -67,7 +67,7 @@ def compute_z_plane_correlation(
     bottom_df_pd = bottom_df.compute() if hasattr(bottom_df, "compute") else bottom_df
 
     top_counts = (
-        top_df_pd.groupby([points_cell_id_key, points_gene_key])
+        top_df_pd.groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .rename("count")
         .reset_index()
@@ -77,7 +77,7 @@ def compute_z_plane_correlation(
     )
 
     bottom_counts = (
-        bottom_df_pd.groupby([points_cell_id_key, points_gene_key])
+        bottom_df_pd.groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .rename("count")
         .reset_index()
@@ -105,7 +105,7 @@ def compute_z_plane_correlation(
     if inplace:
         merge_into_obs(
             sdata,
-            table_key=tables_key,
+            tables_key=tables_key,
             df_to_merge=correlation_df,
             table_cell_id_key=points_cell_id_key,
             df_cell_id_key=points_cell_id_key,
