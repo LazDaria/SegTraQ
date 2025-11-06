@@ -1,21 +1,18 @@
-from pathlib import Path
-from typing import Any, Optional
-from anndata import AnnData
-
-import numpy as np
-import scanpy as sc
 import warnings
 
-from . import bl, cs, nc, pl, sp
-from .utils import run_label_transfer as _run_label_transfer
+import numpy as np
+import spatialdata as sd
+from anndata import AnnData
 
+from . import bl, cs, nc
+from .utils import run_label_transfer as _run_label_transfer
 from .utils import validate_spatialdata
 
 
 class SegTraQ:
     def __init__(
         self,
-        sdata,
+        sdata: sd.SpatialData,
         images_key: str | None = "morphology_focus",
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
@@ -34,8 +31,7 @@ class SegTraQ:
         labels_key: str | None = "cell_labels",
         labels_data_key: str | None = "scale0/image",
         labels_to_cell_id_key: str | None = "cell_labels",
-    ):       
-
+    ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
         Defaults target 10x Genomics Xenium; override keys for other technologies.
@@ -161,7 +157,19 @@ class SegTraQ:
         self.labels_to_cell_id_key = labels_to_cell_id_key
 
         self.bl = _BLFacade(self)
-        self.nc: NCFacade = NCFacade(self)
+        self.nc = _NCFacade(self)
+        self.cs = _CSFacade(self)
+
+    @property
+    def sdata(self):
+        """Underlying SpatialData object (modifiable)."""
+        return self._sdata
+
+    @sdata.setter
+    def sdata(self, value):
+        if not isinstance(value, sd.SpatialData):
+            raise TypeError("Must be a SpatialData object")
+        self._sdata = value
 
     def run_baseline(self, inplace: bool = True):
         """
@@ -217,7 +225,7 @@ class SegTraQ:
             if dens is not None:
                 out["transcript_density"] = dens
             return out
-        
+
     def run_nuclear_correlation(self, inplace: bool = True):
         """
         Compute nuclear-correlation metrics and optionally merge them into the cell table.
@@ -257,7 +265,6 @@ class SegTraQ:
         cell_nuc_corr = self.nc.compute_cell_nuc_correlation()
         parts_corr = self.nc.compute_correlation_between_parts()
 
-
         if inplace:
             return None
 
@@ -268,18 +275,19 @@ class SegTraQ:
                 "parts_correlation": parts_corr,
             }
 
-        
-    def run_label_transfer(self, 
-                           adata_ref = AnnData, 
-                           tx_min: float = 10.0,
-                           tx_max: float = 2000.0,
-                           gn_min: float = 5.0,
-                           gn_max: float = np.inf,
-                           label_key: str = "transferred_cell_type",
-                           ref_cell_type: str = "cell_type",
-                           ref_ensemble_key: str | None = None,
-                           query_ensemble_key: str | None =  "gene_ids",
-                           inplace: bool = True):
+    def run_label_transfer(
+        self,
+        adata_ref=AnnData,
+        tx_min: float = 10.0,
+        tx_max: float = 2000.0,
+        gn_min: float = 5.0,
+        gn_max: float = np.inf,
+        cell_type_key: str = "transferred_cell_type",
+        ref_cell_type: str = "cell_type",
+        ref_ensemble_key: str | None = None,
+        query_ensemble_key: str | None = "gene_ids",
+        inplace: bool = True,
+    ):
         """
         Transfer cell-type labels from a reference AnnData to the current SpatialData table.
         Cells are optionally filtered by per-cell transcript and gene counts before transfer.
@@ -292,14 +300,16 @@ class SegTraQ:
             Inclusive lower and upper bounds for per-cell transcript count filtering.
         gn_min, gn_max : float, default=(5.0, inf)
             Inclusive lower and upper bounds for per-cell gene count filtering.
-        label_key : str
+        cell_type_key : str
             Column name to store transferred labels in `.obs` when `inplace=True`.
         ref_cell_type: str, default="cell_type"
             Column name of cell-type annotations in `adata_ref.obs[ref_cell_type]`.
         ref_ensemble_key: str or None, default=None
-            Column name in `adata_ref.var` that contains unique gene/ensemble IDs. If None, `adata_ref.var_names` will be used.
+            Column name in `adata_ref.var` that contains unique gene/ensemble IDs. 
+            If None, `adata_ref.var_names` will be used.
         query_ensemble_key: str or None, default="gene_ids"
-            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs. 
+            If None, `self.sdata.tables[self.tables_key].var_names` will be used.
         inplace : bool, default=True
             If True, writes labels/scores into `sdata.tables[tables_key].obs` and returns None.
             If False, returns a DataFrame with the assignment and scores without writing.
@@ -316,24 +326,25 @@ class SegTraQ:
             adata_ref=adata_ref,
             ref_cell_type_key=ref_cell_type,
             tables_key=self.tables_key,
-            tables_cell_id_key = self.tables_cell_id_key,
+            tables_cell_id_key=self.tables_cell_id_key,
             tx_min=tx_min,
             tx_max=tx_max,
             gn_min=gn_min,
             gn_max=gn_max,
-            label_key=label_key,
-            ref_ensemble_key = ref_ensemble_key,
-            query_ensemble_key =query_ensemble_key,
+            cell_type_key=cell_type_key,
+            ref_ensemble_key=ref_ensemble_key,
+            query_ensemble_key=query_ensemble_key,
             inplace=inplace,
         )
 
         return None if inplace else result
-    run_label_transfer.__doc__ = _run_label_transfer.__doc__  
+
+    run_label_transfer.__doc__ = _run_label_transfer.__doc__
 
 
 class _BLFacade:
     """
-    Thin facade over segtraq.bl bound to a SegTraQer instance.
+    Thin facade over segtraq.bl bound to a SegTraQ instance.
     Methods use the parent's sdata and configured keys exclusively.
     No per-call overrides are allowed.
     """
@@ -348,7 +359,8 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
-    num_cells.__doc__ = bl.num_cells.__doc__  
+
+    num_cells.__doc__ = bl.num_cells.__doc__
 
     def num_genes(self, inplace: bool = True):
         return bl.num_genes(
@@ -358,7 +370,8 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
-    num_genes.__doc__ = bl.num_genes.__doc__  
+
+    num_genes.__doc__ = bl.num_genes.__doc__
 
     def num_transcripts(self, inplace: bool = True):
         return bl.num_transcripts(
@@ -367,7 +380,8 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
-    num_transcripts.__doc__ = bl.num_transcripts.__doc__  
+
+    num_transcripts.__doc__ = bl.num_transcripts.__doc__
 
     def perc_unassigned_transcripts(self, inplace: bool = True):
         return bl.perc_unassigned_transcripts(
@@ -378,35 +392,38 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
-    perc_unassigned_transcripts.__doc__ = bl.perc_unassigned_transcripts.__doc__   
+
+    perc_unassigned_transcripts.__doc__ = bl.perc_unassigned_transcripts.__doc__
 
     def genes_per_cell(self, inplace: bool = True):
         return bl.genes_per_cell(
             sdata=self._p.sdata,
-            tables_cell_id_key = self._p.tables_cell_id_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
-    genes_per_cell.__doc__ = bl.genes_per_cell.__doc__    
+
+    genes_per_cell.__doc__ = bl.genes_per_cell.__doc__
 
     def transcripts_per_cell(self, inplace: bool = True):
         return bl.transcripts_per_cell(
             sdata=self._p.sdata,
-            tables_cell_id_key = self._p.tables_cell_id_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+
     transcripts_per_cell.__doc__ = bl.transcripts_per_cell.__doc__
 
     def morphological_features(self, features_to_compute: list | None = None, n_jobs: int = 1, inplace: bool = True):
         return bl.morphological_features(
             sdata=self._p.sdata,
-            tables_cell_id_key = self._p.tables_cell_id_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             features_to_compute=features_to_compute,
@@ -414,6 +431,7 @@ class _BLFacade:
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
+
     morphological_features.__doc__ = bl.morphological_features.__doc__
 
     def transcript_density(self, inplace: bool = False):
@@ -434,11 +452,13 @@ class _BLFacade:
             tables_area_volume_key=tavk,
             inplace=inplace,
         )
+
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
-class NCFacade:
+
+class _NCFacade:
     """
-    Bound nuclear-correlation (nc) metrics interface for a SegTraQer instance.
+    Bound nuclear-correlation (nc) metrics interface for a SegTraQ instance.
     Methods use the parent's `sdata` and configured keys.
     No per-call overrides are allowed.
     """
@@ -454,7 +474,7 @@ class NCFacade:
         return nc.compute_cell_nuc_ious(
             sdata=self._p.sdata,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
-            tables_cell_id_key = self._p.tables_cell_id_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
             n_jobs=n_jobs,
@@ -473,7 +493,7 @@ class NCFacade:
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_cell_id_key = self._p.shapes_cell_id_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
             metric="pearson",
             points_key=self._p.points_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
@@ -484,6 +504,7 @@ class NCFacade:
             n_jobs_iou=n_jobs_iou,
             inplace=inplace,
         )
+
     compute_cell_nuc_correlation.__doc__ = nc.compute_cell_nuc_correlation.__doc__
 
     def compute_correlation_between_parts(self, inplace: bool = True):
@@ -506,10 +527,96 @@ class NCFacade:
             n_jobs=1,
             inplace=inplace,
         )
+
     compute_correlation_between_parts.__doc__ = nc.compute_correlation_between_parts.__doc__
 
 
+class _CSFacade:
+    """
+    Thin facade over segtraq.cs bound to a SegTraQ instance.
+    Methods use the parent's sdata and configured keys exclusively.
+    No per-call overrides are allowed.
+    """
 
+    def __init__(self, parent: "SegTraQ") -> None:
+        self._p = parent
+
+    def compute_rmsd(
+        self,
+        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        key_prefix: str = "leiden_subset",
+        random_state: int = 42,
+        cell_type_key: str | None = None,
+        inplace: bool = True,
+    ) -> float:
+        return cs.compute_rmsd(
+            self._p.sdata,
+            resolution=resolution,
+            key_prefix=key_prefix,
+            random_state=random_state,
+            cell_type_key=cell_type_key,
+            inplace=inplace,
+        )
+
+    def compute_mean_cosine_distance(
+        self,
+        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        key_prefix: str = "leiden_subset",
+        random_state: int = 42,
+        cell_type_key: str | None = None,
+        inplace: bool = True,
+    ) -> float:
+        return cs.compute_mean_cosine_distance(
+            self._p.sdata,
+            resolution=resolution,
+            key_prefix=key_prefix,
+            random_state=random_state,
+            cell_type_key=cell_type_key,
+            inplace=inplace,
+        )
+
+    def compute_silhouette_score(
+        self,
+        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        metric: str = "euclidean",
+        key_prefix: str = "leiden_subset",
+        random_state: int = 42,
+        cell_type_key: str | None = None,
+        inplace: bool = True,
+    ) -> float:
+        return cs.compute_silhouette_score(
+            self._p.sdata,
+            resolution=resolution,
+            metric=metric,
+            key_prefix=key_prefix,
+            random_state=random_state,
+            cell_type_key=cell_type_key,
+            inplace=inplace,
+        )
+
+    def compute_purity(
+        self,
+        resolution: float = 1.0,
+        n_genes_subset: int = 100,
+        key_prefix: str = "leiden_subset",
+        inplace: bool = True,
+    ) -> float:
+        return cs.compute_purity(
+            self._p.sdata, resolution=resolution, n_genes_subset=n_genes_subset, key_prefix=key_prefix, inplace=inplace
+        )
+
+    def compute_ari(
+        self,
+        resolution: float = 1.0,
+        n_genes_subset: int = 100,
+        key_prefix: str = "leiden_subset",
+        inplace: bool = True,
+    ) -> float:
+        return cs.compute_ari(
+            self._p.sdata, resolution=resolution, n_genes_subset=n_genes_subset, key_prefix=key_prefix, inplace=inplace
+        )
+
+    # TODO: I DID NOT PUT THE Z-PLANE CORRELATION IN HERE, SINCE THIS SHOULD BE MOVED TO A DIFFERENT MODULE!!!
 
     # def run_umap(self, inplace: bool = True):
     #     adata = self.sdata.tables[self.table_key]
