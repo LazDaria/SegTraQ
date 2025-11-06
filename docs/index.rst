@@ -16,6 +16,7 @@ SegTraQ documentation
    modules/clustering_stability
    modules/nuclear_correlation
    modules/spillover_metrics
+   modules/volume
 
 .. toctree::
    :maxdepth: 1
@@ -26,6 +27,6 @@ SegTraQ documentation
    notebooks/clustering_stability
    notebooks/nuclear_correlation
    notebooks/labeling_via_correlation
-   notebooks/z_plane_correlation
+   notebooks/volume
    notebooks/spillover_metrics_supervised
    notebooks/10x_xenium_focus
