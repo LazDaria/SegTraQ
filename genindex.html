@@ -160,12 +160,12 @@
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics metrics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
@@ -279,6 +279,7 @@ document.write(`
 
 <div class="genindex-jumpbox">
  <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -290,17 +291,27 @@ document.write(`
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_contamination">calculate_contamination() (in module segtraq.sp.supervised)</a>
+</li>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_diff_abundance">calculate_diff_abundance() (in module segtraq.sp.supervised)</a>
+</li>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_marker_purity">calculate_marker_purity() (in module segtraq.sp.supervised)</a>
+</li>
+      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.centroid_mean_coord_diff">centroid_mean_coord_diff() (in module segtraq.ps.point_statistics)</a>
+</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
       <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.nc.nuclear_correlation)</a>
 </li>
-      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.nc.nuclear_correlation)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.nc.nuclear_correlation)</a>
+</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
+</li>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR">compute_MECR() (in module segtraq.sp.supervised)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_purity">compute_purity() (in module segtraq.cs.clustering_stability)</a>
 </li>
@@ -309,6 +320,14 @@ document.write(`
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_silhouette_score">compute_silhouette_score() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/volume.html#segtraq.vl.volume.compute_z_plane_correlation">compute_z_plane_correlation() (in module segtraq.vl.volume)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.distance_to_membrane">distance_to_membrane() (in module segtraq.ps.point_statistics)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -333,6 +352,10 @@ document.write(`
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">segtraq.cs.clustering_stability</a>
 </li>
         <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">segtraq.nc.nuclear_correlation</a>
+</li>
+        <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">segtraq.ps.point_statistics</a>
+</li>
+        <li><a href="modules/supervised.html#module-segtraq.sp.supervised">segtraq.sp.supervised</a>
 </li>
         <li><a href="modules/volume.html#module-segtraq.vl.volume">segtraq.vl.volume</a>
 </li>
@@ -383,13 +406,27 @@ document.write(`
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     segtraq.nc.nuclear_correlation
 
       <ul>
         <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    segtraq.ps.point_statistics
+
+      <ul>
+        <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">module</a>
+</li>
+      </ul></li>
+      <li>
+    segtraq.sp.supervised
+
+      <ul>
+        <li><a href="modules/supervised.html#module-segtraq.sp.supervised">module</a>
 </li>
       </ul></li>
       <li>
