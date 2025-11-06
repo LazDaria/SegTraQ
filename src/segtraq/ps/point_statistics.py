@@ -91,18 +91,20 @@ def centroid_mean_coord_diff(
 
     gdf = sdata[shapes_key].copy()
 
-    if shapes_cell_id_key is None:
-        gdf = gdf
+    if shapes_cell_id_key is not None:
+        shapes_cell_id_key_fixed = shapes_cell_id_key
+        gdf.set_index(shapes_cell_id_key_fixed, drop=True, inplace=True)
     else:
-        gdf.set_index(gdf[shapes_cell_id_key], inplace=True)
+        shapes_cell_id_key_fixed = "cell_id"
+        gdf.index.name = shapes_cell_id_key_fixed
 
     # extract the centroids
     df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
-    # do an inner join on the cell ids - some cells have no transcripts
-    df_total_x = df_centroids_x.join(x_mean, left_on=shapes_cell_id_key, right_on=points_cell_id_key, how="inner")
-    df_total_y = df_centroids_y.join(y_mean, left_on=shapes_cell_id_key, right_on=points_cell_id_key, how="inner")
+    # do an inner merge on the cell ids - some cells have no transcripts
+    df_total_x = df_centroids_x.merge(x_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner")
+    df_total_y = df_centroids_y.merge(y_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner")
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
 
@@ -119,10 +121,10 @@ def centroid_mean_coord_diff(
 
     # normalise the cell area
     df_total[f"distance_{feature}"] = df_total["distance"] / df_total["cell_area"]
-    df_total = df_total.set_index(df_total[points_cell_id_key])
+    df_total = df_total.reset_index(drop=True)
 
     if inplace:
-        merge_into_obs(sdata, tables_key, df_total, tables_cell_id_key, points_cell_id_key)
+        merge_into_obs(sdata, tables_key, df_total[[points_cell_id_key, f"distance_{feature}"]], tables_cell_id_key, points_cell_id_key)
 
     return df_total
 
@@ -133,6 +135,8 @@ def distance_to_membrane(
     tables_key: str = "table",
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
     tables_cell_id_key: str = "cell_id",
     shapes_cell_id_key: str = "cell_id",
@@ -153,6 +157,10 @@ def distance_to_membrane(
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, optional
         The key in the transcript table indicating transcript identifiers. Default is "transcripts".
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     points_cell_id_key : str, default="cell_id"
@@ -187,7 +195,7 @@ def distance_to_membrane(
     df = df[df[points_cell_id_key] != -1]
 
     # zip the coordinates to a common column as tuple
-    df["coordinates"] = list(zip(df["x"], df["y"], strict=False))
+    df["coordinates"] = list(zip(df[points_x_key], df[points_y_key], strict=False))
 
     # make the coordinates into a Point object
     df["coordinate_points"] = df["coordinates"].map(lambda x: Point(x))
@@ -195,15 +203,17 @@ def distance_to_membrane(
     # extract the cell segmentation boundaries
     gdf = sdata["cell_boundaries"]
 
-    # make the cell key the index for joining the two dataframes
+    # make the cell key the index for merging the two dataframes
     # df = df.set_index(df[cell_key])
 
     # merge the geopandas dataframe with the dataframe from above
-    if shapes_cell_id_key is None:
-        shapes_cell_id_key_fixed = "cell_id"
-        gdf[shapes_cell_id_key_fixed] = gdf.index
-    else:
+
+    if shapes_cell_id_key is not None:
         shapes_cell_id_key_fixed = shapes_cell_id_key
+        gdf.set_index(shapes_cell_id_key_fixed, drop=True, inplace=True)
+    else:
+        shapes_cell_id_key_fixed = "cell_id"
+        gdf.index.name = shapes_cell_id_key_fixed
 
     gdf = gdf.merge(df, how="inner", left_on=points_cell_id_key, right_on=shapes_cell_id_key_fixed)
 
@@ -217,9 +227,6 @@ def distance_to_membrane(
     gdf[f"distance_to_outline_{feature}"] = gdf.apply(
         lambda x: x["coordinate_points"].distance(x["linear_geometry"]), axis=1
     )
-
-    # rename index as this should not have the same name as one of the columns
-    gdf.index.name = "index"
 
     # calculate the mean transcript distance to the cell outline per cell
     mean_distance_to_outline = gdf.groupby(shapes_cell_id_key)[[f"distance_to_outline_{feature}"]].mean()
@@ -239,9 +246,8 @@ def distance_to_membrane(
     mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = 1 / np.sqrt(
         mean_distance_to_outline[f"distance_to_outline_{feature}"]
     )
-    mean_distance_to_outline = mean_distance_to_outline.set_index(mean_distance_to_outline[shapes_cell_id_key])
 
     if inplace:
-        merge_into_obs(sdata, tables_key, mean_distance_to_outline, tables_cell_id_key, shapes_cell_id_key)
+        merge_into_obs(sdata, tables_key, mean_distance_to_outline[[shapes_cell_id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]], tables_cell_id_key, shapes_cell_id_key)
 
     return mean_distance_to_outline
