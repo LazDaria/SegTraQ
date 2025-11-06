@@ -691,7 +691,7 @@ class _NCFacade:
 
     compute_cell_nuc_correlation.__doc__ = nc.compute_cell_nuc_correlation.__doc__
 
-    def compute_correlation_between_parts(self, inplace: bool = True):
+    def compute_correlation_between_parts(self, n_jobs: int = -1, inplace: bool = True):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -708,7 +708,7 @@ class _NCFacade:
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
-            n_jobs=1,
+            n_jobs=n_jobs,
             inplace=inplace,
         )
 
@@ -972,27 +972,3 @@ class _VLFacade:
             points_gene_key=self._p.points_gene_key,
             inplace=inplace,
         )
-
-    # def run_umap(self, inplace: bool = True):
-    #     adata = self.sdata.tables[self.tables_key]
-
-    #     if inplace:
-    #         sc.pp.pca(adata)
-    #         sc.pp.neighbors(adata)
-    #         sc.tl.umap(adata)
-    #         return None
-    #     else:
-    #         adata_copy = adata.copy()
-    #         sc.pp.pca(adata_copy)
-    #         sc.pp.neighbors(adata_copy)
-    #         sc.tl.umap(adata_copy)
-    #         return adata_copy
-
-    # def run_all(self):
-    #     self.run_baseline()
-    #     self.run_annotation()
-    #     self.run_umap()
-    #     # self.run_nuclear_correlation()
-    #     self.run_clustering_stability()
-    #     self.run_supervised_spillover_metrics()
-    #     self.run_rastering()
