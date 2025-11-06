@@ -28,5 +28,5 @@ SegTraQ documentation
    notebooks/nuclear_correlation
    notebooks/labeling_via_correlation
    notebooks/volume
-   notebooks/spillover_metrics_supervised
+   notebooks/supervised
    notebooks/10x_xenium_focus
