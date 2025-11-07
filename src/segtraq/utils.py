@@ -359,7 +359,6 @@ def get_ref_markers(
 
 
 def get_mut_excl_markers(
-    # Modified from https://github.com/dpeerlab/segger-analysis
     adata_ref,
     markers,
     ref_cell_type: str,
@@ -369,6 +368,7 @@ def get_mut_excl_markers(
     cell_types: tuple[str, str] | None = None,
 ) -> list[tuple[str, str]]:
     """
+    # Modified from https://github.com/dpeerlab/segger-analysis
     Finds mutually exclusive markers (presence-based specificity) between cell types.
 
     Optionally restricts computation to a specified pair of cell types.
