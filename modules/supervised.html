@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The supervised (sp) accessor &#8212; SegTraQ</title>
+    <title>The supervised metrics (sp) accessor &#8212; SegTraQ</title>
   
   
   
@@ -45,7 +45,7 @@
     <link rel="icon" href="../_static/icon.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="The point statistics (ps) accessor" href="point_statistics.html" />
+    <link rel="next" title="The point statistics metrics (ps) accessor" href="point_statistics.html" />
     <link rel="prev" title="The nuclear correlation (nc) accessor" href="nuclear_correlation.html" />
     <link href="../_static/style.css" rel="stylesheet" type="text/css">
 
@@ -161,11 +161,9 @@
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The supervised metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics metrics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segtraq_class.html">The segtraq (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">Utility functions</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
@@ -313,7 +311,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>The supervised (sp) accessor</h1>
+    <h1>The supervised metrics (sp) accessor</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -341,8 +339,8 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="the-supervised-sp-accessor">
-<h1>The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-supervised-sp-accessor" title="Link to this heading">#</a></h1>
+  <section id="the-supervised-metrics-sp-accessor">
+<h1>The supervised metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-supervised-metrics-sp-accessor" title="Link to this heading">#</a></h1>
 <p>The supervised metrics accessor provides metrics to compare the spatial single cell expression profiles to those from a single-cell RNA sequencing dataset.</p>
 <section id="module-segtraq.sp.supervised">
 <span id="supervised-metrics"></span><h2>Supervised metrics<a class="headerlink" href="#module-segtraq.sp.supervised" title="Link to this heading">#</a></h2>
@@ -484,7 +482,7 @@ if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR">
 <span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR" title="Link to this definition">#</a></dt>
-<dd><p>Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
+<dd><p># Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
 <p>Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -532,7 +530,7 @@ if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</p>
+        <p class="prev-next-title">The point statistics metrics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

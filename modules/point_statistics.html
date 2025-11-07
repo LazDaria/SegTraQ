@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The point statistics (ps) accessor &#8212; SegTraQ</title>
+    <title>The point statistics metrics (ps) accessor &#8212; SegTraQ</title>
   
   
   
@@ -46,7 +46,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="The volume (vl) accessor" href="volume.html" />
-    <link rel="prev" title="The supervised (sp) accessor" href="supervised.html" />
+    <link rel="prev" title="The supervised metrics (sp) accessor" href="supervised.html" />
     <link href="../_static/style.css" rel="stylesheet" type="text/css">
 
   </head>
@@ -161,11 +161,9 @@
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">The supervised metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The point statistics metrics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="segtraq_class.html">The segtraq (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">Utility functions</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
@@ -313,7 +311,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>The point statistics (ps) accessor</h1>
+    <h1>The point statistics metrics (ps) accessor</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -323,7 +321,7 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.ps.point_statistics">Point statistics</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.ps.point_statistics">Point statistics metrics</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.ps.point_statistics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.ps.point_statistics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
 </ul>
@@ -339,11 +337,11 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="the-point-statistics-ps-accessor">
-<h1>The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor<a class="headerlink" href="#the-point-statistics-ps-accessor" title="Link to this heading">#</a></h1>
+  <section id="the-point-statistics-metrics-ps-accessor">
+<h1>The point statistics metrics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor<a class="headerlink" href="#the-point-statistics-metrics-ps-accessor" title="Link to this heading">#</a></h1>
 <p>The point statistics metrics accessor provides metrics to compare the mean spatial distribution of transcripts in relation to the centroid and the segmented outline of the cell.</p>
 <section id="module-segtraq.ps.point_statistics">
-<span id="point-statistics"></span><h2>Point statistics<a class="headerlink" href="#module-segtraq.ps.point_statistics" title="Link to this heading">#</a></h2>
+<span id="point-statistics-metrics"></span><h2>Point statistics metrics<a class="headerlink" href="#module-segtraq.ps.point_statistics" title="Link to this heading">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.ps.point_statistics.centroid_mean_coord_diff">
 <span class="sig-prename descclassname"><span class="pre">segtraq.ps.point_statistics.</span></span><span class="sig-name descname"><span class="pre">centroid_mean_coord_diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('centroid_x',</span> <span class="pre">'centroid_y')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.ps.point_statistics.centroid_mean_coord_diff" title="Link to this definition">#</a></dt>
@@ -433,7 +431,7 @@ If <cite>None</cite>, the shape index is used as the cell ID.</p></li>
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</p>
+        <p class="prev-next-title">The supervised metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</p>
       </div>
     </a>
     <a class="right-next"
@@ -461,7 +459,7 @@ If <cite>None</cite>, the shape index is used as the cell ID.</p></li>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.ps.point_statistics">Point statistics</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.ps.point_statistics">Point statistics metrics</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.ps.point_statistics.centroid_mean_coord_diff"><code class="docutils literal notranslate"><span class="pre">centroid_mean_coord_diff()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.ps.point_statistics.distance_to_membrane"><code class="docutils literal notranslate"><span class="pre">distance_to_membrane()</span></code></a></li>
 </ul>
