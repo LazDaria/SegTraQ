@@ -116,10 +116,14 @@ class SegTraQ:
 
         .. code-block:: python
 
-            st = SegTraQer(sdata, ...)
+            st = SegTraQ(sdata, ...)
+
             st.bl.genes_per_cell()
+
             st.nc.compute_cell_nuc_ious()
+
             st.ps.centroid_mean_coord_diff("ERBB2")
+            
             st.sp.calculate_contamination(markers=...)
         """
 
