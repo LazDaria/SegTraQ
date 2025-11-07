@@ -114,6 +114,8 @@ class SegTraQ:
 
         For example:
 
+        .. code-block:: python
+
             st = SegTraQer(sdata, ...)
             st.bl.genes_per_cell()
             st.nc.compute_cell_nuc_ious()
