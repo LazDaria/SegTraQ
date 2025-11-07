@@ -110,3 +110,4 @@ ENV/
 #temporary solution
 #tests/data*
 tests/data/scRNAseq_ref_large.h5ad
+data/
