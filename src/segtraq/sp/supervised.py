@@ -14,7 +14,7 @@ def compute_MECR(
     sdata, gene_pairs: list[tuple[str, str]], tables_key: str = "table", inplace: bool = True
 ) -> dict[tuple[str, str], float]:
     """
-    # Modified from https://github.com/dpeerlab/segger-analysis
+    Modified from https://github.com/dpeerlab/segger-analysis
 
     Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.
 
