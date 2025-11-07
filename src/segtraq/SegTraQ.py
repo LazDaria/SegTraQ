@@ -106,6 +106,19 @@ class SegTraQ:
         labels_to_cell_id_key : str or None, optional, default="cell_labels"
             Column in `sdata.tables[tables_key]` mapping segmentation label IDs
             (from `labels_key`) to cell IDs.
+
+        Notes
+        -----
+        After initializing a SegTraQer instance, all SegTraQ modules can be run
+        directly from the object using its module facades.
+
+        For example:
+
+            st = SegTraQer(sdata, ...)
+            st.bl.genes_per_cell()
+            st.nc.compute_cell_nuc_ious()
+            st.ps.centroid_mean_coord_diff("ERBB2")
+            st.sp.calculate_contamination(markers=...)
         """
 
         # Validate spatialdata object
