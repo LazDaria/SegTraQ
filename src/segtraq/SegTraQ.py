@@ -123,7 +123,7 @@ class SegTraQ:
             st.nc.compute_cell_nuc_ious()
 
             st.ps.centroid_mean_coord_diff("ERBB2")
-            
+
             st.sp.calculate_contamination(markers=...)
 
         Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.
