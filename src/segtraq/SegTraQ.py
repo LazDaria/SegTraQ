@@ -109,7 +109,7 @@ class SegTraQ:
 
         Notes
         -----
-        After initializing a SegTraQer instance, all SegTraQ modules can be run
+        After initializing a SegTraQ instance, all SegTraQ modules can be run
         directly from the object using its module facades.
 
         For example:
@@ -125,6 +125,8 @@ class SegTraQ:
             st.ps.centroid_mean_coord_diff("ERBB2")
             
             st.sp.calculate_contamination(markers=...)
+
+        Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.
         """
 
         # Validate spatialdata object
