@@ -399,13 +399,13 @@ If None, a nucleus mask can be obtained via <cite>segtraq.run_cellpose</cite>.</
 <p>After initializing a SegTraQer instance, all SegTraQ modules can be run
 directly from the object using its module facades.</p>
 <p>For example:</p>
-<blockquote>
-<div><p>st = SegTraQer(sdata, …)
-st.bl.genes_per_cell()
-st.nc.compute_cell_nuc_ious()
-st.ps.centroid_mean_coord_diff(“ERBB2”)
-st.sp.calculate_contamination(markers=…)</p>
-</div></blockquote>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">st</span> <span class="o">=</span> <span class="n">SegTraQer</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">genes_per_cell</span><span class="p">()</span>
+<span class="n">st</span><span class="o">.</span><span class="n">nc</span><span class="o">.</span><span class="n">compute_cell_nuc_ious</span><span class="p">()</span>
+<span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">centroid_mean_coord_diff</span><span class="p">(</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">)</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">calculate_contamination</span><span class="p">(</span><span class="n">markers</span><span class="o">=...</span><span class="p">)</span>
+</pre></div>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_baseline">
 <span class="sig-name descname"><span class="pre">run_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_baseline" title="Link to this definition">#</a></dt>
