@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: python
 
 =============================================
 The nuclear correlation (:code:`nc`) accessor

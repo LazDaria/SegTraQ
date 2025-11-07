@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: python
 
 ==================================
 The volume (:code:`vl`) accessor
