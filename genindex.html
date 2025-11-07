@@ -163,6 +163,8 @@
 <li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/utils.html">Utility functions</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
@@ -284,8 +286,10 @@ document.write(`
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
  
 </div>
 <h2 id="C">C</h2>
@@ -336,6 +340,12 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.genes_per_cell">genes_per_cell() (in module segtraq.bl.baseline)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/utils.html#segtraq.get_mut_excl_markers">get_mut_excl_markers() (in module segtraq)</a>
+</li>
+      <li><a href="modules/utils.html#segtraq.get_ref_markers">get_ref_markers() (in module segtraq)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -389,9 +399,37 @@ document.write(`
   </ul></td>
 </tr></table>
 
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_baseline">run_baseline() (segtraq.SegTraQ method)</a>
+</li>
+      <li><a href="modules/utils.html#segtraq.run_label_transfer">run_label_transfer() (in module segtraq)</a>
+
+      <ul>
+        <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_label_transfer">(segtraq.SegTraQ method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_nuclear_correlation">run_nuclear_correlation() (segtraq.SegTraQ method)</a>
+</li>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_point_statistics">run_point_statistics() (segtraq.SegTraQ method)</a>
+</li>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_supervised_metrics">run_supervised_metrics() (segtraq.SegTraQ method)</a>
+</li>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_volume">run_volume() (segtraq.SegTraQ method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.sdata">sdata (segtraq.SegTraQ property)</a>
+</li>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ">SegTraQ (class in segtraq)</a>
+</li>
       <li>
     segtraq.bl.baseline
 
@@ -447,6 +485,14 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.transcripts_per_cell">transcripts_per_cell() (in module segtraq.bl.baseline)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/utils.html#segtraq.validate_spatialdata">validate_spatialdata() (in module segtraq)</a>
 </li>
   </ul></td>
 </tr></table>

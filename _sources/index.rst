@@ -18,6 +18,8 @@ SegTraQ documentation
    modules/supervised
    modules/point_statistics
    modules/volume
+   modules/segtraq_class
+   modules/utils
 
 .. toctree::
    :maxdepth: 1
