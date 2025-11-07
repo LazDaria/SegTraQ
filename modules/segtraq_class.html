@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The segtraq (SegTraQ) class &#8212; SegTraQ</title>
+    <title>The SegTraQ (SegTraQ) class &#8212; SegTraQ</title>
   
   
   
@@ -164,7 +164,7 @@
 <li class="toctree-l1"><a class="reference internal" href="supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">The segtraq (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utility functions</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
@@ -313,7 +313,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>The segtraq (SegTraQ) class</h1>
+    <h1>The SegTraQ (SegTraQ) class</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -348,8 +348,8 @@ document.write(`
                 <article class="bd-article">
                   
   <section id="the-segtraq-segtraq-class">
-<h1>The segtraq (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class<a class="headerlink" href="#the-segtraq-segtraq-class" title="Link to this heading">#</a></h1>
-<p>The segtraq (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class represents the core interface for computing SegTraQ metrics.</p>
+<h1>The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class<a class="headerlink" href="#the-segtraq-segtraq-class" title="Link to this heading">#</a></h1>
+<p>The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class represents the core interface for computing SegTraQ metrics.</p>
 <section id="segtraq-class">
 <h2>SegTraQ class<a class="headerlink" href="#segtraq-class" title="Link to this heading">#</a></h2>
 <dl class="py class">
@@ -396,7 +396,7 @@ If None, a nucleus mask can be obtained via <cite>segtraq.run_cellpose</cite>.</
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>After initializing a SegTraQer instance, all SegTraQ modules can be run
+<p>After initializing a SegTraQ instance, all SegTraQ modules can be run
 directly from the object using its module facades.</p>
 <p>For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">st</span> <span class="o">=</span> <span class="n">SegTraQ</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
@@ -410,6 +410,7 @@ directly from the object using its module facades.</p>
 <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">calculate_contamination</span><span class="p">(</span><span class="n">markers</span><span class="o">=...</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_baseline">
 <span class="sig-name descname"><span class="pre">run_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_baseline" title="Link to this definition">#</a></dt>
