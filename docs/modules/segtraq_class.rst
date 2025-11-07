@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: python
 
 ===================================
 The segtraq (:code:`SegTraQ`) class

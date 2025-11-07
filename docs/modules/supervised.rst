@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: python
 
 =====================================
 The supervised (:code:`sp`) accessor

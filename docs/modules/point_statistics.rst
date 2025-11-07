@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: python
 
 ===========================================
 The point statistics (:code:`ps`) accessor
