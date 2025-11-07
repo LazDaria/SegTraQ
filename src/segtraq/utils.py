@@ -65,7 +65,7 @@ def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_
     return precision, recall, F1
 
 
-def assign_celltype_by_pearson(
+def _assign_celltype_by_pearson(
     adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id"
 ) -> pd.DataFrame:
     """
@@ -227,7 +227,7 @@ def run_label_transfer(
         sc.pp.log1p(adata_q)
 
     # Assign labels
-    ct_corr = assign_celltype_by_pearson(adata_q, ref_mean_df, query_ensemble_key)
+    ct_corr = _assign_celltype_by_pearson(adata_q, ref_mean_df, query_ensemble_key)
 
     if inplace:
         # Write back only to the filtered subset cells
