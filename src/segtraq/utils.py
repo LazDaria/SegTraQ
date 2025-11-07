@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import spatialdata as sd
-import xarray as xr
 from anndata import AnnData
 from scipy import sparse
 from scipy.spatial.distance import cdist
@@ -604,9 +603,11 @@ def validate_spatialdata(
 
     # check if there is an image at the specified key
     if images_key is not None:
-        assert images_key in sdata.images.keys(), f"{images_key} not found in the image layer. "
-        f"Available keys: {sdata.images.keys()}. "
-        "You can set this with the images_key parameter."
+        assert images_key in sdata.images.keys(), (
+            f"{images_key} not found in the image layer. "
+            f"Available keys: {sdata.images.keys()}. "
+            "You can set this with the images_key parameter (set to None if you do not have this)."
+        )
 
     contains_points = len(sdata.points) > 0
     contains_shapes = len(sdata.shapes) > 0
@@ -650,7 +651,8 @@ def validate_spatialdata(
     # check gene key
     assert points_gene_key in points.columns, (
         f"Points DataFrame must contain gene feature column '{points_gene_key}'. "
-        f"Available columns: {points.columns.tolist()}"
+        f"Available columns: {points.columns.tolist()}. "
+        f"You can set this with the 'points_gene_key' argument."
     )
 
     if contains_tables:
@@ -777,76 +779,77 @@ def validate_spatialdata(
                     stacklevel=2,
                 )
 
-    # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
-    if contains_labels:
-        # we can have multiple labels keys (e. g. when using multiple layers in proseg), so we need to handle them here
-        if isinstance(labels_key, str):
-            assert labels_key in sdata.labels, (
-                f"Labels DataFrame must contain key: {labels_key}. "
-                f"Available keys: {list(sdata.labels.keys())}. "
-                f"If you want to use a different key, set the labels_key parameter."
-            )
-            labels = sdata.labels[labels_key]
+    # TODO: THIS NEEDS TO BE REACTIVATED AT SOME POINT
+    # # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
+    # if contains_labels:
+    #     # we can have multiple labels keys (e. g. when using multiple layers in proseg), so we need to handle them here
+    #     if isinstance(labels_key, str):
+    #         assert labels_key in sdata.labels, (
+    #             f"Labels DataFrame must contain key: {labels_key}. "
+    #             f"Available keys: {list(sdata.labels.keys())}. "
+    #             f"If you want to use a different key, set the labels_key parameter."
+    #         )
+    #         labels = sdata.labels[labels_key]
 
-            # handling weird spatialdata structures
-            if isinstance(labels, xr.DataTree):
-                assert labels_data_key is not None, (
-                    f"It looks like your labels are stored as a DataTree. "
-                    f"Please provide a labels_data_key to access the labels data. "
-                    f"Available keys are: {list(labels.keys())}."
-                )
-                assert labels_data_key.split("/")[0] in labels.keys(), (
-                    f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
-                )
+    #         # handling weird spatialdata structures
+    #         if isinstance(labels, xr.DataTree):
+    #             assert labels_data_key is not None, (
+    #                 f"It looks like your labels are stored as a DataTree. "
+    #                 f"Please provide a labels_data_key to access the labels data. "
+    #                 f"Available keys are: {list(labels.keys())}."
+    #             )
+    #             assert labels_data_key.split("/")[0] in labels.keys(), (
+    #                 f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
+    #             )
 
-                labels = labels[labels_data_key]  # Get the dataset node
+    #             labels = labels[labels_data_key]  # Get the dataset node
 
-                assert isinstance(labels, xr.DataArray), (
-                    f"The labels data should be a DataArray. Please provide a valid data key. "
-                    f"Available keys are: {[labels_data_key + '/' + x for x in list(labels.keys())]}."
-                )
+    #             assert isinstance(labels, xr.DataArray), (
+    #                 f"The labels data should be a DataArray. Please provide a valid data key. "
+    #                 f"Available keys are: {[labels_data_key + '/' + x for x in list(labels.keys())]}."
+    #             )
 
-                # label ID and cell ID are not the same
-                labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
-        elif isinstance(labels_key, list):
-            # if multiple labels keys are provided, we need to check each one
-            labels_cell_ids = set()
-            for key in labels_key:
-                labels_tmp = sdata.labels[key]
-                if isinstance(labels_tmp, xr.DataTree):
-                    assert labels_data_key is not None, (
-                        f"It looks like your labels are stored as a DataTree. "
-                        f"Please provide a labels_data_key to access the labels data. "
-                        f"Available keys are: {list(labels.keys())}."
-                    )
-                    labels_tmp = labels_tmp[labels_data_key]
-                    assert isinstance(labels_tmp, xr.DataArray)
-                # add nonzero unique labels
-                labels_cell_ids.update(np.unique(labels_tmp).tolist())
+    #             # label ID and cell ID are not the same
+    #             labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
+    #     elif isinstance(labels_key, list):
+    #         # if multiple labels keys are provided, we need to check each one
+    #         labels_cell_ids = set()
+    #         for key in labels_key:
+    #             labels_tmp = sdata.labels[key]
+    #             if isinstance(labels_tmp, xr.DataTree):
+    #                 assert labels_data_key is not None, (
+    #                     f"It looks like your labels are stored as a DataTree. "
+    #                     f"Please provide a labels_data_key to access the labels data. "
+    #                     f"Available keys are: {list(labels.keys())}."
+    #                 )
+    #                 labels_tmp = labels_tmp[labels_data_key]
+    #                 assert isinstance(labels_tmp, xr.DataArray)
+    #             # add nonzero unique labels
+    #             labels_cell_ids.update(np.unique(labels_tmp).tolist())
 
-            # Remove background label (e.g. 0)
-            labels_cell_ids.discard(0)
-        else:
-            raise ValueError("labels_key must be a string or a list of strings")
+    #         # Remove background label (e.g. 0)
+    #         labels_cell_ids.discard(0)
+    #     else:
+    #         raise ValueError("labels_key must be a string or a list of strings")
 
-    # if there are both shapes and labels, ensure they are compatible
-    if contains_shapes and contains_labels:
-        num_missing_in_shapes = len(labels_cell_ids) - len(shapes_cell_ids)
-        num_missing_in_labels = len(shapes_cell_ids) - len(labels_cell_ids)
-        if num_missing_in_labels > 0:
-            warnings.warn(
-                f"Missing {num_missing_in_labels} cell IDs in labels."
-                f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
-                f"This might lead to inconsistencies in the spatialdata object.",
-                stacklevel=2,
-            )
-        if num_missing_in_shapes > 0:
-            warnings.warn(
-                f"Missing {num_missing_in_shapes} cell IDs in shapes: "
-                f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
-                f"This might lead to inconsistencies in the spatialdata object.",
-                stacklevel=2,
-            )
+    # # if there are both shapes and labels, ensure they are compatible
+    # if contains_shapes and contains_labels:
+    #     num_missing_in_shapes = len(labels_cell_ids) - len(shapes_cell_ids)
+    #     num_missing_in_labels = len(shapes_cell_ids) - len(labels_cell_ids)
+    #     if num_missing_in_labels > 0:
+    #         warnings.warn(
+    #             f"Missing {num_missing_in_labels} cell IDs in labels."
+    #             f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
+    #             f"This might lead to inconsistencies in the spatialdata object.",
+    #             stacklevel=2,
+    #         )
+    #     if num_missing_in_shapes > 0:
+    #         warnings.warn(
+    #             f"Missing {num_missing_in_shapes} cell IDs in shapes: "
+    #             f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
+    #             f"This might lead to inconsistencies in the spatialdata object.",
+    #             stacklevel=2,
+    #         )
 
     # check for nucleus shapes
     if nucleus_shapes_key is not None:
