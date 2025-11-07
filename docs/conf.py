@@ -26,6 +26,9 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
 ]
 
+# Show both the class docstring and __init__ docstring
+autoclass_content = "both" 
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
