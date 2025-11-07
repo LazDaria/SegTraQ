@@ -612,7 +612,7 @@ def validate_spatialdata(
 
     contains_points = len(sdata.points) > 0
     contains_shapes = len(sdata.shapes) > 0
-    contains_labels = len(sdata.labels) > 0
+    # contains_labels = len(sdata.labels) > 0
     contains_tables = len(sdata.tables) > 0
 
     # check if there are points in the spatial data
@@ -679,7 +679,7 @@ def validate_spatialdata(
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
     shapes_cell_ids = set()
-    labels_cell_ids = set()
+    # labels_cell_ids = set()
 
     # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
     if contains_shapes:
@@ -783,7 +783,8 @@ def validate_spatialdata(
     # TODO: THIS NEEDS TO BE REACTIVATED AT SOME POINT
     # # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
     # if contains_labels:
-    #     # we can have multiple labels keys (e. g. when using multiple layers in proseg), so we need to handle them here
+    #     # we can have multiple labels keys (e. g. when using multiple layers in proseg),
+    # so we need to handle them here
     #     if isinstance(labels_key, str):
     #         assert labels_key in sdata.labels, (
     #             f"Labels DataFrame must contain key: {labels_key}. "
@@ -840,14 +841,16 @@ def validate_spatialdata(
     #     if num_missing_in_labels > 0:
     #         warnings.warn(
     #             f"Missing {num_missing_in_labels} cell IDs in labels."
-    #             f"There are {len(shapes_cell_ids)} cell IDs in shapes, but only {len(labels_cell_ids)} are in labels. "
+    #             f"There are {len(shapes_cell_ids)} cell IDs in shapes,
+    # but only {len(labels_cell_ids)} are in labels. "
     #             f"This might lead to inconsistencies in the spatialdata object.",
     #             stacklevel=2,
     #         )
     #     if num_missing_in_shapes > 0:
     #         warnings.warn(
     #             f"Missing {num_missing_in_shapes} cell IDs in shapes: "
-    #             f"There are {len(labels_cell_ids)} cell IDs in labels, but only {len(shapes_cell_ids)} are in shapes. "
+    #             f"There are {len(labels_cell_ids)} cell IDs in labels, but only
+    # {len(shapes_cell_ids)} are in shapes. "
     #             f"This might lead to inconsistencies in the spatialdata object.",
     #             stacklevel=2,
     #         )
