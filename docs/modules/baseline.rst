@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: python
 
 ==================================
 The baseline (:code:`bl`) accessor
