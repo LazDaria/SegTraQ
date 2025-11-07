@@ -25,9 +25,11 @@ SegTraQ documentation
    :maxdepth: 1
    :caption: Tutorials:
    
+   notebooks/10x_xenium_focus
+   notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
    notebooks/nuclear_correlation
    notebooks/volume
    notebooks/supervised
-   notebooks/10x_xenium_focus
+   notebooks/point_statistics
