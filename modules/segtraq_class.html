@@ -399,10 +399,14 @@ If None, a nucleus mask can be obtained via <cite>segtraq.run_cellpose</cite>.</
 <p>After initializing a SegTraQer instance, all SegTraQ modules can be run
 directly from the object using its module facades.</p>
 <p>For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">st</span> <span class="o">=</span> <span class="n">SegTraQer</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">st</span> <span class="o">=</span> <span class="n">SegTraQ</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+
 <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">genes_per_cell</span><span class="p">()</span>
+
 <span class="n">st</span><span class="o">.</span><span class="n">nc</span><span class="o">.</span><span class="n">compute_cell_nuc_ious</span><span class="p">()</span>
+
 <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">centroid_mean_coord_diff</span><span class="p">(</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">)</span>
+
 <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">calculate_contamination</span><span class="p">(</span><span class="n">markers</span><span class="o">=...</span><span class="p">)</span>
 </pre></div>
 </div>
