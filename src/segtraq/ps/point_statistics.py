@@ -116,7 +116,7 @@ def centroid_mean_coord_diff(
     df_total["distance"] = np.linalg.norm(
         df_total.loc[:, [centroid_key[0], centroid_key[1]]].values
         - df_total.loc[:, [points_y_key, points_x_key]].values,
-        ord = 2,
+        ord=2,
         axis=1,
     )
 
