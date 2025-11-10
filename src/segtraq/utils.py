@@ -20,11 +20,19 @@ def _to_ndarray(x) -> np.ndarray:
 
 def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     """Quickly check if data looks like non-negative integer counts."""
-    arr = x.data if hasattr(x, "data") else np.asarray(x).ravel()
+    if sparse.issparse(x):
+        # Nonzero entries only (zeros are fine for count check)
+        arr = x.data
+    elif hasattr(x, "values") and not isinstance(x, np.ndarray):
+        arr = np.asarray(x.values).ravel()
+    else:
+        arr = np.asarray(x).ravel()
+
     if arr.size == 0:
         return False
     if np.issubdtype(arr.dtype, np.integer):
         return True
+    
     samp = arr if arr.size <= n else np.random.choice(arr, n, replace=False)
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
@@ -65,7 +73,7 @@ def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_
 
 
 def _assign_celltype_by_pearson(
-    adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, cell_id_key: str = "cell_id"
+    adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, tables_cell_id_key: str = "cell_id"
 ) -> pd.DataFrame:
     """
     Assign cell types to cells in `adata` via Pearson correlation with reference means.
@@ -79,8 +87,8 @@ def _assign_celltype_by_pearson(
     query_ensemble_key: str or None, default="gene_ids"
         Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
         If None, `self.sdata.tables[self.tables_key].var_names` will be used.
-    cell_id_key: str
-        Column name in tables DataFrame indicating cell IDs. Default is "cell_id".
+    tables_cell_id_key : str, default="cell_id"
+        Column in the query cell table uniquely identifying each cell.
 
     Returns
     -------
@@ -90,7 +98,7 @@ def _assign_celltype_by_pearson(
     genes = adata.var_names if q_ensemble_key is None else adata.var[q_ensemble_key]
     X_query = pd.DataFrame(
         _to_ndarray(adata.X),
-        index=adata.obs[cell_id_key],
+        index=adata.obs[tables_cell_id_key],
         columns=genes,
     )
 
@@ -109,7 +117,7 @@ def _assign_celltype_by_pearson(
     best_score = cor_df.max(axis=1)
 
     return pd.DataFrame(
-        {"cell_id": X_query.index, "transferred_cell_type": best_celltype.values, "pearson_score": best_score.values}
+        {tables_cell_id_key: X_query.index, "transferred_cell_type": best_celltype.values, "pearson_score": best_score.values}
     )
 
 
@@ -119,6 +127,9 @@ def run_label_transfer(
     ref_cell_type: str,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_gene_key: str = "feature_name",
     tx_min: float = 10.0,
     tx_max: float = 2000.0,
     gn_min: float = 5.0,
@@ -147,6 +158,12 @@ def run_label_transfer(
         Key of the AnnData table in `sdata.tables`.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    points_key : str, optional
+        The key to access the transcript data within `sdata.points` (default is "transcripts").
+    points_cell_id_key : str, optional
+        The column name in the transcript data representing cell identifiers (default is "cell_id").
+    points_gene_key : str, optional
+        The column name in the transcript data representing gene names (default is "feature_name").
     tx_min, tx_max : float
         Min/max transcripts per cell for pre-filtering.
     gn_min, gn_max : float
@@ -199,8 +216,17 @@ def run_label_transfer(
     need_gn = "gene_count" not in tbl.obs.columns
 
     if need_tx or need_gn:
-        bl.transcripts_per_cell(sdata)
-        bl.genes_per_cell(sdata)
+        bl.transcripts_per_cell(sdata, 
+                                tables_cell_id_key=tables_cell_id_key,
+                                points_key=points_key,
+                                points_cell_id_key=points_cell_id_key,
+                                tables_key=tables_key)
+        bl.genes_per_cell(sdata,
+                          tables_cell_id_key=tables_cell_id_key,
+                          points_key=points_key,
+                          points_cell_id_key=points_cell_id_key,
+                          points_gene_key=points_gene_key,
+                          tables_key=tables_key)
 
     # QC filter
     qc_range = {"transcript_count": (tx_min, tx_max), "gene_count": (gn_min, gn_max)}
@@ -226,7 +252,7 @@ def run_label_transfer(
         sc.pp.log1p(adata_q)
 
     # Assign labels
-    ct_corr = _assign_celltype_by_pearson(adata_q, ref_mean_df, query_ensemble_key)
+    ct_corr = _assign_celltype_by_pearson(adata_q, ref_mean_df, query_ensemble_key, tables_cell_id_key)
 
     if inplace:
         # Write back only to the filtered subset cells
@@ -237,28 +263,51 @@ def run_label_transfer(
     else:
         return out
 
-
-def merge_into_obs(sdata, tables_key, df_to_merge, table_cell_id_key, df_cell_id_key, fillna_cols=None):
+def merge_into_obs(
+    sdata,
+    tables_key,
+    df_to_merge,
+    table_cell_id_key,
+    df_cell_id_key,
+    fillna_cols=None
+):
     obs = sdata.tables[tables_key].obs
 
-    # Drop overlapping columns, but keep the merge key
+    left_index = False
+    left_on = table_cell_id_key
+    if table_cell_id_key in obs.columns and obs.index.name == table_cell_id_key:
+        left_index = True
+        left_on = None
+
+    right_index = False
+    right_on = df_cell_id_key
+    if df_cell_id_key in df_to_merge.columns and df_to_merge.index.name == df_cell_id_key:
+        right_index = True
+        right_on = None
+
     overlapping = [
-        c for c in df_to_merge.columns if c in obs.columns and c != table_cell_id_key and c != df_cell_id_key
+        c for c in df_to_merge.columns
+        if c in obs.columns and c not in {table_cell_id_key, df_cell_id_key}
     ]
+
     if overlapping:
         obs = obs.drop(columns=overlapping)
 
-    # Merge
-    df = obs.merge(df_to_merge, left_on=table_cell_id_key, right_on=df_cell_id_key, how="left")
+    df = obs.merge(
+        df_to_merge,
+        left_on=left_on,
+        right_on=right_on,
+        left_index=left_index,
+        right_index=right_index,
+        how="left"
+    )
 
-    # Optionally fill numeric columns with zeros
     if fillna_cols:
         for c in fillna_cols:
-            if c in df:
+            if c in df.columns:
                 df[c] = df[c].fillna(0)
 
     sdata.tables[tables_key].obs = df
-
 
 def get_ref_markers(
     adata_ref: AnnData,

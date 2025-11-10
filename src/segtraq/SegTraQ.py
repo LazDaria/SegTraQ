@@ -349,6 +349,9 @@ class SegTraQ:
             ref_cell_type=ref_cell_type,
             tables_key=self.tables_key,
             tables_cell_id_key=self.tables_cell_id_key,
+            points_key=self.points_key,
+            points_cell_id_key=self.points_cell_id_key,
+            points_gene_key=self.points_gene_key,
             tx_min=tx_min,
             tx_max=tx_max,
             gn_min=gn_min,
@@ -799,6 +802,7 @@ class _SPFacade:
             markers=markers,
             use_quantiles=use_quantiles,
             tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
             inplace=inplace,
         )
 
