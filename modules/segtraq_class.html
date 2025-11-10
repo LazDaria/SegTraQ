@@ -466,6 +466,9 @@ Otherwise transformation will be performed before running label transfer.</p></l
 <li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> with reference cell types.</p></li>
 <li><p><strong>tables_key</strong> (<em>str</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
 <li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the cell table uniquely identifying each cell.</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The key to access the transcript data within <cite>sdata.points</cite> (default is “transcripts”).</p></li>
+<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The column name in the transcript data representing cell identifiers (default is “cell_id”).</p></li>
+<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>optional</em>) – The column name in the transcript data representing gene names (default is “feature_name”).</p></li>
 <li><p><strong>tx_min</strong> (<em>float</em>) – Min/max transcripts per cell for pre-filtering.</p></li>
 <li><p><strong>tx_max</strong> (<em>float</em>) – Min/max transcripts per cell for pre-filtering.</p></li>
 <li><p><strong>gn_min</strong> (<em>float</em>) – Min/max genes per cell for pre-filtering.</p></li>
