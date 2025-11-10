@@ -32,7 +32,7 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
         return False
     if np.issubdtype(arr.dtype, np.integer):
         return True
-    
+
     samp = arr if arr.size <= n else np.random.choice(arr, n, replace=False)
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
@@ -117,7 +117,11 @@ def _assign_celltype_by_pearson(
     best_score = cor_df.max(axis=1)
 
     return pd.DataFrame(
-        {tables_cell_id_key: X_query.index, "transferred_cell_type": best_celltype.values, "pearson_score": best_score.values}
+        {
+            tables_cell_id_key: X_query.index,
+            "transferred_cell_type": best_celltype.values,
+            "pearson_score": best_score.values,
+        }
     )
 
 
@@ -216,17 +220,21 @@ def run_label_transfer(
     need_gn = "gene_count" not in tbl.obs.columns
 
     if need_tx or need_gn:
-        bl.transcripts_per_cell(sdata, 
-                                tables_cell_id_key=tables_cell_id_key,
-                                points_key=points_key,
-                                points_cell_id_key=points_cell_id_key,
-                                tables_key=tables_key)
-        bl.genes_per_cell(sdata,
-                          tables_cell_id_key=tables_cell_id_key,
-                          points_key=points_key,
-                          points_cell_id_key=points_cell_id_key,
-                          points_gene_key=points_gene_key,
-                          tables_key=tables_key)
+        bl.transcripts_per_cell(
+            sdata,
+            tables_cell_id_key=tables_cell_id_key,
+            points_key=points_key,
+            points_cell_id_key=points_cell_id_key,
+            tables_key=tables_key,
+        )
+        bl.genes_per_cell(
+            sdata,
+            tables_cell_id_key=tables_cell_id_key,
+            points_key=points_key,
+            points_cell_id_key=points_cell_id_key,
+            points_gene_key=points_gene_key,
+            tables_key=tables_key,
+        )
 
     # QC filter
     qc_range = {"transcript_count": (tx_min, tx_max), "gene_count": (gn_min, gn_max)}
@@ -263,14 +271,8 @@ def run_label_transfer(
     else:
         return out
 
-def merge_into_obs(
-    sdata,
-    tables_key,
-    df_to_merge,
-    table_cell_id_key,
-    df_cell_id_key,
-    fillna_cols=None
-):
+
+def merge_into_obs(sdata, tables_key, df_to_merge, table_cell_id_key, df_cell_id_key, fillna_cols=None):
     obs = sdata.tables[tables_key].obs
 
     left_index = False
@@ -285,21 +287,13 @@ def merge_into_obs(
         right_index = True
         right_on = None
 
-    overlapping = [
-        c for c in df_to_merge.columns
-        if c in obs.columns and c not in {table_cell_id_key, df_cell_id_key}
-    ]
+    overlapping = [c for c in df_to_merge.columns if c in obs.columns and c not in {table_cell_id_key, df_cell_id_key}]
 
     if overlapping:
         obs = obs.drop(columns=overlapping)
 
     df = obs.merge(
-        df_to_merge,
-        left_on=left_on,
-        right_on=right_on,
-        left_index=left_index,
-        right_index=right_index,
-        how="left"
+        df_to_merge, left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index, how="left"
     )
 
     if fillna_cols:
@@ -308,6 +302,7 @@ def merge_into_obs(
                 df[c] = df[c].fillna(0)
 
     sdata.tables[tables_key].obs = df
+
 
 def get_ref_markers(
     adata_ref: AnnData,
