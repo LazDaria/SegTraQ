@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 import pandas as pd
 import spatialdata as sd
 from geopandas import GeoDataFrame
@@ -27,13 +28,19 @@ def _process_cell(
     """For one cell polygon compute the IoU with the best-matching nucleus."""
 
     cell_geom = cell_row.geometry
+
+    if shapes_cell_id_key is None:
+        shapes_cell_id_key_fixed = "cell_id"
+    else:
+        shapes_cell_id_key_fixed = shapes_cell_id_key
+
     cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
 
     # Get candidate nuclei bounding boxes that overlap this cell's bbox
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
 
     if not candidate_idx:
-        return {"cell_id": cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
+        return {shapes_cell_id_key_fixed: cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
 
     candidates = nuc_boundaries.iloc[candidate_idx]
 
@@ -46,7 +53,7 @@ def _process_cell(
             best_iou = iou
             best_nuc_id = nuc.name
 
-    return {"cell_id": cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
+    return {shapes_cell_id_key_fixed: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
 
 
 def _nucleus_by_feature_df(
@@ -98,6 +105,13 @@ def _nucleus_by_feature_df(
             trans.axes = trans.axes[:2]
 
         trans_dict = {coord_sys: trans}
+
+        if not df2.index.is_unique:
+            warnings.warn(
+                "Index of sdata.points[points_key] is not unique — resetting index to avoid reindexing errors.",
+                UserWarning,
+            )
+            df2 = df2.reset_index(drop=True)
 
         pts2 = PointsModel.parse(
             df2,

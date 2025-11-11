@@ -7,7 +7,7 @@ from pandas import DataFrame
 from scipy.stats import pearsonr
 from tqdm import tqdm
 
-from ..utils import merge_into_obs
+from ..utils import merge_into_obs, _looks_like_counts
 from .utils import _nucleus_by_feature_df, _process_cell
 
 
@@ -48,6 +48,11 @@ def compute_cell_nuc_ious(
     pandas.DataFrame
         Columns: [cell_id, best_nuc_id, IoU]
     """
+    T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+    assert T_cells == T_nuclei, (
+        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
 
     # Get GeoDataFrames
     cell_boundaries = sdata.shapes[shapes_key]
@@ -73,7 +78,11 @@ def compute_cell_nuc_ious(
     iou_df = pd.DataFrame(results)
 
     if inplace:
-        merge_into_obs(sdata, "table", iou_df, tables_cell_id_key, "cell_id")
+        if shapes_cell_id_key is None:
+            shapes_cell_id_key_fixed = "cell_id"
+        else:
+            shapes_cell_id_key_fixed = shapes_cell_id_key
+        merge_into_obs(sdata, "table", iou_df, tables_cell_id_key, shapes_cell_id_key_fixed)
 
     return iou_df
 
@@ -141,6 +150,12 @@ def compute_cell_nuc_correlation(
             (NaN if no match).
     """
 
+    T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+    assert T_cells == T_nuclei, (
+        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
+
     df = sdata.tables[tables_key].obs.copy()
     if "best_nuc_id" not in df.columns:
         iou_df = compute_cell_nuc_ious(
@@ -158,11 +173,20 @@ def compute_cell_nuc_correlation(
             how="left",
         )
 
-    arr = (
-        sdata.tables[tables_key].X.toarray()
-        if hasattr(sdata.tables[tables_key].X, "toarray")
-        else sdata.tables[tables_key].X
-    )
+    tbl = sdata.tables[tables_key]
+    X = tbl.X
+    # Check if X looks like counts
+    if _looks_like_counts(X):
+        arr = X.toarray() if hasattr(X, "toarray") else X
+    elif "raw" not in tbl.layers:
+        raise ValueError(
+            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            "and the main matrix does not look like counts."
+        )
+    else:
+        raw = tbl.layers["raw"]
+        arr = raw.toarray() if hasattr(raw, "toarray") else raw
+
     expr_cells = pd.DataFrame(
         arr,
         index=sdata.tables[tables_key].obs[tables_cell_id_key],
@@ -267,15 +291,20 @@ def compute_correlation_between_parts(
     pd.DataFrame
         DataFrame with columns ["cell_id", "best_nuc_id", "correlation_parts"]
     """
+    T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+    assert T_cells == T_nuclei, (
+        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
 
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
         iou_df = compute_cell_nuc_ious(
             sdata, shapes_cell_id_key, tables_cell_id_key, shapes_key, nucleus_shapes_key, n_jobs=n_jobs
         )
     else:
-        iou_df = sdata.tables[tables_key].obs[["cell_id", "best_nuc_id", "IoU"]].copy()
+        iou_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "best_nuc_id", "IoU"]].copy()
 
-    best_nuc_map = iou_df.set_index("cell_id")["best_nuc_id"]
+    best_nuc_map = iou_df.set_index(tables_cell_id_key)["best_nuc_id"]
 
     cells_gdf: gpd.GeoDataFrame = sdata.shapes[shapes_key]
     nucs_gdf: gpd.GeoDataFrame = sdata.shapes[nucleus_shapes_key]
@@ -348,9 +377,9 @@ def compute_correlation_between_parts(
 
     corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
 
-    out = iou_df.set_index("cell_id")[["best_nuc_id", "IoU"]].join(corr_per_cell, how="left").reset_index()
+    out = iou_df.set_index(tables_cell_id_key)[["best_nuc_id", "IoU"]].join(corr_per_cell, how="left").reset_index()
 
     if inplace:
-        merge_into_obs(sdata, tables_key, out, tables_cell_id_key, "cell_id")
+        merge_into_obs(sdata, tables_key, out, tables_cell_id_key, tables_cell_id_key)
 
     return out
