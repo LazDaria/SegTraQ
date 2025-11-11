@@ -6,8 +6,19 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import copy
+import xarray as xr
+import geopandas as gpd
 import spatialdata as sd
+from packaging import version as pkg_version
+from spatialdata.transformations import get_transformation, set_transformation, get_transformation_between_coordinate_systems
 from anndata import AnnData
+from skimage.measure import find_contours
+from shapely.geometry import shape
+from shapely.affinity import translate, affine_transform
+from rasterio.features import shapes
+from importlib.metadata import version
+from typing import Callable
 from scipy import sparse
 from scipy.spatial.distance import cdist
 
@@ -917,3 +928,280 @@ def validate_spatialdata(
             )
 
     return True
+
+def _process_image(
+    sdata: sd.SpatialData,
+    channel: str = "DAPI",
+    images_key: str  = "morphology_focus",
+    images_data_key: str = "scale0/image",
+    key_added: str = "nucleus_boundaries",
+    return_values: bool = True,
+):
+    if key_added is not None:
+        assert (
+            key_added not in sdata.labels.keys()
+        ), f"Key {key_added} already exists in spatial data object. Please choose another key."
+
+    image = sdata.images[images_key]
+
+    if isinstance(image, xr.DataTree):
+        assert (
+            images_data_key is not None
+        ), f"It looks like your image is stored as a DataTree. Please provide a data_key to access the image data. Available keys are: {list(image.keys())}."
+        assert (
+            images_data_key.split("/")[0] in image.keys()
+        ), f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+
+        image = image[images_data_key] 
+
+        assert isinstance(
+            image, xr.DataArray
+        ), f"The image data should be a DataArray. Please provide a valid data key. Available keys are: {[images_data_key + '/' + x for x in list(image.keys())]}."
+
+    try:
+        image = image.sel(c=[channel])
+    except KeyError:
+        raise KeyError(
+            f"Channel {[channel]} not found in the image data. Available channels: {list(image.c.values)}"
+        )
+
+    if return_values:
+        # returning a numpy array
+        return image.values
+    # returning an xarray object
+    return image
+
+def _cellpose(
+    img: np.ndarray,
+    diameter: float = None,
+    channel_settings: list = None,
+    num_iterations: int = 2000,
+    cellprob_threshold: float = 0.0,
+    flow_threshold: float = 0.4,
+    batch_size: int = 8,
+    gpu: bool = True,
+    model_type: str = "cyto3",  # cellpose < 4.0
+    pretrained_model: str = "cpsam",  # cellpose 4.0
+    postprocess_func: Callable = lambda x: x,
+    **kwargs,
+):
+
+    from cellpose import models
+
+    cp_version = version("cellpose")
+
+    # checking that the input is 2D or 3D
+    if img.ndim not in [2, 3]:
+        raise ValueError(f"Input image must be 2D or 3D, got {img.ndim}.")
+
+    # if the input is 2D, we add a channel dimension
+    if img.ndim == 2:
+        img = img[np.newaxis, :, :]
+
+    # The cellpose API has changed in version 4.0, so we need to check the version
+
+    if pkg_version.parse(cp_version).major < 4 and channel_settings != [0, 0]:
+        assert (
+            channel_settings is not None
+        ), "The argument channel_settings must be provided for Cellpose < 4.0. For independent segmentation of each channel, set it to [0, 0]. For joint segmentation, set it to [1, 2] or [2, 1]."
+        assert (
+            img.shape[0] == 2
+        ), f"Joint segmentation requires exactly two channels. You set channel_settings to {channel_settings}, but provided {img.shape[0]} channels in the object."
+        model = models.Cellpose(gpu=gpu, model_type=model_type)
+    else:
+        # model_type is not used in cellpose 4.0
+        model = models.CellposeModel(gpu=gpu, pretrained_model=pretrained_model)
+
+    all_masks = []
+    # if the channels are [0, 0], independent segmentation is performed on all channels
+    if channel_settings == [0, 0]:
+        if img.shape[0] > 1:
+            warnings.warn(
+                "Performing independent segmentation on all markers. If you want to perform joint segmentation, please set the channel_settings argument appropriately.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        for ch in range(img.shape[0]):
+            # Build version-aware keyword arguments
+            eval_kwargs = dict(
+                diameter=diameter,
+                niter=num_iterations,
+                cellprob_threshold=cellprob_threshold,
+                flow_threshold=flow_threshold,
+                batch_size=batch_size,
+                **kwargs,
+            )
+
+            if pkg_version.parse(cp_version).major < 4:
+                eval_kwargs["channels"] = channel_settings
+
+            # Get the image at the channel and run Cellpose
+            output = model.eval(img[ch].squeeze(), **eval_kwargs)
+
+            # Unpack outputs based on version
+            if pkg_version.parse(cp_version).major >= 4:
+                masks_pred, _, diams = output
+            else:
+                masks_pred, _, _, diams = output
+
+            masks_pred = postprocess_func(masks_pred)
+            all_masks.append(masks_pred)
+    else:
+        # if the channels are anything else, joint segmentation is attempted
+        eval_kwargs = dict(
+            diameter=diameter,
+            niter=num_iterations,
+            cellprob_threshold=cellprob_threshold,
+            flow_threshold=flow_threshold,
+            batch_size=batch_size,
+            **kwargs,
+        )
+
+        if pkg_version.parse(cp_version).major < 4:
+            eval_kwargs["channels"] = channel_settings
+
+        output = model.eval(img.squeeze(), **eval_kwargs)
+
+        # Unpack based on version
+        if pkg_version.parse(cp_version).major >= 4:
+            masks_pred, _, diams = output
+        else:
+            masks_pred, _, _, diams = output
+
+        masks_pred = postprocess_func(masks_pred)
+        all_masks.append(masks_pred)
+
+    return np.array(all_masks), diams
+
+def _labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
+    """
+    Convert a 2D label image into polygon boundaries.
+
+    Each connected label is represented by one Polygon or MultiPolygon.
+
+    Parameters
+    ----------
+    label_img : np.ndarray
+        2D array of integer labels. Background should be 0.
+    simplify_tolerance : float or None, default=0.5
+        Simplification tolerance for polygon boundaries. Set to None or 0
+        to disable simplification.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame with columns ["cell_id", "geometry"]. Each row corresponds to one labeled region.
+    """
+    if label_img.ndim != 2:
+        raise ValueError("Input label_img must be 2D.")
+
+    mask = (label_img != 0).astype(np.uint8)
+    geometries = []
+    cell_ids = []
+
+    # shapes() only accepts either of these dtypes: int16, int32, uint8, uint16, float32, float64, int8
+    # if our labels are in uint32, and we have label_img.max() < 2_147_483_647, we need to convert to int32
+    if label_img.dtype == np.uint32 and label_img.max() < np.iinfo(np.int32).max:
+        label_img = label_img.astype(np.int32)
+
+    for geom, value in shapes(label_img, mask=mask, connectivity=8):
+        if value == 0:
+            continue
+        poly = shape(geom)
+        # this turns disconnected polygons into MultiPolygons (which are valid)
+        if not poly.is_valid:
+            poly = poly.buffer(0)
+        if not poly.is_valid or poly.area == 0:
+            continue
+        if simplify_tolerance and simplify_tolerance > 0:
+            poly = poly.simplify(simplify_tolerance, preserve_topology=True)
+        geometries.append(poly)
+        cell_ids.append(int(value))
+
+    gdf = gpd.GeoDataFrame({"cell_id": cell_ids, "geometry": geometries})
+    # Merge multiple geometries per label into a single MultiPolygon
+    gdf = gdf.dissolve(by="cell_id", as_index=True)
+    # rasterio operates on the pixel centroids instead of the corners
+    # to get sub-pixel accurate geometries, we need to shift the geometries by -0.5 in x and y
+    gdf["geometry"] = gdf["geometry"].apply(lambda p: translate(p, xoff=-0.5, yoff=-0.5))
+
+    return gdf
+
+def add_nuc_shapes_via_cellpose(
+    sdata: sd.SpatialData,
+    channel: str = "DAPI",
+    images_key: str = "morphology_focus",
+    images_data_key: str = "scale0/image",
+    shapes_key: str = "cell_boundaries",
+    key_added: str = "nucleus_boundaries",
+    inplace: bool = True,
+    **kwargs,
+):
+    """
+    This function runs the cellpose segmentation algorithm on the provided image data.
+    It extracts the image data from the spatialdata object, applies the cellpose algorithm,
+    and adds the segmentation masks to the spatialdata object.
+    The segmentation masks are stored as polygons in the shapes attribute of the spatialdata object.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned spatial
+        transcriptomics data (images, tables, points, shapes and optional labels).
+
+    channel: str, default="DAPI"
+        The channel(s) to be used for segmentation.
+
+    images_key : str, default="morphology_focus"
+        Key in `sdata.images` for a nuclear or morphology image (e.g., DAPI).
+        Used for segmentation. 
+    
+    images_data_key : str, default="scale0/image"
+        Key for accessing data in `sdata.images` if they are stored as a DataTree.
+        Consider using a higher scale (lower resolution) for segmentation to speed up computation and reduce memory usage during Cellpose.
+
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons. Used to get transformations.
+
+    key_added: str, default="nucleus_boundaries" 
+        The key under which the segmentation masks will be stored in the shapes attribute of the spatialdata object. Defaults to "nucleus_boundaries".
+
+    inplace, bool, default=True
+        Whether to modify the spatialdata object in place. Defaults to True.
+
+    **kwargs: Additional keyword arguments to be passed to the cellpose algorithm.
+    """
+
+    if not inplace:
+        sdata = copy.deepcopy(sdata)
+
+    # assert that the format is correct and extract the image
+    image = _process_image(sdata, channel=channel, images_key=images_key, key_added=key_added, images_data_key=images_data_key)
+
+    # run cellpose
+    segmentation_masks, _ = _cellpose(image, **kwargs)
+
+    # convert labels to shapes
+    nuc_shapes = _labels_to_shapes(segmentation_masks[0])
+
+    # get transformations
+    S = get_transformation(sdata.images[images_key][images_data_key]).to_affine_matrix(("x", "y"), ("x", "y")) #get scaling factors
+    T = get_transformation_between_coordinate_systems(sdata, sdata.images[images_key], sdata.shapes[shapes_key]).to_affine_matrix(("x", "y"), ("x", "y")) #get affine transformation between image and shapes
+    A = T @ S
+    t_params = [A[0,0], A[0,1], A[1,0], A[1,1], A[0,2], A[1,2]]
+
+    #apply affine transformation to nuclear shapes to have them in the same coordinate system as cell shapes
+    nuc_shapes['geometry'] = nuc_shapes['geometry'].apply(lambda g: affine_transform(g, t_params))
+
+    sdata.shapes[key_added] = sd.models.ShapesModel.parse(
+        nuc_shapes, transformations=None
+    )
+
+    # set transformation for nucleus shapes to be the same as for cell shapes
+    cell_shape_transformation = get_transformation(sdata.shapes[shapes_key])
+    set_transformation(sdata.shapes[key_added], cell_shape_transformation)
+
+    if not inplace:
+        return sdata
+
+    
