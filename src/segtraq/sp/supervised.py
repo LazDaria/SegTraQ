@@ -315,7 +315,7 @@ def calculate_marker_purity(
             sdata=sdata,
             tables_key=tables_key,
             df_to_merge=result,
-            table_cell_id_key=tables_cell_id_key,
+            tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
     return result

@@ -282,38 +282,57 @@ def run_label_transfer(
     else:
         return out
 
+def merge_into_obs(
+    sdata,
+    tables_key,
+    df_to_merge: pd.DataFrame,
+    tables_cell_id_key: str,
+    df_cell_id_key: str,
+    fillna_cols=None
+):
+    """
+    Left-join df_to_merge into sdata.tables[tables_key].obs without resetting the index
+    and without creating duplicate key columns.
 
-def merge_into_obs(sdata, tables_key, df_to_merge, table_cell_id_key, df_cell_id_key, fillna_cols=None):
+    - Preserves obs index
+    - Uses obs[tables_cell_id_key] as the join key unless df_cell_id_key already exists in obs
+    - Drops overlapping columns on the right (or overwrites if overwrite=True)
+    """
+
     obs = sdata.tables[tables_key].obs
 
-    left_index = False
-    left_on = table_cell_id_key
-    if table_cell_id_key in obs.columns and obs.index.name == table_cell_id_key:
-        left_index = True
-        left_on = None
+    # Choose the column on the left to join on:
+    # If the right's key already exists in obs, prefer that (avoids redundant columns)
+    left_on_key = df_cell_id_key if (df_cell_id_key == obs.index.name or df_cell_id_key in obs.columns) else tables_cell_id_key
 
-    right_index = False
-    right_on = df_cell_id_key
-    if df_cell_id_key in df_to_merge.columns and df_to_merge.index.name == df_cell_id_key:
-        right_index = True
-        right_on = None
+    # Build right indexed by the join key
+    if df_to_merge.index.name != df_cell_id_key:
+        right = df_to_merge.set_index(df_cell_id_key, drop=True)
+    else:
+        right = df_to_merge
 
-    overlapping = [c for c in df_to_merge.columns if c in obs.columns and c not in {table_cell_id_key, df_cell_id_key}]
+    # Decide which columns from right to bring over
+    right_cols = list(right.columns)
+    overlapping_cols = [c for c in right_cols if c in obs.columns and c != df_cell_id_key]
+    if overlapping_cols:
+        obs = obs.drop(columns=overlapping_cols)
 
-    if overlapping:
-        obs = obs.drop(columns=overlapping)
+    # Perform a left join while preserving the left index.
+    # Two cases: join using a left column (on=...) or directly on the index.
+    if obs.index.name == left_on_key:
+        # Index-on-index join (fast, preserves index)
+        joined = obs.join(right, how="left")
+    else:
+        joined = obs.join(right, on=left_on_key, how="left")
 
-    df = obs.merge(
-        df_to_merge, left_on=left_on, right_on=right_on, left_index=left_index, right_index=right_index, how="left"
-    )
-
+    # Fill NAs if requested
     if fillna_cols:
         for c in fillna_cols:
-            if c in df.columns:
-                df[c] = df[c].fillna(0)
+            if c in joined.columns:
+                joined[c] = joined[c].fillna(0)
 
-    sdata.tables[tables_key].obs = df
-
+    # Assign back (no intermediate index reset happened)
+    sdata.tables[tables_key].obs = joined
 
 def get_ref_markers(
     adata_ref: AnnData,
