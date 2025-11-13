@@ -235,6 +235,7 @@ class SegTraQ:
             num_genes=self.bl.num_genes(inplace=inplace),
             num_transcripts=self.bl.num_transcripts(inplace=inplace),
             perc_unassigned_transcripts=self.bl.perc_unassigned_transcripts(inplace=inplace),
+            perc_unassigned_transcripts_per_gene=self.bl.perc_unassigned_transcripts_per_gene(inplace=inplace),
         )
 
         if inplace:
@@ -615,6 +616,19 @@ class _BLFacade:
         )
 
     genes_per_cell.__doc__ = bl.genes_per_cell.__doc__
+
+    def perc_unassigned_transcripts_per_gene(self, inplace: bool = True):
+        return bl.perc_unassigned_transcripts_per_gene(
+            sdata=self._p.sdata,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_gene_key=self._p.points_gene_key,
+            tables_key=self._p.tables_key,
+            inplace=inplace,
+        )
+
+    perc_unassigned_transcripts_per_gene.__doc__ = bl.perc_unassigned_transcripts_per_gene.__doc__
 
     def transcripts_per_cell(self, inplace: bool = True):
         return bl.transcripts_per_cell(
