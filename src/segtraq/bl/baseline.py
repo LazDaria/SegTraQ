@@ -131,10 +131,10 @@ def perc_unassigned_transcripts(
     float
         The fraction of transcripts that are unassigned.
     """
-    counts = sdata.points[points_key][points_cell_id_key].compute().value_counts()
-    num_unassigned = counts.get(points_background_id, 0)
-    # converting from np.float64 to float for consistency
-    perc_unassigned_transcripts = float(num_unassigned / counts.sum()) * 100
+    points = sdata.points[points_key][points_cell_id_key]
+    is_unassigned = points == points_background_id
+    perc_unassigned_transcripts = is_unassigned.mean().compute() * 100
+
     if inplace:
         sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
     return perc_unassigned_transcripts
