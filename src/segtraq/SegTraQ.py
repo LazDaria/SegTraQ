@@ -28,9 +28,6 @@ class SegTraQ:
         shapes_cell_id_key: str | None = "cell_id",
         nucleus_shapes_key: str | None = "nucleus_boundaries",
         nucleus_shapes_cell_id_key: str | None = "cell_id",
-        labels_key: str | None = "cell_labels",
-        labels_data_key: str | None = "scale0/image",
-        labels_to_cell_id_key: str | None = "cell_labels",
     ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
@@ -97,16 +94,6 @@ class SegTraQ:
             Column linking nucleus polygons to cell IDs. If `None` but
             `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
 
-        labels_key : str or None, optional, default="cell_labels"
-            Key in `sdata.labels` for a labeled segmentation mask, if available.
-
-        labels_data_key : str or None, optional, default="scale0/image"
-            Key for accessing data in `sdata.labels` if they are stored as a DataTree. Default is None.
-
-        labels_to_cell_id_key : str or None, optional, default="cell_labels"
-            Column in `sdata.tables[tables_key]` mapping segmentation label IDs
-            (from `labels_key`) to cell IDs.
-
         Notes
         -----
         After initializing a SegTraQ instance, all SegTraQ modules can be run
@@ -147,9 +134,6 @@ class SegTraQ:
             shapes_cell_id_key=shapes_cell_id_key,
             nucleus_shapes_key=nucleus_shapes_key,
             nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
-            labels_key=labels_key,
-            labels_to_cell_id_key=labels_to_cell_id_key,
-            labels_data_key=labels_data_key,
         )
 
         self.sdata = sdata
@@ -172,10 +156,6 @@ class SegTraQ:
         self.shapes_cell_id_key = shapes_cell_id_key
         self.nucleus_shapes_key = nucleus_shapes_key
         self.nucleus_shapes_cell_id_key = nucleus_shapes_cell_id_key
-
-        self.labels_key = labels_key
-        self.labels_data_key = labels_data_key
-        self.labels_to_cell_id_key = labels_to_cell_id_key
 
         self.bl = _BLFacade(self)
         self.nc = _NCFacade(self)
