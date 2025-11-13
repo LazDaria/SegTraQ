@@ -263,6 +263,56 @@ def compute_cell_nuc_correlation(
 
     return corr_df, iou_df
 
+def _pearson_corr_parts(mat: pd.DataFrame) -> pd.DataFrame:
+    # 1) Move "part" from index to columns
+    mat_unstack = mat.unstack("part")  # index: cell_id, columns: (gene, part)
+
+    # 2) Extract the two matrices (one row per cell, one col per gene)
+    # This will create NaNs where a cell is missing that part.
+    intersection = mat_unstack.xs("intersection", level="part", axis=1)
+    remainder    = mat_unstack.xs("remainder",    level="part", axis=1)
+
+    # 3) Convert to NumPy
+    X = intersection.to_numpy(dtype=float)
+    Y = remainder.to_numpy(dtype=float)
+
+    # 4) Mask out rows where intersection or remainder is entirely zero or missing
+    valid = (
+        np.isfinite(X).all(axis=1) &
+        np.isfinite(Y).all(axis=1) &
+        (X.sum(axis=1) != 0) &
+        (Y.sum(axis=1) != 0)
+    )
+
+    # Prepare result array filled with NaNs
+    corr = np.full(X.shape[0], np.nan, dtype=float)
+
+    # 5) Compute Pearson correlation row-wise for valid rows only
+    Xv = X[valid]
+    Yv = Y[valid]
+
+    # subtract row means
+    Xc = Xv - Xv.mean(axis=1, keepdims=True)
+    Yc = Yv - Yv.mean(axis=1, keepdims=True)
+
+    num = (Xc * Yc).sum(axis=1)
+    den = np.sqrt((Xc**2).sum(axis=1) * (Yc**2).sum(axis=1))
+
+    # avoid division by zero
+    nonzero = den != 0
+    corr_valid = np.full(Xv.shape[0], np.nan, dtype=float)
+    corr_valid[nonzero] = num[nonzero] / den[nonzero]
+
+    corr[valid] = corr_valid
+
+    # 6) Wrap back into a Series / DataFrame
+    corr_per_cell = pd.Series(
+        corr,
+        index=mat_unstack.index,
+        name="correlation_parts"
+    ).to_frame()
+
+    return corr_per_cell
 
 def compute_correlation_between_parts(
     sdata,
@@ -273,6 +323,7 @@ def compute_correlation_between_parts(
     nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
@@ -306,6 +357,8 @@ def compute_correlation_between_parts(
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
     points_x_key : str, default="x"
@@ -357,7 +410,17 @@ def compute_correlation_between_parts(
 
     best_nuc_map = iou_df.set_index(id_key)["best_nuc_id"]
 
-    transcripts_df = sdata.points[points_key].compute()
+    transcripts = sdata.points[points_key].compute()
+
+    #subset to transcripts assigned to cells
+    transcripts_df = transcripts[transcripts[points_cell_id_key]!= points_background_id].copy()
+    #subset to valid genes
+    valid_features = pd.Index(sdata.tables[tables_key].var_names)  #TODO - this might break, if var.index and points_gene_key do not match! e.g. one is Ensemble key and one is gene_key
+    transcripts_df = transcripts_df.dropna(subset=[points_gene_key])
+    transcripts_df = transcripts_df[transcripts_df[points_gene_key].isin(valid_features)]
+    transcripts_df[points_gene_key] = transcripts_df[points_gene_key].cat.remove_unused_categories()
+
+    tx_in_cell = transcripts_df[[points_gene_key, points_cell_id_key]]
 
     # Choose a single CRS (cells' CRS), and reproject other layers if needed - TODO
     target_crs = nucs_gdf.crs
@@ -371,16 +434,9 @@ def compute_correlation_between_parts(
     )
     # if transcripts_gdf.crs != target_crs:
     #     transcripts_gdf = transcripts_gdf.to_crs(target_crs)
-    cells_gdf.index.name = None
     
-    tx_in_cell = gpd.sjoin(
-        transcripts_gdf[[points_gene_key, "geometry"]],
-        cells_gdf[[id_key, "geometry"]],
-        how="inner",
-        predicate="within",
-    )
-
     nucs_gdf.index.name = "nuc_id"
+    
     tx_in_nuc = gpd.sjoin(
         transcripts_gdf[["geometry"]],
         nucs_gdf[["geometry"]],
@@ -390,37 +446,31 @@ def compute_correlation_between_parts(
 
     tx = tx_in_cell.join(tx_in_nuc, how="left")
 
-    tx["best_nuc_id"] = tx[id_key].map(best_nuc_map)
+    tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
     tx["in_intersection"] = (tx["nuc_id"].notna()) & (tx["nuc_id"] == tx["best_nuc_id"])
     tx["part"] = np.where(tx["in_intersection"], "intersection", "remainder")
 
-    valid_features = pd.Index(sdata.tables[tables_key].var_names)  #TODO - this might break, if var.index and points_gene_key do not match! e.g. one is Ensemble key and one is gene_key
-    tx = tx.dropna(subset=[points_gene_key])
-    tx = tx[tx[points_gene_key].isin(valid_features)]
-    tx[points_gene_key] = tx[points_gene_key].cat.remove_unused_categories()
+    mat = pd.crosstab(
+        [tx[points_cell_id_key], tx["part"]],
+        tx[points_gene_key]
+    ).fillna(0)
 
-    counts = tx.groupby([id_key, "part", points_gene_key]).size().rename("count").reset_index()
+    # either use _pearson_corr_parts vectorized function or the slower per-cell apply (commented out below)
+    corr_per_cell = _pearson_corr_parts(mat)
+    # def _corr_two_cols(df_cell):
+    #     df = df_cell.copy()
+    #     df.index = df.index.get_level_values(1) 
+    #     if "intersection" not in df.index or "remainder" not in df.index:
+    #         return np.nan
+    #     x = df.loc["intersection"].to_numpy(dtype=float)
+    #     y = df.loc["remainder"].to_numpy(dtype=float)
+    #     if x.sum() == 0 or y.sum() == 0:
+    #         return np.nan
+    #     r, _ = pearsonr(x, y)
+    #     return r
 
-    mat = counts.pivot_table(
-        index=[id_key, points_gene_key],
-        columns="part",
-        values="count",
-        fill_value=0,
-        aggfunc="sum",
-    )
-
-    mat = mat[["intersection", "remainder"]]
-
-    def _corr_two_cols(df_cell):
-        x = df_cell["intersection"].to_numpy(dtype=float)
-        y = df_cell["remainder"].to_numpy(dtype=float)
-        if x.sum() == 0 or y.sum() == 0:
-            return np.nan
-        r, _ = pearsonr(x, y)
-        return r
-
-    corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
-
+    #corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
+    
     out = iou_df.merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
     if inplace:

@@ -731,6 +731,7 @@ class _NCFacade:
             nucleus_shapes_key=self._p.nucleus_shapes_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
