@@ -1,5 +1,6 @@
-import numpy as np
 import warnings
+
+import numpy as np
 import pandas as pd
 import spatialdata as sd
 from geopandas import GeoDataFrame
@@ -110,6 +111,7 @@ def _nucleus_by_feature_df(
             warnings.warn(
                 "Index of sdata.points[points_key] is not unique — resetting index to avoid reindexing errors.",
                 UserWarning,
+                stacklevel=2,
             )
             df2 = df2.reset_index(drop=True)
 
