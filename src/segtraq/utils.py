@@ -1,26 +1,29 @@
+import copy
 import math
 import warnings
 from collections import Counter
+from collections.abc import Callable
+from importlib.metadata import version
 from itertools import combinations
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import copy
-import xarray as xr
-import geopandas as gpd
 import spatialdata as sd
-from packaging import version as pkg_version
-from spatialdata.transformations import get_transformation, set_transformation, get_transformation_between_coordinate_systems
+import xarray as xr
 from anndata import AnnData
-from skimage.measure import find_contours
-from shapely.geometry import shape
-from shapely.affinity import translate, affine_transform
+from packaging import version as pkg_version
 from rasterio.features import shapes
-from importlib.metadata import version
-from typing import Callable
 from scipy import sparse
 from scipy.spatial.distance import cdist
+from shapely.affinity import affine_transform, translate
+from shapely.geometry import shape
+from spatialdata.transformations import (
+    get_transformation,
+    get_transformation_between_coordinate_systems,
+    set_transformation,
+)
 
 from .bl import baseline as bl
 
@@ -282,13 +285,9 @@ def run_label_transfer(
     else:
         return out
 
+
 def merge_into_obs(
-    sdata,
-    tables_key,
-    df_to_merge: pd.DataFrame,
-    tables_cell_id_key: str,
-    df_cell_id_key: str,
-    fillna_cols=None
+    sdata, tables_key, df_to_merge: pd.DataFrame, tables_cell_id_key: str, df_cell_id_key: str, fillna_cols=None
 ):
     """
     Left-join df_to_merge into sdata.tables[tables_key].obs without resetting the index
@@ -303,7 +302,9 @@ def merge_into_obs(
 
     # Choose the column on the left to join on:
     # If the right's key already exists in obs, prefer that (avoids redundant columns)
-    left_on_key = df_cell_id_key if (df_cell_id_key == obs.index.name or df_cell_id_key in obs.columns) else tables_cell_id_key
+    left_on_key = (
+        df_cell_id_key if (df_cell_id_key == obs.index.name or df_cell_id_key in obs.columns) else tables_cell_id_key
+    )
 
     # Build right indexed by the join key
     if df_to_merge.index.name != df_cell_id_key:
@@ -333,6 +334,7 @@ def merge_into_obs(
 
     # Assign back (no intermediate index reset happened)
     sdata.tables[tables_key].obs = joined
+
 
 def merge_into_var(sdata, tables_key, df_to_merge):
     var = sdata.tables[tables_key].var
@@ -890,47 +892,53 @@ def validate_spatialdata(
 
     return True
 
+
 def _process_image(
     sdata: sd.SpatialData,
     channel: str = "DAPI",
-    images_key: str  = "morphology_focus",
+    images_key: str = "morphology_focus",
     images_data_key: str = "scale0/image",
     key_added: str = "nucleus_boundaries",
     return_values: bool = True,
 ):
     if key_added is not None:
-        assert (
-            key_added not in sdata.labels.keys()
-        ), f"Key {key_added} already exists in spatial data object. Please choose another key."
+        assert key_added not in sdata.labels.keys(), (
+            f"Key {key_added} already exists in spatial data object. Please choose another key."
+        )
 
     image = sdata.images[images_key]
 
     if isinstance(image, xr.DataTree):
-        assert (
-            images_data_key is not None
-        ), f"It looks like your image is stored as a DataTree. Please provide a data_key to access the image data. Available keys are: {list(image.keys())}."
-        assert (
-            images_data_key.split("/")[0] in image.keys()
-        ), f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+        assert images_data_key is not None, (
+            f"It looks like your image is stored as a DataTree. "
+            f"Please provide a data_key to access the image data. "
+            f"Available keys are: {list(image.keys())}."
+        )
+        assert images_data_key.split("/")[0] in image.keys(), (
+            f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+        )
 
-        image = image[images_data_key] 
+        image = image[images_data_key]
 
-        assert isinstance(
-            image, xr.DataArray
-        ), f"The image data should be a DataArray. Please provide a valid data key. Available keys are: {[images_data_key + '/' + x for x in list(image.keys())]}."
+        assert isinstance(image, xr.DataArray), (
+            f"The image data should be a DataArray. "
+            f"Please provide a valid data key. "
+            f"Available keys are: {[images_data_key + '/' + x for x in list(image.keys())]}."
+        )
 
     try:
         image = image.sel(c=[channel])
-    except KeyError:
+    except KeyError as err:
         raise KeyError(
             f"Channel {[channel]} not found in the image data. Available channels: {list(image.c.values)}"
-        )
+        ) from err
 
     if return_values:
         # returning a numpy array
         return image.values
     # returning an xarray object
     return image
+
 
 def _cellpose(
     img: np.ndarray,
@@ -946,7 +954,6 @@ def _cellpose(
     postprocess_func: Callable = lambda x: x,
     **kwargs,
 ):
-
     from cellpose import models
 
     cp_version = version("cellpose")
@@ -962,12 +969,16 @@ def _cellpose(
     # The cellpose API has changed in version 4.0, so we need to check the version
 
     if pkg_version.parse(cp_version).major < 4 and channel_settings != [0, 0]:
-        assert (
-            channel_settings is not None
-        ), "The argument channel_settings must be provided for Cellpose < 4.0. For independent segmentation of each channel, set it to [0, 0]. For joint segmentation, set it to [1, 2] or [2, 1]."
-        assert (
-            img.shape[0] == 2
-        ), f"Joint segmentation requires exactly two channels. You set channel_settings to {channel_settings}, but provided {img.shape[0]} channels in the object."
+        assert channel_settings is not None, (
+            "The argument channel_settings must be provided for Cellpose < 4.0. "
+            "For independent segmentation of each channel, set it to [0, 0]. "
+            "For joint segmentation, set it to [1, 2] or [2, 1]."
+        )
+        assert img.shape[0] == 2, (
+            f"Joint segmentation requires exactly two channels. "
+            f"You set channel_settings to {channel_settings}, "
+            f"but provided {img.shape[0]} channels in the object."
+        )
         model = models.Cellpose(gpu=gpu, model_type=model_type)
     else:
         # model_type is not used in cellpose 4.0
@@ -978,7 +989,9 @@ def _cellpose(
     if channel_settings == [0, 0]:
         if img.shape[0] > 1:
             warnings.warn(
-                "Performing independent segmentation on all markers. If you want to perform joint segmentation, please set the channel_settings argument appropriately.",
+                "Performing independent segmentation on all markers. "
+                "If you want to perform joint segmentation, "
+                "please set the channel_settings argument appropriately.",
                 RuntimeWarning,
                 stacklevel=2,
             )
@@ -1034,6 +1047,7 @@ def _cellpose(
 
     return np.array(all_masks), diams
 
+
 def _labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -> gpd.GeoDataFrame:
     """
     Convert a 2D label image into polygon boundaries.
@@ -1088,6 +1102,7 @@ def _labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 
 
     return gdf
 
+
 def add_nuc_shapes_via_cellpose(
     sdata: sd.SpatialData,
     channel: str = "DAPI",
@@ -1115,17 +1130,19 @@ def add_nuc_shapes_via_cellpose(
 
     images_key : str, default="morphology_focus"
         Key in `sdata.images` for a nuclear or morphology image (e.g., DAPI).
-        Used for segmentation. 
-    
+        Used for segmentation.
+
     images_data_key : str, default="scale0/image"
         Key for accessing data in `sdata.images` if they are stored as a DataTree.
-        Consider using a higher scale (lower resolution) for segmentation to speed up computation and reduce memory usage during Cellpose.
+        Consider using a higher scale (lower resolution) for segmentation to
+        speed up computation and reduce memory usage during Cellpose.
 
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons. Used to get transformations.
 
-    key_added: str, default="nucleus_boundaries" 
-        The key under which the segmentation masks will be stored in the shapes attribute of the spatialdata object. Defaults to "nucleus_boundaries".
+    key_added: str, default="nucleus_boundaries"
+        The key under which the segmentation masks will be stored in the shapes attribute
+        of the spatialdata object. Defaults to "nucleus_boundaries".
 
     inplace, bool, default=True
         Whether to modify the spatialdata object in place. Defaults to True.
@@ -1137,7 +1154,9 @@ def add_nuc_shapes_via_cellpose(
         sdata = copy.deepcopy(sdata)
 
     # assert that the format is correct and extract the image
-    image = _process_image(sdata, channel=channel, images_key=images_key, key_added=key_added, images_data_key=images_data_key)
+    image = _process_image(
+        sdata, channel=channel, images_key=images_key, key_added=key_added, images_data_key=images_data_key
+    )
 
     # run cellpose
     segmentation_masks, _ = _cellpose(image, **kwargs)
@@ -1146,17 +1165,19 @@ def add_nuc_shapes_via_cellpose(
     nuc_shapes = _labels_to_shapes(segmentation_masks[0])
 
     # get transformations
-    S = get_transformation(sdata.images[images_key][images_data_key]).to_affine_matrix(("x", "y"), ("x", "y")) #get scaling factors
-    T = get_transformation_between_coordinate_systems(sdata, sdata.images[images_key], sdata.shapes[shapes_key]).to_affine_matrix(("x", "y"), ("x", "y")) #get affine transformation between image and shapes
+    S = get_transformation(sdata.images[images_key][images_data_key]).to_affine_matrix(
+        ("x", "y"), ("x", "y")
+    )  # get scaling factors
+    T = get_transformation_between_coordinate_systems(
+        sdata, sdata.images[images_key], sdata.shapes[shapes_key]
+    ).to_affine_matrix(("x", "y"), ("x", "y"))  # get affine transformation between image and shapes
     A = T @ S
-    t_params = [A[0,0], A[0,1], A[1,0], A[1,1], A[0,2], A[1,2]]
+    t_params = [A[0, 0], A[0, 1], A[1, 0], A[1, 1], A[0, 2], A[1, 2]]
 
-    #apply affine transformation to nuclear shapes to have them in the same coordinate system as cell shapes
-    nuc_shapes['geometry'] = nuc_shapes['geometry'].apply(lambda g: affine_transform(g, t_params))
+    # apply affine transformation to nuclear shapes to have them in the same coordinate system as cell shapes
+    nuc_shapes["geometry"] = nuc_shapes["geometry"].apply(lambda g: affine_transform(g, t_params))
 
-    sdata.shapes[key_added] = sd.models.ShapesModel.parse(
-        nuc_shapes, transformations=None
-    )
+    sdata.shapes[key_added] = sd.models.ShapesModel.parse(nuc_shapes, transformations=None)
 
     # set transformation for nucleus shapes to be the same as for cell shapes
     cell_shape_transformation = get_transformation(sdata.shapes[shapes_key])
@@ -1164,5 +1185,3 @@ def add_nuc_shapes_via_cellpose(
 
     if not inplace:
         return sdata
-
-    
