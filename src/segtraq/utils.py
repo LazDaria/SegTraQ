@@ -602,18 +602,15 @@ def validate_spatialdata(
     shapes_cell_id_key: str | None = "cell_id",
     nucleus_shapes_key: str | None = "nucleus_boundaries",
     nucleus_shapes_cell_id_key: str | None = "cell_id",
-    labels_key: str = "cell_labels",
-    labels_to_cell_id_key: str | None = "label_id",
-    labels_data_key: str = None,
 ) -> bool:
     """
     Validates the integrity of a SpatialData object by checking the consistency of cell IDs
-    across points, shapes, labels, and tables.
+    across points, shapes, and tables.
 
     This function ensures that:
-    - All points have corresponding shapes, labels, and tables.
-    - Cell IDs in points match those in shapes, labels, and tables.
-    - If shapes or labels are present, they contain all cell IDs from the points.
+    - All points have corresponding shapes, and tables.
+    - Cell IDs in points match those in shapes, and tables.
+    - If shapes are present, they contain all cell IDs from the points.
     - If tables are present, they contain all cell IDs from the shapes.
 
     Parameters
@@ -636,13 +633,6 @@ def validate_spatialdata(
     shapes_cell_id_key : str, optional
         Column name in the shapes DataFrame indicating cell IDs. Default is "cell_id".
         If None, the function assumes cell IDs are stored in the index.
-    labels_key : str, optional
-        Key for accessing segmentation labels in the SpatialData. Default is "cell_labels".
-    labels_data_key : str, optional
-        Key for accessing data within labels if they are stored as a DataTree. Default is None.
-    labels_to_cell_id_key : str or None, optional
-        Column in `sdata.tables[tables_key]` mapping segmentation label IDs
-        (from `labels_key`) to cell IDs.
 
     Raises
     ------
@@ -669,7 +659,6 @@ def validate_spatialdata(
 
     contains_points = len(sdata.points) > 0
     contains_shapes = len(sdata.shapes) > 0
-    # contains_labels = len(sdata.labels) > 0
     contains_tables = len(sdata.tables) > 0
 
     # check if there are points in the spatial data
@@ -726,17 +715,10 @@ def validate_spatialdata(
                 f"Available columns: {table.obs.columns.tolist()}. "
                 f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
             )
-        if labels_to_cell_id_key is not None:
-            assert labels_to_cell_id_key in table.obs.columns, (
-                f"Tables DataFrame must contain mapping to segmentation label IDs - '{tables_area_volume_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'labels_to_cell_id_key' argument (set to None if you do not have this)."
-            )
 
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
     shapes_cell_ids = set()
-    # labels_cell_ids = set()
 
     # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
     if contains_shapes:
@@ -766,6 +748,28 @@ def validate_spatialdata(
                 f"If you want to use the index as cell IDs, set shapes_cell_id_key=None."
             )
             shapes_cell_ids = set(shapes[shapes_cell_id_key])
+
+        # ensuring that all cell IDs have the same dtype (either str or numeric)
+        # taking a random ID from each set and comparing dtypes
+        transcript_sample = next(iter(transcript_ids))
+        shapes_sample = next(iter(shapes_cell_ids))
+
+        def is_numeric(x):
+            return isinstance(x, int | float | np.integer | np.floating)
+
+        def is_string(x):
+            return isinstance(x, str)
+
+        if (is_numeric(transcript_sample) and is_numeric(shapes_sample)) or (
+            is_string(transcript_sample) and is_string(shapes_sample)
+        ):
+            pass  # OK, both numeric or both string
+        else:
+            raise TypeError(
+                f"Cell ID types between points and shapes are incompatible: "
+                f"{type(transcript_sample)} (points) vs {type(shapes_sample)} (shapes). "
+                f"Please ensure that cell IDs are all strings or all numeric."
+            )
 
         missing_in_polygons = {
             x
@@ -836,81 +840,6 @@ def validate_spatialdata(
                     "This might lead to inconsistencies in the spatialdata object.",
                     stacklevel=2,
                 )
-
-    # TODO: THIS NEEDS TO BE REACTIVATED AT SOME POINT
-    # # if there are labels, ensure that there are no cell IDs in the points that are not in the labels
-    # if contains_labels:
-    #     # we can have multiple labels keys (e. g. when using multiple layers in proseg),
-    # so we need to handle them here
-    #     if isinstance(labels_key, str):
-    #         assert labels_key in sdata.labels, (
-    #             f"Labels DataFrame must contain key: {labels_key}. "
-    #             f"Available keys: {list(sdata.labels.keys())}. "
-    #             f"If you want to use a different key, set the labels_key parameter."
-    #         )
-    #         labels = sdata.labels[labels_key]
-
-    #         # handling weird spatialdata structures
-    #         if isinstance(labels, xr.DataTree):
-    #             assert labels_data_key is not None, (
-    #                 f"It looks like your labels are stored as a DataTree. "
-    #                 f"Please provide a labels_data_key to access the labels data. "
-    #                 f"Available keys are: {list(labels.keys())}."
-    #             )
-    #             assert labels_data_key.split("/")[0] in labels.keys(), (
-    #                 f"Data key {labels_data_key} not found in the labels data. Available keys: {list(labels.keys())}"
-    #             )
-
-    #             labels = labels[labels_data_key]  # Get the dataset node
-
-    #             assert isinstance(labels, xr.DataArray), (
-    #                 f"The labels data should be a DataArray. Please provide a valid data key. "
-    #                 f"Available keys are: {[labels_data_key + '/' + x for x in list(labels.keys())]}."
-    #             )
-
-    #             # label ID and cell ID are not the same
-    #             labels_cell_ids = set(np.unique(labels)) - {0}  # Exclude background label (0)
-    #     elif isinstance(labels_key, list):
-    #         # if multiple labels keys are provided, we need to check each one
-    #         labels_cell_ids = set()
-    #         for key in labels_key:
-    #             labels_tmp = sdata.labels[key]
-    #             if isinstance(labels_tmp, xr.DataTree):
-    #                 assert labels_data_key is not None, (
-    #                     f"It looks like your labels are stored as a DataTree. "
-    #                     f"Please provide a labels_data_key to access the labels data. "
-    #                     f"Available keys are: {list(labels.keys())}."
-    #                 )
-    #                 labels_tmp = labels_tmp[labels_data_key]
-    #                 assert isinstance(labels_tmp, xr.DataArray)
-    #             # add nonzero unique labels
-    #             labels_cell_ids.update(np.unique(labels_tmp).tolist())
-
-    #         # Remove background label (e.g. 0)
-    #         labels_cell_ids.discard(0)
-    #     else:
-    #         raise ValueError("labels_key must be a string or a list of strings")
-
-    # # if there are both shapes and labels, ensure they are compatible
-    # if contains_shapes and contains_labels:
-    #     num_missing_in_shapes = len(labels_cell_ids) - len(shapes_cell_ids)
-    #     num_missing_in_labels = len(shapes_cell_ids) - len(labels_cell_ids)
-    #     if num_missing_in_labels > 0:
-    #         warnings.warn(
-    #             f"Missing {num_missing_in_labels} cell IDs in labels."
-    #             f"There are {len(shapes_cell_ids)} cell IDs in shapes,
-    # but only {len(labels_cell_ids)} are in labels. "
-    #             f"This might lead to inconsistencies in the spatialdata object.",
-    #             stacklevel=2,
-    #         )
-    #     if num_missing_in_shapes > 0:
-    #         warnings.warn(
-    #             f"Missing {num_missing_in_shapes} cell IDs in shapes: "
-    #             f"There are {len(labels_cell_ids)} cell IDs in labels, but only
-    # {len(shapes_cell_ids)} are in shapes. "
-    #             f"This might lead to inconsistencies in the spatialdata object.",
-    #             stacklevel=2,
-    #         )
 
     # check for nucleus shapes
     if nucleus_shapes_key is not None:
