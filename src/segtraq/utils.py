@@ -749,6 +749,28 @@ def validate_spatialdata(
             )
             shapes_cell_ids = set(shapes[shapes_cell_id_key])
 
+        # ensuring that all cell IDs have the same dtype (either str or numeric)
+        # taking a random ID from each set and comparing dtypes
+        transcript_sample = next(iter(transcript_ids))
+        shapes_sample = next(iter(shapes_cell_ids))
+
+        def is_numeric(x):
+            return isinstance(x, int | float | np.integer | np.floating)
+
+        def is_string(x):
+            return isinstance(x, str)
+
+        if (is_numeric(transcript_sample) and is_numeric(shapes_sample)) or (
+            is_string(transcript_sample) and is_string(shapes_sample)
+        ):
+            pass  # OK, both numeric or both string
+        else:
+            raise TypeError(
+                f"Cell ID types between points and shapes are incompatible: "
+                f"{type(transcript_sample)} (points) vs {type(shapes_sample)} (shapes). "
+                f"Please ensure that cell IDs are all strings or all numeric."
+            )
+
         missing_in_polygons = {
             x
             for x in (transcript_ids - shapes_cell_ids - {points_background_id})
