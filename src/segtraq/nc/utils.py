@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 import pandas as pd
 import spatialdata as sd
 from geopandas import GeoDataFrame
@@ -21,19 +22,21 @@ def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
 def _process_cell(
     cell_row: Series,
     shapes_cell_id_key: str | None,
+    id_key: str | None,
     nuc_boundaries: GeoDataFrame,
     nuc_sindex: Index,
 ) -> dict[str | int, str | int, int | None | float]:
     """For one cell polygon compute the IoU with the best-matching nucleus."""
 
     cell_geom = cell_row.geometry
+
     cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
 
     # Get candidate nuclei bounding boxes that overlap this cell's bbox
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
 
     if not candidate_idx:
-        return {"cell_id": cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
+        return {id_key: cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
 
     candidates = nuc_boundaries.iloc[candidate_idx]
 
@@ -46,7 +49,7 @@ def _process_cell(
             best_iou = iou
             best_nuc_id = nuc.name
 
-    return {"cell_id": cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
+    return {id_key: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
 
 
 def _nucleus_by_feature_df(
@@ -56,24 +59,28 @@ def _nucleus_by_feature_df(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
+    points_z_key: str | None = "z",
 ) -> pd.DataFrame:
     """
     Aggregate feature counts per nucleus, converting transcripts to 2D if needed.
 
     Parameters
     ----------
-    sdata : SpatialData
-        `SpatialData` containing transcript `Points` and nucleus `Shapes`.
-    points_key : str
-        Name of transcripts `Points` element.
-    nucleus_shapes_key : str
-        Name of nucleus shape layer to aggregate by.
-    points_gene_key : str
-        Column in transcripts pointing to feature (e.g. gene/protein).
-    points_x_key: str
-        Column in transcripts pointing x coordinate.
-    points_y_key: str
-        Column in transcripts pointing y coordinate.
+        sdata : SpatialData
+            A `SpatialData` object containing segmented and transcript-assigned spatial
+            transcriptomics data (images, tables, points, shapes and optional labels).
+        nucleus_shapes_key : str, default="nucleus_boundaries"
+            Key in `sdata.shapes` for nucleus boundary polygons, if available.
+        points_x_key : str, default="x"
+            Column for the x-coordinate of each transcript/spot.
+        points_gene_key : str, default="feature_name"
+            Column specifying the gene/feature name for each transcript/spot.
+        points_x_key : str, default="x"
+            Column for the x-coordinate of each transcript/spot.
+        points_y_key : str, default="y"
+            Column for the y-coordinate of each transcript/spot.
+        points_z_key : str or None, optional, default="z"
+            Column for the z-coordinate (3D data). If `None`, data are treated as 2D.
 
     Returns
     -------
@@ -84,11 +91,11 @@ def _nucleus_by_feature_df(
     pts = sdata.points[points_key]
     # check dimensionality: assume 3D if "z" in actual data columns
     df = pts.compute()
-    is_3d = "z" in df.columns  # TODO - maybe there is a better way to check if transcripts are 3D
+    is_3d = points_z_key in df.columns  # TODO - maybe there is a better way to check if transcripts are 3D
 
     if is_3d:
         transcripts_2d_key = points_key + "_2D"
-        df2 = df.drop(columns=["z"])
+        df2 = df.drop(columns=[points_z_key])
         coord_sys = "global"  # TODO find an soft coded way to get coordinate system of transcripts
         trans = sd.transformations.get_transformation(pts, to_coordinate_system=coord_sys, get_all=False)
 
@@ -98,6 +105,13 @@ def _nucleus_by_feature_df(
             trans.axes = trans.axes[:2]
 
         trans_dict = {coord_sys: trans}
+
+        if not df2.index.is_unique:
+            warnings.warn(
+                "Index of sdata.points[points_key] is not unique — resetting index to avoid reindexing errors.",
+                UserWarning,
+            )
+            df2 = df2.reset_index(drop=True)
 
         pts2 = PointsModel.parse(
             df2,
@@ -121,5 +135,5 @@ def _nucleus_by_feature_df(
     ad = sdata2.tables["table"]
     X = ad.X
     arr = X.toarray() if hasattr(X, "toarray") else X
-    df_out = pd.DataFrame(arr, index=sdata2["nucleus_boundaries"].index, columns=ad.var_names)
+    df_out = pd.DataFrame(arr, index=sdata2[nucleus_shapes_key].index, columns=ad.var_names)
     return df_out
