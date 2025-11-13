@@ -304,6 +304,19 @@ def merge_into_obs(sdata, tables_key, df_to_merge, table_cell_id_key, df_cell_id
     sdata.tables[tables_key].obs = df
 
 
+def merge_into_var(sdata, tables_key, df_to_merge):
+    var = sdata.tables[tables_key].var
+
+    overlapping = [c for c in df_to_merge.columns if c in var.columns]
+
+    if overlapping:
+        var = var.drop(columns=overlapping)
+
+    df = var.merge(df_to_merge, left_index=True, right_index=True, how="left")
+
+    sdata.tables[tables_key].var = df
+
+
 def get_ref_markers(
     adata_ref: AnnData,
     ref_cell_type: str,
