@@ -5,7 +5,7 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from shapely.geometry import MultiPolygon, Polygon
 
-from ..utils import merge_into_obs
+from ..utils import merge_into_obs, merge_into_var
 from .utils import count_polygons
 
 
@@ -107,7 +107,7 @@ def perc_unassigned_transcripts(
     inplace: bool = True,
 ) -> float:
     """
-    Calculates the proportion of unassigned transcripts in a SpatialData object.
+    Calculates the percentage of unassigned transcripts in a SpatialData object.
 
     Parameters
     ----------
@@ -134,10 +134,74 @@ def perc_unassigned_transcripts(
     counts = sdata.points[points_key][points_cell_id_key].compute().value_counts()
     num_unassigned = counts.get(points_background_id, 0)
     # converting from np.float64 to float for consistency
-    perc_unassigned_transcripts = float(num_unassigned / counts.sum())
+    perc_unassigned_transcripts = float(num_unassigned / counts.sum()) * 100
     if inplace:
         sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
     return perc_unassigned_transcripts
+
+
+def perc_unassigned_transcripts_per_gene(
+    sdata: sd.SpatialData,
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: int = -1,
+    tables_key: str = "table",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Calculates the number and percentage of unassigned transcripts per gene in a SpatialData object.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The spatial data object containing transcript information.
+    points_key : str, optional
+        The key to access transcript data within the spatial data object. Default is "transcripts".
+    points_gene_key : str, optional
+        The key for gene names in the transcript data. Default is "feature_name".
+    points_cell_id_key : str, optional
+        The key for cell assignment information within the transcript data. Default is "cell_id".
+    points_background_id : int, optional
+        The value indicating an unassigned transcript. Default is -1.
+    tables_key : str, optional
+        The key to access the AnnData table from `sdata.tables`. Default is "table".
+    inplace : bool, optional
+        If True, stores the resulting DataFrame in
+        `sdata.tables[tables_key].uns["perc_unassigned_transcripts_per_gene"]`.
+        Default is True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame indexed by gene name with columns:
+        - 'total' : total number of transcripts for the gene
+        - 'unassigned' : number of unassigned transcripts
+        - 'perc_unassigned' : percentage of unassigned transcripts
+    """
+    points = sdata.points[points_key]
+
+    # Compute only necessary columns
+    df = points[[points_gene_key, points_cell_id_key]].compute()
+
+    # Aggregate total and unassigned counts efficiently
+    result = (
+        df.groupby(points_gene_key, observed=True)[points_cell_id_key]
+        .agg(
+            total="count",
+            unassigned=lambda x: (x == points_background_id).sum(),
+        )
+        .astype(int)
+    )
+
+    # Compute percentage
+    result["perc_unassigned"] = result["unassigned"] / result["total"] * 100
+
+    # Store and return
+    if inplace:
+        merge_into_var(sdata, tables_key, result)
+
+    return result
 
 
 def transcripts_per_cell(
