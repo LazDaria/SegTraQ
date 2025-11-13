@@ -7,7 +7,7 @@ from pandas import DataFrame
 from scipy.stats import pearsonr
 from tqdm import tqdm
 
-from ..utils import merge_into_obs, _looks_like_counts
+from ..utils import _looks_like_counts, merge_into_obs
 from .utils import _nucleus_by_feature_df, _process_cell
 
 
@@ -33,7 +33,7 @@ def compute_cell_nuc_ious(
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table. Gene names in
         `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`). 
+        `sdata.points[points_key]` (see `points_gene_key`).
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -85,21 +85,26 @@ def compute_cell_nuc_ious(
 
     # Parallel loop over cells
     results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
-        delayed(_process_cell)(cell_row=cell_row,
-                               shapes_cell_id_key=shapes_cell_id_key, 
-                               id_key=id_key, 
-                               nuc_boundaries=nuc_boundaries, 
-                               nuc_sindex=nuc_sindex) for _, cell_row in iterator
+        delayed(_process_cell)(
+            cell_row=cell_row,
+            shapes_cell_id_key=shapes_cell_id_key,
+            id_key=id_key,
+            nuc_boundaries=nuc_boundaries,
+            nuc_sindex=nuc_sindex,
+        )
+        for _, cell_row in iterator
     )
 
     iou_df = pd.DataFrame(results)
 
     if inplace:
-        merge_into_obs(sdata=sdata, 
-                       tables_key=tables_key, 
-                       df_to_merge=iou_df, 
-                       tables_cell_id_key=tables_cell_id_key, 
-                       df_cell_id_key=id_key)
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=iou_df,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
 
     return iou_df
 
@@ -133,7 +138,7 @@ def compute_cell_nuc_correlation(
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table. Gene names in
         `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`). 
+        `sdata.points[points_key]` (see `points_gene_key`).
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -185,14 +190,14 @@ def compute_cell_nuc_correlation(
 
     if "best_nuc_id" not in tbl.obs.columns:
         iou_df = compute_cell_nuc_ious(
-                sdata=sdata,
-                tables_key=tables_key,
-                tables_cell_id_key=tables_cell_id_key,
-                shapes_key=shapes_key,
-                shapes_cell_id_key=shapes_cell_id_key,
-                nucleus_shapes_key=nucleus_shapes_key,
-                n_jobs=n_jobs_iou,
-                inplace=inplace
+            sdata=sdata,
+            tables_key=tables_key,
+            tables_cell_id_key=tables_cell_id_key,
+            shapes_key=shapes_key,
+            shapes_cell_id_key=shapes_cell_id_key,
+            nucleus_shapes_key=nucleus_shapes_key,
+            n_jobs=n_jobs_iou,
+            inplace=inplace,
         )
     else:
         iou_df = tbl.obs[[id_key, "best_nuc_id", "IoU"]].copy()
@@ -213,7 +218,9 @@ def compute_cell_nuc_correlation(
     expr_cells = pd.DataFrame(
         arr,
         index=sdata.tables[tables_key].obs[tables_cell_id_key],
-        columns=sdata.tables[tables_key].var.index, #TODO - this might break, if var.index and points_gene_key do not match!
+        columns=sdata.tables[
+            tables_key
+        ].var.index,  # TODO - this might break, if var.index and points_gene_key do not match!
     )
 
     expr_nucleus_df = _nucleus_by_feature_df(
@@ -255,13 +262,16 @@ def compute_cell_nuc_correlation(
     corr_df = pd.DataFrame(rows)
 
     if inplace:
-        merge_into_obs(sdata=sdata, 
-                       tables_key=tables_key, 
-                       df_to_merge=corr_df, 
-                       tables_cell_id_key=tables_cell_id_key, 
-                       df_cell_id_key=id_key)
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=corr_df,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
 
     return corr_df, iou_df
+
 
 def _pearson_corr_parts(mat: pd.DataFrame) -> pd.DataFrame:
     # 1) Move "part" from index to columns
@@ -270,19 +280,14 @@ def _pearson_corr_parts(mat: pd.DataFrame) -> pd.DataFrame:
     # 2) Extract the two matrices (one row per cell, one col per gene)
     # This will create NaNs where a cell is missing that part.
     intersection = mat_unstack.xs("intersection", level="part", axis=1)
-    remainder    = mat_unstack.xs("remainder",    level="part", axis=1)
+    remainder = mat_unstack.xs("remainder", level="part", axis=1)
 
     # 3) Convert to NumPy
     X = intersection.to_numpy(dtype=float)
     Y = remainder.to_numpy(dtype=float)
 
     # 4) Mask out rows where intersection or remainder is entirely zero or missing
-    valid = (
-        np.isfinite(X).all(axis=1) &
-        np.isfinite(Y).all(axis=1) &
-        (X.sum(axis=1) != 0) &
-        (Y.sum(axis=1) != 0)
-    )
+    valid = np.isfinite(X).all(axis=1) & np.isfinite(Y).all(axis=1) & (X.sum(axis=1) != 0) & (Y.sum(axis=1) != 0)
 
     # Prepare result array filled with NaNs
     corr = np.full(X.shape[0], np.nan, dtype=float)
@@ -306,13 +311,10 @@ def _pearson_corr_parts(mat: pd.DataFrame) -> pd.DataFrame:
     corr[valid] = corr_valid
 
     # 6) Wrap back into a Series / DataFrame
-    corr_per_cell = pd.Series(
-        corr,
-        index=mat_unstack.index,
-        name="correlation_parts"
-    ).to_frame()
+    corr_per_cell = pd.Series(corr, index=mat_unstack.index, name="correlation_parts").to_frame()
 
     return corr_per_cell
+
 
 def compute_correlation_between_parts(
     sdata,
@@ -343,7 +345,7 @@ def compute_correlation_between_parts(
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table. Gene names in
         `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`). 
+        `sdata.points[points_key]` (see `points_gene_key`).
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -393,7 +395,7 @@ def compute_correlation_between_parts(
     else:
         id_key = tables_cell_id_key
         cells_gdf[id_key] = cells_gdf.index
-    
+
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
         iou_df = compute_cell_nuc_ious(
             sdata=sdata,
@@ -403,7 +405,7 @@ def compute_correlation_between_parts(
             shapes_key=shapes_key,
             nucleus_shapes_key=nucleus_shapes_key,
             n_jobs=n_jobs,
-            inplace=inplace
+            inplace=inplace,
         )
     else:
         iou_df = sdata.tables[tables_key].obs[[id_key, "best_nuc_id", "IoU"]].copy()
@@ -412,10 +414,13 @@ def compute_correlation_between_parts(
 
     transcripts = sdata.points[points_key].compute()
 
-    #subset to transcripts assigned to cells
-    transcripts_df = transcripts[transcripts[points_cell_id_key]!= points_background_id].copy()
-    #subset to valid genes
-    valid_features = pd.Index(sdata.tables[tables_key].var_names)  #TODO - this might break, if var.index and points_gene_key do not match! e.g. one is Ensemble key and one is gene_key
+    # subset to transcripts assigned to cells
+    transcripts_df = transcripts[transcripts[points_cell_id_key] != points_background_id].copy()
+    # subset to valid genes
+    valid_features = pd.Index(
+        sdata.tables[tables_key].var_names
+    )  # TODO - this might break, if var.index and points_gene_key do not match!
+    # e.g. one is Ensemble key and one is gene_key
     transcripts_df = transcripts_df.dropna(subset=[points_gene_key])
     transcripts_df = transcripts_df[transcripts_df[points_gene_key].isin(valid_features)]
     transcripts_df[points_gene_key] = transcripts_df[points_gene_key].cat.remove_unused_categories()
@@ -434,9 +439,9 @@ def compute_correlation_between_parts(
     )
     # if transcripts_gdf.crs != target_crs:
     #     transcripts_gdf = transcripts_gdf.to_crs(target_crs)
-    
+
     nucs_gdf.index.name = "nuc_id"
-    
+
     tx_in_nuc = gpd.sjoin(
         transcripts_gdf[["geometry"]],
         nucs_gdf[["geometry"]],
@@ -450,16 +455,13 @@ def compute_correlation_between_parts(
     tx["in_intersection"] = (tx["nuc_id"].notna()) & (tx["nuc_id"] == tx["best_nuc_id"])
     tx["part"] = np.where(tx["in_intersection"], "intersection", "remainder")
 
-    mat = pd.crosstab(
-        [tx[points_cell_id_key], tx["part"]],
-        tx[points_gene_key]
-    ).fillna(0)
+    mat = pd.crosstab([tx[points_cell_id_key], tx["part"]], tx[points_gene_key]).fillna(0)
 
     # either use _pearson_corr_parts vectorized function or the slower per-cell apply (commented out below)
     corr_per_cell = _pearson_corr_parts(mat)
     # def _corr_two_cols(df_cell):
     #     df = df_cell.copy()
-    #     df.index = df.index.get_level_values(1) 
+    #     df.index = df.index.get_level_values(1)
     #     if "intersection" not in df.index or "remainder" not in df.index:
     #         return np.nan
     #     x = df.loc["intersection"].to_numpy(dtype=float)
@@ -469,15 +471,17 @@ def compute_correlation_between_parts(
     #     r, _ = pearsonr(x, y)
     #     return r
 
-    #corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
-    
+    # corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
+
     out = iou_df.merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
     if inplace:
-        merge_into_obs(sdata=sdata, 
-                       tables_key=tables_key, 
-                       df_to_merge=out, 
-                       tables_cell_id_key=tables_cell_id_key, 
-                       df_cell_id_key=id_key)
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
 
     return out

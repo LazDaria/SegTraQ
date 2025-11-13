@@ -5,7 +5,13 @@ __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh
 
 from . import bl, cs, nc, pl, ps, sp, vl
 from .SegTraQ import SegTraQ
-from .utils import get_mut_excl_markers, get_ref_markers, run_label_transfer, validate_spatialdata, add_nuc_shapes_via_cellpose
+from .utils import (
+    add_nuc_shapes_via_cellpose,
+    get_mut_excl_markers,
+    get_ref_markers,
+    run_label_transfer,
+    validate_spatialdata,
+)
 
 # Override canonical module path for Sphinx
 for _f in (
@@ -13,7 +19,7 @@ for _f in (
     get_ref_markers,
     get_mut_excl_markers,
     validate_spatialdata,
-    add_nuc_shapes_via_cellpose
+    add_nuc_shapes_via_cellpose,
 ):
     _f.__module__ = "segtraq"
 
