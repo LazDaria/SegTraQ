@@ -107,7 +107,7 @@ def compute_z_plane_correlation(
             sdata,
             tables_key=tables_key,
             df_to_merge=correlation_df,
-            table_cell_id_key=points_cell_id_key,
+            tables_cell_id_key=points_cell_id_key,
             df_cell_id_key=points_cell_id_key,
             fillna_cols=["correlation"],
         )
