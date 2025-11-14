@@ -88,26 +88,28 @@ def centroid_mean_coord_diff(
 
     x_mean = pd.DataFrame(x_mean)
     y_mean = pd.DataFrame(y_mean)
-
+    
     gdf = sdata[shapes_key].copy()
-
+    
     if shapes_cell_id_key is not None:
-        shapes_cell_id_key_fixed = shapes_cell_id_key
-        gdf.set_index(shapes_cell_id_key_fixed, drop=True, inplace=True)
+        id_key = shapes_cell_id_key
+        gdf.set_index(id_key, inplace=True)
+    elif sdata[shapes_key].index.name is not None:
+        id_key = sdata[shapes_key].index.name
     else:
-        shapes_cell_id_key_fixed = "cell_id"
-        gdf.index.name = shapes_cell_id_key_fixed
-
+        id_key = tables_cell_id_key
+        gdf.index.name = id_key
+        
     # extract the centroids
     df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner merge on the cell ids - some cells have no transcripts
     df_total_x = df_centroids_x.merge(
-        x_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner"
+        x_mean, left_on=id_key, right_on=points_cell_id_key, how="inner"
     )
     df_total_y = df_centroids_y.merge(
-        y_mean, left_on=shapes_cell_id_key_fixed, right_on=points_cell_id_key, how="inner"
+        y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner"
     )
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
@@ -121,20 +123,21 @@ def centroid_mean_coord_diff(
     )
 
     # extract the cell area
-    area_df = sdata[tables_key].obs[[tables_cell_id_key, "cell_area"]]
-    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
+    area_df = sdata[tables_key].obs[[id_key, "cell_area"]]
+    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=id_key, how="left")
 
     # normalise the cell area
     df_total[f"distance_{feature}"] = df_total["distance"] / df_total["cell_area"]
     df_total = df_total.reset_index(drop=True)
 
+    
     if inplace:
         merge_into_obs(
-            sdata,
-            tables_key,
-            df_total[[points_cell_id_key, f"distance_{feature}"]],
-            tables_cell_id_key,
-            points_cell_id_key,
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=df_total,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
         )
 
     return df_total
@@ -151,8 +154,10 @@ def distance_to_membrane(
     points_cell_id_key: str = "cell_id",
     tables_cell_id_key: str = "cell_id",
     shapes_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
     inplace: bool = True,
 ):
+    
     """
     Calculates the mean distance of the transcript of a feature of interest to the outline of the cell segmentation
 
@@ -179,6 +184,8 @@ def distance_to_membrane(
     shapes_cell_id_key : str or None, optional, default="cell_id"
         Column in the cell-boundary shapes linking polygons to cell IDs.
         If `None`, the shape index is used as the cell ID.
+     shapes_key: str, optional
+        The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -211,22 +218,18 @@ def distance_to_membrane(
     # make the coordinates into a Point object
     df["coordinate_points"] = df["coordinates"].map(lambda x: Point(x))
 
-    # extract the cell segmentation boundaries
-    gdf = sdata["cell_boundaries"]
-
-    # make the cell key the index for merging the two dataframes
-    # df = df.set_index(df[cell_key])
-
-    # merge the geopandas dataframe with the dataframe from above
-
+    gdf = sdata[shapes_key].copy()
+    
     if shapes_cell_id_key is not None:
-        shapes_cell_id_key_fixed = shapes_cell_id_key
-        gdf.set_index(shapes_cell_id_key_fixed, drop=True, inplace=True)
+        id_key = shapes_cell_id_key
+        gdf.set_index(id_key, inplace=True)
+    elif sdata[shapes_key].index.name is not None:
+        id_key = sdata[shapes_key].index.name
     else:
-        shapes_cell_id_key_fixed = "cell_id"
-        gdf.index.name = shapes_cell_id_key_fixed
+        id_key = tables_cell_id_key
+        gdf.index.name = id_key
 
-    gdf = gdf.merge(df, how="inner", left_on=points_cell_id_key, right_on=shapes_cell_id_key_fixed)
+    gdf = gdf.merge(df, how="inner", left_on=points_cell_id_key, right_on=id_key)
 
     # compute the linear outline of the cell segmentation
     gdf["linear_geometry"] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis=1)
@@ -240,7 +243,7 @@ def distance_to_membrane(
     )
 
     # calculate the mean transcript distance to the cell outline per cell
-    mean_distance_to_outline = gdf.groupby(shapes_cell_id_key)[[f"distance_to_outline_{feature}"]].mean()
+    mean_distance_to_outline = gdf.groupby(id_key)[[f"distance_to_outline_{feature}"]].mean()
 
     # extract the cell area
     area_df = sdata[tables_key].obs[[tables_cell_id_key, "cell_area"]]
@@ -257,16 +260,18 @@ def distance_to_membrane(
     mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = 1 / np.sqrt(
         mean_distance_to_outline[f"distance_to_outline_{feature}"]
     )
+    
+    mean_distance_to_outline = mean_distance_to_outline.reset_index(drop=True)
 
     if inplace:
         merge_into_obs(
             sdata,
             tables_key,
             mean_distance_to_outline[
-                [shapes_cell_id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
+                [id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
             ],
             tables_cell_id_key,
-            shapes_cell_id_key,
+            id_key,
         )
 
     return mean_distance_to_outline
