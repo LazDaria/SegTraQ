@@ -170,7 +170,6 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
@@ -501,11 +500,9 @@ transcriptomics data (images, tables, points, shapes and optional labels).</p></
 <li><p><strong>images_key</strong> (<em>str</em><em>, </em><em>default=&quot;morphology_focus&quot;</em>) – Key in <cite>sdata.images</cite> for a nuclear or morphology image (e.g., DAPI).
 Used for segmentation.</p></li>
 <li><p><strong>images_data_key</strong> (<em>str</em><em>, </em><em>default=&quot;scale0/image&quot;</em>) – Key for accessing data in <cite>sdata.images</cite> if they are stored as a DataTree.
-Consider using a higher scale (lower resolution) for segmentation to
-speed up computation and reduce memory usage during Cellpose.</p></li>
+Consider using a higher scale (lower resolution) for segmentation to speed up computation and reduce memory usage during Cellpose.</p></li>
 <li><p><strong>shapes_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_boundaries&quot;</em>) – Key in <cite>sdata.shapes</cite> for cell boundary polygons. Used to get transformations.</p></li>
-<li><p><strong>key_added</strong> (<em>str</em><em>, </em><em>default=&quot;nucleus_boundaries&quot;</em>) – The key under which the segmentation masks will be stored in the shapes attribute
-of the spatialdata object. Defaults to “nucleus_boundaries”.</p></li>
+<li><p><strong>key_added</strong> (<em>str</em><em>, </em><em>default=&quot;nucleus_boundaries&quot;</em>) – The key under which the segmentation masks will be stored in the shapes attribute of the spatialdata object. Defaults to “nucleus_boundaries”.</p></li>
 <li><p><strong>inplace</strong> – Whether to modify the spatialdata object in place. Defaults to True.</p></li>
 <li><p><strong>bool</strong> – Whether to modify the spatialdata object in place. Defaults to True.</p></li>
 <li><p><strong>default=True</strong> – Whether to modify the spatialdata object in place. Defaults to True.</p></li>
