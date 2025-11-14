@@ -280,11 +280,11 @@ def run_label_transfer(
         # Write back only to the filtered subset cells
         out = ct_corr.rename(columns={"celltype": cell_type_key})
         merge_into_obs(
-        sdata=sdata,
-        tables_key=tables_key,
-        df_to_merge=out,
-        tables_cell_id_key=tables_cell_id_key,
-        df_cell_id_key=tables_cell_id_key
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
         )
         tbl.obs[cell_type_key] = tbl.obs[cell_type_key].astype("category")
         return None
