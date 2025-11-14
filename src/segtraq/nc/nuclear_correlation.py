@@ -473,7 +473,7 @@ def compute_correlation_between_parts(
 
     # corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
 
-    out = iou_df.merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
+    out = iou_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
     if inplace:
         merge_into_obs(
