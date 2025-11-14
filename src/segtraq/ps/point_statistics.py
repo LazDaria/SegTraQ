@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 from shapely import LinearRing, Point
-
 from ..utils import merge_into_obs
 
 
@@ -221,7 +220,7 @@ def distance_to_membrane(
 
     if shapes_cell_id_key is not None:
         shapes_cell_id_key_fixed = shapes_cell_id_key
-        gdf.set_index(shapes_cell_id_key_fixed, drop=True, inplace=True)
+        gdf.set_index(shapes_cell_id_key_fixed, drop=True, inplace=True) 
     else:
         shapes_cell_id_key_fixed = "cell_id"
         gdf.index.name = shapes_cell_id_key_fixed
