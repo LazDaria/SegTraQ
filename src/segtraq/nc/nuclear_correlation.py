@@ -8,7 +8,7 @@ from scipy.stats import pearsonr
 from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
-from .utils import _nucleus_by_feature_df, _process_cell
+from .utils import _shapes_by_feature_df, _process_cell, _get_center_and_border_shapes,  _compute_ncvs_within_radius
 
 
 def compute_cell_nuc_ious(
@@ -223,7 +223,7 @@ def compute_cell_nuc_correlation(
         ].var.index,  # TODO - this might break, if var.index and points_gene_key do not match!
     )
 
-    expr_nucleus_df = _nucleus_by_feature_df(
+    expr_nucleus_df = _shapes_by_feature_df(
         sdata, points_key, nucleus_shapes_key, points_gene_key, points_x_key, points_y_key, points_z_key
     )
 
@@ -485,3 +485,174 @@ def compute_correlation_between_parts(
         )
 
     return out
+
+def compute_border_similarity_contamination(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    shapes_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_z_key: str | None = "z",
+    erosion_fraction_of_radius: float | None = 0.4,
+    radius_factor: float = 2.0,
+    metric: str = "pearson",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    For each cell, compute a border similarity contamination score by (1) comparing
+    gene expression in an eroded interior ("center") and a thin outer shell
+    ("border"), and (2) comparing the border with the neighborhood
+    composition vector (NCV).
+
+    Specifically, the function:
+      1. Erodes each cell polygon to obtain a center region.
+      2. Defines the border region as the set difference between the full cell
+         and its eroded center.
+      3. Computes gene expression profiles for center and border.
+      4. Computes the correlation between center and border expression.
+      5. Computes the correlation between border expression and the
+         NCV expression profile of the same cell.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data (tables, points, shapes, etc.).
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    shapes_cell_id_key : str, default="cell_id"
+        Column in `sdata.shapes[shapes_key]` linking polygons to cell IDs.
+        If `None`, the shape index is used as the cell ID.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for spot/transcript-level data.
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript/spot.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
+    points_z_key : str or None, optional, default="z"
+        Column for the z-coordinate (3D data). If `None`, data are treated as 2D.
+    radius_factor : float, default=2.0
+        Neighborhood radius factor in the same coordinate units as the shapes.
+    erosion_fraction_of_radius : float or None, default=0.4
+        Fraction of the equivalent radius to use as erosion
+        Example: 0.4 means erode by 40% of the radius.
+    metric : str, default="pearson"
+        Correlation metric to use ("pearson" currently supported).
+    inplace : bool, optional
+        Whether to add the results to `sdata.tables[tables_key].obs`. Default is True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns:
+            - `tables_cell_id_key`: identifier of each cell,
+            - `corr_center_border`: correlation between center and border expression,
+            - `corr_border_ncv`: correlation between border and NCV expression
+    """
+
+    center_gdf, border_gdf = _get_center_and_border_shapes(
+        sdata = sdata,
+        tables_key = tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key = shapes_key,
+        shapes_cell_id_key=shapes_cell_id_key,
+        radius_factor = radius_factor
+        )
+    
+    sdata.shapes["cell_centers"] = sd.models.ShapesModel.parse(center_gdf[~center_gdf.geometry.isna()])
+    sdata.shapes["cell_borders"] = sd.models.ShapesModel.parse(border_gdf)
+
+    expr_center = _shapes_by_feature_df(
+        sdata=sdata,
+        points_key=points_key,
+        shapes_key=shapes_key,
+        region="cell_centers",
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_z_key=points_z_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        shapes_cell_id_key=shapes_cell_id_key,
+    )
+
+    expr_border = _shapes_by_feature_df(
+        sdata=sdata,
+        points_key=points_key,
+        shapes_key=shapes_key,
+        region="cell_borders",
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_z_key=points_z_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        shapes_cell_id_key=shapes_cell_id_key,
+    )
+
+    expr_ncv = _compute_ncvs_within_radius(
+        sdata = sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        shapes_cell_id_key=shapes_cell_id_key,
+        radius_factor=radius_factor
+    )
+
+    # Ensure common set of genes across center, border, and NCV (if provided) - TODO don't think this is necessary
+    common_genes = expr_center.columns.intersection(expr_border.columns)
+    common_genes = common_genes.intersection(expr_ncv.columns)
+
+    expr_center = expr_center[common_genes]
+    expr_border = expr_border[common_genes]
+    expr_ncv = expr_ncv[common_genes]
+
+    id_key = expr_center.index.name
+
+    rows = []
+    for cid in expr_center.index:
+        x_center = expr_center.loc[cid].to_numpy().ravel()
+        x_border = expr_border.loc[cid].to_numpy().ravel()
+        x_ncv = expr_ncv.loc[cid].to_numpy().ravel()
+
+        # center–border correlation
+        if metric == "pearson":
+            if np.all(x_center == 0) or np.all(x_border == 0):
+                corr_center_border = np.nan
+            else:
+                corr_center_border, _ = pearsonr(x_center, x_border)
+            if np.all(x_border == 0) or np.all(x_ncv == 0):
+                corr_border_ncv = np.nan
+            else:
+                corr_border_ncv, _ = pearsonr(x_border, x_ncv)
+        else:
+            raise ValueError(f"Metric {metric} not supported")
+
+        rows.append(
+            {
+                id_key: cid,
+                "corr_center_border": corr_center_border,
+                "corr_border_ncv": corr_border_ncv,
+            }
+        )
+
+    corr_df = pd.DataFrame(rows)
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=corr_df,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return corr_df

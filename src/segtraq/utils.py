@@ -27,7 +27,6 @@ from spatialdata.transformations import (
 
 from .bl import baseline as bl
 
-
 def _to_ndarray(x) -> np.ndarray:
     return x.toarray() if hasattr(x, "toarray") else np.asarray(x)
 
