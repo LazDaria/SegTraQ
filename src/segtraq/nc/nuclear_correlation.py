@@ -4,7 +4,8 @@ import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
@@ -442,7 +443,7 @@ def compute_correlation_between_parts(
 
     nucs_gdf.index.name = "nuc_id"
 
-    tx_in_nuc = gpd.sjoin(
+    tx_in_nuc = gpd.sjoin( #TODO - filter out transcripts from overlapping cells for Proseg
         transcripts_gdf[["geometry"]],
         nucs_gdf[["geometry"]],
         how="left",
@@ -607,7 +608,7 @@ def compute_border_similarity_contamination(
         radius_factor=radius_factor
     )
 
-    # Ensure common set of genes across center, border, and NCV (if provided) - TODO don't think this is necessary
+    # Align dataframes
     common_genes = expr_center.columns.intersection(expr_border.columns)
     common_genes = common_genes.intersection(expr_ncv.columns)
 
