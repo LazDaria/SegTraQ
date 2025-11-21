@@ -4,11 +4,19 @@ import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
-from .utils import _nucleus_by_feature_df, _process_cell
+from .utils import (
+    _compute_ncvs_within_radius,
+    _get_center_and_border_shapes,
+    _group_points_by_regions,
+    _norm_log_df,
+    _process_cell,
+    _shapes_by_feature_df,
+)
 
 
 def compute_cell_nuc_ious(
@@ -16,8 +24,9 @@ def compute_cell_nuc_ious(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str = "cell_id",
+    shapes_cell_id_key: str | None = "cell_id",
     nucleus_shapes_key: str = "nucleus_boundaries",
+    nucleus_shapes_cell_id_key: str | None = None,
     n_jobs: int = -1,
     use_progress: bool = True,
     inplace: bool = True,
@@ -43,6 +52,9 @@ def compute_cell_nuc_ious(
         If `None`, the shape index is used as the cell ID.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
+    nucleus_shapes_cell_id_key : str or None, optional, default=None
+        Column linking nucleus polygons to cell IDs. If `None` is provided,
+        the shape index is used as the cell ID.
     n_jobs : int, optional
         Number of parallel jobs. Default=-1 uses all CPUs.
     use_progress : bool, optional
@@ -89,7 +101,8 @@ def compute_cell_nuc_ious(
             cell_row=cell_row,
             shapes_cell_id_key=shapes_cell_id_key,
             id_key=id_key,
-            nuc_boundaries=nuc_boundaries,
+            nucleus_shapes=nuc_boundaries,
+            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
             nuc_sindex=nuc_sindex,
         )
         for _, cell_row in iterator
@@ -116,11 +129,9 @@ def compute_cell_nuc_correlation(
     shapes_key: str = "cell_boundaries",
     shapes_cell_id_key: str = "cell_id",
     nucleus_shapes_key: str = "nucleus_boundaries",
+    nucleus_shapes_cell_id_key: str | None = None,
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_z_key: str | None = "z",
     metric: str = "pearson",
     n_jobs_iou: int = -1,
     inplace: bool = True,
@@ -148,16 +159,13 @@ def compute_cell_nuc_correlation(
         If `None`, the shape index is used as the cell ID.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
+    nucleus_shapes_cell_id_key : str or None, optional, default=None
+        Column linking nucleus polygons to cell IDs. If `None` but
+        `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
-    points_z_key : str or None, optional, default="z"
-        Column for the z-coordinate (3D data). If `None`, data are treated as 2D.
     n_jobs_iou: int
         Number of jobs for computing IoU, if not yet calculated.
     inplace : bool, optional
@@ -196,6 +204,7 @@ def compute_cell_nuc_correlation(
             shapes_key=shapes_key,
             shapes_cell_id_key=shapes_cell_id_key,
             nucleus_shapes_key=nucleus_shapes_key,
+            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
             n_jobs=n_jobs_iou,
             inplace=inplace,
         )
@@ -223,8 +232,13 @@ def compute_cell_nuc_correlation(
         ].var.index,  # TODO - this might break, if var.index and points_gene_key do not match!
     )
 
-    expr_nucleus_df = _nucleus_by_feature_df(
-        sdata, points_key, nucleus_shapes_key, points_gene_key, points_x_key, points_y_key, points_z_key
+    expr_nucleus_df = _shapes_by_feature_df(
+        sdata=sdata,
+        tables_cell_id_key=tables_cell_id_key,
+        region_key=nucleus_shapes_key,
+        region_cell_id_key=nucleus_shapes_cell_id_key,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
     )
 
     common_genes = expr_nucleus_df.columns.intersection(expr_cells.columns)
@@ -323,6 +337,7 @@ def compute_correlation_between_parts(
     shapes_key: str = "cell_boundaries",
     shapes_cell_id_key: str = "cell_id",
     nucleus_shapes_key: str = "nucleus_boundaries",
+    nucleus_shapes_cell_id_key: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
@@ -355,6 +370,9 @@ def compute_correlation_between_parts(
         If `None`, the shape index is used as the cell ID.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
+    nucleus_shapes_cell_id_key : str or None, optional, default=None
+        Column linking nucleus polygons to cell IDs. If `None` but
+        `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
@@ -404,6 +422,7 @@ def compute_correlation_between_parts(
             tables_cell_id_key=tables_cell_id_key,
             shapes_key=shapes_key,
             nucleus_shapes_key=nucleus_shapes_key,
+            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
             n_jobs=n_jobs,
             inplace=inplace,
         )
@@ -442,7 +461,7 @@ def compute_correlation_between_parts(
 
     nucs_gdf.index.name = "nuc_id"
 
-    tx_in_nuc = gpd.sjoin(
+    tx_in_nuc = gpd.sjoin(  # TODO - filter out transcripts from overlapping cells for Proseg
         transcripts_gdf[["geometry"]],
         nucs_gdf[["geometry"]],
         how="left",
@@ -473,7 +492,7 @@ def compute_correlation_between_parts(
 
     # corr_per_cell = mat.groupby(level=0, sort=False).apply(_corr_two_cols).rename("correlation_parts").to_frame()
 
-    out = iou_df.merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
+    out = iou_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
     if inplace:
         merge_into_obs(
@@ -485,3 +504,224 @@ def compute_correlation_between_parts(
         )
 
     return out
+
+
+def compute_center_border_ncv_correlation(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    shapes_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    radius_factor: float = 2.0,
+    metric: str = "cosine_sim",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    For each cell, compute a border similarity contamination score by (1) comparing
+    gene expression in an eroded interior ("center") and a thin outer shell
+    ("border"), and (2) comparing the border with the neighborhood
+    composition vector (NCV).
+
+    Specifically, the function:
+      1. Erodes each cell polygon to obtain a center region.
+      2. Defines the border region as the set difference between the full cell
+         and its eroded center.
+      3. Computes gene expression profiles for center and border.
+      4. Computes the correlation between center and border expression.
+      5. Computes the correlation between border expression and the
+         NCV expression profile of the same cell.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data (tables, points, shapes, etc.).
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    shapes_cell_id_key : str, default="cell_id"
+        Column in `sdata.shapes[shapes_key]` linking polygons to cell IDs.
+        If `None`, the shape index is used as the cell ID.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for spot/transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript/spot to a cell.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript/spot.
+    radius_factor : float, default=2.0
+        Neighborhood radius factor in the same coordinate units as the shapes.
+    erosion_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius to use as erosion
+        Example: 0.2 means erode by 20% of the radius.
+    metric : str, default="pearson"
+        Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
+    inplace : bool, optional
+        Whether to add the results to `sdata.tables[tables_key].obs`. Default is True.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with columns:
+            - `tables_cell_id_key`: identifier of each cell,
+            - `corr_center_border`: correlation between center and border expression,
+            - `corr_border_ncv`: correlation between border and NCV expression
+            - `corr_ncv_vs_center`: ratio of the two correlations
+    """
+
+    center_gdf, border_gdf = _get_center_and_border_shapes(
+        sdata=sdata,
+        shapes_key=shapes_key,
+        shapes_cell_id_key=shapes_cell_id_key,
+        tables_cell_id_key=tables_cell_id_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    sdata.shapes["cell_centers"] = sd.models.ShapesModel.parse(center_gdf, transformations=None)
+    sdata.shapes["cell_borders"] = sd.models.ShapesModel.parse(border_gdf, transformations=None)
+
+    cell_shape_transformation = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
+    sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
+
+    expr_center = _group_points_by_regions(
+        sdata=sdata,
+        region_key="cell_centers",
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_cell_id_key=points_cell_id_key,
+        region_cell_id_key=shapes_cell_id_key,
+    )
+
+    expr_border = _group_points_by_regions(
+        sdata=sdata,
+        region_key="cell_borders",
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_cell_id_key=points_cell_id_key,
+        region_cell_id_key=shapes_cell_id_key,
+    )
+
+    expr_ncv = _compute_ncvs_within_radius(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        shapes_cell_id_key=shapes_cell_id_key,
+        radius_factor=radius_factor,
+    )
+
+    # Align dataframe columns
+    common_genes = expr_center.columns.intersection(expr_border.columns)
+    common_genes = common_genes.intersection(expr_ncv.columns)
+
+    expr_center = expr_center[common_genes]
+    expr_border = expr_border[common_genes]
+    expr_ncv = expr_ncv[common_genes]
+
+    # Align dataframe rows- these might not match
+    # expr_ncv computed based on table and expr_center/border based on shapes
+    common_cells = expr_center.index.intersection(expr_border.index)
+    common_cells = common_cells.intersection(expr_ncv.index)
+
+    expr_center = expr_center.loc[common_cells]
+    expr_border = expr_border.loc[common_cells]
+    expr_ncv = expr_ncv.loc[common_cells]
+
+    expr_center_raw = expr_center
+    expr_border_raw = expr_border
+    expr_ncv_raw = expr_ncv
+
+    expr_center = _norm_log_df(expr_center_raw)
+    expr_border = _norm_log_df(expr_border_raw)
+    expr_ncv = _norm_log_df(expr_ncv_raw)
+
+    id_key = expr_center.index.name
+
+    rows = []
+
+    for cid in expr_center.index:
+        x_center = expr_center.loc[cid].to_numpy().ravel()
+        x_border = expr_border.loc[cid].to_numpy().ravel()
+        x_ncv = expr_ncv.loc[cid].to_numpy().ravel()
+
+        x_center_raw = expr_center_raw.loc[cid].to_numpy().ravel()
+        x_border_raw = expr_border_raw.loc[cid].to_numpy().ravel()
+        x_ncv_raw = expr_ncv_raw.loc[cid].to_numpy().ravel()
+
+        # Filter out genes that are zero in all three regions
+        mask = (x_center_raw != 0) | (x_border_raw != 0) | (x_ncv_raw != 0)
+        x_center = x_center[mask]
+        x_border = x_border[mask]
+        x_ncv = x_ncv[mask]
+
+        corr_center_border = np.nan
+        corr_border_ncv = np.nan
+        corr_ncv_vs_center = np.nan
+
+        if metric not in ["pearson", "spearman", "cosine_sim"]:
+            raise ValueError(f"Metric {metric} not supported")
+
+        # center–border similarity
+        if not (np.all(x_center == 0) or np.all(x_border == 0)):
+            if metric == "pearson":
+                corr_center_border, _ = pearsonr(x_center, x_border)
+            elif metric == "spearman":
+                corr_center_border, _ = spearmanr(x_center, x_border)
+            elif metric == "cosine_sim":
+                corr_center_border = cosine_similarity(x_center.reshape(1, -1), x_border.reshape(1, -1))[0, 0]
+
+        # border–NCV similarity
+        if not (np.all(x_border == 0) or np.all(x_ncv == 0)):
+            if metric == "pearson":
+                corr_border_ncv, _ = pearsonr(x_border, x_ncv)
+            elif metric == "spearman":
+                corr_border_ncv, _ = spearmanr(x_border, x_ncv)
+            elif metric == "cosine_sim":
+                corr_border_ncv = cosine_similarity(x_border.reshape(1, -1), x_ncv.reshape(1, -1))[0, 0]
+
+        # ratio: border–NCV vs center–border
+        if (
+            not np.isnan(corr_center_border)
+            and not np.isnan(corr_border_ncv)
+            and not np.isclose(corr_center_border, 0.0)
+        ):
+            corr_ncv_vs_center = corr_border_ncv / corr_center_border
+
+            rows.append(
+                {
+                    id_key: cid,
+                    "corr_center_border": corr_center_border,
+                    "corr_border_ncv": corr_border_ncv,
+                    "corr_ncv_vs_center": corr_ncv_vs_center,
+                }
+            )
+
+    corr_df = pd.DataFrame(rows)
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=corr_df,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return corr_df
