@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The nuclear correlation (nc) accessor &#8212; SegTraQ</title>
+    <title>The region correlation (rc) accessor &#8212; SegTraQ</title>
   
   
   
@@ -41,10 +41,12 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'modules/nuclear_correlation';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'modules/region_correlation';</script>
     <link rel="icon" href="../_static/icon.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="The supervised (sp) accessor" href="supervised.html" />
+    <link rel="prev" title="The clustering stability (cs) accessor" href="clustering_stability.html" />
     <link href="../_static/style.css" rel="stylesheet" type="text/css">
 
   </head>
@@ -107,8 +109,6 @@
       
       
       
-        
-      
       <div class="bd-sidebar-primary bd-sidebar">
         
 
@@ -157,9 +157,10 @@
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="nav bd-sidenav">
+<ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
@@ -231,7 +232,7 @@
       
       
       
-      <li><a href="../_sources/modules/nuclear_correlation.rst" target="_blank"
+      <li><a href="../_sources/modules/region_correlation.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -313,7 +314,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>The nuclear correlation (nc) accessor</h1>
+    <h1>The region correlation (rc) accessor</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -327,9 +328,16 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="the-nuclear-correlation-nc-accessor">
-<h1>The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor<a class="headerlink" href="#the-nuclear-correlation-nc-accessor" title="Link to this heading">#</a></h1>
-<p>The nuclear correlation accessor provides metrics to evaluate the correlation between the cell and nuclear segmentation mask.</p>
+  <section id="the-region-correlation-rc-accessor">
+<h1>The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor<a class="headerlink" href="#the-region-correlation-rc-accessor" title="Link to this heading">#</a></h1>
+<p>The region correlation accessor provides metrics to evaluate how well intracellular regions align.
+.. automodule:: segtraq.rc.region_correlation</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">members<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+</div></blockquote>
 </section>
 
 
@@ -343,6 +351,24 @@ document.write(`
                 <footer class="prev-next-footer d-print-none">
                   
 <div class="prev-next-area">
+    <a class="left-prev"
+       href="clustering_stability.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="supervised.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
 </div>
                 </footer>
               
