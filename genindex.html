@@ -159,7 +159,6 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
@@ -173,7 +172,7 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/nuclear_correlation.html">Correlation to nuclear segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
@@ -317,16 +316,8 @@ document.write(`
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
-      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_border_similarity_contamination">compute_border_similarity_contamination() (in module segtraq.nc.nuclear_correlation)</a>
-</li>
-      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.nc.nuclear_correlation)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.nc.nuclear_correlation)</a>
-</li>
-      <li><a href="modules/nuclear_correlation.html#segtraq.nc.nuclear_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.nc.nuclear_correlation)</a>
-</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR">compute_MECR() (in module segtraq.sp.supervised)</a>
@@ -374,8 +365,6 @@ document.write(`
         <li><a href="modules/baseline.html#module-segtraq.bl.baseline">segtraq.bl.baseline</a>
 </li>
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">segtraq.cs.clustering_stability</a>
-</li>
-        <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">segtraq.nc.nuclear_correlation</a>
 </li>
         <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">segtraq.ps.point_statistics</a>
 </li>
@@ -430,9 +419,9 @@ document.write(`
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_nuclear_correlation">run_nuclear_correlation() (segtraq.SegTraQ method)</a>
-</li>
       <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_point_statistics">run_point_statistics() (segtraq.SegTraQ method)</a>
+</li>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_region_correlation">run_region_correlation() (segtraq.SegTraQ method)</a>
 </li>
       <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_supervised_metrics">run_supervised_metrics() (segtraq.SegTraQ method)</a>
 </li>
@@ -460,13 +449,6 @@ document.write(`
 
       <ul>
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.nc.nuclear_correlation
-
-      <ul>
-        <li><a href="modules/nuclear_correlation.html#module-segtraq.nc.nuclear_correlation">module</a>
 </li>
       </ul></li>
   </ul></td>
