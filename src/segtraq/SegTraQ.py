@@ -4,7 +4,7 @@ import numpy as np
 import spatialdata as sd
 from anndata import AnnData
 
-from . import bl, cs, nc, ps, sp, vl
+from . import bl, cs, ps, rc, sp, vl
 from .utils import run_label_transfer as _run_label_transfer
 from .utils import validate_spatialdata
 
@@ -27,7 +27,7 @@ class SegTraQ:
         shapes_key: str = "cell_boundaries",
         shapes_cell_id_key: str | None = "cell_id",
         nucleus_shapes_key: str | None = "nucleus_boundaries",
-        nucleus_shapes_cell_id_key: str | None = "cell_id",
+        nucleus_shapes_cell_id_key: str | None = None,
     ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
@@ -90,7 +90,7 @@ class SegTraQ:
             Key in `sdata.shapes` for nucleus boundary polygons, if available.
             If None, a nucleus mask can be obtained via `segtraq.run_cellpose`.
 
-        nucleus_shapes_cell_id_key : str or None, optional, default="cell_id"
+        nucleus_shapes_cell_id_key : str or None, optional, default=None
             Column linking nucleus polygons to cell IDs. If `None` but
             `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
 
@@ -158,7 +158,7 @@ class SegTraQ:
         self.nucleus_shapes_cell_id_key = nucleus_shapes_cell_id_key
 
         self.bl = _BLFacade(self)
-        self.nc = _NCFacade(self)
+        self.rc = _RCFacade(self)
         self.cs = _CSFacade(self)
         self.vl = _VLFacade(self)
         self.sp = _SPFacade(self)
@@ -231,14 +231,17 @@ class SegTraQ:
                 out["transcript_density"] = dens
             return out
 
-    def run_nuclear_correlation(self, inplace: bool = True):
+    def run_region_correlation(self, inplace: bool = True):
         """
-        Compute nuclear-correlation metrics and optionally merge them into the cell table.
+        Compute region-correlation metrics and optionally merge them into the cell table.
 
         This runs, in order:
         1) IoU between each cell and its best-matching nucleus
         2) Correlation between per-cell expression and its matched nucleus (Pearson)
         3) Correlation between the cell's nucleus-overlap part vs. remainder (vectorized)
+        4) Compute correlation of gene expression in an eroded interior ("center") and
+           a thin outer shell ("border"), and (2) comparing the border with the neighborhood
+           composition vector (NCV).
 
         Parameters
         ----------
@@ -249,24 +252,27 @@ class SegTraQ:
         Returns
         -------
         None or dict
-            - If `inplace=True`: returns None after writing to `sdata`.
-            - If `inplace=False`: returns a dict with keys:
-                * "ious"                : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU]
-                * "cell_nuc_correlation": DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_nc_cell]
-                * "parts_correlation"   : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_cell_parts]
+        - If `inplace=True`: returns None after writing to `sdata`.
+        - If `inplace=False`: returns a dict with keys:
+        * "ious"                  : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU]
+        * "cell_nuc_correlation". : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_nc_cell]
+        * "parts_correlation"     : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_cell_parts]
+        * "center_border_ncv_corr": DataFrame with columns
+                                    [tables_cell_id_key, corr_center_border, corr_border_ncv, corr_ncv_vs_center]
 
         Notes
         -----
         - Requires `self.nucleus_shapes_key` (nucleus boundaries).
         """
         assert self.nucleus_shapes_key is not None, (
-            "Cannot run nuclear correlation: `nucleus_shapes_key` is None. "
+            "Cannot run region correlation: `nucleus_shapes_key` is None. "
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        ious = self.nc.compute_cell_nuc_ious(inplace=inplace)
-        cell_nuc_corr = self.nc.compute_cell_nuc_correlation(inplace=inplace)
-        parts_corr = self.nc.compute_correlation_between_parts(inplace=inplace)
+        ious = self.rc.compute_cell_nuc_ious(inplace=inplace)
+        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(inplace=inplace)
+        parts_corr = self.rc.compute_correlation_between_parts(inplace=inplace)
+        center_border_ncv_corr = self.rc.compute_center_border_ncv_correlation(inplace=inplace)
 
         if inplace:
             return None
@@ -276,6 +282,7 @@ class SegTraQ:
                 "ious": ious,
                 "cell_nuc_correlation": cell_nuc_corr,
                 "parts_correlation": parts_corr,
+                "center_border_ncv_corr": center_border_ncv_corr,
             }
 
     def run_label_transfer(
@@ -658,9 +665,9 @@ class _BLFacade:
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
 
-class _NCFacade:
+class _RCFacade:
     """
-    Bound nuclear-correlation (nc) metrics interface for a SegTraQ instance.
+    Bound region-correlation (rc) metrics interface for a SegTraQ instance.
     Methods use the parent's `sdata` and configured keys.
     No per-call overrides are allowed.
     """
@@ -673,56 +680,56 @@ class _NCFacade:
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
         )
-        return nc.compute_cell_nuc_ious(
+        return rc.compute_cell_nuc_ious(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
+            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             n_jobs=n_jobs,
             use_progress=True,
             inplace=inplace,
         )
 
-    compute_cell_nuc_ious.__doc__ = nc.compute_cell_nuc_ious.__doc__
+    compute_cell_nuc_ious.__doc__ = rc.compute_cell_nuc_ious.__doc__
 
     def compute_cell_nuc_correlation(self, n_jobs_iou: int = -1, inplace: bool = True):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
         )
-        return nc.compute_cell_nuc_correlation(
+        return rc.compute_cell_nuc_correlation(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
+            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             points_key=self._p.points_key,
             points_gene_key=self._p.points_gene_key,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            points_z_key=self._p.points_z_key,
             metric="pearson",
             n_jobs_iou=n_jobs_iou,
             inplace=inplace,
         )
 
-    compute_cell_nuc_correlation.__doc__ = nc.compute_cell_nuc_correlation.__doc__
+    compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
 
     def compute_correlation_between_parts(self, n_jobs: int = -1, inplace: bool = True):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
         )
-        return nc.compute_correlation_between_parts(
+        return rc.compute_correlation_between_parts(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
+            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_background_id=self._p.points_background_id,
@@ -733,7 +740,33 @@ class _NCFacade:
             inplace=inplace,
         )
 
-    compute_correlation_between_parts.__doc__ = nc.compute_correlation_between_parts.__doc__
+    compute_correlation_between_parts.__doc__ = rc.compute_correlation_between_parts.__doc__
+
+    def compute_center_border_ncv_correlation(
+        self,
+        erosion_fraction_of_radius: float = 0.2,
+        radius_factor: float = 2.0,
+        metric: str = "cosine_sim",
+        inplace: bool = True,
+    ):
+        return rc.compute_center_border_ncv_correlation(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            points_gene_key=self._p.points_gene_key,
+            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            radius_factor=radius_factor,
+            metric=metric,
+            inplace=inplace,
+        )
+
+    compute_center_border_ncv_correlation.__doc__ = rc.compute_center_border_ncv_correlation.__doc__
 
 
 class _SPFacade:
