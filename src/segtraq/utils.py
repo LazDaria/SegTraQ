@@ -213,11 +213,11 @@ def run_label_transfer(
         warnings.warn(
             "Reference adata_ref does not appear log-normalized."
             "Counts will be log1p-transformed before running label transfer."
-            'Raw counts will be stored in `adata_ref.layers["raw"]`.',
+            "Raw counts will be stored in `adata_ref.raw`.",
             RuntimeWarning,
             stacklevel=2,
         )
-        adata_ref.layers["raw"] = adata_ref.X
+        adata_ref.raw = adata_ref.X.copy()
         sc.pp.normalize_total(adata_ref, target_sum=1e4)
         sc.pp.log1p(adata_ref)
 
@@ -629,6 +629,8 @@ def validate_spatialdata(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_area_volume_key: str | None = "cell_area",
+    tables_x_key: str | None = "x",
+    tables_y_key: str | None = "y",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
@@ -752,6 +754,20 @@ def validate_spatialdata(
                 f"Tables DataFrame must contain area/volume column '{tables_area_volume_key}'. "
                 f"Available columns: {table.obs.columns.tolist()}. "
                 f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
+            )
+
+        if tables_x_key is not None:
+            assert tables_x_key in table.obs.columns, (
+                f"Tables DataFrame must contain x coordinate column '{tables_x_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'tables_x_key' argument (set to None if you do not have this)."
+            )
+
+        if tables_y_key is not None:
+            assert tables_y_key in table.obs.columns, (
+                f"Tables DataFrame must contain y coordinate column '{tables_y_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'tables_y_key' argument (set to None if you do not have this)."
             )
 
     # get unique cell IDs from points
