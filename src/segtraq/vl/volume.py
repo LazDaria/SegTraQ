@@ -228,7 +228,9 @@ def compute_cell_cell_IoU(
         )
         for _, cell_row in iterator
     ) 
-    IoU_df = pd.DataFrame(results)
+    IoU_df = pd.DataFrame(results).set_index(
+        tables_cell_id_key
+    )
 
     if inplace:
         merge_into_obs(
