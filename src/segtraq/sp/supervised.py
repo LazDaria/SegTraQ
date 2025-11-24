@@ -4,10 +4,17 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import squidpy as sq
+import torch
 from scipy import sparse
+from sklearn.linear_model import LogisticRegression as SklearnLogisticRegression
+from sklearn.metrics import average_precision_score
+from sklearn.model_selection import PredefinedSplit, permutation_test_score
+from sklearn.preprocessing import StandardScaler
+from torch import nn
 from tqdm.auto import tqdm
 
-from ..utils import _score_one_list, merge_into_obs
+from ..utils import _looks_like_counts, _score_one_list, merge_into_obs
+from .utils import LogisticRegression, add_neighbor_celltype_binary, assign_grid_splits
 
 
 def compute_MECR(
@@ -525,3 +532,143 @@ def calculate_diff_abundance(
         sdata.tables[tables_key].uns["diff_abundance"]["summary"] = summary
 
     return de_results, summary
+
+
+def neighbor_prediction(
+    sdata,
+    ct1,
+    ct2,
+    tables_key: str = "table",
+    cell_type_key: str = "transferred_cell_type",
+    tables_x_key: str = "x_centroid",
+    tables_y_key: str = "y_centroid",
+    grid_shape: tuple[int, int] = (10, 10),
+    lr: float = 1e-4,
+    epochs: int = 300,
+    n_permutations: int = 100,
+    seed: int = 0,
+    inplace: bool = True,
+):
+    """
+    Predict whether the presence of neighboring cells of type `ct2` affects the transcriptome
+    of cells of type `ct1` using logistic regression. Significance is assessed using
+    sklearn's permutation_test_score on the test set.
+
+    Returns a dictionary with model, weights, intercept, test AP, null APs, and empirical p-value.
+    """
+    if inplace:
+        adata = sdata.tables[tables_key]
+    else:
+        adata = sdata.tables[tables_key].copy()
+
+    # --- Compute neighbor indicators ---
+    adata = add_neighbor_celltype_binary(
+        adata, cell_type_col=cell_type_key, tables_x_key=tables_x_key, tables_y_key=tables_y_key
+    )
+
+    # --- Select focal cells (ct1) and labels ---
+    mask_focal = adata.obs[cell_type_key].astype(str) == str(ct1)
+    idx_focal = np.where(mask_focal)[0]
+    if len(idx_focal) == 0:
+        raise ValueError(f"No cells of type {ct1} found.")
+    y_all = adata.obsm["neighbor_celltype_binary"].iloc[idx_focal][ct2].astype(int).values
+
+    # --- Expression matrix ---
+    if _looks_like_counts(adata.X):
+        adata.raw = adata.X.copy()
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
+    X_all = adata.X.toarray()[idx_focal] if hasattr(adata.X, "toarray") else np.array(adata.X)[idx_focal]
+    gene_names = np.asarray(adata.var_names)
+
+    # --- Grid splits ---
+    is_train, is_val, is_test = assign_grid_splits(
+        adata, mask_focal, grid_shape, seed, tables_x_key=tables_x_key, tables_y_key=tables_y_key
+    )
+    X_train, X_val, X_test = X_all[is_train], X_all[is_val], X_all[is_test]
+    y_train, y_val, y_test = y_all[is_train], y_all[is_val], y_all[is_test]
+
+    # --- Standardization ---
+    scaler = StandardScaler().fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_val = scaler.transform(X_val)
+    X_test = scaler.transform(X_test)
+
+    # --- Train logistic regression on training set ---
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    Xtr_t = torch.tensor(X_train, dtype=torch.float32, device=device)
+    ytr_t = torch.tensor(y_train.astype(np.float32), device=device).unsqueeze(1)
+    Xv_t = torch.tensor(X_val, dtype=torch.float32, device=device)
+    Xt_t = torch.tensor(X_test, dtype=torch.float32, device=device)
+
+    model = LogisticRegression(X_train.shape[1]).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    pos_sum = (y_train == 1).sum()
+    neg_sum = (y_train == 0).sum()
+    pos_weight = neg_sum / pos_sum
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, device=device))
+
+    best_val_ap = -np.inf
+    best_state = None
+
+    for epoch in range(epochs):
+        model.train()
+        optimizer.zero_grad()
+        logits = model(Xtr_t)
+        loss = criterion(logits, ytr_t)
+        loss.backward()
+        optimizer.step()
+
+        # validation
+        if epoch % 10 == 0 or epoch == epochs - 1:
+            model.eval()
+            with torch.no_grad():
+                val_probs = torch.sigmoid(model(Xv_t)).cpu().numpy().ravel()
+                val_ap = average_precision_score(y_val, val_probs)
+
+            if val_ap > best_val_ap:
+                best_val_ap = val_ap
+                best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+
+    if best_state:
+        model.load_state_dict(best_state)
+
+    # --- Test evaluation ---
+    model.eval()
+    with torch.no_grad():
+        test_probs = torch.sigmoid(model(Xt_t)).cpu().numpy().ravel()
+        test_ap = average_precision_score(y_test, test_probs)
+        weights = model.linear.weight.detach().cpu().numpy().ravel()
+        intercept = float(model.linear.bias.detach().cpu().numpy())
+
+    # --- Permutation test on test set using sklearn ---
+    # PredefinedSplit: -1 for train+val, 0 for test
+    test_fold = np.ones(len(X_all), dtype=int) * -1
+    test_fold[is_test] = 0
+    ps = PredefinedSplit(test_fold)
+
+    sklearn_model = SklearnLogisticRegression(max_iter=1000, solver="liblinear", random_state=seed)
+    score, perm_scores, pvalue = permutation_test_score(
+        sklearn_model,
+        X_all,
+        y_all,
+        scoring="average_precision",
+        cv=ps,
+        n_permutations=n_permutations,
+        random_state=seed,
+    )
+
+    adata.uns["neighbor_prediction"] = {
+        "torch_model": model,
+        "weights": weights,
+        "intercept": intercept,
+        "best_val_ap": float(best_val_ap),
+        "test_ap": test_ap,
+        "gene_names": gene_names,
+        "empirical_p_value": pvalue,
+        "null_aps": perm_scores,
+        "splits": {"train": idx_focal[is_train], "val": idx_focal[is_val], "test": idx_focal[is_test]},
+    }
+
+    return adata.uns["neighbor_prediction"]
