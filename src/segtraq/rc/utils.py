@@ -124,7 +124,7 @@ def _shapes_by_feature_df(
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str = "cell_id",
+    shapes_cell_id_key: str | None = "cell_id",
     tables_cell_id_key: str = "cell_id",
     erosion_fraction_of_radius: float = 0.3,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
@@ -140,6 +140,7 @@ def _get_center_and_border_shapes(
         Key in `sdata.shapes` for cell boundary polygons.
     shapes_cell_id_key : str, default="cell_id"
         Column name linking shapes to cell IDs.
+        If `None`, the shape index is used as the cell ID.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     erosion_fraction_of_radius : float, default=0.4
@@ -207,18 +208,23 @@ def _get_center_and_border_shapes(
     center_gdf = gpd.GeoDataFrame(center_records, geometry="geometry", crs=cells_gdf.crs)
     border_gdf = gpd.GeoDataFrame(border_records, geometry="geometry", crs=cells_gdf.crs)
 
+    if shapes_cell_id_key is None:
+        center_gdf.set_index(id_key, drop=True, inplace=True)
+        border_gdf.set_index(id_key, drop=True, inplace=True)
+
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
 
 def _group_points_by_regions(
     sdata: sd.SpatialData,
     region_key: str,
+    tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
-    region_cell_id_key: str = "cell_id",
+    region_cell_id_key: str | None = "cell_id",
 ) -> gpd.GeoDataFrame:
     """
     Aggregate transcript counts per region (e.g., cell centers or cell borders)
@@ -238,6 +244,8 @@ def _group_points_by_regions(
     region_key : str
         Key in `sdata.shapes` specifying which regions to use (e.g., `"cell_centers"`,
         `"cell_borders"`). Must contain a `geometry` column with polygons.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_gene_key : str, default="feature_name"
@@ -248,8 +256,9 @@ def _group_points_by_regions(
         Column for the y-coordinate of each transcript/spot.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
-    region_cell_id_key : str, default="cell_id"
+    region_cell_id_key : str or None, default="cell_id"
         Column in `sdata.shapes[region_key]` mapping each region polygon to a cell ID.
+        If `None`, the shape index is used as the cell ID.
 
     Returns
     -------
@@ -270,7 +279,18 @@ def _group_points_by_regions(
 
     region_gdf = sdata.shapes[region_key].copy()
 
-    region_gdf = region_gdf.rename(columns={region_cell_id_key: "region_id"})
+    if region_cell_id_key is not None:
+        id_key = region_cell_id_key
+        region_gdf = region_gdf.rename(columns={region_cell_id_key: "region_id"})
+    elif region_gdf.index.name is not None:
+        id_key = region_gdf.index.name
+        region_gdf.index.name = "region_id"
+        region_gdf.reset_index(inplace=True)
+    else:
+        id_key = tables_cell_id_key
+        region_gdf.index.name = "region_id"
+        region_gdf.reset_index(inplace=True)
+
     region_gdf = region_gdf[["region_id", "geometry"]]
 
     pts_gdf_region = gpd.sjoin(
@@ -288,7 +308,7 @@ def _group_points_by_regions(
         .size()
         .unstack(fill_value=0)
     )
-    df_region.index.name = "cell_id"
+    df_region.index.name = id_key
 
     return df_region
 
@@ -298,7 +318,7 @@ def _compute_ncvs_within_radius(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str = "cell_id",
+    shapes_cell_id_key: str | None = "cell_id",
     radius_factor: float = 2.0,
 ) -> pd.DataFrame:
     """
@@ -315,8 +335,9 @@ def _compute_ncvs_within_radius(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str, default="cell_id"
+    shapes_cell_id_key : str or None, default="cell_id"
         Column in the shapes GeoDataFrame linking polygons to cell IDs.
+        If `None`, the shape index is used as the cell ID.
     radius_factor : float, default=2.0
         Neighborhood radius factor in the same coordinate units as the shapes.
 
