@@ -131,20 +131,23 @@ def _process_cell(
 ) -> list:
     """For one cell polygon compute the IoU with overlapping cells in z"""
     
+    cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
+    
     cell_geom1 = make_valid(cell_row.geometry)
-    # Get candidate nuclei bounding boxes that overlap this cell's bbox
+    # Get candidate cell bounding boxes that overlap this cell's bbox
     candidate_idx = list(cell_sindex.intersection(cell_geom1.bounds))
     
     # if there are no candidates, return 0.0
     if not candidate_idx:
-        return {"cell_id": cell_row.name, "IoU": 0.0, "IoU_sum": 0.0}
+        return {"cell_id": cell_id, "IoU": 0.0, "IoU_sum": 0.0}
 
     candidates = cell_boundaries.iloc[candidate_idx]
     # go over candidates per cell and calculate IoU
     IoU_ls = []
     for _, cell in candidates.iterrows():
+        cell_id2 = cell[shapes_cell_id_key] if shapes_cell_id_key is not None else cell.name
         #if it is the same cell, break
-        if cell_row.name == cell.name:
+        if cell_id == cell_id2:
             break
         cell_geom2 = make_valid(cell.geometry)
         intersection = cell_geom1.intersection(cell_geom2).area
@@ -153,7 +156,7 @@ def _process_cell(
         IoU_ls.append(IoU)    
     IoU_ls.sort(reverse=True)
 
-    return {"cell_id": cell_row.name, "IoU": IoU_ls, "IoU_sum": sum(IoU_ls)}
+    return {"cell_id": cell_id, "IoU": IoU_ls, "IoU_sum": sum(IoU_ls)}
 
 #code adapt from Daria Lazic
 def compute_cell_cell_IoU(
