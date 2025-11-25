@@ -1,7 +1,5 @@
-import geopandas as gpd
 import numpy as np
 import pandas as pd
-import gc
 import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
@@ -11,13 +9,13 @@ from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
+    _assign_nuc_to_transcripts,
     _compute_ncvs_within_radius,
     _get_center_and_border_shapes,
     _group_points_by_regions,
     _norm_log_df,
     _process_cell,
     _shapes_by_feature_df,
-    _assign_nuc_to_transcripts
 )
 
 
@@ -275,7 +273,7 @@ def compute_cell_nuc_correlation(
             x = x_norm[mask]
             y = y_norm[mask]
 
-            if (np.all(x == 0) or np.all(y == 0)):
+            if np.all(x == 0) or np.all(y == 0):
                 corr = np.nan
             else:
                 if metric == "pearson":
@@ -305,6 +303,7 @@ def compute_cell_nuc_correlation(
         )
 
     return corr_df, iou_df
+
 
 def compute_correlation_between_parts(
     sdata,
@@ -410,15 +409,15 @@ def compute_correlation_between_parts(
     best_nuc_map = iou_df.set_index(id_key)["best_nuc_id"]
 
     tx = _assign_nuc_to_transcripts(
-        sdata = sdata,
-        tables_key = tables_key,
-        nucleus_shapes_key = nucleus_shapes_key,
-        points_key = points_key,
-        points_cell_id_key = points_cell_id_key, 
-        points_background_id = points_background_id, 
-        points_gene_key = points_gene_key,
-        points_x_key = points_x_key,
-        points_y_key = points_y_key
+        sdata=sdata,
+        tables_key=tables_key,
+        nucleus_shapes_key=nucleus_shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
     )
 
     tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
@@ -426,32 +425,26 @@ def compute_correlation_between_parts(
 
     # intersection: cell ∩ best nucleus
     counts_intersection = (
-        tx[tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
-        .size()
-        .unstack(fill_value=0)
+        tx[tx["in_intersection"]].groupby([points_cell_id_key, points_gene_key]).size().unstack(fill_value=0)
     )
 
     # remainder: rest of the cell
     counts_remainder = (
-        tx[~tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
-        .size()
-        .unstack(fill_value=0)
+        tx[~tx["in_intersection"]].groupby([points_cell_id_key, points_gene_key]).size().unstack(fill_value=0)
     )
 
     common_cells = counts_intersection.index.intersection(counts_remainder.index)
     common_genes = counts_intersection.columns.intersection(counts_remainder.columns)
 
     counts_intersection_raw = counts_intersection.loc[common_cells, common_genes]
-    counts_remainder_raw    = counts_remainder.loc[common_cells, common_genes]
+    counts_remainder_raw = counts_remainder.loc[common_cells, common_genes]
 
     # normalize
     total_counts = (counts_intersection_raw + counts_remainder_raw).sum(axis=1).replace(0, np.nan)
     counts_intersection_norm = counts_intersection_raw.div(total_counts, axis=0) * scale
-    counts_remainder_norm   = counts_remainder_raw.div(total_counts, axis=0) * scale
+    counts_remainder_norm = counts_remainder_raw.div(total_counts, axis=0) * scale
     counts_intersection_norm = np.log1p(counts_intersection_norm).fillna(0.0)
-    counts_remainder_norm   = np.log1p(counts_remainder_norm).fillna(0.0)
+    counts_remainder_norm = np.log1p(counts_remainder_norm).fillna(0.0)
 
     rows = []
     for cid in common_cells:
@@ -478,10 +471,7 @@ def compute_correlation_between_parts(
 
         rows.append((cid, r))
 
-    corr_per_cell = (
-        pd.DataFrame(rows, columns=[points_cell_id_key, "correlation_parts"])
-        .set_index(points_cell_id_key)
-    )
+    corr_per_cell = pd.DataFrame(rows, columns=[points_cell_id_key, "correlation_parts"]).set_index(points_cell_id_key)
 
     out = iou_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
@@ -700,7 +690,7 @@ def compute_center_border_ncv_correlation(
         if (
             not np.isnan(corr_center_border)
             and not np.isnan(corr_border_ncv)
-            and not np.isclose(corr_center_border, 0.0) #TODO - set to very small value instead?
+            and not np.isclose(corr_center_border, 0.0)  # TODO - set to very small value instead?
         ):
             corr_ncv_vs_center = corr_border_ncv / corr_center_border
 

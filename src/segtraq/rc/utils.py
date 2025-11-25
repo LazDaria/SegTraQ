@@ -214,6 +214,7 @@ def _get_center_and_border_shapes(
 
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
+
 def _assign_nuc_to_transcripts(
     sdata,
     tables_key: str = "table",
@@ -226,7 +227,7 @@ def _assign_nuc_to_transcripts(
     points_y_key: str = "y",
 ):
     """
-    Assigns nucleus IDs to transcripts by performing a spatial join 
+    Assigns nucleus IDs to transcripts by performing a spatial join
     between transcript coordinates and nucleus polygons.
 
     Parameters
@@ -252,17 +253,17 @@ def _assign_nuc_to_transcripts(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-    
+
     Returns
     -------
     tx : pandas.DataFrame
-        A subset transcripts dataframe with nuclear assignments in 
+        A subset transcripts dataframe with nuclear assignments in
         column `nuc_id`.
     """
     nucs_gdf = sdata.shapes[nucleus_shapes_key].copy()
     nucs_gdf.index.name = "nuc_id"
-    
-    #Subset transcripts
+
+    # Subset transcripts
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
     pts = pts[cols]
@@ -277,7 +278,7 @@ def _assign_nuc_to_transcripts(
     pts = pts[pts[points_gene_key].isin(valid_features)]
 
     transcripts = pts.compute()
-    transcripts = transcripts.reset_index(drop=True) 
+    transcripts = transcripts.reset_index(drop=True)
     transcripts[points_gene_key] = transcripts[points_gene_key].astype("category")
 
     pts_gdf = gpd.GeoDataFrame(
@@ -286,7 +287,7 @@ def _assign_nuc_to_transcripts(
         crs=nucs_gdf.crs,  # assume same CRS
     )
 
-    tx_in_nuc = gpd.sjoin( 
+    tx_in_nuc = gpd.sjoin(
         pts_gdf[["geometry"]],
         nucs_gdf[["geometry"]],
         how="left",
@@ -294,16 +295,13 @@ def _assign_nuc_to_transcripts(
     )[["nuc_id"]]
 
     # remove duplicate assignments
-    tx_in_nuc = (
-        tx_in_nuc[["nuc_id"]]         
-        .groupby(level=0)         
-        .first()                
-    )
+    tx_in_nuc = tx_in_nuc[["nuc_id"]].groupby(level=0).first()
 
     tx_in_cell = transcripts[[points_gene_key, points_cell_id_key]]
     tx = tx_in_cell.join(tx_in_nuc, how="left")
 
     return tx
+
 
 def _group_points_by_regions(
     sdata: sd.SpatialData,
