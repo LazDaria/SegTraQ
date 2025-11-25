@@ -231,10 +231,7 @@ class SegTraQ:
                 out["transcript_density"] = dens
             return out
 
-    def run_region_correlation(self, 
-                               metric: str = "cosine_sim",
-                               n_jobs: int = -1, 
-                               inplace: bool = True):
+    def run_region_correlation(self, metric: str = "cosine_sim", n_jobs: int = -1, inplace: bool = True):
         """
         Compute region-correlation metrics and optionally merge them into the cell table.
 
@@ -698,10 +695,7 @@ class _RCFacade:
 
     compute_cell_nuc_ious.__doc__ = rc.compute_cell_nuc_ious.__doc__
 
-    def compute_cell_nuc_correlation(self, 
-                                     metric: str = "cosine_sim", 
-                                     n_jobs_iou: int = -1, 
-                                     inplace: bool = True):
+    def compute_cell_nuc_correlation(self, metric: str = "cosine_sim", n_jobs_iou: int = -1, inplace: bool = True):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -723,10 +717,7 @@ class _RCFacade:
 
     compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
 
-    def compute_correlation_between_parts(self, 
-                                          metric: str = "cosine_sim", 
-                                          n_jobs: int = -1, 
-                                          inplace: bool = True):
+    def compute_correlation_between_parts(self, metric: str = "cosine_sim", n_jobs: int = -1, inplace: bool = True):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
