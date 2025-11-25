@@ -88,9 +88,9 @@ def centroid_mean_coord_diff(
 
     x_mean = pd.DataFrame(x_mean)
     y_mean = pd.DataFrame(y_mean)
-    
+
     gdf = sdata[shapes_key].copy()
-    
+
     if shapes_cell_id_key is not None:
         id_key = shapes_cell_id_key
         gdf.set_index(id_key, inplace=True)
@@ -99,18 +99,14 @@ def centroid_mean_coord_diff(
     else:
         id_key = tables_cell_id_key
         gdf.index.name = id_key
-        
+
     # extract the centroids
     df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner merge on the cell ids - some cells have no transcripts
-    df_total_x = df_centroids_x.merge(
-        x_mean, left_on=id_key, right_on=points_cell_id_key, how="inner"
-    )
-    df_total_y = df_centroids_y.merge(
-        y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner"
-    )
+    df_total_x = df_centroids_x.merge(x_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
+    df_total_y = df_centroids_y.merge(y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
 
@@ -130,7 +126,6 @@ def centroid_mean_coord_diff(
     df_total[f"distance_{feature}"] = df_total["distance"] / df_total["cell_area"]
     df_total = df_total.reset_index(drop=True)
 
-    
     if inplace:
         merge_into_obs(
             sdata=sdata,
@@ -157,7 +152,6 @@ def distance_to_membrane(
     shapes_key: str = "cell_boundaries",
     inplace: bool = True,
 ):
-    
     """
     Calculates the mean distance of the transcript of a feature of interest to the outline of the cell segmentation
 
@@ -219,7 +213,7 @@ def distance_to_membrane(
     df["coordinate_points"] = df["coordinates"].map(lambda x: Point(x))
 
     gdf = sdata[shapes_key].copy()
-    
+
     if shapes_cell_id_key is not None:
         id_key = shapes_cell_id_key
         gdf.set_index(id_key, inplace=True)
@@ -260,7 +254,7 @@ def distance_to_membrane(
     mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = 1 / np.sqrt(
         mean_distance_to_outline[f"distance_to_outline_{feature}"]
     )
-    
+
     mean_distance_to_outline = mean_distance_to_outline.reset_index(drop=True)
 
     if inplace:
