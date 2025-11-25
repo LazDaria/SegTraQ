@@ -1,6 +1,7 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import gc
 import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
@@ -16,6 +17,7 @@ from .utils import (
     _norm_log_df,
     _process_cell,
     _shapes_by_feature_df,
+    _assign_nuc_to_transcripts
 )
 
 
@@ -324,7 +326,7 @@ def compute_correlation_between_parts(
     inplace: bool = True,
 ):
     """
-    Vectorized version: computes Pearson correlation between the cell∩best_nucleus
+    Vectorized version: computes Cosine similarity between the cell ∩ best_nucleus
     ("intersection") and the rest of the cell ("remainder") using spatial joins.
     Returns DataFrame with columns ["cell_id", "best_nuc_id", "IoU", "correlation_parts"].
 
@@ -361,7 +363,6 @@ def compute_correlation_between_parts(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-        Column name for y coordinate.
     metric : str, default="cosine_sim"
         Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
     scale: float, default=1e4,
@@ -382,17 +383,14 @@ def compute_correlation_between_parts(
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
-    cells_gdf = sdata.shapes[shapes_key].copy()
-    nucs_gdf = sdata.shapes[nucleus_shapes_key]
+    cells_gdf = sdata.shapes[shapes_key]
 
     if shapes_cell_id_key is not None:
         id_key = shapes_cell_id_key
     elif cells_gdf.index.name is not None:
         id_key = cells_gdf.index.name
-        cells_gdf[id_key] = cells_gdf.index
     else:
         id_key = tables_cell_id_key
-        cells_gdf[id_key] = cells_gdf.index
 
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
         iou_df = compute_cell_nuc_ious(
@@ -411,86 +409,79 @@ def compute_correlation_between_parts(
 
     best_nuc_map = iou_df.set_index(id_key)["best_nuc_id"]
 
-    transcripts = sdata.points[points_key].compute()
-
-    transcripts_df = transcripts[transcripts[points_cell_id_key] != points_background_id].copy()
-
-    valid_features = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  # TODO - this might break, if var.index and points_gene_key do not match!
-    # e.g. one is Ensemble key and one is gene_key
-
-    transcripts_df = transcripts_df.dropna(subset=[points_gene_key])
-    transcripts_df = transcripts_df[transcripts_df[points_gene_key].isin(valid_features)]
-    transcripts_df[points_gene_key] = transcripts_df[points_gene_key].cat.remove_unused_categories()
-
-    tx_in_cell = transcripts_df[[points_gene_key, points_cell_id_key]]
-
-    transcripts_gdf = gpd.GeoDataFrame(
-        transcripts_df,
-        geometry=gpd.points_from_xy(transcripts_df[points_x_key], transcripts_df[points_y_key]),
-        crs=cells_gdf.crs,  # assume same CRS
+    tx = _assign_nuc_to_transcripts(
+        sdata = sdata,
+        tables_key = tables_key,
+        nucleus_shapes_key = nucleus_shapes_key,
+        points_key = points_key,
+        points_cell_id_key = points_cell_id_key, 
+        points_background_id = points_background_id, 
+        points_gene_key = points_gene_key,
+        points_x_key = points_x_key,
+        points_y_key = points_y_key
     )
-
-    nucs_gdf.index.name = "nuc_id"
-
-    tx_in_nuc = gpd.sjoin( 
-        transcripts_gdf[["geometry"]],
-        nucs_gdf[["geometry"]],
-        how="left",
-        predicate="within",
-    )[["nuc_id"]]
-
-    tx = tx_in_cell.join(tx_in_nuc, how="left")
 
     tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
     tx["in_intersection"] = (tx["nuc_id"].notna()) & (tx["nuc_id"] == tx["best_nuc_id"])
-    tx["part"] = np.where(tx["in_intersection"], "intersection", "remainder")
 
-    # grouping by points_cell_id_key and part (in_intersection or remainder)
-    # works also for 3D methods like Proseg (transcripts with same cell ID are grouped)
-    mat_raw = pd.crosstab([tx[points_cell_id_key], tx["part"]], tx[points_gene_key]).fillna(0)
+    # intersection: cell ∩ best nucleus
+    counts_intersection = (
+        tx[tx["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key])
+        .size()
+        .unstack(fill_value=0)
+    )
 
-    # library size normalization
-    cell_sums = mat_raw.groupby(level=0).sum().replace(0, np.nan)
-    sums_for_each_row = mat_raw.index.get_level_values(0).map(cell_sums.sum(axis=1))
-    df_norm = mat_raw.div(sums_for_each_row, axis=0) * scale
-    mat_norm = np.log1p(df_norm).fillna(0.0)
+    # remainder: rest of the cell
+    counts_remainder = (
+        tx[~tx["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key])
+        .size()
+        .unstack(fill_value=0)
+    )
+
+    common_cells = counts_intersection.index.intersection(counts_remainder.index)
+    common_genes = counts_intersection.columns.intersection(counts_remainder.columns)
+
+    counts_intersection_raw = counts_intersection.loc[common_cells, common_genes]
+    counts_remainder_raw    = counts_remainder.loc[common_cells, common_genes]
+
+    # normalize
+    total_counts = (counts_intersection_raw + counts_remainder_raw).sum(axis=1).replace(0, np.nan)
+    counts_intersection_norm = counts_intersection_raw.div(total_counts, axis=0) * scale
+    counts_remainder_norm   = counts_remainder_raw.div(total_counts, axis=0) * scale
+    counts_intersection_norm = np.log1p(counts_intersection_norm).fillna(0.0)
+    counts_remainder_norm   = np.log1p(counts_remainder_norm).fillna(0.0)
 
     rows = []
-    for cell_id, df_cell_norm in mat_norm.groupby(level=0, sort=False):
-        df_cell_raw = mat_raw.xs(cell_id, level=0)
+    for cid in common_cells:
+        x_raw = counts_intersection_raw.loc[cid].to_numpy(dtype=float)
+        y_raw = counts_remainder_raw.loc[cid].to_numpy(dtype=float)
 
-        df_norm = df_cell_norm.copy()
-        df_norm.index = df_norm.index.get_level_values(1)
-        df_raw = df_cell_raw.copy()
-        df_raw.index = df_raw.index.get_level_values(0)
+        # keep genes that are non-zero in at least one part
+        mask = (x_raw != 0) | (y_raw != 0)
 
-        if "intersection" not in df_norm.index or "remainder" not in df_norm.index:
+        x = counts_intersection_norm.loc[cid].to_numpy(dtype=float)[mask]
+        y = counts_remainder_norm.loc[cid].to_numpy(dtype=float)[mask]
+
+        if np.all(x == 0) or np.all(y == 0):
             r = np.nan
         else:
-            x_raw = df_raw.loc["intersection"].to_numpy(dtype=float)
-            y_raw = df_raw.loc["remainder"].to_numpy(dtype=float)
-            mask = (x_raw != 0) | (y_raw != 0)
-
-            x = df_norm.loc["intersection"].to_numpy(dtype=float)[mask]
-            y = df_norm.loc["remainder"].to_numpy(dtype=float)[mask]
-
-            if np.all(x == 0) or np.all(y == 0):
-                r = np.nan
+            if metric == "pearson":
+                r, _ = pearsonr(x, y)
+            elif metric == "spearman":
+                r, _ = spearmanr(x, y)
+            elif metric == "cosine_sim":
+                r = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
             else:
-                if metric == "pearson":
-                    r, _ = pearsonr(x, y)
-                elif metric == "spearman":
-                    r, _ = spearmanr(x, y)
-                elif metric == "cosine_sim":
-                    r = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
-                else:
-                    raise ValueError(f"Metric {metric} not supported")
+                raise ValueError(f"Metric {metric} not supported")
 
-        rows.append((cell_id, r))
+        rows.append((cid, r))
 
-    corr_per_cell = pd.DataFrame(rows, columns=[points_cell_id_key, "correlation_parts"]).set_index(points_cell_id_key)
+    corr_per_cell = (
+        pd.DataFrame(rows, columns=[points_cell_id_key, "correlation_parts"])
+        .set_index(points_cell_id_key)
+    )
 
     out = iou_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
@@ -709,7 +700,7 @@ def compute_center_border_ncv_correlation(
         if (
             not np.isnan(corr_center_border)
             and not np.isnan(corr_border_ncv)
-            and not np.isclose(corr_center_border, 0.0)
+            and not np.isclose(corr_center_border, 0.0) #TODO - set to very small value instead?
         ):
             corr_ncv_vs_center = corr_border_ncv / corr_center_border
 

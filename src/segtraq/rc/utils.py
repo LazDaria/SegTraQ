@@ -214,6 +214,96 @@ def _get_center_and_border_shapes(
 
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
+def _assign_nuc_to_transcripts(
+    sdata,
+    tables_key: str = "table",
+    nucleus_shapes_key: str = "nucleus_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+):
+    """
+    Assigns nucleus IDs to transcripts by performing a spatial join 
+    between transcript coordinates and nucleus polygons.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned spatial
+        transcriptomics data (images, tables, points, shapes and optional labels).
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table. Gene names in
+        `sdata.tables[tables_key].var.index` should match the gene field in
+        `sdata.points[points_key]` (see `points_gene_key`).
+    nucleus_shapes_key : str, default="nucleus_boundaries"
+        Key in `sdata.shapes` for nucleus boundary polygons, if available.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for spot/transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript/spot.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
+    
+    Returns
+    -------
+    tx : pandas.DataFrame
+        A subset transcripts dataframe with nuclear assignments in 
+        column `nuc_id`.
+    """
+    nucs_gdf = sdata.shapes[nucleus_shapes_key].copy()
+    nucs_gdf.index.name = "nuc_id"
+    
+    #Subset transcripts
+    pts = sdata.points[points_key]
+    cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
+    pts = pts[cols]
+    pts = pts[pts[points_cell_id_key] != points_background_id]
+
+    valid_features = pd.Index(
+        sdata.tables[tables_key].var_names
+    )  # TODO - this might break, if var.index and points_gene_key do not match!
+    # e.g. one is Ensemble key and one is gene_key
+
+    pts = pts.dropna(subset=[points_gene_key])
+    pts = pts[pts[points_gene_key].isin(valid_features)]
+
+    transcripts = pts.compute()
+    transcripts = transcripts.reset_index(drop=True) 
+    transcripts[points_gene_key] = transcripts[points_gene_key].astype("category")
+
+    pts_gdf = gpd.GeoDataFrame(
+        transcripts,
+        geometry=gpd.points_from_xy(transcripts[points_x_key], transcripts[points_y_key]),
+        crs=nucs_gdf.crs,  # assume same CRS
+    )
+
+    tx_in_nuc = gpd.sjoin( 
+        pts_gdf[["geometry"]],
+        nucs_gdf[["geometry"]],
+        how="left",
+        predicate="within",
+    )[["nuc_id"]]
+
+    # remove duplicate assignments
+    tx_in_nuc = (
+        tx_in_nuc[["nuc_id"]]         
+        .groupby(level=0)         
+        .first()                
+    )
+
+    tx_in_cell = transcripts[[points_gene_key, points_cell_id_key]]
+    tx = tx_in_cell.join(tx_in_nuc, how="left")
+
+    return tx
 
 def _group_points_by_regions(
     sdata: sd.SpatialData,
