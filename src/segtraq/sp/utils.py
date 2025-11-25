@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import squidpy as sq
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score
-from torch import nn
 
 
 def add_neighbor_celltype_binary(
@@ -51,36 +51,74 @@ def add_neighbor_celltype_binary(
     return adata
 
 
-# --- Spatial grid split ---
-def assign_grid_splits(adata, mask_cells, grid_shape=(10, 10), seed=0, tables_x_key="x", tables_y_key="y"):
-    """Assign train/val/test splits by spatial grid units for selected cells."""
+def assign_grid_splits(
+    adata, mask_cells, grid_shape=(10, 10), test_size=0.25, seed=0, tables_x_key="x", tables_y_key="y"
+):
+    """
+    Assign train/test splits based on spatial grid units to prevent spatial leakage.
+
+    This function divides the spatial coordinate space into a grid. It assigns
+    whole grid tiles to either the training or test set, ensuring that cells
+    physically close to each other (within the same tile) are not split across sets.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        Annotated data matrix.
+    mask_cells : np.ndarray or list
+        Boolean mask or indices indicating the subset of cells to split (e.g., focal cell type).
+    grid_shape : tuple of int, optional
+        The number of grid units in (x, y) directions. Default is (10, 10).
+    test_size : float, optional
+        The proportion of grid units to assign to the test set. Default is 0.25.
+    seed : int, optional
+        Random seed for reproducible grid shuffling. Default is 0.
+    tables_x_key : str, optional
+        Column name in adata.obs for X coordinates. Default is "x".
+    tables_y_key : str, optional
+        Column name in adata.obs for Y coordinates. Default is "y".
+
+    Returns
+    -------
+    is_train : np.ndarray
+        Boolean mask corresponding to `mask_cells` (subset length) indicating training samples.
+    is_test : np.ndarray
+        Boolean mask corresponding to `mask_cells` (subset length) indicating test samples.
+    """
     rng = np.random.RandomState(seed)
+
+    # Extract coordinates for the specific subset of cells
     xs = adata.obs[tables_x_key].values[mask_cells].astype(float)
     ys = adata.obs[tables_y_key].values[mask_cells].astype(float)
 
-    # normalize spatial coordinates to [0,1]
+    # Normalize spatial coordinates to [0,1] for grid assignment
     def _norm(v):
         mn, mx = np.nanmin(v), np.nanmax(v)
         return np.zeros_like(v) if mx == mn else (v - mn) / (mx - mn)
 
     xsn, ysn = _norm(xs), _norm(ys)
+
+    # Assign cells to grid IDs
     gx = np.minimum((xsn * grid_shape[0]).astype(int), grid_shape[0] - 1)
     gy = np.minimum((ysn * grid_shape[1]).astype(int), grid_shape[1] - 1)
     grid_ids = gx + gy * grid_shape[0]
 
+    # Split the unique grids, not the cells directly
     unique_grids = np.unique(grid_ids)
     rng.shuffle(unique_grids)
-    n = len(unique_grids)
-    n_train = int(np.floor(0.5 * n))
-    n_val = int(np.floor(0.25 * n))
-    train_grids = unique_grids[:n_train]
-    val_grids = unique_grids[n_train : n_train + n_val]
-    test_grids = unique_grids[n_train + n_val :]
 
+    n_total = len(unique_grids)
+    n_test = int(np.floor(n_total * test_size))
+    n_train = n_total - n_test  # Ensure all grids are used
+
+    train_grids = unique_grids[:n_train]
+    test_grids = unique_grids[n_train:]
+
+    # Map back to cell-level masks
     is_train = np.isin(grid_ids, train_grids)
-    is_val = np.isin(grid_ids, val_grids)
     is_test = np.isin(grid_ids, test_grids)
-    return is_train, is_val, is_test
+
+    return is_train, is_test
 
 
 # --- Standardization ---
@@ -90,16 +128,6 @@ def standardize_by_train(X_train, X_val, X_test):
     gene_std = X_train.std(axis=0, ddof=0)
     gene_std[gene_std == 0] = 1.0
     return ((X_train - gene_mean) / gene_std, (X_val - gene_mean) / gene_std, (X_test - gene_mean) / gene_std)
-
-
-# --- PyTorch logistic regression model ---
-class LogisticRegression(nn.Module):
-    def __init__(self, n_features):
-        super().__init__()
-        self.linear = nn.Linear(n_features, 1)
-
-    def forward(self, x):
-        return self.linear(x)
 
 
 def test_model_above_chance(y_true, y_pred, n_bootstrap=1000, seed=0):
@@ -146,3 +174,30 @@ def test_model_above_chance(y_true, y_pred, n_bootstrap=1000, seed=0):
     p_value = np.mean(null_aps >= observed_ap)
 
     return p_value, null_aps, observed_ap
+
+
+# Helper function to run one permutation
+def run_single_permutation(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    seed,
+    model_params,  # Pass parameters needed for the null model
+):
+    """Performs one model fit and scoring for a permuted null distribution."""
+    # Use a local RNG for thread safety
+    local_rng = np.random.RandomState(seed)
+
+    # 1. Permute training labels (y_train)
+    y_train_permuted = local_rng.permutation(y_train)
+
+    # 2. Define the low-precision null model
+    null_model = LogisticRegression(**model_params)
+
+    # 3. Fit and Predict
+    null_model.fit(X_train, y_train_permuted)
+    null_probs = null_model.predict_proba(X_test)[:, 1]
+
+    # 4. Score
+    return average_precision_score(y_test, null_probs)
