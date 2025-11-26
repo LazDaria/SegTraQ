@@ -491,8 +491,7 @@ class SegTraQ:
             inplace=inplace,
         )
 
-        # TODO: put this in here properly
-        # neighbor_prediction_results = self.sp.neighbor_prediction()
+        # TODO: need to add the neighbor prediction here! Should we do this for all pairs of cell types?
 
         if inplace:
             return None
