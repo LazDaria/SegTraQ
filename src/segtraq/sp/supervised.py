@@ -636,16 +636,22 @@ def neighbor_prediction(
 
     y_all = adata.obsm["neighbor_celltype_binary"].iloc[idx_focal][ct2].astype(int).values
 
+    # check if there are both positive and negative samples
+    if np.unique(y_all).size < 2:
+        raise ValueError(
+            f"Could not find both positive and negative samples for cell type {ct2} among neighbors of {ct1}."
+        )
+
     # Check for log normalization
     if _looks_like_counts(adata.X):
         warnings.warn(
             "Reference adata does not appear log-normalized."
             "Counts will be log1p-transformed before running label transfer."
-            "Raw counts will be stored in `adata.raw`.",
+            "Raw counts will be stored in `adata.layers['raw']`.",
             RuntimeWarning,
             stacklevel=2,
         )
-        adata.raw = adata.X.copy()
+        adata.layers["raw"] = adata.X.copy()
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 
@@ -668,6 +674,12 @@ def neighbor_prediction(
     X_test = scaler.transform(X_all[is_test])
     y_train = y_all[is_train]
     y_test = y_all[is_test]
+
+    # check that both classes are present in training data
+    if np.unique(y_train).size < 2:
+        raise ValueError(f"Training data after spatial split does not contain both classes for cell type {ct2}.")
+    if np.unique(y_test).size < 2:
+        raise ValueError(f"Test data after spatial split does not contain both classes for cell type {ct2}.")
 
     # --- 3. Model Fitting ---
     rng = np.random.RandomState(seed)
