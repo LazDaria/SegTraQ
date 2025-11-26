@@ -29,7 +29,6 @@ dependencies = [
   "squidpy>=1.6.2",
   "tqdm",
   "anndata",
-  "torch",
 ]
 requires-python = ">= 3.11"
 

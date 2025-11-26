@@ -9,3 +9,4 @@ SegTraQ - **Seg**mentation and **Tra**nscript Assignment **Q**uality Control - A
 
 > ⚠️ Note: SegTraQ is under active development. 
 > Features, interfaces, and functionality may change in upcoming releases.
+> To install the latest development version, run `pip install git+https://github.com/LazDaria/SegTraQ`
