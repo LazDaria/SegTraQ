@@ -705,11 +705,9 @@ def neighbor_prediction(
     seeds = [rng.randint(2**32 - 1) for _ in range(n_permutations)]
 
     perm_scores = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(run_single_permutation)(X_train, y_train, X_test, y_test, seed=s, model_params=null_model_params)
-        for s in seeds
+        delayed(run_single_permutation)(obs_probs, y_test, seed=s) for s in seeds
     )
     perm_scores = np.array(perm_scores)
-
     p_value = np.mean(perm_scores >= observed_score)
 
     adata.uns["neighbor_prediction"] = {
