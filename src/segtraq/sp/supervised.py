@@ -1,13 +1,19 @@
+import warnings
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
 import squidpy as sq
+from joblib import Parallel, delayed
 from scipy import sparse
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import average_precision_score
+from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 
-from ..utils import _score_one_list, merge_into_obs
+from ..utils import _looks_like_counts, _score_one_list, merge_into_obs
+from .utils import add_neighbor_celltype_binary, assign_grid_splits, run_single_permutation
 
 
 def compute_MECR(
@@ -525,3 +531,204 @@ def calculate_diff_abundance(
         sdata.tables[tables_key].uns["diff_abundance"]["summary"] = summary
 
     return de_results, summary
+
+
+def neighbor_prediction(
+    sdata,
+    ct1,
+    ct2,
+    tables_key="table",
+    cell_type_key="transferred_cell_type",
+    tables_x_key="x_centroid",
+    tables_y_key="y_centroid",
+    grid_shape=(10, 10),
+    n_permutations=100,
+    seed=0,
+    inplace=True,
+    n_jobs=-1,
+):
+    """
+    See if it is possible to predict adjacency of ct1 next to ct2 based on ct1's expression profiles using
+    logistic regression.
+    Parameters
+    ----------
+    sdata : object
+        Container object expected to expose a mapping-like attribute `tables` such
+        that `sdata.tables[tables_key]` returns an AnnData-like object. The AnnData
+        must provide:
+          - .obs: a pandas.DataFrame containing at least the `cell_type_key` column
+          - .var_names: iterable of gene names
+          - .X: expression matrix (numpy array or sparse matrix)
+          - .obsm: a dict-like object; the function will look for or add
+            "neighbor_celltype_binary"
+    ct1 : str or int
+        The focal cell type (as stored in `.obs[cell_type_key]`) for which to
+        predict the presence of neighboring ct2 cells.
+    ct2 : str or int
+        The neighbor cell type (column name in `adata.obsm["neighbor_celltype_binary"]`)
+        whose presence/absence among neighbors is the target binary outcome.
+    tables_key : str, optional
+        Key in `sdata.tables` to read the AnnData from (default: "table").
+    cell_type_key : str, optional
+        Column name in `.obs` containing transferred/annotated cell types
+        (default: "transferred_cell_type").
+    tables_x_key, tables_y_key : str, optional
+        Column names in `.obs` used as spatial coordinates for grid splitting and
+        for computing neighbor relations if `neighbor_celltype_binary` must be added.
+        (default: "x_centroid", "y_centroid").
+    grid_shape : tuple of two ints, optional
+        Number of spatial grid cells along (nx, ny) used to assign spatial folds;
+        cells within the same grid tile go to the same split (default: (10, 10)).
+    n_permutations : int, optional
+        Number of permutations to build an empirical null distribution of AP scores
+        (default: 100).
+    seed : int, optional
+        Random seed used for reproducible splitting and permutation seeds (default: 0).
+    inplace : bool, optional
+        If True, operate on the AnnData in `sdata.tables[tables_key]` directly and
+        write results into its `.uns`. If False, operate on a copy and return the
+        result without mutating the original (default: True).
+    n_jobs : int, optional
+        Number of parallel jobs for permutation computation. Passed to joblib. If
+        -1, use all available cores. The implementation uses the 'threading'
+        backend to reduce memory-copy overhead (default: -1).
+    Returns
+    -------
+    dict
+        A dictionary describing the trained model and permutation results, saved
+        into `adata.uns["neighbor_prediction"]` and also returned. Keys include:
+          - "model_params": {"weights": array, "intercept": float}
+              Coefficients of the trained high-precision logistic regression.
+          - "test_ap": float
+              Observed average-precision (AP) on the spatial test fold.
+          - "empirical_p_value": float
+              Fraction of permutation APs greater than or equal to observed AP.
+          - "null_aps": ndarray, shape (n_permutations,)
+              AP scores computed under the null (permuted) models.
+          - "gene_names": ndarray
+              Names of features (genes) corresponding to model coefficients.
+          - "splits": {"train_indices": array, "test_indices": array}
+              Indices (into the focal-cell index set) of the train/test split.
+    Raises
+    ------
+    ValueError
+        If fewer than 10 cells of type `ct1` are available (insufficient data).
+    """
+    if inplace:
+        adata = sdata.tables[tables_key]
+    else:
+        adata = sdata.tables[tables_key].copy()
+
+    # --- 1. Data Preparation ---
+    # here, we add a matrix of shape (cells, cell_types) in
+    # adata.obsm["neighbor_celltype_binary"] that indicates if a cell has
+    # at least one neighbor of that cell type
+    if "neighbor_celltype_binary" not in adata.obsm:
+        add_neighbor_celltype_binary(
+            adata, cell_type_col=cell_type_key, tables_x_key=tables_x_key, tables_y_key=tables_y_key
+        )
+
+    mask_focal = adata.obs[cell_type_key].astype(str) == str(ct1)
+    idx_focal = np.where(mask_focal)[0]
+
+    if len(idx_focal) < 10:
+        raise ValueError(f"Too few cells ({len(idx_focal)}) of type {ct1}.")
+
+    y_all = adata.obsm["neighbor_celltype_binary"].iloc[idx_focal][ct2].astype(int).values
+
+    # check if there are both positive and negative samples
+    if np.unique(y_all).size < 2:
+        raise ValueError(
+            f"Could not find both positive and negative samples for cell type {ct2} among neighbors of {ct1}."
+        )
+
+    # Check for log normalization
+    if _looks_like_counts(adata.X):
+        warnings.warn(
+            "Reference adata does not appear log-normalized."
+            "Counts will be log1p-transformed before running label transfer."
+            "Raw counts will be stored in `adata.layers['raw']`.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        adata.layers["raw"] = adata.X.copy()
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
+    X_all = adata.X[idx_focal]
+    if sparse.issparse(X_all):
+        X_all = X_all.toarray()
+
+    gene_names = np.array(adata.var_names)
+
+    # --- 2. Splitting & Standardization ---
+    # to make sure there is as little spatial leakage as possible
+    # between train and test, we assign splits based on a spatial grid
+    is_train, is_test = assign_grid_splits(
+        adata, mask_focal, grid_shape, seed=seed, tables_x_key=tables_x_key, tables_y_key=tables_y_key
+    )
+
+    scaler = StandardScaler()
+    scaler.fit(X_all[is_train])
+    X_train = scaler.transform(X_all[is_train])
+    X_test = scaler.transform(X_all[is_test])
+    y_train = y_all[is_train]
+    y_test = y_all[is_test]
+
+    # check that both classes are present in training data
+    if np.unique(y_train).size < 2:
+        raise ValueError(f"Training data after spatial split does not contain both classes for cell type {ct2}.")
+    if np.unique(y_test).size < 2:
+        raise ValueError(f"Test data after spatial split does not contain both classes for cell type {ct2}.")
+
+    # --- 3. Model Fitting ---
+    rng = np.random.RandomState(seed)
+    perm_scores = np.zeros(n_permutations)
+
+    # Parameters for the low-precision null model
+    null_model_params = {
+        "solver": "liblinear",
+        "penalty": "l2",
+        "C": 1.0,
+        "class_weight": "balanced",
+        "tol": 1e-2,  # Loose tolerance for speed
+        "max_iter": 100,
+        "random_state": seed,
+    }
+
+    # Parameters for the high-precision observed model
+    real_model_params = null_model_params.copy()
+    real_model_params["tol"] = 1e-4
+    real_model_params["max_iter"] = 1000
+
+    real_model = LogisticRegression(**real_model_params)
+    real_model.fit(X_train, y_train)
+
+    # Calculate observed score
+    obs_probs = real_model.predict_proba(X_test)[:, 1]
+    observed_score = average_precision_score(y_test, obs_probs)
+
+    weights = real_model.coef_.ravel()
+    intercept = real_model.intercept_[0]
+
+    # --- 4. Permutation Testing ---
+    # We use the 'threading' backend to avoid memory copy/serialization overhead.
+    # We generate a unique seed for each permutation for better statistical validity.
+    seeds = [rng.randint(2**32 - 1) for _ in range(n_permutations)]
+
+    perm_scores = Parallel(n_jobs=n_jobs, backend="threading")(
+        delayed(run_single_permutation)(obs_probs, y_test, seed=s) for s in seeds
+    )
+    perm_scores = np.array(perm_scores)
+    p_value = np.mean(perm_scores >= observed_score)
+
+    adata.uns["neighbor_prediction"] = {
+        "model_params": {"weights": weights, "intercept": intercept},
+        "test_ap": observed_score,
+        "empirical_p_value": p_value,
+        "null_aps": perm_scores,
+        "gene_names": gene_names,
+        "splits": {"train_indices": idx_focal[is_train], "test_indices": idx_focal[is_test]},
+    }
+
+    return adata.uns["neighbor_prediction"]
