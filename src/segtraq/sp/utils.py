@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import squidpy as sq
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score
 
 
@@ -121,15 +120,6 @@ def assign_grid_splits(
     return is_train, is_test
 
 
-# --- Standardization ---
-def standardize_by_train(X_train, X_val, X_test):
-    """Subtract train mean, divide by train std; avoids zero std."""
-    gene_mean = X_train.mean(axis=0)
-    gene_std = X_train.std(axis=0, ddof=0)
-    gene_std[gene_std == 0] = 1.0
-    return ((X_train - gene_mean) / gene_std, (X_val - gene_mean) / gene_std, (X_test - gene_mean) / gene_std)
-
-
 def test_model_above_chance(y_true, y_pred, n_bootstrap=1000, seed=0):
     """
     Test whether the model's average precision is above chance using bootstrap.
@@ -176,28 +166,19 @@ def test_model_above_chance(y_true, y_pred, n_bootstrap=1000, seed=0):
     return p_value, null_aps, observed_ap
 
 
-# Helper function to run one permutation
 def run_single_permutation(
-    X_train,
-    y_train,
-    X_test,
+    actual_probs,
     y_test,
     seed,
-    model_params,  # Pass parameters needed for the null model
 ):
-    """Performs one model fit and scoring for a permuted null distribution."""
+    """Calculates score for a permuted null distribution using fixed predictions."""
     # Use a local RNG for thread safety
     local_rng = np.random.RandomState(seed)
 
-    # 1. Permute training labels (y_train)
-    y_train_permuted = local_rng.permutation(y_train)
+    # 1. Permute test labels (y_test)
+    y_test_permuted = local_rng.permutation(y_test)
 
-    # 2. Define the low-precision null model
-    null_model = LogisticRegression(**model_params)
-
-    # 3. Fit and Predict
-    null_model.fit(X_train, y_train_permuted)
-    null_probs = null_model.predict_proba(X_test)[:, 1]
-
-    # 4. Score
-    return average_precision_score(y_test, null_probs)
+    # 2. Score: The ACTUAL predictions are scored against the PERMUTED labels
+    #    This tests the null hypothesis that the *true* association between features (in X_test)
+    #    and labels (in y_test) is broken.
+    return average_precision_score(y_test_permuted, actual_probs)
