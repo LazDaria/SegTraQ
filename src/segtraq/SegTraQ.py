@@ -17,6 +17,8 @@ class SegTraQ:
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
         tables_area_volume_key: str | None = "cell_area",
+        tables_x_key: str | None = "x",
+        tables_y_key: str | None = "y",
         points_key: str = "transcripts",
         points_cell_id_key: str = "cell_id",
         points_background_id: str | int = "UNASSIGNED",
@@ -57,6 +59,12 @@ class SegTraQ:
             Column in the cell table with cell area (2D) or volume (3D/quasi-3D).
             If `None`, area/volume-based metrics will be computed via
             `segtraq.bl.morphological_features`.
+
+        tables_x_key : str or None, optional, default="x"
+            Column in the cell table with the x-coordinate of the cell centroid.
+
+        tables_y_key : str or None, optional, default="y"
+            Column in the cell table with the y-coordinate of the cell centroid.
 
         points_key : str, default="transcripts"
             Key in `sdata.points` for spot/transcript-level data.
@@ -123,6 +131,8 @@ class SegTraQ:
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             tables_area_volume_key=tables_area_volume_key,
+            tables_x_key=tables_x_key,
+            tables_y_key=tables_y_key,
             points_key=points_key,
             points_cell_id_key=points_cell_id_key,
             points_background_id=points_background_id,
@@ -143,6 +153,8 @@ class SegTraQ:
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
         self.tables_area_volume_key = tables_area_volume_key
+        self.tables_x_key = tables_x_key
+        self.tables_y_key = tables_y_key
 
         self.points_key = points_key
         self.points_cell_id_key = points_cell_id_key
@@ -478,6 +490,8 @@ class SegTraQ:
             cell_centroid_y_key=cell_centroid_y_key,
             inplace=inplace,
         )
+
+        # TODO: need to add the neighbor prediction here! Should we do this for all pairs of cell types?
 
         if inplace:
             return None
@@ -868,6 +882,31 @@ class _SPFacade:
         )
 
     calculate_diff_abundance.__doc__ = sp.calculate_diff_abundance.__doc__
+
+    def neighbor_prediction(
+        self,
+        ct1: str,
+        ct2: str,
+        cell_type_key: str = "transferred_cell_type",
+        grid_shape: tuple[int, int] = (10, 10),
+        n_permutations: int = 100,
+        seed: int = 0,
+        inplace: bool = True,
+    ):
+        return sp.neighbor_prediction(
+            self._p.sdata,
+            ct1,
+            ct2,
+            cell_type_key=cell_type_key,
+            tables_x_key=self._p.tables_x_key,
+            tables_y_key=self._p.tables_y_key,
+            grid_shape=grid_shape,
+            n_permutations=n_permutations,
+            seed=seed,
+            inplace=inplace,
+        )
+
+    neighbor_prediction.__doc__ = sp.neighbor_prediction.__doc__
 
 
 class _PSFacade:
