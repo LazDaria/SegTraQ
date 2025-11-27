@@ -126,7 +126,7 @@ def _process_cell(
     cell_row: Series,
     shapes_cell_id_key: str | None,
     id_key: str | None,
-    cell_boundaries: GeoDataFrame,
+    cell_boundaries_total: GeoDataFrame,
     cell_sindex: Index,
 ) -> list:
     """For one cell polygon compute the IoU with overlapping cells in z"""
@@ -141,8 +141,8 @@ def _process_cell(
     if not candidate_idx:
         return {"cell_id": cell_id, "IoU": 0.0, "IoU_sum": 0.0}
 
-    candidates = cell_boundaries.iloc[candidate_idx]
-    # go over candidates per cell and calculate IoU
+    candidates = cell_boundaries_total.iloc[candidate_idx]
+    # go over candidates per cell and calculate intersection are
     IoU_ls = []
     for _, cell in candidates.iterrows():
         cell_id2 = cell[shapes_cell_id_key] if shapes_cell_id_key is not None else cell.name
@@ -165,6 +165,7 @@ def compute_cell_cell_IoU(
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
     shapes_cell_id_key: str = "cell_id",
+    nucleus_shapes_key: str = "nucleus_boundaries",
     n_jobs: int = -1,
     use_progress: bool = True,
     inplace: bool = True,
@@ -199,11 +200,17 @@ def compute_cell_cell_IoU(
     -------
     pandas.DataFrame
     """
-
+    
     # Get GeoDataFrames
     cell_boundaries = sdata.shapes[shapes_key]
+    # extract the names of the shape layers that are not the nucleus
+    shape_layers = [k for k in sdata.shapes if k not in [nucleus_shapes_key]]
+    # extrac the actual gdfs and add them to a list
+    selected_shapes = [sdata.shapes[name] for name in shape_layers]
+    # concatenate all the GeoDataFrames to one gdf
+    cell_boundaries_total = GeoDataFrame(pd.concat(selected_shapes, ignore_index=True), crs=sdata.shapes[shapes_key].crs)
     # Build spatial index once
-    cell_sindex = cell_boundaries.sindex
+    cell_sindex = cell_boundaries_total.sindex
     # Iterator for cells
     iterator = cell_boundaries.iterrows()
     if use_progress:
@@ -226,11 +233,11 @@ def compute_cell_cell_IoU(
             cell_row=cell_row,
             shapes_cell_id_key=shapes_cell_id_key,
             id_key=id_key,
-            cell_boundaries=cell_boundaries,
+            cell_boundaries_total=cell_boundaries_total,
             cell_sindex=cell_sindex,
         )
         for _, cell_row in iterator
-    ) 
+    )
     IoU_df = pd.DataFrame(results).set_index(
         tables_cell_id_key
     )
