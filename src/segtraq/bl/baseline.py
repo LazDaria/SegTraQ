@@ -5,7 +5,7 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from shapely.geometry import MultiPolygon, Polygon
 
-from ..utils import merge_into_obs, merge_into_var
+from ..utils import _is_background, merge_into_obs, merge_into_var
 from .utils import count_polygons
 
 
@@ -132,8 +132,8 @@ def perc_unassigned_transcripts(
         The fraction of transcripts that are unassigned.
     """
     points = sdata.points[points_key][points_cell_id_key]
-    is_unassigned = points == points_background_id
-    perc_unassigned_transcripts = is_unassigned.mean().compute() * 100
+    is_background = _is_background(points, points_background_id)
+    perc_unassigned_transcripts = is_background.mean().compute() * 100
 
     if inplace:
         sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
@@ -189,7 +189,7 @@ def perc_unassigned_transcripts_per_gene(
         df.groupby(points_gene_key, observed=True)[points_cell_id_key]
         .agg(
             total="count",
-            unassigned=lambda x: (x == points_background_id).sum(),
+            unassigned=lambda x: _is_background(x, points_background_id).sum(),
         )
         .astype(int)
     )
