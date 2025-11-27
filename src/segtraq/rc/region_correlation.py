@@ -9,10 +9,10 @@ from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
+    _align_expression_dfs,
     _assign_nuc_to_transcripts,
+    _assign_transcripts_to_center_or_border,
     _compute_ncvs_within_radius,
-    _get_center_and_border_shapes,
-    _group_points_by_regions,
     _norm_log_df,
     _process_cell,
     _shapes_by_feature_df,
@@ -562,45 +562,19 @@ def compute_center_border_ncv_correlation(
             - `corr_ncv_vs_center`: ratio of the two correlations
     """
 
-    center_gdf, border_gdf = _get_center_and_border_shapes(
-        sdata=sdata,
+    _, _, expr_center, expr_border = _assign_transcripts_to_center_or_border(
+        sdata,
         shapes_key=shapes_key,
         shapes_cell_id_key=shapes_cell_id_key,
-        tables_cell_id_key=tables_cell_id_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
-    sdata.shapes["cell_centers"] = sd.models.ShapesModel.parse(center_gdf, transformations=None)
-    sdata.shapes["cell_borders"] = sd.models.ShapesModel.parse(border_gdf, transformations=None)
-
-    cell_shape_transformation = sd.transformations.get_transformation(sdata.shapes[shapes_key])
-    sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
-    sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
-
-    expr_center = _group_points_by_regions(
-        sdata=sdata,
-        region_key="cell_centers",
-        tables_cell_id_key=tables_cell_id_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        region_cell_id_key=shapes_cell_id_key,
-    )
-
-    expr_border = _group_points_by_regions(
-        sdata=sdata,
-        region_key="cell_borders",
-        tables_cell_id_key=tables_cell_id_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        region_cell_id_key=shapes_cell_id_key,
-    )
-
+    # NCV: neighborhood composition vector
     expr_ncv = _compute_ncvs_within_radius(
         sdata=sdata,
         tables_key=tables_key,
@@ -610,34 +584,16 @@ def compute_center_border_ncv_correlation(
         radius_factor=radius_factor,
     )
 
-    # Align dataframe columns
-    common_genes = expr_center.columns.intersection(expr_border.columns)
-    common_genes = common_genes.intersection(expr_ncv.columns)
+    # next, we align the three expression DataFrames to have the same cells and genes
+    aligned_expression_dfs = _align_expression_dfs(
+        {"expr_center": expr_center, "expr_border": expr_border, "expr_ncv": expr_ncv}, sdata, tables_key
+    )
 
-    # Only use gene`s transcripts and exclude control probes
-    valid_genes = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  # TODO - this might break, if var.index and points_gene_key do not match!
-    # e.g. one is Ensemble key and one is gene_key
-    common_genes = common_genes.intersection(valid_genes)
+    expr_center_raw = aligned_expression_dfs["expr_center"]
+    expr_border_raw = aligned_expression_dfs["expr_border"]
+    expr_ncv_raw = aligned_expression_dfs["expr_ncv"]
 
-    expr_center = expr_center[common_genes]
-    expr_border = expr_border[common_genes]
-    expr_ncv = expr_ncv[common_genes]
-
-    # Align dataframe rows- these might not match
-    # expr_ncv computed based on table and expr_center/border based on shapes
-    common_cells = expr_center.index.intersection(expr_border.index)
-    common_cells = common_cells.intersection(expr_ncv.index)
-
-    expr_center = expr_center.loc[common_cells]
-    expr_border = expr_border.loc[common_cells]
-    expr_ncv = expr_ncv.loc[common_cells]
-
-    expr_center_raw = expr_center
-    expr_border_raw = expr_border
-    expr_ncv_raw = expr_ncv
-
+    # normalization and log1p
     expr_center = _norm_log_df(expr_center_raw)
     expr_border = _norm_log_df(expr_border_raw)
     expr_ncv = _norm_log_df(expr_ncv_raw)
