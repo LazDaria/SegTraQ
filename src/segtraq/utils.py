@@ -825,6 +825,14 @@ def validate_spatialdata(
                 f"Please ensure that cell IDs are all strings or all numeric."
             )
 
+        # if the user provided a background ID, we want to ensure that it actually occurs
+        if points_background_id is not None:
+            assert points_background_id in transcript_ids, (
+                f"points_background_id '{points_background_id}' not found among point cell IDs. "
+                f"You can set this with the points_background_id parameter. "
+                f"If you do not have a background ID, set this parameter to None."
+            )
+
         # missing_in_polygons = { #TODO - after querying sdata objects, this breaks
         #     x
         #     for x in (transcript_ids - shapes_cell_ids - {points_background_id})
@@ -1207,3 +1215,26 @@ def add_nuc_shapes_via_cellpose(
 
     if not inplace:
         return sdata
+
+
+def _is_background(series: pd.Series, background_id):
+    """
+    Checks if values in a Pandas Series match the background_id,
+    handling None, np.nan, or pd.NA correctly.
+
+    Args:
+        series (pd.Series): The column data (e.g., 'cell_id').
+        background_id: The value representing background (e.g., 'UNASSIGNED', 0, np.nan).
+
+    Returns:
+        pd.Series (bool): A boolean Series (True if background, False otherwise).
+    """
+    # Use pd.isna() to reliably check for None, np.nan, or pd.NA in background_id
+    if pd.isna(background_id):
+        # If the background ID is a null value, check for missing data in the Series
+        is_background = series.isna()
+    else:
+        # Otherwise, perform a direct equality check
+        is_background = series == background_id
+
+    return is_background
