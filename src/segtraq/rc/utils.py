@@ -8,7 +8,7 @@ from rtree.index import Index
 from scipy.spatial import cKDTree
 from shapely.geometry.base import BaseGeometry
 
-from ..utils import _looks_like_counts
+from ..utils import _is_background, _looks_like_counts
 
 
 def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
@@ -267,7 +267,8 @@ def _assign_nuc_to_transcripts(
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
     pts = pts[cols]
-    pts = pts[pts[points_cell_id_key] != points_background_id]
+    is_background = _is_background(pts[points_cell_id_key], points_background_id)
+    pts = pts[~is_background]
 
     valid_features = pd.Index(
         sdata.tables[tables_key].var_names
