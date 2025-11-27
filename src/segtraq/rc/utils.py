@@ -296,7 +296,7 @@ def _assign_nuc_to_transcripts(
     )[["nuc_id"]]
 
     # remove duplicate assignments
-    tx_in_nuc = tx_in_nuc[["nuc_id"]].groupby(level=0).first()
+    tx_in_nuc = tx_in_nuc[["nuc_id"]].groupby(level=0, observed=True).first()
 
     tx_in_cell = transcripts[[points_gene_key, points_cell_id_key]]
     tx = tx_in_cell.join(tx_in_nuc, how="left")
@@ -393,7 +393,7 @@ def _group_points_by_regions(
         pts_gdf_region.loc[
             pts_gdf_region["region_id"] == pts_gdf_region[points_cell_id_key], ["region_id", points_gene_key]
         ]
-        .groupby(["region_id", points_gene_key])
+        .groupby(["region_id", points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
     )
@@ -499,3 +499,92 @@ def _compute_ncvs_within_radius(
 
     expr_ncv = pd.DataFrame(ncv_arr, index=expr_cells.index, columns=genes)
     return expr_ncv
+
+
+def _assign_transcripts_to_center_or_border(
+    sdata,
+    shapes_key: str = "cell_boundaries",
+    shapes_cell_id_key: str | None = "cell_id",
+    tables_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_cell_id_key: str = "cell_id",
+    erosion_fraction_of_radius: float = 0.3,
+):
+    center_gdf, border_gdf = _get_center_and_border_shapes(
+        sdata=sdata,
+        shapes_key=shapes_key,
+        shapes_cell_id_key=shapes_cell_id_key,
+        tables_cell_id_key=tables_cell_id_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    sdata.shapes["cell_centers"] = sd.models.ShapesModel.parse(center_gdf, transformations=None)
+    sdata.shapes["cell_borders"] = sd.models.ShapesModel.parse(border_gdf, transformations=None)
+
+    cell_shape_transformation = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
+    sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
+
+    expr_center = _group_points_by_regions(
+        sdata=sdata,
+        region_key="cell_centers",
+        tables_cell_id_key=tables_cell_id_key,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_cell_id_key=points_cell_id_key,
+        region_cell_id_key=shapes_cell_id_key,
+    )
+
+    expr_border = _group_points_by_regions(
+        sdata=sdata,
+        region_key="cell_borders",
+        tables_cell_id_key=tables_cell_id_key,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_cell_id_key=points_cell_id_key,
+        region_cell_id_key=shapes_cell_id_key,
+    )
+
+    return center_gdf, border_gdf, expr_center, expr_border
+
+
+def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
+    """Align multiple expression dataframes to have the same genes and cells."""
+    # dfs is a dictionary of dataframes to align (key: name (e. g. 'expr_center'), value: dataframe)
+    # ensure there are at least 2 dataframes
+    if len(dfs) < 2:
+        raise ValueError("At least two dataframes are required for alignment.")
+
+    # Align dataframe columns to only keep common genes
+    common_genes = list(dfs.values())[0].columns
+    for other_df in list(dfs.values())[1:]:
+        common_genes = common_genes.intersection(other_df.columns)
+
+    # Only use gene`s transcripts and exclude control probes
+    valid_genes = pd.Index(
+        sdata.tables[tables_key].var_names
+    )  # TODO - this might break, if var.index and points_gene_key do not match!
+    # e.g. one is Ensemble key and one is gene_key
+    common_genes = common_genes.intersection(valid_genes)
+
+    dfs_aligned = {}
+    for name, df in dfs.items():
+        dfs_aligned[name] = df[common_genes]
+
+    # Align dataframe rows- these might not match
+    # expr_ncv computed based on table and expr_center/border based on shapes
+    common_cells = dfs_aligned[list(dfs_aligned.keys())[0]].index
+    for other_df in list(dfs_aligned.values())[1:]:
+        common_cells = common_cells.intersection(other_df.index)
+
+    for name, df in dfs_aligned.items():
+        dfs_aligned[name] = df.loc[common_cells]
+
+    return dfs_aligned

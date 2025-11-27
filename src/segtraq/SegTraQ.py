@@ -955,6 +955,32 @@ class _PSFacade:
 
     distance_to_membrane.__doc__ = ps.distance_to_membrane.__doc__
 
+    def periphery_enrichment_score(
+        self,
+        erosion_fraction_of_radius: float = 0.2,
+        radius_factor: float = 2.0,
+        metric: str = "cosine_sim",
+        inplace: bool = True,
+    ):
+        return ps.periphery_enrichment_score(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            points_gene_key=self._p.points_gene_key,
+            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            radius_factor=radius_factor,
+            metric=metric,
+            inplace=inplace,
+        )
+
+    periphery_enrichment_score.__doc__ = ps.periphery_enrichment_score.__doc__
+
 
 class _CSFacade:
     """
