@@ -371,11 +371,13 @@ class SegTraQ:
         Run volume metrics for SegTraQ.
         """
         z_plane_correlation = self.vl.compute_z_plane_correlation(inplace=inplace)
+        cell_cell_IoU = self.vl.compute_cell_cell_IoU(inplace=inplace)
         if inplace:
             return None
         else:
             return {
                 "z_plane_correlation": z_plane_correlation,
+                "cell_cell_IoU": cell_cell_IoU
             }
 
     def run_supervised_metrics(
@@ -1091,5 +1093,21 @@ class _VLFacade:
             tables_key=self._p.tables_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
+            inplace=inplace,
+        )
+    def compute_cell_cell_IoU(
+        self, 
+        n_jobs: int = -1,
+        inplace: bool = True
+    ):
+    
+        return vl.compute_cell_cell_IoU(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            n_jobs=n_jobs,
+            use_progress=True,
             inplace=inplace,
         )
