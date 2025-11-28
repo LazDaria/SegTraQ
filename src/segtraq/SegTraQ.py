@@ -375,10 +375,7 @@ class SegTraQ:
         if inplace:
             return None
         else:
-            return {
-                "z_plane_correlation": z_plane_correlation,
-                "cell_cell_IoU": cell_cell_IoU
-            }
+            return {"z_plane_correlation": z_plane_correlation, "cell_cell_IoU": cell_cell_IoU}
 
     def run_supervised_metrics(
         self,
@@ -1095,12 +1092,8 @@ class _VLFacade:
             points_gene_key=self._p.points_gene_key,
             inplace=inplace,
         )
-    def compute_cell_cell_IoU(
-        self, 
-        n_jobs: int = -1,
-        inplace: bool = True
-    ):
-    
+
+    def compute_cell_cell_IoU(self, n_jobs: int = -1, inplace: bool = True):
         return vl.compute_cell_cell_IoU(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
