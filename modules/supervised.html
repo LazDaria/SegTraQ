@@ -177,7 +177,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
-
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
 
@@ -332,7 +331,6 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_prediction"><code class="docutils literal notranslate"><span class="pre">neighbor_prediction()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -509,102 +507,6 @@ if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
 </dl>
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.neighbor_prediction">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">neighbor_prediction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ct1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ct2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_x_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_y_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(10,</span> <span class="pre">10)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_permutations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.neighbor_prediction" title="Link to this definition">#</a></dt>
-<dd><p>See if it is possible to predict adjacency of ct1 next to ct2 based on ct1’s expression profiles using
-logistic regression.
-:param sdata: Container object expected to expose a mapping-like attribute <cite>tables</cite> such</p>
-<blockquote>
-<div><p>that <cite>sdata.tables[tables_key]</cite> returns an AnnData-like object. The AnnData
-must provide:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>.obs: a pandas.DataFrame containing at least the <cite>cell_type_key</cite> column</p></li>
-<li><p>.var_names: iterable of gene names</p></li>
-<li><p>.X: expression matrix (numpy array or sparse matrix)</p></li>
-<li><p>.obsm: a dict-like object; the function will look for or add
-“neighbor_celltype_binary”</p></li>
-</ul>
-</div></blockquote>
-</div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>ct1</strong> (<em>str</em><em> or </em><em>int</em>) – The focal cell type (as stored in <cite>.obs[cell_type_key]</cite>) for which to
-predict the presence of neighboring ct2 cells.</p></li>
-<li><p><strong>ct2</strong> (<em>str</em><em> or </em><em>int</em>) – The neighbor cell type (column name in <cite>adata.obsm[“neighbor_celltype_binary”]</cite>)
-whose presence/absence among neighbors is the target binary outcome.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key in <cite>sdata.tables</cite> to read the AnnData from (default: “table”).</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>.obs</cite> containing transferred/annotated cell types
-(default: “transferred_cell_type”).</p></li>
-<li><p><strong>tables_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in <cite>.obs</cite> used as spatial coordinates for grid splitting and
-for computing neighbor relations if <cite>neighbor_celltype_binary</cite> must be added.
-(default: “x_centroid”, “y_centroid”).</p></li>
-<li><p><strong>tables_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in <cite>.obs</cite> used as spatial coordinates for grid splitting and
-for computing neighbor relations if <cite>neighbor_celltype_binary</cite> must be added.
-(default: “x_centroid”, “y_centroid”).</p></li>
-<li><p><strong>grid_shape</strong> (<em>tuple</em><em> of </em><em>two ints</em><em>, </em><em>optional</em>) – Number of spatial grid cells along (nx, ny) used to assign spatial folds;
-cells within the same grid tile go to the same split (default: (10, 10)).</p></li>
-<li><p><strong>n_permutations</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of permutations to build an empirical null distribution of AP scores
-(default: 100).</p></li>
-<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Random seed used for reproducible splitting and permutation seeds (default: 0).</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, operate on the AnnData in <cite>sdata.tables[tables_key]</cite> directly and
-write results into its <cite>.uns</cite>. If False, operate on a copy and return the
-result without mutating the original (default: True).</p></li>
-<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of parallel jobs for permutation computation. Passed to joblib. If
--1, use all available cores. The implementation uses the ‘threading’
-backend to reduce memory-copy overhead (default: -1).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>A dictionary describing the trained model and permutation results, saved
-into <cite>adata.uns[“neighbor_prediction”]</cite> and also returned. Keys include:</p>
-<blockquote>
-<div><ul class="simple">
-<li><dl class="simple">
-<dt>”model_params”: {“weights”: array, “intercept”: float}</dt><dd><p>Coefficients of the trained high-precision logistic regression.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>”test_ap”: float</dt><dd><p>Observed average-precision (AP) on the spatial test fold.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>”empirical_p_value”: float</dt><dd><p>Fraction of permutation APs greater than or equal to observed AP.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>”null_aps”: ndarray, shape (n_permutations,)</dt><dd><p>AP scores computed under the null (permuted) models.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>”gene_names”: ndarray</dt><dd><p>Names of features (genes) corresponding to model coefficients.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>”splits”: {“train_indices”: array, “test_indices”: array}</dt><dd><p>Indices (into the focal-cell index set) of the train/test split.</p>
-</dd>
-</dl>
-</li>
-</ul>
-</div></blockquote>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If fewer than 10 cells of type <cite>ct1</cite> are available (insufficient data).</p>
-</dd>
-</dl>
-</dd></dl>
-
 </section>
 </section>
 
@@ -658,7 +560,6 @@ into <cite>adata.uns[“neighbor_prediction”]</cite> and also returned. Keys i
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_prediction"><code class="docutils literal notranslate"><span class="pre">neighbor_prediction()</span></code></a></li>
 </ul>
 </li>
 </ul>
