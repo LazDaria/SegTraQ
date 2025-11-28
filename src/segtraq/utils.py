@@ -863,6 +863,24 @@ def validate_spatialdata(
 
             tables_cell_ids = set(table.obs[tables_cell_id_key].values)
 
+            # checking that the dtype of the table cell IDs matches that of the shapes
+            table_dtype = table.obs[tables_cell_id_key].dtype
+            shapes_sample = next(iter(shapes_cell_ids))
+            if is_numeric(shapes_sample):
+                if not np.issubdtype(table_dtype, np.number):
+                    raise TypeError(
+                        f"Cell ID types between shapes and tables are incompatible: "
+                        f"{type(shapes_sample)} (shapes) vs {table_dtype} (tables). "
+                        f"Please ensure that cell IDs are all strings or all numeric."
+                    )
+            elif is_string(shapes_sample):
+                if not np.issubdtype(table_dtype, np.object_) and not np.issubdtype(table_dtype, np.str_):
+                    raise TypeError(
+                        f"Cell ID types between shapes and tables are incompatible: "
+                        f"{type(shapes_sample)} (shapes) vs {table_dtype} (tables). "
+                        f"Please ensure that cell IDs are all strings or all numeric."
+                    )
+
             # --- Ensure consistent types between shapes and tables ---
             # Ignore missing values (e.g. NaN, None) when checking type
             non_missing_shapes = [x for x in shapes_cell_ids if not _is_missing(x)]
