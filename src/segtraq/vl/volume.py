@@ -1,7 +1,13 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+from pandas import Series
+from geopandas import GeoDataFrame, GeoSeries
 from scipy.stats import pearsonr
+from rtree.index import Index
+from tqdm import tqdm
+from joblib import Parallel, delayed
+from shapely.validation import make_valid
 
 from ..utils import merge_into_obs
 
@@ -113,3 +119,136 @@ def compute_z_plane_correlation(
         )
 
     return correlation_df
+
+
+#code adapt from Daria Lazic
+def _process_cell(
+    cell_row: Series,
+    shapes_cell_id_key: str | None,
+    id_key: str | None,
+    cell_boundaries_total: GeoDataFrame,
+    cell_sindex: Index,
+) -> list:
+    """For one cell polygon compute the IoU with overlapping cells in z"""
+    
+    cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
+    
+    cell_geom1 = make_valid(cell_row.geometry)
+    # Get candidate cell bounding boxes that overlap this cell's bbox
+    candidate_idx = list(cell_sindex.intersection(cell_geom1.bounds))
+    
+    # if there are no candidates, return 0.0
+    if not candidate_idx:
+        return {"cell_id": cell_id, "IoU": 0.0, "IoU_sum": 0.0}
+
+    candidates = cell_boundaries_total.iloc[candidate_idx]
+    # go over candidates per cell and calculate intersection are
+    IoU_ls = []
+    for _, cell in candidates.iterrows():
+        cell_id2 = cell[shapes_cell_id_key] if shapes_cell_id_key is not None else cell.name
+        #if it is the same cell, break
+        if cell_id == cell_id2:
+            break
+        cell_geom2 = make_valid(cell.geometry)
+        intersection = cell_geom1.intersection(cell_geom2).area
+        union = cell_geom1.union(cell_geom2).area
+        IoU = intersection / union if union > 0 else 0.0
+        IoU_ls.append(IoU)    
+    IoU_ls.sort(reverse=True)
+
+    return {"cell_id": cell_id, "IoU": IoU_ls, "IoU_sum": sum(IoU_ls)}
+
+#code adapt from Daria Lazic
+def compute_cell_cell_IoU(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    shapes_cell_id_key: str = "cell_id",
+    nucleus_shapes_key: str = "nucleus_boundaries",
+    n_jobs: int = -1,
+    use_progress: bool = True,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute per-cell IoU between cell and nearby cell boundaries in a SpatialData object.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned spatial
+        transcriptomics data (images, tables, points, shapes and optional labels).
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table. Gene names in
+        `sdata.tables[tables_key].var.index` should match the gene field in
+        `sdata.points[points_key]` (see `points_gene_key`).
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    shapes_cell_id_key : str,  default="cell_id"
+        Column in the cell-boundary shapes linking polygons to cell IDs.
+        If `None`, the shape index is used as the cell ID.
+    n_jobs : int, optional
+        Number of parallel jobs. Default=-1 uses all CPUs.
+    use_progress : bool, optional
+        Whether to display a progress bar with tqdm.
+    inplace : bool, optional
+        Whether to add the results to `sdata.tables`. Default is True.
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    
+    # Get GeoDataFrames
+    cell_boundaries = sdata.shapes[shapes_key]
+    # extract the names of the shape layers that are not the nucleus
+    shape_layers = [k for k in sdata.shapes if k not in [nucleus_shapes_key]]
+    # extrac the actual gdfs and add them to a list
+    selected_shapes = [sdata.shapes[name] for name in shape_layers]
+    # concatenate all the GeoDataFrames to one gdf
+    cell_boundaries_total = GeoDataFrame(pd.concat(selected_shapes, ignore_index=True), crs=sdata.shapes[shapes_key].crs)
+    # Build spatial index once
+    cell_sindex = cell_boundaries_total.sindex
+    # Iterator for cells
+    iterator = cell_boundaries.iterrows()
+    if use_progress:
+        iterator = tqdm(
+            iterator,
+            total=len(cell_boundaries),
+            desc="Processing IoU between overlapping cells",
+        )
+
+    if shapes_cell_id_key is not None:
+        id_key = shapes_cell_id_key
+    elif cell_boundaries.index.name is not None:
+        id_key = cell_boundaries.index.name
+    else:
+        id_key = tables_cell_id_key
+
+    # Parallel loop over cells
+    results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
+        delayed(_process_cell)(
+            cell_row=cell_row,
+            shapes_cell_id_key=shapes_cell_id_key,
+            id_key=id_key,
+            cell_boundaries_total=cell_boundaries_total,
+            cell_sindex=cell_sindex,
+        )
+        for _, cell_row in iterator
+    )
+    IoU_df = pd.DataFrame(results).set_index(
+        tables_cell_id_key
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=IoU_df,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return IoU_df
