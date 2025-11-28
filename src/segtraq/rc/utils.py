@@ -37,7 +37,6 @@ def _process_cell(
     nuc_sindex: Index,
 ) -> dict[str | int, str | int, int | None | float]:
     """For one cell polygon compute the IoU with the best-matching nucleus."""
-
     cell_geom = cell_row.geometry
 
     cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
