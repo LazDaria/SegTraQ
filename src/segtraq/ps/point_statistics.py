@@ -3,6 +3,7 @@ import pandas as pd
 import spatialdata as sd
 from shapely import LinearRing, Point
 
+from ..rc.utils import _align_expression_dfs, _assign_transcripts_to_center_or_border
 from ..utils import merge_into_obs
 
 
@@ -269,3 +270,79 @@ def distance_to_membrane(
         )
 
     return mean_distance_to_outline
+
+
+def periphery_enrichment_score(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    shapes_cell_id_key: str | None = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    radius_factor: float = 2.0,
+    metric: str = "cosine_sim",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    center_gdf, border_gdf, expr_center, expr_border = _assign_transcripts_to_center_or_border(
+        sdata,
+        shapes_key=shapes_key,
+        shapes_cell_id_key=shapes_cell_id_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    # next, we align the three expression DataFrames to have the same cells and genes
+    aligned_expression_dfs = _align_expression_dfs(
+        {"expr_center": expr_center, "expr_border": expr_border}, sdata, tables_key
+    )
+
+    expr_center_raw = aligned_expression_dfs["expr_center"]
+    expr_border_raw = aligned_expression_dfs["expr_border"]
+
+    # summing up the total expression per cell (all genes combined)
+    total_expr_center = expr_center_raw.sum(axis=1)
+    total_expr_border = expr_border_raw.sum(axis=1)
+
+    # combining the areas and expressions into a single DataFrame
+    epsilon = 1e-10  # small constant to avoid division by zero
+
+    # combining expressions
+    df = pd.DataFrame(
+        {
+            "cell_id": total_expr_center.index,
+            "center_expr": total_expr_center.values,
+            "border_expr": total_expr_border.values,
+        }
+    )
+
+    # merging areas into the df
+    df = df.merge(
+        pd.DataFrame({"cell_id": center_gdf["cell_id"], "center_area": center_gdf.geometry.area.values}), on="cell_id"
+    ).merge(
+        pd.DataFrame({"cell_id": border_gdf["cell_id"], "border_area": border_gdf.geometry.area.values}), on="cell_id"
+    )
+
+    # calculate densities and ratio with pseudocount (+1) and safe division (+epsilon)
+    df["border_density"] = (df["border_expr"] + 1) / (df["border_area"] + epsilon)
+    df["center_density"] = (df["center_expr"] + 1) / (df["center_area"] + epsilon)
+    df["density_ratio"] = df["border_density"] / df["center_density"]
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=df,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key="cell_id",
+        )
+
+    return df
