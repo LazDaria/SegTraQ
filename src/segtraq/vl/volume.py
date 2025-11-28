@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from pandas import Series
-from geopandas import GeoDataFrame, GeoSeries
-from scipy.stats import pearsonr
-from rtree.index import Index
-from tqdm import tqdm
+from geopandas import GeoDataFrame
 from joblib import Parallel, delayed
+from pandas import Series
+from rtree.index import Index
+from scipy.stats import pearsonr
 from shapely.validation import make_valid
+from tqdm import tqdm
 
 from ..utils import merge_into_obs
 
@@ -121,7 +121,7 @@ def compute_z_plane_correlation(
     return correlation_df
 
 
-#code adapt from Daria Lazic
+# code adapt from Daria Lazic
 def _process_cell(
     cell_row: Series,
     shapes_cell_id_key: str | None,
@@ -130,13 +130,13 @@ def _process_cell(
     cell_sindex: Index,
 ) -> list:
     """For one cell polygon compute the IoU with overlapping cells in z"""
-    
+
     cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
-    
+
     cell_geom1 = make_valid(cell_row.geometry)
     # Get candidate cell bounding boxes that overlap this cell's bbox
     candidate_idx = list(cell_sindex.intersection(cell_geom1.bounds))
-    
+
     # if there are no candidates, return 0.0
     if not candidate_idx:
         return {"cell_id": cell_id, "IoU": 0.0, "IoU_sum": 0.0}
@@ -146,19 +146,20 @@ def _process_cell(
     IoU_ls = []
     for _, cell in candidates.iterrows():
         cell_id2 = cell[shapes_cell_id_key] if shapes_cell_id_key is not None else cell.name
-        #if it is the same cell, break
+        # if it is the same cell, break
         if cell_id == cell_id2:
             break
         cell_geom2 = make_valid(cell.geometry)
         intersection = cell_geom1.intersection(cell_geom2).area
         union = cell_geom1.union(cell_geom2).area
         IoU = intersection / union if union > 0 else 0.0
-        IoU_ls.append(IoU)    
+        IoU_ls.append(IoU)
     IoU_ls.sort(reverse=True)
 
     return {"cell_id": cell_id, "IoU": IoU_ls, "IoU_sum": sum(IoU_ls)}
 
-#code adapt from Daria Lazic
+
+# code adapt from Daria Lazic
 def compute_cell_cell_IoU(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -200,7 +201,7 @@ def compute_cell_cell_IoU(
     -------
     pandas.DataFrame
     """
-    
+
     # Get GeoDataFrames
     cell_boundaries = sdata.shapes[shapes_key]
     # extract the names of the shape layers that are not the nucleus
@@ -208,7 +209,9 @@ def compute_cell_cell_IoU(
     # extrac the actual gdfs and add them to a list
     selected_shapes = [sdata.shapes[name] for name in shape_layers]
     # concatenate all the GeoDataFrames to one gdf
-    cell_boundaries_total = GeoDataFrame(pd.concat(selected_shapes, ignore_index=True), crs=sdata.shapes[shapes_key].crs)
+    cell_boundaries_total = GeoDataFrame(
+        pd.concat(selected_shapes, ignore_index=True), crs=sdata.shapes[shapes_key].crs
+    )
     # Build spatial index once
     cell_sindex = cell_boundaries_total.sindex
     # Iterator for cells
@@ -238,9 +241,7 @@ def compute_cell_cell_IoU(
         )
         for _, cell_row in iterator
     )
-    IoU_df = pd.DataFrame(results).set_index(
-        tables_cell_id_key
-    )
+    IoU_df = pd.DataFrame(results).set_index(tables_cell_id_key)
 
     if inplace:
         merge_into_obs(

@@ -685,21 +685,16 @@ def neighbor_prediction(
     rng = np.random.RandomState(seed)
     perm_scores = np.zeros(n_permutations)
 
-    # Parameters for the low-precision null model
-    null_model_params = {
+    # Parameters for the logistic regression
+    real_model_params = {
         "solver": "liblinear",
         "penalty": "l2",
         "C": 1.0,
         "class_weight": "balanced",
-        "tol": 1e-2,  # Loose tolerance for speed
-        "max_iter": 100,
+        "tol": 1e-4,
+        "max_iter": 1000,
         "random_state": seed,
     }
-
-    # Parameters for the high-precision observed model
-    real_model_params = null_model_params.copy()
-    real_model_params["tol"] = 1e-4
-    real_model_params["max_iter"] = 1000
 
     real_model = LogisticRegression(**real_model_params)
     real_model.fit(X_train, y_train)
