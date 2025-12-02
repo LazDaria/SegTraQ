@@ -182,39 +182,52 @@ def run_leiden_clustering_on_random_subset(
     return key_added, pca
 
 
-def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> float:
+def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
     """
     Compute the pairwise adjusted Rand index (ARI) for given cluster keys in an AnnData object.
+    Handles non-overlapping label sets by restricting to rows where both labels exist.
 
     Parameters
     ----------
     adata : ad.AnnData
-        The AnnData object containing clustering information.
-    cluster_keys : List[str]
-        The key(s) in `adata.obs` that contain the cluster labels.
-
+        The AnnData object containing cluster labels in `.obs`.
+    cluster_keys : list of str
+        List of keys in `adata.obs` representing different clusterings.
     Returns
     -------
-    float
-        The average pairwise ARI across the specified cluster keys.
+    np.ndarray
+        A symmetric matrix of pairwise ARI scores.
     """
-    n_clusterings = len(cluster_keys)
-    assert n_clusterings > 1, "At least two cluster keys are required to compute pairwise ARI."
 
-    # Ensure all specified cluster keys exist in adata.obs
+    n = len(cluster_keys)
+    assert n > 1, "At least two cluster keys are required to compute pairwise ARI."
+
+    # Ensure all keys exist
     for key in cluster_keys:
         if key not in adata.obs:
             raise ValueError(f"Cluster key '{key}' not found in adata.obs.")
 
-    # Compute pairwise ARI scores
-    ARI_matrix = np.zeros((n_clusterings, n_clusterings))
+    ARI_matrix = np.zeros((n, n))
 
-    for i in range(n_clusterings):
-        for j in range(i + 1, n_clusterings):
-            ari = adjusted_rand_score(adata.obs[cluster_keys[i]], adata.obs[cluster_keys[j]])
+    for i in range(n):
+        for j in range(i + 1, n):
+            labels_i = adata.obs[cluster_keys[i]]
+            labels_j = adata.obs[cluster_keys[j]]
+
+            # Restrict to cells with non-missing labels in both clusterings
+            mask = labels_i.notna() & labels_j.notna()
+            labels_i_valid = labels_i[mask]
+            labels_j_valid = labels_j[mask]
+
+            # If no overlapping labels → ARI undefined → set NaN
+            if len(labels_i_valid) == 0:
+                ARI_matrix[i, j] = ARI_matrix[j, i] = np.nan
+                continue
+
+            ari = adjusted_rand_score(labels_i_valid, labels_j_valid)
             ARI_matrix[i, j] = ARI_matrix[j, i] = ari
-    np.fill_diagonal(ARI_matrix, 1.0)
 
+    np.fill_diagonal(ARI_matrix, 1.0)
     return ARI_matrix
 
 

@@ -1047,23 +1047,31 @@ class _CSFacade:
     def compute_purity(
         self,
         resolution: float = 1.0,
-        n_genes_subset: int = 100,
+        frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         inplace: bool = True,
     ) -> float:
         return cs.compute_purity(
-            self._p.sdata, resolution=resolution, n_genes_subset=n_genes_subset, key_prefix=key_prefix, inplace=inplace
+            self._p.sdata,
+            resolution=resolution,
+            frac_cells_subset=frac_cells_subset,
+            key_prefix=key_prefix,
+            inplace=inplace,
         )
 
     def compute_ari(
         self,
         resolution: float = 1.0,
-        n_genes_subset: int = 100,
+        frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         inplace: bool = True,
     ) -> float:
         return cs.compute_ari(
-            self._p.sdata, resolution=resolution, n_genes_subset=n_genes_subset, key_prefix=key_prefix, inplace=inplace
+            self._p.sdata,
+            resolution=resolution,
+            frac_cells_subset=frac_cells_subset,
+            key_prefix=key_prefix,
+            inplace=inplace,
         )
 
 
