@@ -128,98 +128,106 @@ def run_leiden_clustering_on_adata(
     return adata.obs[key_added].copy(), adata.obsm["X_pca"]
 
 
-def run_leiden_clustering_on_random_gene_subset(
+def subset_adata(
+    adata: ad.AnnData,
+    frac_cells_subset: float,
+    random_state: int,
+):
+    rng = np.random.default_rng(random_state)
+
+    n_cells = adata.shape[0]
+    if frac_cells_subset > 1.0:
+        raise ValueError("frac_cells_subset must be <= 1.")
+
+    n_cells_subset = int(n_cells * frac_cells_subset)
+
+    cell_idx = rng.choice(n_cells, size=n_cells_subset, replace=False)
+    return adata[cell_idx, :], f"cells{n_cells_subset}"
+
+
+def run_leiden_clustering_on_random_subset(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
-    n_genes_subset: int | None = 100,
+    frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden",
     random_state: int = 42,
     recompute_neighbors: bool = True,
 ):
-    """
-    Run Leiden clustering on either a random subset of genes or all genes.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        The spatialdata object.
-    resolution : float
-        Leiden resolution.
-    n_genes_subset : int or None
-        If int, run on that number of random genes. If None, use all genes.
-    key_prefix : str
-        Prefix for result key in .obs.
-    random_state : int
-        Seed for reproducibility (when subsetting genes).
-    recompute_neighbors : bool
-        Whether to recompute neighbors before clustering.
-
-    Returns
-    -------
-    key_added : str
-        The key under which clustering results are stored in .obs.
-    """
     adata = sdata.tables["table"]
-    key_added = None
 
-    if n_genes_subset is None:
-        # Use all genes
-        adata_subset = adata
-        key_added = f"{key_prefix}_allgenes_res{resolution}"
-    else:
-        # Use random subset of genes
-        rng = np.random.default_rng(random_state)
-        n_genes = adata.shape[1]
-        if n_genes_subset > n_genes:
-            raise ValueError("n_genes_subset cannot be greater than total number of genes")
-
-        gene_indices = rng.choice(n_genes, size=n_genes_subset, replace=False)
-        gene_names = adata.var_names[gene_indices]
-        adata_subset = adata[:, gene_names]
-        key_added = f"{key_prefix}_{n_genes_subset}_res{resolution}_seed{random_state}"
-
-    # Run Leiden and store in original object
-    labels, pca = run_leiden_clustering_on_adata(
-        adata_subset, resolution=resolution, key_added=key_added, recompute_neighbors=recompute_neighbors
+    # --- Perform subsetting --- #
+    adata_subset, subset_label = subset_adata(
+        adata,
+        frac_cells_subset=frac_cells_subset,
+        random_state=random_state,
     )
-    adata.obs[key_added] = labels.values
+
+    key_added = f"{key_prefix}_{subset_label}_res{resolution}_seed{random_state}"
+
+    # Run Leiden clustering
+    labels, pca = run_leiden_clustering_on_adata(
+        adata_subset,
+        resolution=resolution,
+        key_added=key_added,
+        recompute_neighbors=recompute_neighbors,
+    )
+
+    # Store labels in the full AnnData
+    # For cell subsetting, missing cells get NaN
+    full_labels = pd.Series(index=adata.obs_names, dtype=object)
+    full_labels.loc[adata_subset.obs_names] = labels.values
+
+    adata.obs[key_added] = full_labels
 
     return key_added, pca
 
 
-def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> float:
+def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
     """
     Compute the pairwise adjusted Rand index (ARI) for given cluster keys in an AnnData object.
+    Handles non-overlapping label sets by restricting to rows where both labels exist.
 
     Parameters
     ----------
     adata : ad.AnnData
-        The AnnData object containing clustering information.
-    cluster_keys : List[str]
-        The key(s) in `adata.obs` that contain the cluster labels.
-
+        The AnnData object containing cluster labels in `.obs`.
+    cluster_keys : list of str
+        List of keys in `adata.obs` representing different clusterings.
     Returns
     -------
-    float
-        The average pairwise ARI across the specified cluster keys.
+    np.ndarray
+        A symmetric matrix of pairwise ARI scores.
     """
-    n_clusterings = len(cluster_keys)
-    assert n_clusterings > 1, "At least two cluster keys are required to compute pairwise ARI."
 
-    # Ensure all specified cluster keys exist in adata.obs
+    n = len(cluster_keys)
+    assert n > 1, "At least two cluster keys are required to compute pairwise ARI."
+
+    # Ensure all keys exist
     for key in cluster_keys:
         if key not in adata.obs:
             raise ValueError(f"Cluster key '{key}' not found in adata.obs.")
 
-    # Compute pairwise ARI scores
-    ARI_matrix = np.zeros((n_clusterings, n_clusterings))
+    ARI_matrix = np.zeros((n, n))
 
-    for i in range(n_clusterings):
-        for j in range(i + 1, n_clusterings):
-            ari = adjusted_rand_score(adata.obs[cluster_keys[i]], adata.obs[cluster_keys[j]])
+    for i in range(n):
+        for j in range(i + 1, n):
+            labels_i = adata.obs[cluster_keys[i]]
+            labels_j = adata.obs[cluster_keys[j]]
+
+            # Restrict to cells with non-missing labels in both clusterings
+            mask = labels_i.notna() & labels_j.notna()
+            labels_i_valid = labels_i[mask]
+            labels_j_valid = labels_j[mask]
+
+            # If no overlapping labels → ARI undefined → set NaN
+            if len(labels_i_valid) == 0:
+                ARI_matrix[i, j] = ARI_matrix[j, i] = np.nan
+                continue
+
+            ari = adjusted_rand_score(labels_i_valid, labels_j_valid)
             ARI_matrix[i, j] = ARI_matrix[j, i] = ari
-    np.fill_diagonal(ARI_matrix, 1.0)
 
+    np.fill_diagonal(ARI_matrix, 1.0)
     return ARI_matrix
 
 
@@ -263,21 +271,6 @@ def compute_purity_score(labels_true, labels_pred):
 
 
 def compute_pairwise_purity(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
-    """
-    Compute the pairwise purity scores between different clusterings in .obs.
-
-    Parameters
-    ----------
-    adata : AnnData
-        The AnnData object containing the cluster assignments.
-    cluster_keys : List[str]
-        List of .obs keys with clustering labels.
-
-    Returns
-    -------
-    np.ndarray
-        Symmetric matrix of pairwise purity scores.
-    """
     n = len(cluster_keys)
     purity_matrix = np.zeros((n, n))
 
@@ -285,11 +278,20 @@ def compute_pairwise_purity(adata: ad.AnnData, cluster_keys: list[str]) -> np.nd
         for j in range(i + 1, n):
             labels_i = adata.obs[cluster_keys[i]]
             labels_j = adata.obs[cluster_keys[j]]
-            # Compute purity in both directions and average
-            p1 = compute_purity_score(labels_i, labels_j)
-            p2 = compute_purity_score(labels_j, labels_i)
-            avg_purity = (p1 + p2) / 2
-            purity_matrix[i, j] = purity_matrix[j, i] = avg_purity
+
+            # Restrict to intersection where both have labels
+            mask = labels_i.notna() & labels_j.notna()
+            labels_i_valid = labels_i[mask]
+            labels_j_valid = labels_j[mask]
+
+            # Handle empty intersections
+            if len(labels_i_valid) == 0:
+                purity_matrix[i, j] = purity_matrix[j, i] = np.nan
+                continue
+
+            p1 = compute_purity_score(labels_i_valid, labels_j_valid)
+            p2 = compute_purity_score(labels_j_valid, labels_i_valid)
+            purity_matrix[i, j] = purity_matrix[j, i] = (p1 + p2) / 2
 
     np.fill_diagonal(purity_matrix, 1.0)
     return purity_matrix
