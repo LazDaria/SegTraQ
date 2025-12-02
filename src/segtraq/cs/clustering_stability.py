@@ -10,7 +10,7 @@ from .utils import (
     compute_pairwise_ari,
     compute_pairwise_purity,
     compute_rmsd_for_clustering,
-    run_leiden_clustering_on_random_gene_subset,
+    run_leiden_clustering_on_random_subset,
 )
 
 
@@ -73,10 +73,10 @@ def compute_rmsd(
 
     best_rmsd = np.inf
     for res in resolution:
-        key_added, pca = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=res,
-            n_genes_subset=None,  # Use all genes
+            frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
             random_state=random_state,
             recompute_neighbors=False,
@@ -155,10 +155,10 @@ def compute_mean_cosine_distance(
         )
 
     for res in resolution:
-        key_added, pca = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=res,
-            n_genes_subset=None,  # Use all genes
+            frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
             random_state=random_state,
             recompute_neighbors=False,
@@ -244,10 +244,10 @@ def compute_silhouette_score(
 
     for res in resolution:
         # Run clustering for each resolution
-        key_added, pca = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=res,
-            n_genes_subset=None,  # Use all genes
+            frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
             random_state=random_state,
             recompute_neighbors=False,
@@ -269,40 +269,38 @@ def compute_silhouette_score(
 def compute_purity(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
-    n_genes_subset: int = 100,
+    frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden_subset",
     inplace: bool = True,
 ) -> float:
     """
-    Compute the clustering consistency using pairwise purity scores across
-    clustering runs on random gene subsets.
-
+    Compute the clustering stability using pairwise purity on random subsets of genes.
     Parameters
     ----------
-    sdata : SpatialData
-        The SpatialData object.
-    resolution : float
-        Leiden resolution parameter.
-    n_genes_subset : int
-        Number of genes to use per clustering run.
-    key_prefix : str
-        Prefix for storing cluster labels in .obs.
+    sdata : sd.SpatialData
+        The SpatialData object containing clustering information.
+    resolution : float, optional
+        The resolution parameter for Leiden clustering, by default 1.0.
+    frac_cells_subset : float, optional
+        The fraction of cells to subset for clustering, by default 0.63.
+    key_prefix : str, optional
+        The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     inplace : bool, optional
-        Whether to store the computed purity score in sdata.uns, by default True.
+        Whether to store the computed purity in sdata.uns, by default True.
 
     Returns
     -------
     float
-        Average pairwise purity score.
+        The average pairwise purity across the specified cluster keys.
     """
     adata = sdata.tables["table"]
     cluster_keys = []
 
     for random_state in range(5):
-        key_added, pca = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=resolution,
-            n_genes_subset=n_genes_subset,
+            frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
             random_state=random_state,
         )
@@ -320,7 +318,7 @@ def compute_purity(
 def compute_ari(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
-    n_genes_subset: int = 100,
+    frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden_subset",
     inplace: bool = True,
 ) -> float:
@@ -349,10 +347,10 @@ def compute_ari(
     cluster_keys = []
     # Run clustering on random subsets of genes
     for random_state in range(5):
-        key_added, pca = run_leiden_clustering_on_random_gene_subset(
+        key_added, pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=resolution,
-            n_genes_subset=n_genes_subset,
+            frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
             random_state=random_state,
         )
