@@ -861,6 +861,11 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the tables_cell_id_key parameter."
             )
 
+            assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
+            "You can set them like this: \n"
+            "sdata.tables['table'].obs['region'] = 'cell_boundaries'\n"
+            "sdata.set_table_annotates_spatialelement('table', region='cell_boundaries')"
+
             tables_cell_ids = set(table.obs[tables_cell_id_key].values)
 
             # checking that the dtype of the table cell IDs matches that of the shapes
