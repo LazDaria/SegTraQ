@@ -68,9 +68,9 @@ def compute_cell_nuc_ious(
     """
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
-    assert T_cells == T_nuclei, (
-        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
-    )
+    assert (
+        T_cells == T_nuclei
+    ), "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
 
     # Get GeoDataFrames
     cell_boundaries = sdata.shapes[shapes_key]
@@ -182,12 +182,14 @@ def compute_cell_nuc_correlation(
             - `corr_nc_cell`: Pearson correlation between the cell and its matched nucleus gene counts
             (0.0 if no match).
     """
+    if metric not in ["pearson", "spearman", "cosine_sim"]:
+        raise ValueError(f"Metric {metric} not supported")
 
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
-    assert T_cells == T_nuclei, (
-        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
-    )
+    assert (
+        T_cells == T_nuclei
+    ), "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
 
     if shapes_cell_id_key is not None:
         id_key = shapes_cell_id_key
@@ -376,11 +378,14 @@ def compute_correlation_between_parts(
     pd.DataFrame
         DataFrame with columns [cell_id_key, "best_nuc_id", "correlation_parts"]
     """
+    if metric not in ["pearson", "spearman", "cosine_sim"]:
+        raise ValueError(f"Metric {metric} not supported")
+
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
-    assert T_cells == T_nuclei, (
-        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
-    )
+    assert (
+        T_cells == T_nuclei
+    ), "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
 
     cells_gdf = sdata.shapes[shapes_key]
 
