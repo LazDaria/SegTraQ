@@ -30,14 +30,14 @@ def test_morphological_features(sdata_new):
     # asserts for the different features (that they are present and of correct type, also in the right range)
     for feature in all_features:
         assert feature in morphological_features.columns, f"Feature '{feature}' should be present in DataFrame columns"
-        assert feature in sdata_new.tables["table"].obs.columns, (
-            f"Feature '{feature}' should be in the observation columns of the table"
-        )
+        assert (
+            feature in sdata_new.tables["table"].obs.columns
+        ), f"Feature '{feature}' should be in the observation columns of the table"
         feature_values = morphological_features[feature]
         assert not feature_values.empty, f"Feature '{feature}' should have values"
-        assert all(isinstance(value, (int | float)) for value in feature_values), (
-            f"Values for '{feature}' should be numeric"
-        )
+        assert all(
+            isinstance(value, (int | float)) for value in feature_values
+        ), f"Values for '{feature}' should be numeric"
         if feature in ["cell_area", "perimeter", "bbox_width", "bbox_height", "num_polygons"]:
             assert all(value >= 0 for value in feature_values), f"Values for '{feature}' should be non-negative"
         elif feature in [

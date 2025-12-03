@@ -955,9 +955,9 @@ def _process_image(
     return_values: bool = True,
 ):
     if key_added is not None:
-        assert key_added not in sdata.labels.keys(), (
-            f"Key {key_added} already exists in spatial data object. Please choose another key."
-        )
+        assert (
+            key_added not in sdata.labels.keys()
+        ), f"Key {key_added} already exists in spatial data object. Please choose another key."
 
     image = sdata.images[images_key]
 
@@ -967,9 +967,9 @@ def _process_image(
             f"Please provide a data_key to access the image data. "
             f"Available keys are: {list(image.keys())}."
         )
-        assert images_data_key.split("/")[0] in image.keys(), (
-            f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
-        )
+        assert (
+            images_data_key.split("/")[0] in image.keys()
+        ), f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
 
         image = image[images_data_key]
 
@@ -1223,7 +1223,9 @@ def add_nuc_shapes_via_cellpose(
     )  # get scaling factors
     T = get_transformation_between_coordinate_systems(
         sdata, sdata.images[images_key], sdata.shapes[shapes_key]
-    ).to_affine_matrix(("x", "y"), ("x", "y"))  # get affine transformation between image and shapes
+    ).to_affine_matrix(
+        ("x", "y"), ("x", "y")
+    )  # get affine transformation between image and shapes
     A = T @ S
     t_params = [A[0, 0], A[0, 1], A[1, 0], A[1, 1], A[0, 2], A[1, 2]]
 
