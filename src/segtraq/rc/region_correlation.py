@@ -182,6 +182,8 @@ def compute_cell_nuc_correlation(
             - `corr_nc_cell`: Pearson correlation between the cell and its matched nucleus gene counts
             (0.0 if no match).
     """
+    if metric not in ["pearson", "spearman", "cosine_sim"]:
+        raise ValueError(f"Metric {metric} not supported")
 
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
@@ -376,6 +378,9 @@ def compute_correlation_between_parts(
     pd.DataFrame
         DataFrame with columns [cell_id_key, "best_nuc_id", "correlation_parts"]
     """
+    if metric not in ["pearson", "spearman", "cosine_sim"]:
+        raise ValueError(f"Metric {metric} not supported")
+
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
     assert T_cells == T_nuclei, (
@@ -425,12 +430,18 @@ def compute_correlation_between_parts(
 
     # intersection: cell ∩ best nucleus
     counts_intersection = (
-        tx[tx["in_intersection"]].groupby([points_cell_id_key, points_gene_key]).size().unstack(fill_value=0)
+        tx[tx["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
     )
 
     # remainder: rest of the cell
     counts_remainder = (
-        tx[~tx["in_intersection"]].groupby([points_cell_id_key, points_gene_key]).size().unstack(fill_value=0)
+        tx[~tx["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
     )
 
     common_cells = counts_intersection.index.intersection(counts_remainder.index)

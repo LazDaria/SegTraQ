@@ -61,42 +61,6 @@
                         }
                     ],
                     "path": "0"
-                },
-                {
-                    "coordinateTransformations": [
-                        {
-                            "scale": [
-                                2.0036363636363634,
-                                2.0
-                            ],
-                            "type": "scale"
-                        }
-                    ],
-                    "path": "1"
-                },
-                {
-                    "coordinateTransformations": [
-                        {
-                            "scale": [
-                                4.021897810218978,
-                                4.0
-                            ],
-                            "type": "scale"
-                        }
-                    ],
-                    "path": "2"
-                },
-                {
-                    "coordinateTransformations": [
-                        {
-                            "scale": [
-                                8.102941176470589,
-                                8.0
-                            ],
-                            "type": "scale"
-                        }
-                    ],
-                    "path": "3"
                 }
             ],
             "name": "cell_labels",

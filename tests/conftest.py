@@ -16,9 +16,24 @@ def test_sdata_new():
     test_data_path = Path(__file__).parent / "data" / "xenium_sdata.zarr"
     sdata_new = SpatialData.read(test_data_path)
 
+    # subsetting for faster tests
+    bb_xmin = 800
+    bb_ymin = 1150
+    bb_w = 200
+    bb_h = 300
+    bb_xmax = bb_xmin + bb_w
+    bb_ymax = bb_ymin + bb_h
+
+    sdata_new = sdata_new.query.bounding_box(
+        axes=["x", "y"],
+        min_coordinate=[bb_xmin, bb_ymin],
+        max_coordinate=[bb_xmax, bb_ymax],
+        target_coordinate_system="global",
+    )
+
     # adding raw counts etc.
     adata = sdata_new.tables["table"]
-    adata.layers["counts"] = adata.X.copy()
+    adata.layers["raw"] = adata.X.copy()
     # normalizing and log-transforming the counts
     sc.pp.normalize_total(adata, inplace=True)
     sc.pp.log1p(adata)

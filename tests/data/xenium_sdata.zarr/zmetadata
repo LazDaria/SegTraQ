@@ -12,7 +12,7 @@
         "images/.zgroup": {
             "zarr_format": 2
         },
-        "images/morphology_focus/.zattrs": {
+        "images/image/.zattrs": {
             "multiscales": [
                 {
                     "axes": [
@@ -85,45 +85,6 @@
                                 }
                             ],
                             "path": "0"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        1.0,
-                                        2.0036363636363634,
-                                        2.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "1"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        1.0,
-                                        4.021897810218978,
-                                        4.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "2"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        1.0,
-                                        8.102941176470589,
-                                        8.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "3"
                         }
                     ],
                     "metadata": {
@@ -135,7 +96,7 @@
                             ]
                         }
                     },
-                    "name": "/images/morphology_focus",
+                    "name": "/images/image",
                     "version": "0.4-dev-spatialdata"
                 }
             ],
@@ -150,14 +111,14 @@
                 "version": "0.2"
             }
         },
-        "images/morphology_focus/.zgroup": {
+        "images/image/.zgroup": {
             "zarr_format": 2
         },
-        "images/morphology_focus/0/.zarray": {
+        "images/image/0/.zarray": {
             "chunks": [
                 1,
-                256,
-                256
+                1795,
+                1519
             ],
             "compressor": {
                 "blocksize": 0,
@@ -173,83 +134,8 @@
             "order": "C",
             "shape": [
                 1,
-                551,
-                680
-            ],
-            "zarr_format": 2
-        },
-        "images/morphology_focus/1/.zarray": {
-            "chunks": [
-                1,
-                256,
-                256
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u2",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                1,
-                275,
-                340
-            ],
-            "zarr_format": 2
-        },
-        "images/morphology_focus/2/.zarray": {
-            "chunks": [
-                1,
-                137,
-                170
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u2",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                1,
-                137,
-                170
-            ],
-            "zarr_format": 2
-        },
-        "images/morphology_focus/3/.zarray": {
-            "chunks": [
-                1,
-                68,
-                85
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u2",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                1,
-                68,
-                85
+                1795,
+                1519
             ],
             "zarr_format": 2
         },
@@ -325,42 +211,6 @@
                                 }
                             ],
                             "path": "0"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        2.0036363636363634,
-                                        2.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "1"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        4.021897810218978,
-                                        4.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "2"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        8.102941176470589,
-                                        8.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "3"
                         }
                     ],
                     "name": "cell_labels",
@@ -376,8 +226,8 @@
         },
         "labels/cell_labels/0/.zarray": {
             "chunks": [
-                256,
-                256
+                1795,
+                1519
             ],
             "compressor": {
                 "blocksize": 0,
@@ -392,77 +242,8 @@
             "filters": null,
             "order": "C",
             "shape": [
-                551,
-                680
-            ],
-            "zarr_format": 2
-        },
-        "labels/cell_labels/1/.zarray": {
-            "chunks": [
-                256,
-                256
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u4",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                275,
-                340
-            ],
-            "zarr_format": 2
-        },
-        "labels/cell_labels/2/.zarray": {
-            "chunks": [
-                137,
-                170
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u4",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                137,
-                170
-            ],
-            "zarr_format": 2
-        },
-        "labels/cell_labels/3/.zarray": {
-            "chunks": [
-                68,
-                85
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u4",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                68,
-                85
+                1795,
+                1519
             ],
             "zarr_format": 2
         },
@@ -529,42 +310,6 @@
                                 }
                             ],
                             "path": "0"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        2.0036363636363634,
-                                        2.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "1"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        4.021897810218978,
-                                        4.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "2"
-                        },
-                        {
-                            "coordinateTransformations": [
-                                {
-                                    "scale": [
-                                        8.102941176470589,
-                                        8.0
-                                    ],
-                                    "type": "scale"
-                                }
-                            ],
-                            "path": "3"
                         }
                     ],
                     "name": "nucleus_labels",
@@ -580,8 +325,8 @@
         },
         "labels/nucleus_labels/0/.zarray": {
             "chunks": [
-                256,
-                256
+                1795,
+                1519
             ],
             "compressor": {
                 "blocksize": 0,
@@ -596,77 +341,8 @@
             "filters": null,
             "order": "C",
             "shape": [
-                551,
-                680
-            ],
-            "zarr_format": 2
-        },
-        "labels/nucleus_labels/1/.zarray": {
-            "chunks": [
-                256,
-                256
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u4",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                275,
-                340
-            ],
-            "zarr_format": 2
-        },
-        "labels/nucleus_labels/2/.zarray": {
-            "chunks": [
-                137,
-                170
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u4",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                137,
-                170
-            ],
-            "zarr_format": 2
-        },
-        "labels/nucleus_labels/3/.zarray": {
-            "chunks": [
-                68,
-                85
-            ],
-            "compressor": {
-                "blocksize": 0,
-                "clevel": 5,
-                "cname": "lz4",
-                "id": "blosc",
-                "shuffle": 1
-            },
-            "dimension_separator": "/",
-            "dtype": "<u4",
-            "fill_value": 0,
-            "filters": null,
-            "order": "C",
-            "shape": [
-                68,
-                85
+                1795,
+                1519
             ],
             "zarr_format": 2
         },
@@ -838,7 +514,7 @@
             "encoding-type": "anndata",
             "encoding-version": "0.1.0",
             "instance_key": "label_id",
-            "region": "cell_boundaries",
+            "region": "cell_labels",
             "region_key": "region",
             "spatialdata-encoding-type": "ngff:regions_table",
             "version": "0.1"
@@ -847,10 +523,10 @@
             "zarr_format": 2
         },
         "tables/table/X/.zattrs": {
-            "encoding-type": "csc_matrix",
+            "encoding-type": "csr_matrix",
             "encoding-version": "0.1.0",
             "shape": [
-                2198,
+                18311,
                 5101
             ]
         },
@@ -859,7 +535,7 @@
         },
         "tables/table/X/data/.zarray": {
             "chunks": [
-                51256
+                102074
             ],
             "compressor": {
                 "blocksize": 0,
@@ -874,13 +550,13 @@
             "filters": null,
             "order": "C",
             "shape": [
-                205021
+                1633184
             ],
             "zarr_format": 2
         },
         "tables/table/X/indices/.zarray": {
             "chunks": [
-                51256
+                102074
             ],
             "compressor": {
                 "blocksize": 0,
@@ -895,13 +571,13 @@
             "filters": null,
             "order": "C",
             "shape": [
-                205021
+                1633184
             ],
             "zarr_format": 2
         },
         "tables/table/X/indptr/.zarray": {
             "chunks": [
-                5102
+                18312
             ],
             "compressor": {
                 "blocksize": 0,
@@ -916,7 +592,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                5102
+                18312
             ],
             "zarr_format": 2
         },
@@ -955,7 +631,7 @@
         },
         "tables/table/obs/_index/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -974,7 +650,7 @@
             ],
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -984,7 +660,7 @@
         },
         "tables/table/obs/cell_area/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -999,7 +675,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1009,7 +685,7 @@
         },
         "tables/table/obs/cell_id/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1028,7 +704,7 @@
             ],
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1038,7 +714,7 @@
         },
         "tables/table/obs/control_codeword_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1053,7 +729,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1063,7 +739,7 @@
         },
         "tables/table/obs/control_probe_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1078,7 +754,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1088,7 +764,7 @@
         },
         "tables/table/obs/deprecated_codeword_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1103,7 +779,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1113,7 +789,7 @@
         },
         "tables/table/obs/genomic_control_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1128,7 +804,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1138,7 +814,7 @@
         },
         "tables/table/obs/label_id/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1148,12 +824,12 @@
                 "shuffle": 1
             },
             "dimension_separator": "/",
-            "dtype": "<i4",
+            "dtype": "<i8",
             "fill_value": 0,
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1163,7 +839,7 @@
         },
         "tables/table/obs/nucleus_area/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1178,7 +854,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1188,7 +864,7 @@
         },
         "tables/table/obs/nucleus_count/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1203,7 +879,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1250,7 +926,7 @@
         },
         "tables/table/obs/region/codes/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1265,7 +941,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1275,7 +951,7 @@
         },
         "tables/table/obs/segmentation_method/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1294,7 +970,7 @@
             ],
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1304,7 +980,7 @@
         },
         "tables/table/obs/total_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1319,7 +995,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1329,7 +1005,7 @@
         },
         "tables/table/obs/transcript_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1344,7 +1020,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1354,7 +1030,7 @@
         },
         "tables/table/obs/unassigned_codeword_counts/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1369,7 +1045,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1379,7 +1055,7 @@
         },
         "tables/table/obs/x_centroid/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1394,7 +1070,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1404,7 +1080,7 @@
         },
         "tables/table/obs/y_centroid/.zarray": {
             "chunks": [
-                2198
+                18311
             ],
             "compressor": {
                 "blocksize": 0,
@@ -1419,7 +1095,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                2198
+                18311
             ],
             "zarr_format": 2
         },
@@ -1474,7 +1150,7 @@
             "chunks": [],
             "compressor": null,
             "dimension_separator": "/",
-            "dtype": "<U15",
+            "dtype": "<U11",
             "fill_value": "",
             "filters": null,
             "order": "C",
