@@ -34,22 +34,42 @@ def compute_MECR(
     dict
         Mapping {(gene1, gene2): MECR}, where MECR = P(both>0) / P(at least one>0).
     """
-    mecr: dict[tuple[str, str], float] = {}
     expr_df = sdata.tables[tables_key].to_df()
+    mecr = {}
+    adj = {}
 
     for g1, g2 in gene_pairs:
         e1 = expr_df[g1] > 0
         e2 = expr_df[g2] > 0
-        p_both = (e1 & e2).mean()
+
+        pA = e1.mean()
+        pB = e2.mean()
         p_any = (e1 | e2).mean()
-        mecr[(g1, g2)] = (p_both / p_any) if p_any > 0 else 0.0
+        p_both = (e1 & e2).mean()
+
+        # Ordinary MECR
+        if p_any > 0:
+            mecr_val = p_both / p_any
+        else:
+            mecr_val = np.nan
+
+        # Expected co-detection under independence
+        p_exp = pA * pB
+
+        # Adjusted MECR
+        if p_exp > 0:
+            adj_val = mecr_val / p_exp
+        else:
+            adj_val = np.nan
+
+        mecr[(g1, g2)] = mecr_val
+        adj[(g1, g2)] = adj_val
 
     if inplace:
-        if "MECR" not in sdata.tables[tables_key].uns:
-            sdata.tables[tables_key].uns["MECR"] = {}
-        sdata.tables[tables_key].uns["MECR"].update(mecr)
+        sdata.tables[tables_key].uns.setdefault("MECR", {}).update(mecr)
+        sdata.tables[tables_key].uns.setdefault("AdjMECR", {}).update(adj)
 
-    return mecr
+    return mecr, adj
 
 
 def calculate_contamination(

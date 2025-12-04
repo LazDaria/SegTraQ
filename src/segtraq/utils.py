@@ -14,6 +14,7 @@ import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
 from packaging import version as pkg_version
+from typing import Dict, List, Optional
 from rasterio.features import shapes
 from scipy import sparse
 from scipy.spatial.distance import cdist
@@ -355,7 +356,7 @@ def merge_into_var(sdata, tables_key, df_to_merge):
     sdata.tables[tables_key].var = df
 
 
-def get_ref_markers(
+def get_ref_markers_version1(
     adata_ref: AnnData,
     ref_cell_type: str,
     q_pos: float = 0.95,
@@ -451,6 +452,116 @@ def get_ref_markers(
 
     return markers
 
+def get_ref_markers(
+    adata_ref: AnnData,
+    ref_cell_type: str,
+    method: str = "wilcoxon",
+    pval_adj_thresh: float = 0.05,
+    logfc_pos_thresh: float = 1.0,
+    logfc_neg_thresh: float = -1.0,
+    t: float = 0.25,
+) -> Dict[str, Dict[str, List[str]]]:
+    """
+    Compute statistically grounded positive and negative markers per cell type.
+
+    For each cell type c, perform a one-vs-rest differential expression test
+    using Scanpy's `rank_genes_groups` and define:
+
+        Positive markers(c):
+            - pvals_adj < pval_adj_thresh
+            - logfoldchanges > logfc_pos_thresh
+            - Filter out markers that are shared between t cell types
+
+        Negative markers(c):
+            - pvals_adj < pval_adj_thresh
+            - logfoldchanges < logfc_neg_thresh
+            - Filter out markers that are shared between t cell types
+
+    Parameters
+    ----------
+    adata_ref: AnnData
+        Reference single-cell AnnData (cells x genes).
+    ref_cell_type: str
+        Column in `adata_ref.obs` containing cell type labels.
+    method: str, (default: "wilcoxon")
+        DE method passed to `sc.tl.rank_genes_groups` (e.g. "wilcoxon", "t-test",
+        "logreg").
+    pval_adj_thresh: float, (default: 0.05)
+        FDR (adjusted p-value) cutoff for both positive and negative markers.
+    logfc_pos_thresh: float, (default: 1.0)
+        Minimum log fold-change for positive markers.
+    logfc_neg_thresh: float, (default: -1.0)
+        Maximum log fold-change (negative) for negative markers.
+    t : float, optional (default: 0.25)
+        Overlap filter: drop genes that appear in >= t * n_types marker lists.
+
+    Returns
+    -------
+    dict
+        {cell_type: {"positive": [genes], "negative": [genes]}}
+    """
+    adata = adata_ref.copy()
+
+    if _looks_like_counts(adata.X):
+        warnings.warn(
+            "Reference adata_ref does not appear log-normalized. "
+            "normalize_total + log1p will be applied to a copy for DE.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
+    adata.var_names_make_unique()
+
+    ctypes = pd.Categorical(adata.obs[ref_cell_type])
+    types = list(ctypes.categories)
+    n_types = len(types)
+    if n_types < 2:
+        raise ValueError("Need at least two cell types to compute differential markers.")
+
+    # Run DE
+    sc.tl.rank_genes_groups(
+        adata,
+        groupby=ref_cell_type,
+        method=method
+    )
+
+    pos_lists: Dict[str, List[str]] = {}
+    neg_lists: Dict[str, List[str]] = {}
+
+    for ct in types:
+        df = sc.get.rank_genes_groups_df(adata, group=ct)
+
+        # Positive markers: upregulated, frequent in-type, rare out-of-type
+        pos_df = df[
+            (df["pvals_adj"] < pval_adj_thresh)
+            & (df["logfoldchanges"] > logfc_pos_thresh)
+        ].copy()
+
+        # Negative markers: downregulated, rare in-type, present out-of-type
+        neg_df = df[
+            (df["pvals_adj"] < pval_adj_thresh)
+            & (df["logfoldchanges"] < logfc_neg_thresh)
+        ].copy()
+
+        pos_lists[ct] = pos_df["names"].tolist()
+        neg_lists[ct] = neg_df["names"].tolist()
+
+    # overlap filter (remove ubiquitous markers)
+    pos_lists = _apply_overlap_filter(pos_lists, t=t, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=t, n_ct=n_types)
+
+    markers: Dict[str, Dict[str, List[str]]] = {
+        ct: {
+            "positive": pos_lists.get(ct, []),
+            "negative": neg_lists.get(ct, []),
+        }
+        for ct in types
+    }
+
+    return markers
+
 
 def get_mut_excl_markers(
     adata_ref,
@@ -465,13 +576,14 @@ def get_mut_excl_markers(
     Modified from https://github.com/dpeerlab/segger-analysis
 
     Finds mutually exclusive markers (presence-based specificity) between cell types.
-
+    Therefore it picks highly specific genes for each type, 
+    then only keep pairs that almost never co-occur in single cells.
     Optionally restricts computation to a specified pair of cell types.
 
     Parameters
     ----------
     adata_ref : AnnData
-        Reference single-cell dataset (cells × genes).
+        Reference single-cell dataset (cells x genes).
     markers : dict
         Marker dictionary as returned by `find_markers`; only the "positive" list is used.
     ref_cell_type : str
