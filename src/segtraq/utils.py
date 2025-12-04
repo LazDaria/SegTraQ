@@ -926,6 +926,18 @@ def validate_spatialdata(
                     stacklevel=2,
                 )
 
+            # check that gene names in the table are compatible with those in the points
+            genes_in_points = set(points[points_gene_key].unique())
+            genes_in_table = set(table.var_names)
+            common_genes = genes_in_points & genes_in_table
+            if len(common_genes) == 0:
+                raise ValueError(
+                    "No common genes found between points and tables. "
+                    "Please ensure that the gene names in both are compatible."
+                    f"Genes in points: {list(genes_in_points)[:5]}..., "
+                    f"Genes in tables: {list(genes_in_table)[:5]}..."
+                )
+
     # check for nucleus shapes
     if nucleus_shapes_key is not None:
         assert nucleus_shapes_key in sdata.shapes.keys(), (
@@ -955,9 +967,9 @@ def _process_image(
     return_values: bool = True,
 ):
     if key_added is not None:
-        assert (
-            key_added not in sdata.labels.keys()
-        ), f"Key {key_added} already exists in spatial data object. Please choose another key."
+        assert key_added not in sdata.labels.keys(), (
+            f"Key {key_added} already exists in spatial data object. Please choose another key."
+        )
 
     image = sdata.images[images_key]
 
@@ -967,9 +979,9 @@ def _process_image(
             f"Please provide a data_key to access the image data. "
             f"Available keys are: {list(image.keys())}."
         )
-        assert (
-            images_data_key.split("/")[0] in image.keys()
-        ), f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+        assert images_data_key.split("/")[0] in image.keys(), (
+            f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+        )
 
         image = image[images_data_key]
 
@@ -1223,9 +1235,7 @@ def add_nuc_shapes_via_cellpose(
     )  # get scaling factors
     T = get_transformation_between_coordinate_systems(
         sdata, sdata.images[images_key], sdata.shapes[shapes_key]
-    ).to_affine_matrix(
-        ("x", "y"), ("x", "y")
-    )  # get affine transformation between image and shapes
+    ).to_affine_matrix(("x", "y"), ("x", "y"))  # get affine transformation between image and shapes
     A = T @ S
     t_params = [A[0, 0], A[0, 1], A[1, 0], A[1, 1], A[0, 2], A[1, 2]]
 

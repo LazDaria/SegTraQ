@@ -1,4 +1,3 @@
-
 import pandas as pd
 import pytest
 
@@ -16,9 +15,9 @@ def test_data_types_and_columns(sdata_new):
         "IoU",
         "corr_nc_cell",
     }, f"Columns mismatch: expected {{'cell_id','best_nuc_id','IoU','corr_nc_cell'}}, got {set(corr_df.columns)}"
-    assert (
-        corr_df["corr_nc_cell"].dtype == float
-    ), f"Expected correlation dtype float, got {corr_df['corr_nc_cell'].dtype}"
+    assert corr_df["corr_nc_cell"].dtype == float, (
+        f"Expected correlation dtype float, got {corr_df['corr_nc_cell'].dtype}"
+    )
 
 
 def test_unsupported_metric_raises_value_error(sdata_new):
