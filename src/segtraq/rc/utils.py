@@ -446,19 +446,18 @@ def _compute_ncvs_within_radius(
         id_key = tables_cell_id_key
         cells_gdf.index.name = id_key
 
-    tbl = sdata.tables[tables_key]
-    ad = tbl
+    ad = sdata.tables[tables_key]
     X = ad.X
 
     if _looks_like_counts(X):
         arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in tbl.layers:
+    elif "raw" not in ad.layers:
         raise ValueError(
             f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = tbl.layers["raw"]
+        raw = ad.layers["raw"]
         arr = raw.toarray() if hasattr(raw, "toarray") else raw
 
     mask = ad.obs[tables_cell_id_key].isin(cells_gdf.index)
@@ -563,8 +562,18 @@ def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
 
     # Align dataframe columns to only keep common genes
     common_genes = list(dfs.values())[0].columns
-    for other_df in list(dfs.values())[1:]:
+    for i, (layer, other_df) in enumerate(dfs.items()):
+        # skip first dataframe (we already have its columns)
+        if i == 0:
+            continue
         common_genes = common_genes.intersection(other_df.columns)
+        if len(common_genes) == 0:
+            raise ValueError(
+                f"No common genes found when aligning layer {layer}. "
+                f"Please ensure that your anndata object contains gene names in the var_names. "
+                f"Previous gene names looked like: {list(list(dfs.values())[0].columns)[:5]}. "
+                f"Gene names in layer {layer} look like: {list(other_df.columns)[:5]}."
+            )
 
     # Only use gene`s transcripts and exclude control probes
     valid_genes = pd.Index(
