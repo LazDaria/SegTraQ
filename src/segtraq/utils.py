@@ -861,6 +861,11 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the tables_cell_id_key parameter."
             )
 
+            assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
+            "You can set them like this: \n"
+            "sdata.tables['table'].obs['region'] = 'cell_boundaries'\n"
+            "sdata.set_table_annotates_spatialelement('table', region='cell_boundaries')"
+
             tables_cell_ids = set(table.obs[tables_cell_id_key].values)
 
             # checking that the dtype of the table cell IDs matches that of the shapes
@@ -919,6 +924,18 @@ def validate_spatialdata(
                     "These cells are present in tables, but not in shapes. "
                     "This might lead to inconsistencies in the spatialdata object.",
                     stacklevel=2,
+                )
+
+            # check that gene names in the table are compatible with those in the points
+            genes_in_points = set(points[points_gene_key].unique())
+            genes_in_table = set(table.var_names)
+            common_genes = genes_in_points & genes_in_table
+            if len(common_genes) == 0:
+                raise ValueError(
+                    "No common genes found between points and tables. "
+                    "Please ensure that the gene names in both are compatible."
+                    f"Genes in points: {list(genes_in_points)[:5]}..., "
+                    f"Genes in tables: {list(genes_in_table)[:5]}..."
                 )
 
     # check for nucleus shapes
