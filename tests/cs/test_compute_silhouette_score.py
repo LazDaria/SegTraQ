@@ -7,6 +7,6 @@ def test_compute_silhouette_score(sdata_new):
     )
     assert isinstance(silhouette_score, float), "Silhouette score should be a float"
     assert -1 <= silhouette_score <= 1, "Silhouette score should be in the range [-1, 1]"
-    assert (
-        "silhouette_score" in sdata_new.tables["table"].uns.keys()
-    ), "Silhouette score should be stored in sdata_new.uns"
+    assert "silhouette_score" in sdata_new.tables["table"].uns.keys(), (
+        "Silhouette score should be stored in sdata_new.uns"
+    )

@@ -68,9 +68,9 @@ def compute_cell_nuc_ious(
     """
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
-    assert (
-        T_cells == T_nuclei
-    ), "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    assert T_cells == T_nuclei, (
+        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
 
     # Get GeoDataFrames
     cell_boundaries = sdata.shapes[shapes_key]
@@ -187,9 +187,9 @@ def compute_cell_nuc_correlation(
 
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
-    assert (
-        T_cells == T_nuclei
-    ), "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    assert T_cells == T_nuclei, (
+        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
 
     if shapes_cell_id_key is not None:
         id_key = shapes_cell_id_key
@@ -383,9 +383,9 @@ def compute_correlation_between_parts(
 
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
-    assert (
-        T_cells == T_nuclei
-    ), "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    assert T_cells == T_nuclei, (
+        "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
 
     cells_gdf = sdata.shapes[shapes_key]
 
@@ -430,12 +430,18 @@ def compute_correlation_between_parts(
 
     # intersection: cell ∩ best nucleus
     counts_intersection = (
-        tx[tx["in_intersection"]].groupby([points_cell_id_key, points_gene_key]).size().unstack(fill_value=0)
+        tx[tx["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
     )
 
     # remainder: rest of the cell
     counts_remainder = (
-        tx[~tx["in_intersection"]].groupby([points_cell_id_key, points_gene_key]).size().unstack(fill_value=0)
+        tx[~tx["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
     )
 
     common_cells = counts_intersection.index.intersection(counts_remainder.index)
