@@ -331,6 +331,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR_deterministic"><code class="docutils literal notranslate"><span class="pre">compute_MECR_deterministic()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -486,7 +487,58 @@ if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR" title="Link to this definition">#</a></dt>
+<dd><p>Compute Fisher’s exact test for mutual exclusivity per gene pair.</p>
+<dl>
+<dt>For each (gene1, gene2) pair, this function:</dt><dd><ul>
+<li><p>binarizes expression as &gt; 0 (present/absent),</p></li>
+<li><p>builds a 2x2 contingency table:</p>
+<blockquote>
+<div><p>B&gt;0   B=0</p>
+</div></blockquote>
+<p>A&gt;0  a     b
+A=0  c     d</p>
+</li>
+<li><p>runs Fisher’s exact test with alternative=”less”, i.e.:</p>
+<blockquote>
+<div><p>H0: A and B are independent
+H1: A and B co-occur LESS than expected (mutual exclusivity)</p>
+</div></blockquote>
+</li>
+<li><p>returns the odds ratio and p-value for each pair.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[tables_key]</cite> as AnnData.</p></li>
+<li><p><strong>gene_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Collection of (gene1, gene2) pairs (e.g. from <cite>segtraq.get_mut_excl_markers</cite>).</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;table&quot;</em><em>)</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – <dl class="simple">
+<dt>If True, store results in:</dt><dd><p>sdata.tables[tables_key].uns[“Fisher_OR”]
+sdata.tables[tables_key].uns[“Fisher_pval”]</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>or_dict</strong> (<em>dict</em>) – Mapping {(gene1, gene2): odds_ratio}.
+Odds ratio &lt; 1 suggests mutual exclusivity (given a small p-value).</p></li>
+<li><p><strong>pval_dict</strong> (<em>dict</em>) – Mapping {(gene1, gene2): p_value} for the one-sided test
+(alternative=”less”). Small p-values indicate significant
+under-co-occurrence (mutual exclusivity).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR_deterministic">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR_deterministic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR_deterministic" title="Link to this definition">#</a></dt>
 <dd><p>Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
 <p>Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.</p>
 <dl class="field-list simple">
@@ -560,6 +612,7 @@ if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR_deterministic"><code class="docutils literal notranslate"><span class="pre">compute_MECR_deterministic()</span></code></a></li>
 </ul>
 </li>
 </ul>

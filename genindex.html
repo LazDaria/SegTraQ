@@ -283,27 +283,16 @@ document.write(`
 <h1 id="index">Index</h1>
 
 <div class="genindex-jumpbox">
- <a href="#A"><strong>A</strong></a>
- | <a href="#C"><strong>C</strong></a>
+ <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
- | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
- | <a href="#V"><strong>V</strong></a>
  
 </div>
-<h2 id="A">A</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/utils.html#segtraq.add_nuc_shapes_via_cellpose">add_nuc_shapes_via_cellpose() (in module segtraq)</a>
-</li>
-  </ul></td>
-</tr></table>
-
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -321,15 +310,17 @@ document.write(`
 </li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.rc.region_correlation)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_center_border_ncv_correlation">compute_center_border_ncv_correlation() (in module segtraq.rc.region_correlation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.rc.region_correlation)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR">compute_MECR() (in module segtraq.sp.supervised)</a>
+</li>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR_deterministic">compute_MECR_deterministic() (in module segtraq.sp.supervised)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_purity">compute_purity() (in module segtraq.cs.clustering_stability)</a>
 </li>
@@ -354,12 +345,6 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.genes_per_cell">genes_per_cell() (in module segtraq.bl.baseline)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/utils.html#segtraq.get_mut_excl_markers">get_mut_excl_markers() (in module segtraq)</a>
-</li>
-      <li><a href="modules/utils.html#segtraq.get_ref_markers">get_ref_markers() (in module segtraq)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -417,37 +402,9 @@ document.write(`
   </ul></td>
 </tr></table>
 
-<h2 id="R">R</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_baseline">run_baseline() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/utils.html#segtraq.run_label_transfer">run_label_transfer() (in module segtraq)</a>
-
-      <ul>
-        <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_label_transfer">(segtraq.SegTraQ method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_point_statistics">run_point_statistics() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_region_correlation">run_region_correlation() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_supervised_metrics">run_supervised_metrics() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_volume">run_volume() (segtraq.SegTraQ method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.sdata">sdata (segtraq.SegTraQ property)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ">SegTraQ (class in segtraq)</a>
-</li>
       <li>
     segtraq.bl.baseline
 
@@ -503,14 +460,6 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.transcripts_per_cell">transcripts_per_cell() (in module segtraq.bl.baseline)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="V">V</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/utils.html#segtraq.validate_spatialdata">validate_spatialdata() (in module segtraq)</a>
 </li>
   </ul></td>
 </tr></table>
