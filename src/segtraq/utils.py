@@ -563,7 +563,7 @@ def get_ref_markers(
     return markers
 
 
-def get_mut_excl_markers_deterministic(
+def get_mut_excl_markers(
     adata_ref,
     markers,
     ref_cell_type: str,
