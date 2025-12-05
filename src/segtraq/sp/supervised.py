@@ -7,10 +7,132 @@ import squidpy as sq
 from scipy import sparse
 from tqdm.auto import tqdm
 
-from ..utils import _score_one_list, merge_into_obs
+from ..utils import _score_one_list, merge_into_obs, _looks_like_counts
+
+from typing import Dict, Tuple, List
+import numpy as np
+from scipy.stats import fisher_exact
 
 
 def compute_MECR(
+    sdata,
+    gene_pairs: List[Tuple[str, str]],
+    tables_key: str = "table",
+    inplace: bool = True,
+) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], float]]:
+    """
+    Compute Fisher's exact test for mutual exclusivity per gene pair.
+
+    For each (gene1, gene2) pair, this function:
+        - binarizes expression as > 0 (present/absent),
+        - builds a 2x2 contingency table:
+
+              B>0   B=0
+          A>0  a     b
+          A=0  c     d
+
+        - runs Fisher's exact test with alternative="less", i.e.:
+
+              H0: A and B are independent
+              H1: A and B co-occur LESS than expected (mutual exclusivity)
+
+        - returns the odds ratio and p-value for each pair.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Container with `.tables[tables_key]` as AnnData.
+    gene_pairs : list of tuple
+        Collection of (gene1, gene2) pairs (e.g. from `segtraq.get_mut_excl_markers`).
+    tables_key : str, optional (default: "table")
+        Key of the AnnData table in `sdata.tables`.
+    inplace : bool, optional (default: True)
+        If True, store results in:
+            sdata.tables[tables_key].uns["Fisher_OR"]
+            sdata.tables[tables_key].uns["Fisher_pval"]
+
+    Returns
+    -------
+    or_dict : dict
+        Mapping {(gene1, gene2): odds_ratio}.
+        Odds ratio < 1 suggests mutual exclusivity (given a small p-value).
+    pval_dict : dict
+        Mapping {(gene1, gene2): p_value} for the one-sided test
+        (alternative="less"). Small p-values indicate significant
+        under-co-occurrence (mutual exclusivity).
+    """
+    tbl = sdata.tables[tables_key]
+
+    # --- 1) Choose a raw-count matrix ---------------------------------------
+    X = tbl.X
+
+    X = tbl.X
+    # Check if X looks like counts
+    if _looks_like_counts(X):
+        arr = X.toarray() if hasattr(X, "toarray") else X
+    elif "raw" not in tbl.layers:
+        raise ValueError(
+            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            "and the main matrix does not look like counts."
+        )
+    else:
+        raw = tbl.layers["raw"]
+        arr = raw.toarray() if hasattr(raw, "toarray") else raw
+
+    # --- 2) Set up gene indexing --------------------------------------------
+    var_index = pd.Index(tbl.var_names)
+    n_cells = arr.shape[0]
+
+    or_dict: Dict[Tuple[str, str], float] = {}
+    pval_dict: Dict[Tuple[str, str], float] = {}
+
+    # --- 3) Loop over pairs and run Fisher ----------------------------------
+    for g1, g2 in gene_pairs:
+        if g1 not in var_index or g2 not in var_index:
+            or_dict[(g1, g2)] = np.nan
+            pval_dict[(g1, g2)] = np.nan
+            continue
+
+        idx1 = var_index.get_loc(g1)
+        idx2 = var_index.get_loc(g2)
+
+        expr1 = arr[:, idx1]
+        expr2 = arr[:, idx2]
+
+        # binarize raw counts: present vs absent
+        e1 = expr1 > 0
+        e2 = expr2 > 0
+
+        # contingency table entries
+        a = int((e1 & e2).sum())                 # A>0, B>0
+        b = int((e1 & ~e2).sum())                # A>0, B=0
+        c = int((~e1 & e2).sum())                # A=0, B>0
+        d = n_cells - a - b - c                  # A=0, B=0
+
+        # if no detections at all, nothing to test
+        if (a + b + c) == 0:
+            or_dict[(g1, g2)] = np.nan
+            pval_dict[(g1, g2)] = np.nan
+            continue
+
+        table = [[a, b], [c, d]]
+
+        try:
+            odds_ratio, pval = fisher_exact(table, alternative="less")
+        except Exception:
+            odds_ratio, pval = np.nan, np.nan
+
+        or_dict[(g1, g2)] = odds_ratio
+        pval_dict[(g1, g2)] = pval
+
+    # --- 4) Store in .uns if requested --------------------------------------
+    if inplace:
+        tbl.uns.setdefault("Fisher_OR", {}).update(or_dict)
+        tbl.uns.setdefault("Fisher_pval", {}).update(pval_dict)
+
+    return or_dict, pval_dict
+
+def compute_MECR_deterministic(
     sdata, gene_pairs: list[tuple[str, str]], tables_key: str = "table", inplace: bool = True
 ) -> dict[tuple[str, str], float]:
     """
