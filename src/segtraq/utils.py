@@ -563,7 +563,7 @@ def get_ref_markers(
     return markers
 
 
-def get_mut_excl_markers(
+def get_mut_excl_markers_deterministic(
     adata_ref,
     markers,
     ref_cell_type: str,
@@ -616,6 +616,7 @@ def get_mut_excl_markers(
 
     # Extract expression matrix for selected genes
     X = adata_ref[:, genes].X
+
     if sparse.issparse(X):
         X = X.tocsr()
         # Convert to binary presence/absence matrix (0/1)
@@ -691,17 +692,7 @@ def get_mut_excl_markers(
         ]
 
     # === Step 4: Filter pairs that are co-detected above threshold ===
-    col_counts = np.asarray(B.getnnz(axis=0)).ravel()
-    frac_overall = col_counts / max(n_cells, 1)
-
-    def auto_pass(g1, g2):
-        # If either gene is very rare overall, pair automatically passes
-        return (frac_overall[gene2col[g1]] <= max_codetect) or (frac_overall[gene2col[g2]] <= max_codetect)
-
-    trivial = [p for p in pairs if auto_pass(*p)]
-    to_check = [p for p in pairs if not auto_pass(*p)]
-    if not to_check:
-        return trivial
+    to_check = [p for p in pairs]
 
     # Subset matrix to relevant columns for co-detection check
     B_csc = B.tocsc()
@@ -712,19 +703,15 @@ def get_mut_excl_markers(
     co_counts = (B_sub.T @ B_sub).tocsr()
     idx_map = {c: i for i, c in enumerate(cols_needed)}
 
-    passed = []
+    result = []
     for g1, g2 in to_check:
         i = idx_map[gene2col[g1]]
         j = idx_map[gene2col[g2]]
         both = co_counts[i, j] / n_cells
         if both <= max_codetect:
-            passed.append((g1, g2))
-
-    # Return all passing mutually exclusive gene pairs
-    result = trivial + passed
+            result.append((g1, g2))
 
     return result
-
 
 def _is_missing(x):
     """Return True for any kind of NA / NaN / None."""
