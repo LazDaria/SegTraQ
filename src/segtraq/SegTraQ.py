@@ -505,8 +505,8 @@ class SegTraQ:
 
     def run_point_statistics(
         self,
-        feature: str,
-        inplace: bool = True,  # TODO
+        genes: str | list[str] = None,
+        inplace: bool = True,
     ):
         """
         Compute point-statistics metrics per feature and optionally merge into the cell table.
@@ -532,21 +532,29 @@ class SegTraQ:
             - If `inplace=True`: returns None (results written to `.obs`).
             - If `inplace=False`: returns
                 {
-                "centroid_mean_coord_diff": {feature: DataFrame, ...},
-                "distance_to_membrane":    {feature: DataFrame, ...},
+                "centroid_mean_coord_diff": {genes: DataFrame, ...},
+                "distance_to_membrane":    {genes: DataFrame, ...},
                 }
         """
 
-        cmd_df = self.ps.centroid_mean_coord_diff(feature=feature, inplace=inplace)
-        dtm_df = self.ps.distance_to_membrane(feature=feature, inplace=inplace)
+        cmd_df = self.ps.centroid_mean_coord_diff(genes=genes, inplace=inplace)
+        dtm_df = self.ps.distance_to_membrane(genes=genes, inplace=inplace)
+        pe_df = self.ps.periphery_enrichment_score(genes=genes, inplace=inplace)
 
         if inplace:
             return None
         else:
+            if genes is None:
+                feature = "all_genes"
+            elif isinstance(genes, str):
+                feature = genes
+            else:
+                feature = f"{len(genes)}_genes"
             out = {
                 f"centroid_mean_coord_diff_{feature}": cmd_df[f"distance_{feature}"],
                 f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
                 f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"],
+                f"periphery_enrichment_score_{feature}": pe_df[f"periphery_enrichment_score_{feature}"],
             }
             return out
 
@@ -918,10 +926,10 @@ class _PSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def centroid_mean_coord_diff(self, feature: str, inplace: bool = True):
+    def centroid_mean_coord_diff(self, genes: str | list[str] = None, inplace: bool = True):
         return ps.centroid_mean_coord_diff(
             sdata=self._p.sdata,
-            feature=feature,
+            genes=genes,
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
@@ -937,10 +945,10 @@ class _PSFacade:
 
     centroid_mean_coord_diff.__doc__ = ps.centroid_mean_coord_diff.__doc__
 
-    def distance_to_membrane(self, feature: str, inplace: bool = True):
+    def distance_to_membrane(self, genes: str | list[str] | None = None, inplace: bool = True):
         return ps.distance_to_membrane(
             sdata=self._p.sdata,
-            feature=feature,
+            genes=genes,
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
@@ -956,13 +964,13 @@ class _PSFacade:
 
     def periphery_enrichment_score(
         self,
-        erosion_fraction_of_radius: float = 0.2,
-        radius_factor: float = 2.0,
-        metric: str = "cosine_sim",
+        genes: str | list[str] | None = None,
+        erosion_fraction_of_radius: float = 0.3,
         inplace: bool = True,
     ):
         return ps.periphery_enrichment_score(
             sdata=self._p.sdata,
+            genes=genes,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
@@ -973,8 +981,6 @@ class _PSFacade:
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             erosion_fraction_of_radius=erosion_fraction_of_radius,
-            radius_factor=radius_factor,
-            metric=metric,
             inplace=inplace,
         )
 
