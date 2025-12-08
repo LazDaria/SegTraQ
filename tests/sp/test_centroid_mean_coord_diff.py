@@ -4,7 +4,7 @@ import segtraq as st
 
 
 def test_centroid_mean_coord_diff_structure(sdata_new):
-    df = st.ps.centroid_mean_coord_diff(sdata_new, feature="LUM", inplace=False)
+    df = st.ps.centroid_mean_coord_diff(sdata_new, genes="LUM", inplace=False)
 
     assert isinstance(df, pd.DataFrame), f"centroid_mean_coord_diff should return a DataFrame, got {type(df)}"
     expected_cols = {"cell_id", "centroid_y", "distance_LUM", "y", "cell_area", "centroid_x", "x", "distance"}

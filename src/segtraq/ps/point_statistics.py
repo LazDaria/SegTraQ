@@ -9,12 +9,13 @@ from ..utils import merge_into_obs
 
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
-    feature,
+    genes: str | list[str] | None = None,
     tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
-    tables_cell_id_key: str = "cell_id",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
     shapes_cell_id_key: str = "cell_id",
     points_x_key: str = "x",
     points_y_key: str = "y",
@@ -30,18 +31,21 @@ def centroid_mean_coord_diff(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing spatial transcriptomics data.
-    feature: str
-        String indicating the feature/gene to calculate the mean transcript coordiantes on
+    genes: Optional[Union[str, List[str]]] = None,
+        String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
+        If None, all genes are used.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
     points_gene_key : str, optional
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, optional
         The key in the transcript table indicating transcript identifiers. Default is "transcripts".
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        The cell ID value indicating background transcripts that should be ignored.
     shapes_cell_id_key : str or None, optional, default="cell_id"
         Column in the cell-boundary shapes linking polygons to cell IDs.
         If `None`, the shape index is used as the cell ID.
@@ -67,6 +71,10 @@ def centroid_mean_coord_diff(
     -----
     Requires that the input AnnData table contains a "cell_area" column in `.obs`.
     """
+    assert "cell_area" in sdata[tables_key].obs.columns, (
+        f"'cell_area' column not found in sdata.tables['{tables_key}'].obs. "
+        "Please compute cell areas before using this function, e. g. by using st.bl.morphological_features()."
+    )
 
     # extract the transcript information
     df = sdata.points[points_key].compute()
@@ -75,10 +83,18 @@ def centroid_mean_coord_diff(
     df = df[df[points_cell_id_key].isin(sdata[tables_key].obs[points_cell_id_key])]
 
     # subset transcript dataframe to the feature
-    df = df[df[points_gene_key] == feature]
+    if genes is not None:
+        if isinstance(genes, str):
+            df = df[df[points_gene_key] == genes]
+        else:
+            df = df[df[points_gene_key].isin(genes)]
+
+        # check if the dataframe is empty after filtering
+        if df.empty:
+            raise ValueError(f"No transcripts found for the specified gene(s): {genes}.")
 
     # drop the background transcripts in cell_id == -1
-    df = df[df[points_cell_id_key] != -1]
+    df = df[df[points_cell_id_key] != points_background_id]
 
     # group by cell id
     df = df.groupby(points_cell_id_key)
@@ -124,10 +140,18 @@ def centroid_mean_coord_diff(
     df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=id_key, how="left")
 
     # normalise the cell area
+    if genes is None:
+        feature = "all_genes"
+    elif isinstance(genes, str):
+        feature = genes
+    else:
+        feature = f"{len(genes)}_genes"
     df_total[f"distance_{feature}"] = df_total["distance"] / df_total["cell_area"]
     df_total = df_total.reset_index(drop=True)
 
     if inplace:
+        # removing the area, since it already exists in the object
+        df_total = df_total.drop(columns=["cell_area"])
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
@@ -141,13 +165,14 @@ def centroid_mean_coord_diff(
 
 def distance_to_membrane(
     sdata: sd.SpatialData,
-    feature,
+    genes: str | list[str] | None = None,
     tables_key: str = "table",
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
     tables_cell_id_key: str = "cell_id",
     shapes_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
@@ -160,8 +185,9 @@ def distance_to_membrane(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing spatial transcriptomics data.
-    feature: str
-        String indicating the feature/gene to calculate the mean transcript coordiantes on
+    genes: str | list[str] | None = None,
+        String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
+        If None, all genes are used.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     points_gene_key : str, optional
@@ -172,6 +198,8 @@ def distance_to_membrane(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
+    points_background_id: str | int = "UNASSIGNED"
+        The cell ID value indicating background transcripts that should be ignored.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     points_cell_id_key : str, default="cell_id"
@@ -179,7 +207,7 @@ def distance_to_membrane(
     shapes_cell_id_key : str or None, optional, default="cell_id"
         Column in the cell-boundary shapes linking polygons to cell IDs.
         If `None`, the shape index is used as the cell ID.
-     shapes_key: str, optional
+    shapes_key: str, optional
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
@@ -194,6 +222,10 @@ def distance_to_membrane(
     Requires that the input AnnData table contains a "cell_area" column in `.obs`.
 
     """
+    assert "cell_area" in sdata[tables_key].obs.columns, (
+        f"'cell_area' column not found in sdata.tables['{tables_key}'].obs. "
+        "Please compute cell areas before using this function, e. g. by using st.bl.morphological_features()."
+    )
 
     # extract the transcript information
     df = sdata.points[points_key].compute()
@@ -202,10 +234,13 @@ def distance_to_membrane(
     df = df[df[points_cell_id_key].isin(sdata[tables_key].obs[tables_cell_id_key])]
 
     # subset transcript dataframe to the feature
-    df = df[df[points_gene_key] == feature]
+    if genes is not None:
+        if isinstance(genes, str):
+            genes = [genes]
+        df = df[df[points_gene_key].isin(genes)]
 
-    # drop the background transcripts in cell_id == -1
-    df = df[df[points_cell_id_key] != -1]
+    # drop the background transcripts
+    df = df[df[points_cell_id_key] != points_background_id]
 
     # zip the coordinates to a common column as tuple
     df["coordinates"] = list(zip(df[points_x_key], df[points_y_key], strict=False))
@@ -233,6 +268,12 @@ def distance_to_membrane(
     gdf = gdf.dropna(subset="coordinate_points")
 
     # calculate the distance of the transcript points to the linear segment
+    if genes is None:
+        feature = "all_genes"
+    elif len(genes) == 1:
+        feature = genes[0]
+    else:
+        feature = f"{len(genes)}_genes"
     gdf[f"distance_to_outline_{feature}"] = gdf.apply(
         lambda x: x["coordinate_points"].distance(x["linear_geometry"]), axis=1
     )
@@ -260,13 +301,13 @@ def distance_to_membrane(
 
     if inplace:
         merge_into_obs(
-            sdata,
-            tables_key,
-            mean_distance_to_outline[
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=mean_distance_to_outline[
                 [id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
             ],
-            tables_cell_id_key,
-            id_key,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
         )
 
     return mean_distance_to_outline
@@ -274,6 +315,7 @@ def distance_to_membrane(
 
 def periphery_enrichment_score(
     sdata: sd.SpatialData,
+    genes: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
@@ -283,9 +325,7 @@ def periphery_enrichment_score(
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
-    erosion_fraction_of_radius: float = 0.2,
-    radius_factor: float = 2.0,
-    metric: str = "cosine_sim",
+    erosion_fraction_of_radius: float = 0.3,
     inplace: bool = True,
 ) -> pd.DataFrame:
     center_gdf, border_gdf, expr_center, expr_border = _assign_transcripts_to_center_or_border(
@@ -300,15 +340,29 @@ def periphery_enrichment_score(
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
+    if genes is None:
+        feature = "all_genes"
+    elif isinstance(genes, str):
+        feature = genes
+    else:
+        feature = f"{len(genes)}_genes"
+
     # next, we align the three expression DataFrames to have the same cells and genes
     aligned_expression_dfs = _align_expression_dfs(
-        {"expr_center": expr_center, "expr_border": expr_border}, sdata, tables_key
+        {f"expr_center_{feature}": expr_center, f"expr_border_{feature}": expr_border}, sdata, tables_key
     )
 
-    expr_center_raw = aligned_expression_dfs["expr_center"]
-    expr_border_raw = aligned_expression_dfs["expr_border"]
+    expr_center_raw = aligned_expression_dfs[f"expr_center_{feature}"]
+    expr_border_raw = aligned_expression_dfs[f"expr_border_{feature}"]
+    # summing up the total expression per cell (only on the selected genes)
+    if genes is not None:
+        if isinstance(genes, str):
+            genes = [genes]
+        expr_center_raw = expr_center_raw[genes]
+        expr_border_raw = expr_border_raw[genes]
+        assert not expr_center_raw.empty, "No transcripts found for the specified gene(s) in the center region."
+        assert not expr_border_raw.empty, "No transcripts found for the specified gene(s) in the border region."
 
-    # summing up the total expression per cell (all genes combined)
     total_expr_center = expr_center_raw.sum(axis=1)
     total_expr_border = expr_border_raw.sum(axis=1)
 
@@ -319,23 +373,27 @@ def periphery_enrichment_score(
     df = pd.DataFrame(
         {
             "cell_id": total_expr_center.index,
-            "center_expr": total_expr_center.values,
-            "border_expr": total_expr_border.values,
+            f"center_expr_{feature}": total_expr_center.values,
+            f"border_expr_{feature}": total_expr_border.values,
         }
     )
 
     # merging areas into the df
     df = df.merge(
-        pd.DataFrame({"cell_id": center_gdf["cell_id"], "center_area": center_gdf.geometry.area.values}), on="cell_id"
+        pd.DataFrame({"cell_id": center_gdf["cell_id"], f"center_area_{feature}": center_gdf.geometry.area.values}),
+        on="cell_id",
     ).merge(
-        pd.DataFrame({"cell_id": border_gdf["cell_id"], "border_area": border_gdf.geometry.area.values}), on="cell_id"
+        pd.DataFrame({"cell_id": border_gdf["cell_id"], f"border_area_{feature}": border_gdf.geometry.area.values}),
+        on="cell_id",
     )
 
     # calculate densities and ratio with pseudocount (+1) and safe division (+epsilon)
-    df["border_density"] = (df["border_expr"] + 1) / (df["border_area"] + epsilon)
-    df["center_density"] = (df["center_expr"] + 1) / (df["center_area"] + epsilon)
-    df["density_ratio"] = df["border_density"] / df["center_density"]
-
+    # note that we set density_ratio to NaN if both center and border expression are zero
+    df[f"border_density_{feature}"] = (df[f"border_expr_{feature}"] + 1) / (df[f"border_area_{feature}"] + epsilon)
+    df[f"center_density_{feature}"] = (df[f"center_expr_{feature}"] + 1) / (df[f"center_area_{feature}"] + epsilon)
+    df[f"density_ratio_{feature}"] = df[f"border_density_{feature}"] / df[f"center_density_{feature}"]
+    mask = (df[f"border_expr_{feature}"] + df[f"center_expr_{feature}"]) > 0
+    df.loc[~mask, f"density_ratio_{feature}"] = np.nan
     if inplace:
         merge_into_obs(
             sdata=sdata,
