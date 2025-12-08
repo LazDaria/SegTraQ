@@ -142,9 +142,9 @@ def _get_center_and_border_shapes(
         If `None`, the shape index is used as the cell ID.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
-    erosion_fraction_of_radius : float, default=0.4
+    erosion_fraction_of_radius : float, default=0.3
         Fraction of the equivalent radius to use as erosion
-        Example: 0.4 means erode by 40% of the radius.
+        Example: 0.3 means erode by 30% of the radius.
 
     Returns
     -------
