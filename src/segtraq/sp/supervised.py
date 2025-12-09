@@ -7,7 +7,7 @@ import squidpy as sq
 from scipy import sparse
 from tqdm.auto import tqdm
 
-from ..utils import _score_one_list, merge_into_obs, _looks_like_counts
+from ..utils import _score_one_list, merge_into_obs, _looks_like_counts, _compute_f1_metrics
 
 from typing import Dict, Tuple, List
 import numpy as np
@@ -366,8 +366,156 @@ def calculate_contamination(
 
     return C_cnt, out, records_df  # delete C_cnt later!!!
 
-
 def calculate_marker_purity(
+    sdata,
+    cell_type_key: str,
+    markers: dict[str, dict[str, list[str]]],
+    use_quantiles: bool = True,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute per-cell marker purity: for each cell's annotated type, evaluate
+    Precision/Recall/F1 using its positive and negative marker lists, then
+    summarize into an overall `F1_purity` that rewards high positive-F1 and
+    low negative-F1.
+
+    This version is more scalable:
+      - works group-wise by cell type (vectorized),
+      - only densifies expression for marker unions per type,
+      - returns NaN when purity is not defined (no pos/neg markers).
+    """
+    adata = sdata.tables[tables_key]
+
+    X = adata.X  # keep sparse if it is sparse
+    genes = np.asarray(adata.var_names)
+    cell_types = np.asarray(adata.obs[cell_type_key])
+    n_cells, n_genes = X.shape
+
+    def _idx(lst) -> np.ndarray:
+        if lst is None or len(lst) == 0:
+            return np.empty(0, dtype=int)
+        return np.where(np.isin(genes, np.asarray(lst)))[0]
+
+    # Prepare output arrays
+    pos_prec = np.full(n_cells, np.nan, dtype=float)
+    pos_rec  = np.full(n_cells, np.nan, dtype=float)
+    pos_f1   = np.full(n_cells, np.nan, dtype=float)
+
+    neg_prec = np.full(n_cells, np.nan, dtype=float)
+    neg_rec  = np.full(n_cells, np.nan, dtype=float)
+    neg_f1   = np.full(n_cells, np.nan, dtype=float)
+
+    purity   = np.full(n_cells, np.nan, dtype=float)
+
+    # Work type-by-type for efficiency
+    unique_cts = pd.unique(cell_types)
+
+    for ct in unique_cts:
+        # indices of cells of this type
+        mask_cells = (cell_types == ct)
+        idx_cells = np.where(mask_cells)[0]
+        if idx_cells.size == 0:
+            continue
+
+        # handle missing / unknown types (NaN or not in markers)
+        if pd.isna(ct) or ct not in markers:
+            # leave all metrics as NaN for these cells
+            continue
+
+        m = markers[ct]
+        pos_idx = _idx(m.get("positive", []))
+        neg_idx = _idx(m.get("negative", []))
+
+        # If union empty, nothing to compute
+        if pos_idx.size + neg_idx.size == 0:
+            # all NaN already
+            continue
+
+        union_idx = np.concatenate([pos_idx, neg_idx])
+        union_idx = np.unique(union_idx)
+
+        # Extract expression for these cells and marker union
+        # (convert only this small block to dense)
+        X_ct_union = X[mask_cells][:, union_idx]
+        if hasattr(X_ct_union, "toarray"):
+            X_ct_union = X_ct_union.toarray()
+        else:
+            X_ct_union = np.asarray(X_ct_union)
+        # shape: (n_cells_ct, n_union)
+
+        n_union = union_idx.size
+
+        # ---- POSITIVE MARKERS ----
+        if pos_idx.size > 0:
+            prec, rec, f1 = _compute_f1_metrics(
+                X_ct_union,
+                pos_idx,
+                union_idx,
+                use_quantiles,
+            )
+            pos_prec[idx_cells] = prec
+            pos_rec[idx_cells]  = rec
+            pos_f1[idx_cells]   = f1
+
+
+        # ---- NEGATIVE MARKERS ----
+        if neg_idx.size > 0:
+            prec, rec, f1 = _compute_f1_metrics(
+                X_ct_union,
+                neg_idx,
+                union_idx,
+                use_quantiles,
+            )
+            neg_prec[idx_cells] = prec
+            neg_rec[idx_cells]  = rec
+            neg_f1[idx_cells]   = f1
+
+        # ---- PURITY (only if both sides defined) ----
+        p_f1_ct = pos_f1[idx_cells]
+        n_f1_ct = neg_f1[idx_cells]
+
+        mask_valid = ~np.isnan(p_f1_ct) & ~np.isnan(n_f1_ct)
+        if np.any(mask_valid):
+            p = p_f1_ct[mask_valid]
+            n = n_f1_ct[mask_valid]
+            denom = (1.0 - n) + p
+            purity_vals = np.where(
+                denom > 0.0,
+                2.0 * (1.0 - n) * p / denom,
+                0.0,
+            )
+            purity[idx_cells[mask_valid]] = purity_vals
+        # cells with missing pos/neg F1 stay NaN for purity
+
+    # Build DataFrame
+    result = pd.DataFrame(
+        {
+            "cell_type": cell_types,
+            "positive_precision": pos_prec,
+            "positive_recall": pos_rec,
+            "positive_F1": pos_f1,
+            "negative_precision": neg_prec,
+            "negative_recall": neg_rec,
+            "negative_F1": neg_f1,
+            "F1_purity": purity,
+        },
+        index=adata.obs[tables_cell_id_key],
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=result,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return result
+
+def calculate_marker_purity_slow(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
@@ -416,29 +564,63 @@ def calculate_marker_purity(
     cell_types = np.asarray(adata.obs[cell_type_key])
     n_cells, n_genes = X.shape
 
-    def _idx(lst: list[str]) -> np.ndarray:
-        if not lst:
+    def _idx(lst) -> np.ndarray:
+        if lst is None or len(lst) == 0:
             return np.empty(0, dtype=int)
         return np.where(np.isin(genes, np.asarray(lst)))[0]
-
-    pos_idx_map = {ct: _idx(m.get("positive", [])) for ct, m in markers.items()}
-    neg_idx_map = {ct: _idx(m.get("negative", [])) for ct, m in markers.items()}
 
     rows = []
     for i in range(n_cells):
         ct = cell_types[i]
         expr = X[i, :]
 
-        # positive pass (upper quantile)
-        p_prec, p_rec, p_f1 = _score_one_list(expr, pos_idx_map.get(ct, np.empty(0, dtype=int)), n_genes, use_quantiles)
+        # default: no markers
+        pos_idx = np.empty(0, dtype=int)
+        neg_idx = np.empty(0, dtype=int)
 
-        # negative pass (upper quantile)
-        n_prec, n_rec, n_f1 = _score_one_list(expr, neg_idx_map.get(ct, np.empty(0, dtype=int)), n_genes, use_quantiles)
+        # fill indices if we have markers for this type
+        if (not pd.isna(ct)) and (ct in markers):
+            m = markers[ct]
+            pos_idx = _idx(m.get("positive", []))
+            neg_idx = _idx(m.get("negative", []))
 
-        # fused purity
-        denom = (1.0 - n_f1) + p_f1
-        f1_purity = (2.0 * (1.0 - n_f1) * p_f1 / denom) if denom > 0 else 0.0
+        # union for ranking; may be empty
+        if pos_idx.size + neg_idx.size > 0:
+            union_idx = np.concatenate([pos_idx, neg_idx])
+        else:
+            union_idx = np.empty(0, dtype=int)
 
+        # --- positive markers ---
+        if pos_idx.size == 0 or union_idx.size == 0:
+            p_prec = p_rec = p_f1 = np.nan
+        else:
+            p_prec, p_rec, p_f1 = _score_one_list(
+                expr,
+                pos_idx,
+                n_genes,
+                use_quantiles,
+                union_idx,
+            )
+
+        # --- negative markers ---
+        if neg_idx.size == 0 or union_idx.size == 0:
+            n_prec = n_rec = n_f1 = np.nan
+        else:
+            n_prec, n_rec, n_f1 = _score_one_list(
+                expr,
+                neg_idx,
+                n_genes,
+                use_quantiles,
+                union_idx,
+            )
+
+        # --- fused purity ---
+        # purity is only defined if both positive and negative F1 are defined
+        if np.isnan(p_f1) or np.isnan(n_f1):
+            f1_purity = np.nan
+        else:
+            denom = (1.0 - n_f1) + p_f1
+            f1_purity = (2.0 * (1.0 - n_f1) * p_f1 / denom)
         rows.append(
             {
                 "positive_precision": p_prec,
