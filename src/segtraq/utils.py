@@ -5,9 +5,11 @@ from collections import Counter
 from collections.abc import Callable
 from importlib.metadata import version
 from itertools import combinations
+from joblib import Parallel, delayed
 
 import geopandas as gpd
 import numpy as np
+import collections
 import pandas as pd
 import scanpy as sc
 import spatialdata as sd
@@ -61,8 +63,57 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     drop_genes = set(counts[counts >= (t * n_ct)].index)
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
+def _compute_f1_metrics(
+    X_union: np.ndarray,
+    marker_idx: np.ndarray,
+    union_idx: np.ndarray,
+    use_quantiles: bool,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Vectorized precision/recall/F1 for all cells of a type,
+    working only inside the marker union.
 
-def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_quantiles: bool) -> tuple:
+    Returns arrays (prec, rec, f1) of length n_cells_type.
+    Returns NaNs if no markers.
+    """
+    if marker_idx.size == 0 or union_idx.size == 0:
+        # No markers → undefined metrics
+        n_cells_type = X_union.shape[0]
+        return (np.full(n_cells_type, np.nan),
+                np.full(n_cells_type, np.nan),
+                np.full(n_cells_type, np.nan))
+
+    # Boolean mask of which union positions are markers
+    marker_mask = np.isin(union_idx, marker_idx)   # length n_union
+    n_markers = marker_mask.sum()
+    n_union = union_idx.size
+
+    if use_quantiles:
+        frac = n_markers / n_union
+        thr = np.quantile(X_union, 1.0 - frac, axis=1)
+        predicted = X_union > thr[:, None]
+    else:
+        predicted = X_union > 0
+
+    actual = np.broadcast_to(marker_mask, X_union.shape)
+
+    tp = (predicted & actual).sum(axis=1)
+    fp = (predicted & ~actual).sum(axis=1)
+    fn = (~predicted & actual).sum(axis=1)
+
+    # Vectorized safe division
+    with np.errstate(divide="ignore", invalid="ignore"):
+        prec = np.where(tp + fp > 0, tp / (tp + fp), 0.0)
+        rec  = np.where(tp + fn > 0, tp / (tp + fn), 0.0)
+        f1   = np.where(
+            (prec + rec) > 0,
+            2 * prec * rec / (prec + rec),
+            0.0,
+        )
+
+    return prec, rec, f1
+
+def _score_one_list_all_markers(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_quantiles: bool) -> tuple:
     """Precision, recall, F1 for one list using upper-quantile rule (CellSPA)."""
     if marker_idx.size == 0:
         return 0.0, 0.0, 0.0
@@ -86,6 +137,76 @@ def _score_one_list(expr: np.ndarray, marker_idx: np.ndarray, n_genes: int, use_
     F1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
     return precision, recall, F1
 
+def _score_one_list(expr: np.ndarray,
+                    marker_idx: np.ndarray,
+                    n_genes: int,
+                    use_quantiles: bool,
+                    union_idx: np.ndarray | None = None) -> tuple:
+    """
+    Precision, recall, F1 for one marker list using a *marker-union* ranking rule.
+
+    Instead of ranking genes among all ~20k genes, we restrict the quantile
+    threshold computation to the union of all marker genes for this cell type
+    (positive + negative). This avoids depth bias and zero-inflation artifacts.
+
+    Parameters
+    ----------
+    expr : np.ndarray
+        Expression vector for a single cell (length = n_genes).
+    marker_idx : np.ndarray
+        Indices of markers (positive or negative) for this cell type.
+    n_genes : int
+        Total number of genes (len(expr)).
+    use_quantiles : bool
+        If True, use top-quantile rule; otherwise fallback to expr > 0.
+    union_idx : np.ndarray or None
+        Indices of the union of positive+negative markers for this cell type.
+        If None, defaults to marker_idx (degenerate case).
+
+    Returns
+    -------
+    precision, recall, F1 : tuple of floats
+    """
+    if marker_idx.size == 0:
+        return 0.0, 0.0, 0.0
+
+    # Actual labels
+    actual = np.zeros(n_genes, dtype=bool)
+    actual[marker_idx] = True
+    frac = actual.mean()  # (#markers)/n_genes  — used to set % of union to pick
+
+    # If union not provided, fall back to marker-only set (rare case)
+    if union_idx is None or union_idx.size == 0:
+        union_idx = marker_idx
+
+    # Expression only for marker union
+    expr_union = expr[union_idx]
+
+    if use_quantiles:
+        # Compute threshold *only within marker-union*
+        # Select top (frac * |union|) fraction
+        n_union = union_idx.size
+        # Effective fraction within union
+        frac_eff = marker_idx.size / n_union  
+        thr = np.quantile(expr_union, 1.0 - frac_eff)
+
+        # Predicted = high within the union
+        predicted = np.zeros(n_genes, dtype=bool)
+        predicted[union_idx] = expr_union > thr
+
+    else:
+        predicted = expr > 0
+
+    # Compute confusion statistics
+    tp = int((predicted & actual).sum())
+    fp = int((predicted & ~actual).sum())
+    fn = int((~predicted & actual).sum())
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall    = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    F1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+
+    return precision, recall, F1
 
 def _assign_celltype_by_pearson(
     adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, tables_cell_id_key: str = "cell_id"
@@ -452,7 +573,7 @@ def get_ref_markers_version1(
 
     return markers
 
-def get_ref_markers(
+def get_ref_markers_DE_one_vs_rest(
     adata_ref: AnnData,
     ref_cell_type: str,
     method: str = "wilcoxon",
@@ -549,6 +670,226 @@ def get_ref_markers(
         neg_lists[ct] = neg_df["names"].tolist()
 
     # overlap filter (remove ubiquitous markers)
+    pos_lists = _apply_overlap_filter(pos_lists, t=t, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=t, n_ct=n_types)
+
+    markers: Dict[str, Dict[str, List[str]]] = {
+        ct: {
+            "positive": pos_lists.get(ct, []),
+            "negative": neg_lists.get(ct, []),
+        }
+        for ct in types
+    }
+
+    return markers
+
+def get_ref_markers(
+    adata_ref: AnnData,
+    ref_cell_type: str,
+    method: str = "wilcoxon",
+    pval_adj_thresh: float = 0.05,
+    logfc_pos_thresh: float = 1.0,
+    logfc_neg_thresh: float = -1.0,
+    vote_fraction_pos: float = 0.5,
+    vote_fraction_neg: float = 0.5,
+    t: float = 0.25,
+    min_cells_per_type: int = 10,
+    n_jobs: int = 1,
+) -> Dict[str, Dict[str, List[str]]]:
+    """
+    Compute positive and negative markers per cell type using pairwise DE + voting.
+
+    For each unordered pair of cell types (c, d), run DE for c vs d using Scanpy's
+    `rank_genes_groups` (groups=[c], reference=d), then count how often each gene
+    is significantly:
+        - up in c vs d  (candidate positive marker for c)
+        - down in c vs d (candidate negative marker for c)
+
+    After collecting votes over all pairs (c, d != c), define:
+
+        Positive markers(c):
+            - gene is significantly up in c for at least
+              ceil(vote_fraction_pos * (n_types - 1)) pairwise comparisons
+            - and never significantly down in c (no conflicting votes)
+
+        Negative markers(c):
+            - gene is significantly down in c for at least
+              ceil(vote_fraction_neg * (n_types - 1)) pairwise comparisons
+            - and never significantly up in c
+
+    Finally, an overlap filter is applied separately to positives and negatives
+    (genes appearing in >= t * n_types lists are removed) to keep type-specific markers.
+
+    Parameters
+    ----------
+    adata_ref : AnnData
+        Reference single-cell dataset (cells x genes).
+    ref_cell_type : str
+        Column in `adata_ref.obs` containing cell type labels.
+    method : str, optional (default: "wilcoxon")
+        DE method passed to `sc.tl.rank_genes_groups` ("wilcoxon", "t-test", "logreg", ...).
+    pval_adj_thresh : float, optional (default: 0.05)
+        FDR (adjusted p-value) cutoff for both positive and negative markers.
+    logfc_pos_thresh : float, optional (default: 1.0)
+        Minimum log fold-change for *positive* markers (c > d).
+    logfc_neg_thresh : float, optional (default: -1.0)
+        Maximum log fold-change (negative) for *negative* markers (c < d).
+    vote_fraction_pos : float, optional (default: 0.5)
+        Fraction of pairwise contrasts (c vs d) in which a gene must be significantly
+        up in c to be called a positive marker of c.
+    vote_fraction_neg : float, optional (default: 0.5)
+        Fraction of pairwise contrasts (c vs d) in which a gene must be significantly
+        down in c to be called a negative marker of c.
+    t : float, optional (default: 0.25)
+        Overlap filter: drop genes that appear in >= t * n_types marker lists
+        (done separately for positive and negative lists).
+    min_cells_per_type : int, optional (default: 10)
+        Minimum number of cells required for a cell type to be included in
+        pairwise DE. 
+    n_jobs : int, optional (default: 1)
+        Number of parallel jobs for running pairwise DE. 
+
+    Returns
+    -------
+    dict
+        {cell_type: {"positive": [genes], "negative": [genes]}}
+    """
+    adata = adata_ref.copy()
+
+    # Normalize/log if this looks like raw counts
+    if _looks_like_counts(adata.X):
+        warnings.warn(
+            "Reference adata_ref does not appear log-normalized. "
+            "normalize_total + log1p will be applied to a copy for DE.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
+    adata.var_names_make_unique()
+
+    ctypes = pd.Categorical(adata.obs[ref_cell_type])
+    types = list(ctypes.categories)
+    n_types = len(types)
+    if n_types < 2:
+        raise ValueError("Need at least two cell types to compute differential markers.")
+
+    # cell counts per type
+    cell_counts = ctypes.value_counts().to_dict()
+    usable_types = [ct for ct in types if cell_counts.get(ct, 0) >= min_cells_per_type]
+    if len(usable_types) < 2:
+        raise ValueError(
+            "Fewer than two cell types have at least "
+            f"{min_cells_per_type} cells; cannot perform pairwise DE."
+        )
+
+    # All unordered pairs to process
+    pairs = list(combinations(usable_types, 2))
+
+    # Helper to run DE for one pair (ct_a, ct_b) and return votes
+    def _de_one_pair(ct_a: str, ct_b: str):
+        mask = ctypes.isin([ct_a, ct_b])
+        if mask.sum() < 2 * min_cells_per_type:
+            # too few cells total, skip
+            return (ct_a, ct_b, [], [], False)
+
+        ad_pair = adata[mask].copy()
+
+        # DE: ct_a vs ct_b
+        sc.tl.rank_genes_groups(
+            ad_pair,
+            groupby=ref_cell_type,
+            groups=[ct_a],
+            reference=ct_b,
+            method=method,
+        )
+        df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
+
+        pos_df = df[
+            (df["pvals_adj"] < pval_adj_thresh)
+            & (df["logfoldchanges"] > logfc_pos_thresh)
+        ]
+        neg_df = df[
+            (df["pvals_adj"] < pval_adj_thresh)
+            & (df["logfoldchanges"] < logfc_neg_thresh)
+        ]
+
+        pos_genes_a = pos_df["names"].tolist()
+        neg_genes_a = neg_df["names"].tolist()
+
+        # return everything needed to update votes:
+        # (pair types, genes up in a, genes down in a)
+        return (ct_a, ct_b, pos_genes_a, neg_genes_a, True)
+
+    # Run over all pairs, possibly in parallel
+    if n_jobs == 1:
+        results = [_de_one_pair(ct_a, ct_b) for ct_a, ct_b in pairs]
+    else:
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(_de_one_pair)(ct_a, ct_b) for ct_a, ct_b in pairs
+        )
+
+    # Initialize vote counters and pair counts
+    pos_votes = {ct: collections.Counter() for ct in types}
+    neg_votes = {ct: collections.Counter() for ct in types}
+    pair_counts = {ct: 0 for ct in types}
+
+    # Aggregate votes from worker results
+    for res in results:
+        # If a pair was skipped, return (ct_a, ct_b, [], [], False)
+        if len(res) == 5:
+            ct_a, ct_b, pos_genes_a, neg_genes_a, ok = res
+            if not ok:
+                continue
+        else:
+            ct_a, ct_b, pos_genes_a, neg_genes_a, _ok  = res
+            if pos_genes_a is None and neg_genes_a is None:
+                continue
+
+        # up in ct_a vs ct_b -> positive for a, negative for b
+        for g in pos_genes_a:
+            pos_votes[ct_a][g] += 1
+            neg_votes[ct_b][g] += 1
+
+        # down in ct_a vs ct_b -> negative for a, positive for b
+        for g in neg_genes_a:
+            neg_votes[ct_a][g] += 1
+            pos_votes[ct_b][g] += 1
+
+        pair_counts[ct_a] += 1
+        pair_counts[ct_b] += 1
+
+    # Build final marker lists using per-type voting thresholds
+    pos_lists: Dict[str, List[str]] = {}
+    neg_lists: Dict[str, List[str]] = {}
+
+    for ct in types:
+        M_c = pair_counts[ct]
+        if M_c == 0:
+            pos_lists[ct] = []
+            neg_lists[ct] = []
+            continue
+
+        min_pos_votes = max(1, int(np.ceil(vote_fraction_pos * M_c)))
+        min_neg_votes = max(1, int(np.ceil(vote_fraction_neg * M_c)))
+
+        pos_genes = [
+            g for g, k in pos_votes[ct].items()
+            if k >= min_pos_votes and neg_votes[ct].get(g, 0) == 0
+        ]
+        pos_genes = sorted(pos_genes, key=lambda g: pos_votes[ct][g], reverse=True)
+
+        neg_genes = [
+            g for g, k in neg_votes[ct].items()
+            if k >= min_neg_votes and pos_votes[ct].get(g, 0) == 0
+        ]
+        neg_genes = sorted(neg_genes, key=lambda g: neg_votes[ct][g], reverse=True)
+
+        pos_lists[ct] = pos_genes
+        neg_lists[ct] = neg_genes
+
+    # Overlap filter to remove ubiquitous markers
     pos_lists = _apply_overlap_filter(pos_lists, t=t, n_ct=n_types)
     neg_lists = _apply_overlap_filter(neg_lists, t=t, n_ct=n_types)
 
