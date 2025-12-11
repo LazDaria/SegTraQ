@@ -13,8 +13,420 @@ from typing import Dict, Tuple, List
 import numpy as np
 from scipy.stats import fisher_exact
 
+from __future__ import annotations
+
+from typing import Dict, Tuple
+import numpy as np
+import pandas as pd
+
 
 def compute_MECR(
+    sdata,
+    me_pairs_df: pd.DataFrame,
+    cell_type_key: str,
+    tables_key: str = "table",
+    neighbors_key: str = "spatial_connectivities",
+    use_raw: bool = True,
+    obs_key_score: str = "MECR_contam_score",
+    obs_key_n_pairs: str = "MECR_n_pairs",
+    obs_key_n_coexpr: str = "MECR_n_coexpr",
+) -> pd.DataFrame:
+    """
+    Compute a per-cell contamination score based on mutually exclusive marker pairs.
+
+    For each spatial cell i:
+      - take its cell type c_i,
+      - find all neighbor cells via `neighbors_key`,
+      - collect the neighbor types B(i),
+      - look up all mutually exclusive marker pairs (gene_a, gene_b) for each
+        (ct_a=c_i, ct_b in B(i)) in `me_pairs_df`,
+      - count how many of these (gene_a, gene_b) pairs are co-expressed in cell i
+        (both genes > 0),
+      - define:
+            score_i = n_coexpressed_pairs / n_relevant_pairs
+        where n_relevant_pairs is the number of unique ME pairs relevant for
+        the neighborhood of cell i.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Container with `.tables[tables_key]` as AnnData and a neighbor graph
+        in `.tables[tables_key].obsp[neighbors_key]`.
+    me_pairs_df : pd.DataFrame
+        DataFrame with mutually exclusive marker pairs, with at least columns:
+           - "ct_a": focal cell type,
+           - "ct_b": neighbor cell type,
+           - "gene_a": marker gene of ct_a,
+           - "gene_b": marker gene of ct_b.
+    cell_type_key : str
+        Column in `sdata.tables[tables_key].obs` with cell-type labels.
+    tables_key : str, optional (default: "table")
+        Key of the AnnData table in `sdata.tables`.
+    neighbors_key : str, optional (default: "spatial_connectivities")
+        Key in `adata.obsp` containing the cell-cell adjacency / connectivity
+        matrix.
+    use_raw : bool, optional (default: True)
+        If True, use `.layers["raw"]` if present, otherwise `.X`.
+    obs_key_score : str, optional
+        Name of the `.obs` column where the contamination score is stored.
+    obs_key_n_pairs : str, optional
+        Name of the `.obs` column storing the number of relevant ME pairs per cell.
+    obs_key_n_coexpr : str, optional
+        Name of the `.obs` column storing the number of co-expressed ME pairs
+        per cell.
+
+    Returns
+    -------
+    result_df : pd.DataFrame
+        DataFrame with one row per cell containing:
+            - "cell_id": index of the cell (adata.obs_names),
+            - "cell_type",
+            - obs_key_score,
+            - obs_key_n_pairs,
+            - obs_key_n_coexpr.
+        The same information is also written into `adata.obs` under the
+        specified column names.
+    """
+    adata = sdata.tables[tables_key]
+
+    # --- 1) choose expression matrix ----------------------------------------
+    if use_raw and "raw" in adata.layers:
+        arr = adata.layers["raw"]
+    else:
+        arr = adata.X
+
+    arr = arr.toarray() if hasattr(arr, "toarray") else np.asarray(arr)
+    n_cells, n_genes = arr.shape
+
+    # --- 2) indexing structures ---------------------------------------------
+    var_index = pd.Index(adata.var_names)
+    gene_to_idx: Dict[str, int] = {g: i for i, g in enumerate(var_index)}
+
+    ctypes = adata.obs[cell_type_key].astype("category")
+    ct_values = ctypes.values
+
+    # adjacency matrix
+    if neighbors_key not in adata.obsp:
+        raise KeyError(f"Neighbors matrix '{neighbors_key}' not found in adata.obsp")
+
+    G = adata.obsp[neighbors_key]  # expected CSR/CSC sparse matrix
+
+    # --- 3) preprocess mutually exclusive pairs into index by (ct_a, ct_b) ---
+    # keep only pairs where both genes are present in the spatial data
+    valid_rows = me_pairs_df[
+        me_pairs_df["gene_a"].isin(var_index)
+        & me_pairs_df["gene_b"].isin(var_index)
+    ].copy()
+
+    pair_dict: Dict[Tuple[str, str], list[Tuple[int, int]]] = {}
+
+    for row in valid_rows.itertuples(index=False):
+        ct_a = row.ct_a
+        ct_b = row.ct_b
+        g_a = row.gene_a
+        g_b = row.gene_b
+
+        idx_a = gene_to_idx[g_a]
+        idx_b = gene_to_idx[g_b]
+
+        key = (ct_a, ct_b)
+        pair_dict.setdefault(key, []).append((idx_a, idx_b))
+
+    # make pairs unique per (ct_a, ct_b)
+    for key, lst in pair_dict.items():
+        pair_dict[key] = list(set(lst))
+
+    # --- 4) per-cell contamination computation ------------------------------
+    n_pairs_per_cell = np.zeros(n_cells, dtype=int)
+    n_coexpr_per_cell = np.zeros(n_cells, dtype=int)
+
+    for i in range(n_cells):
+        ct_a = ct_values[i]
+
+        # neighbors of cell i
+        row = G.getrow(i)
+        if row.nnz == 0:
+            continue
+
+        neighbor_indices = row.indices
+        neighbor_types = pd.unique(ctypes.iloc[neighbor_indices].dropna())
+
+        # collect all ME pairs relevant for this cell's neighborhood
+        relevant_pairs: set[Tuple[int, int]] = set()
+        for ct_b in neighbor_types:
+            key = (ct_a, ct_b)
+            if key in pair_dict:
+                relevant_pairs.update(pair_dict[key])
+
+        if not relevant_pairs:
+            continue
+
+        relevant_pairs = list(relevant_pairs)
+        n_pairs_per_cell[i] = len(relevant_pairs)
+
+        expr_i = arr[i, :]
+        e_i = expr_i > 0
+
+        coexpr_count = 0
+        for idx_a, idx_b in relevant_pairs:
+            if e_i[idx_a] and e_i[idx_b]:
+                coexpr_count += 1
+
+        n_coexpr_per_cell[i] = coexpr_count
+
+    # contamination score = co-expressed / total pairs
+    score = np.full(n_cells, np.nan, dtype=float)
+    mask_pairs = n_pairs_per_cell > 0
+    score[mask_pairs] = n_coexpr_per_cell[mask_pairs] / n_pairs_per_cell[mask_pairs]
+
+    # --- 5) store in .obs and return a DataFrame ----------------------------
+    adata.obs[obs_key_score] = score
+    adata.obs[obs_key_n_pairs] = n_pairs_per_cell
+    adata.obs[obs_key_n_coexpr] = n_coexpr_per_cell
+
+    result_df = pd.DataFrame(
+        {
+            "cell_id": adata.obs_names.to_numpy(),
+            "cell_type": ct_values,
+            obs_key_score: score,
+            obs_key_n_pairs: n_pairs_per_cell,
+            obs_key_n_coexpr: n_coexpr_per_cell,
+        }
+    ).set_index("cell_id")
+
+    return result_df
+
+
+def compute_MECR_uns(
+    sdata,
+    me_pairs_df: pd.DataFrame,
+    cell_type_key: str,
+    tables_key: str = "table",
+    neighbors_key: str = "spatial_connectivities",
+    cell_centroid_x_key: str = "cell_centroid_x",
+    cell_centroid_y_key: str = "cell_centroid_y",
+    use_raw: bool = True,
+    inplace: bool = True,
+    uns_key: str = "MECR_neighbors",
+) -> pd.DataFrame:
+    """
+    Compute MECR (Fisher's exact test for mutual exclusivity) for mutually
+    exclusive marker pairs, restricted to A cells that neighbor B cells.
+
+    For each row in `me_pairs_df` (ct_a, ct_b, gene_a, gene_b):
+
+        1. Select spatial cells of type ct_a that have at least one neighbor
+           of type ct_b (based on `neighbors_key` in .obsp).
+
+        2. On this subset of ct_a cells, build a 2x2 contingency table for
+           gene_a and gene_b:
+
+                     gene_b>0   gene_b=0
+             gene_a>0    n11        n10
+             gene_a=0    n01        n00
+
+        3. Run Fisher's exact test with alternative="less":
+
+             H0: gene_a and gene_b are independent
+             H1: co-occurrence is LESS than expected (mutual exclusivity)
+
+    This quantifies how much the B marker (gene_b) appears in A cells that
+    are directly adjacent to B cells, i.e. a contamination-like signal.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Container with `.tables[tables_key]` as AnnData.
+    me_pairs_df : pd.DataFrame
+        DataFrame with at least the columns:
+            - "ct_a"   : focal cell type (where MECR is computed)
+            - "ct_b"   : neighbor cell type
+            - "gene_a" : marker gene of ct_a
+            - "gene_b" : marker gene of ct_b
+        Typically derived from mutually exclusive marker pairs in scRNA-seq.
+    cell_type_key : str
+        Column in `sdata.tables[tables_key].obs` with cell type labels for
+        the spatial cells.
+    tables_key : str, optional (default: "table")
+        Key of the AnnData table in `sdata.tables`.
+    neighbors_key : str, optional (default: "spatial_connectivities")
+        Key in `adata.obsp` containing the adjacency / connectivity matrix
+        (e.g. produced by Squidpy / Scanpy).
+    use_raw : bool, optional (default: True)
+        If True, use `.layers["raw"]` if present, otherwise `.X`.
+        If False, always use `.X`.
+    inplace : bool, optional (default: True)
+        If True, store the result DataFrame in
+            sdata.tables[tables_key].uns[uns_key].
+    uns_key : str, optional (default: "MECR_neighbors")
+        Key in `.uns` under which the result DataFrame is stored if
+        `inplace=True`.
+
+    Returns
+    -------
+    result_df : pd.DataFrame
+        One row per input pair with columns:
+            ["ct_a", "ct_b", "gene_a", "gene_b",
+             "odds_ratio", "pval",
+             "n_cells", "n11", "n10", "n01", "n00"]
+        Rows where genes are missing or no cells are available contain NaNs.
+    """
+    adata = sdata.tables[tables_key]
+    adata.obsm["spatial"] = adata.obs[[cell_centroid_x_key, cell_centroid_y_key]].to_numpy()
+
+    # 1. Build spatial graph (Delaunay triangulation) #TODO
+    sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
+    G = adata.obsp["spatial_connectivities"].tocsr()
+
+    # --- 1) choose expression matrix (prefer raw if requested) --------------
+    if use_raw and "raw" in adata.layers:
+        arr = adata.layers["raw"]
+    else:
+        arr = adata.X
+
+    arr = arr.toarray() if hasattr(arr, "toarray") else np.asarray(arr)
+    n_cells, n_genes = arr.shape
+
+    # --- 2) basic indexing structures ---------------------------------------
+    var_index = pd.Index(adata.var_names)
+    gene_to_idx = {g: i for i, g in enumerate(var_index)}
+
+    # cell types as numpy array
+    ctypes = adata.obs[cell_type_key].astype("category")
+    ct_values = ctypes.values
+    ct_masks = {ct: (ct_values == ct) for ct in ctypes.cat.categories}
+
+    # adjacency / neighbor matrix
+    if neighbors_key not in adata.obsp:
+        raise KeyError(f"Neighbors matrix '{neighbors_key}' not found in adata.obsp")
+
+    G = adata.obsp[neighbors_key]  # expected CSR or similar sparse matrix
+
+    # --- 3) precompute mask of "ct_a cells that have a ct_b neighbor" -------
+    pair_masks = {}
+    for ct_a, ct_b in (
+        me_pairs_df[["ct_a", "ct_b"]]
+        .drop_duplicates()
+        .itertuples(index=False, name=None)
+    ):
+        if ct_a not in ct_masks or ct_b not in ct_masks:
+            pair_masks[(ct_a, ct_b)] = None
+            continue
+
+        mask_a = ct_masks[ct_a]
+        mask_b = ct_masks[ct_b]
+
+        # For each cell, count number of neighbors that are ct_b
+        # G.shape = (n_cells, n_cells), mask_b.shape = (n_cells,)
+        # -> neighbor_counts = G @ mask_b
+        neighbor_counts = G.dot(mask_b.astype(int))
+        has_b_neighbor = neighbor_counts > 0
+
+        # only A cells that have at least one B neighbor
+        subset_mask = mask_a & has_b_neighbor
+        if subset_mask.sum() == 0:
+            pair_masks[(ct_a, ct_b)] = None
+        else:
+            pair_masks[(ct_a, ct_b)] = subset_mask
+
+    # --- 4) loop over gene pairs and run Fisher in the relevant subset ------
+    records = []
+
+    for row in me_pairs_df.itertuples(index=False):
+        ct_a = row.ct_a
+        ct_b = row.ct_b
+        g1 = row.gene_a
+        g2 = row.gene_b
+
+        mask = pair_masks.get((ct_a, ct_b), None)
+        if mask is None or mask.sum() == 0:
+            records.append(
+                dict(
+                    ct_a=ct_a,
+                    ct_b=ct_b,
+                    gene_a=g1,
+                    gene_b=g2,
+                    odds_ratio=np.nan,
+                    pval=np.nan,
+                    n_cells=0,
+                    n11=np.nan,
+                    n10=np.nan,
+                    n01=np.nan,
+                    n00=np.nan,
+                )
+            )
+            continue
+
+        # restrict to ct_a cells with at least one ct_b neighbor
+        sub_arr = arr[mask, :]
+        n_sub = sub_arr.shape[0]
+
+        # gene indices
+        idx1 = gene_to_idx.get(g1)
+        idx2 = gene_to_idx.get(g2)
+        if idx1 is None or idx2 is None:
+            records.append(
+                dict(
+                    ct_a=ct_a,
+                    ct_b=ct_b,
+                    gene_a=g1,
+                    gene_b=g2,
+                    odds_ratio=np.nan,
+                    pval=np.nan,
+                    n_cells=n_sub,
+                    n11=np.nan,
+                    n10=np.nan,
+                    n01=np.nan,
+                    n00=np.nan,
+                )
+            )
+            continue
+
+        expr1 = sub_arr[:, idx1]
+        expr2 = sub_arr[:, idx2]
+
+        e1 = expr1 > 0
+        e2 = expr2 > 0
+
+        # contingency table
+        n11 = int((e1 & e2).sum())          # gene_a>0, gene_b>0
+        n10 = int((e1 & ~e2).sum())         # gene_a>0, gene_b=0
+        n01 = int((~e1 & e2).sum())         # gene_a=0, gene_b>0
+        n00 = int(n_sub - n11 - n10 - n01)  # gene_a=0, gene_b=0
+
+        # if (n11 + n10 + n01) == 0:
+        #     odds_ratio, pval = np.nan, np.nan
+        # else:
+        #     table = [[n11, n10], [n01, n00]]
+        #     try:
+        #         odds_ratio, pval = fisher_exact(table, alternative="less")
+        #     except Exception:
+        #         odds_ratio, pval = np.nan, np.nan
+
+        records.append(
+            dict(
+                ct_a=ct_a,
+                ct_b=ct_b,
+                gene_a=g1,
+                gene_b=g2,
+                # odds_ratio=odds_ratio,
+                # pval=pval,
+                n_cells=n_sub,
+                n11=n11,
+                n10=n10,
+                n01=n01,
+                n00=n00,
+            )
+        )
+
+    result_df = pd.DataFrame.from_records(records)
+
+    if inplace:
+        adata.uns[uns_key] = result_df
+
+    return result_df
+
+def compute_MECR_global(
     sdata,
     gene_pairs: List[Tuple[str, str]],
     tables_key: str = "table",

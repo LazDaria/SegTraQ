@@ -19,6 +19,7 @@ from packaging import version as pkg_version
 from typing import Dict, List, Optional, Tuple
 from rasterio.features import shapes
 from scipy import sparse
+from scipy.stats import fisher_exact
 from scipy.spatial.distance import cdist
 from sklearn.metrics import roc_auc_score
 from shapely.affinity import affine_transform, translate
@@ -385,10 +386,365 @@ def merge_into_var(sdata, tables_key, df_to_merge):
 
     sdata.tables[tables_key].var = df
 
+def _pairwise_auc(
+    adata: AnnData,
+    ctypes: pd.Categorical,
+    ref_cell_type: str,
+    ct_a: str,
+    ct_b: str,
+    max_fpr: float | None,
+    auc_pos_thresh: float,
+    auc_neg_thresh: float,
+    min_cells_per_type: int,
+) -> Tuple[str, str, List[str], List[str], bool]:
+    """Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b)."""
+    # Restrict to cells of ct_a and ct_b
+    mask = ctypes.isin([ct_a, ct_b])
+    if mask.sum() < 2 * min_cells_per_type:
+        # too few cells total → skip
+        return (ct_a, ct_b, [], [], False)
+
+    ad_pair = adata[mask]
+    X_pair = ad_pair.X
+    if hasattr(X_pair, "toarray"):
+        X_pair = X_pair.toarray()
+    else:
+        X_pair = np.asarray(X_pair)  # (n_cells_pair, n_genes)
+
+    genes = np.asarray(ad_pair.var_names)
+    labels = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
+    if labels.sum() == 0 or labels.sum() == labels.size:
+        # Only one class present → skip
+        return (ct_a, ct_b, [], [], False)
+
+    # Precompute means per group to enforce directionality
+    mask_a = labels == 1
+    mask_b = labels == 0
+    mean_a = X_pair[mask_a].mean(axis=0)
+    mean_b = X_pair[mask_b].mean(axis=0)
+
+    # Compute AUC/pAUC per gene (non-vectorized, one roc_auc_score per gene)
+    aucs = np.zeros(genes.size, dtype=float)
+    for j in range(genes.size):
+        scores = X_pair[:, j]
+        # If all scores identical, AUC is undefined → treat as 0.5
+        if np.all(scores == scores[0]):
+            aucs[j] = 0.5
+        else:
+            aucs[j] = roc_auc_score(labels, scores, max_fpr=max_fpr)
+
+    # Identify genes up in ct_a vs ct_b
+    #   high AUC and higher mean in ct_a
+    up_mask = (aucs >= auc_pos_thresh) & (mean_a > mean_b)
+    pos_genes_a = genes[up_mask].tolist()
+
+    # Identify genes down in ct_a vs ct_b
+    #   low AUC (i.e. reversed) and lower mean in ct_a
+    down_mask = (aucs <= (1.0 - auc_neg_thresh)) & (mean_a < mean_b)
+    neg_genes_a = genes[down_mask].tolist()
+
+    return (ct_a, ct_b, pos_genes_a, neg_genes_a, True)
+
+
+def _pairwise_de(
+    adata: AnnData,
+    ctypes: pd.Categorical,
+    ref_cell_type: str,
+    ct_a: str,
+    ct_b: str,
+    method: str,
+    pval_adj_thresh: float,
+    logfc_pos_thresh: float,
+    logfc_neg_thresh: float,
+    min_cells_per_type: int,
+):
+    """Helper: run DE for one pair (ct_a, ct_b) and return genes up/down in ct_a."""
+    mask = ctypes.isin([ct_a, ct_b])
+    if mask.sum() < 2 * min_cells_per_type:
+        # too few cells total, skip
+        return (ct_a, ct_b, [], [], False)
+
+    ad_pair = adata[mask].copy()
+
+    # DE: ct_a vs ct_b
+    sc.tl.rank_genes_groups(
+        ad_pair,
+        groupby=ref_cell_type,
+        groups=[ct_a],
+        reference=ct_b,
+        method=method,
+    )
+    df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
+
+    pos_df = df[
+        (df["pvals_adj"] < pval_adj_thresh)
+        & (df["logfoldchanges"] > logfc_pos_thresh)
+    ]
+    neg_df = df[
+        (df["pvals_adj"] < pval_adj_thresh)
+        & (df["logfoldchanges"] < logfc_neg_thresh)
+    ]
+
+    pos_genes_a = pos_df["names"].tolist()
+    neg_genes_a = neg_df["names"].tolist()
+
+    # return everything needed to update votes:
+    # (pair types, genes up in a, genes down in a)
+    return (ct_a, ct_b, pos_genes_a, neg_genes_a, True)
+
+
+def get_ref_markers(
+    adata_ref: AnnData,
+    ref_cell_type: str,
+    mode: str = "de",
+    max_fpr: float | None = None,
+    auc_pos_thresh: float = 0.9,
+    auc_neg_thresh: float = 0.9,
+    method: str = "wilcoxon",
+    pval_adj_thresh: float = 0.05,
+    logfc_pos_thresh: float = 1.0,
+    logfc_neg_thresh: float = -1.0,
+    vote_fraction_pos: float = 0.5,
+    vote_fraction_neg: float = 0.5,
+    t_pos: float = 0.25,
+    t_neg: float = 0.25,
+    min_cells_per_type: int = 10,
+    n_jobs: int = 1,
+) -> Dict[str, Dict[str, List[str]]]:
+    """
+    Compute positive and negative markers per cell type using pairwise contrasts
+    (AUC/pAUC or DE) followed by voting.
+
+    Two modes:
+    -----------
+
+    mode="auc" :
+        For each unordered pair of cell types (c_i, c_j), compute per-gene AUC or
+        partial AUC (if max_fpr is set). A gene is "up in c_i" if:
+            - AUC >= auc_pos_thresh and mean(c_i) > mean(c_j)
+        and "down in c_i" if:
+            - AUC <= 1 - auc_neg_thresh and mean(c_i) < mean(c_j).
+
+    mode="de" (default):
+        For each pair (c, d), run Scanpy's `rank_genes_groups`
+        (groups=[c], reference=d, method=method).
+        A gene is:
+            - "up in c" if adjusted p-value < pval_adj_thresh and logFC > logfc_pos_thresh,
+            - "down in c" if adjusted p-value < pval_adj_thresh and logFC < logfc_neg_thresh.
+
+    Voting:
+    -------
+    For each cell type c, a gene must be "up" (or "down") in at least
+    ceil(vote_fraction_* * M_c) of its valid pairwise comparisons (M_c), and never
+    conflict (i.e., not both up and down for c).
+
+    Overlap filtering:
+    ------------------
+    Remove genes appearing in ≥ t * n_types marker lists (done separately for
+    positive and negative markers.
+
+    Returned structure:
+    -------------------
+        {cell_type: {"positive": [...], "negative": [...]}}
+
+    Parameters
+    ----------
+    adata_ref : AnnData
+        Reference single-cell dataset (cells x genes).
+    ref_cell_type : str
+        Column in `adata_ref.obs` containing cell type labels.
+    mode : {"auc", "de"}, optional (default: "auc")
+        - "auc": compute markers using pairwise AUC/pAUC as in the original
+          `get_ref_markers`.
+        - "de" : compute markers using pairwise DE as in `get_ref_markers_DE`.
+    max_fpr : float or None, optional (default: None)
+        (AUC mode only)
+        If None, compute full AUC. If in (0, 1], compute standardized pAUC over
+        [0, max_fpr] using sklearn's `roc_auc_score(max_fpr=max_fpr)`.
+    auc_pos_thresh : float, optional (default: 0.9)
+        (AUC mode only)
+        Minimum AUC/pAUC for a gene to be considered "up in c_i vs c_j".
+    auc_neg_thresh : float, optional (default: 0.9)
+        (AUC mode only)
+        Minimum AUC/pAUC (interpreted symmetrically) for a gene to be considered
+        "down in c_i vs c_j" (i.e. AUC <= 1 - auc_neg_thresh).
+    method : str, optional (default: "wilcoxon")
+        (DE mode only)
+        DE method passed to `sc.tl.rank_genes_groups` ("wilcoxon", "t-test", "logreg", ...).
+    pval_adj_thresh : float, optional (default: 0.05)
+        (DE mode only)
+        FDR (adjusted p-value) cutoff for both positive and negative markers.
+    logfc_pos_thresh : float, optional (default: 1.0)
+        (DE mode only)
+        Minimum log fold-change for *positive* markers (c > d).
+    logfc_neg_thresh : float, optional (default: -1.0)
+        (DE mode only)
+        Maximum log fold-change (negative) for *negative* markers (c < d).
+    vote_fraction_pos : float, optional (default: 0.5)
+        Fraction of valid pairwise contrasts in which a gene must be "up in c"
+        (AUC mode) / significantly up in c (DE mode) to be called a positive
+        marker of c.
+    vote_fraction_neg : float, optional (default: 0.5)
+        Fraction of valid pairwise contrasts in which a gene must be "down in c"
+        (AUC mode) / significantly down in c (DE mode) to be called a negative
+        marker of c.
+    t : float, optional (default: 0.25)
+        Overlap filter: drop genes that appear in >= t * n_types marker lists
+        (applied separately to positive and negative lists; behaviour matches the
+        original AUC- and DE-based functions).
+    min_cells_per_type : int, optional (default: 10)
+        Minimum number of cells required per cell type to be included in pairwise
+        computations.
+    n_jobs : int, optional (default: 1)
+        Number of parallel jobs for running pairwise computations.
+
+    Returns
+    -------
+    dict
+        {cell_type: {"positive": [genes], "negative": [genes]}}
+    """
+    adata = adata_ref.copy()
+
+    # Normalize/log if this looks like raw counts
+    if _looks_like_counts(adata.X):
+        warnings.warn(
+            "Reference adata_ref does not appear log-normalized. "
+            "normalize_total + log1p will be applied to a copy for marker computation.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
+    adata.var_names_make_unique()
+
+    ctypes = pd.Categorical(adata.obs[ref_cell_type])
+    types = list(ctypes.categories)
+    n_types = len(types)
+    if n_types < 2:
+        raise ValueError("Need at least two cell types to compute markers.")
+
+    # Cell counts per type → filter rare types
+    cell_counts = ctypes.value_counts().to_dict()
+    usable_types = [ct for ct in types if cell_counts.get(ct, 0) >= min_cells_per_type]
+    if len(usable_types) < 2:
+        raise ValueError(
+            "Fewer than two cell types have at least "
+            f"{min_cells_per_type} cells; cannot perform pairwise contrasts."
+        )
+
+    # All unordered pairs to process
+    pairs = list(combinations(usable_types, 2))
+
+    # Choose worker based on mode
+    if mode == "auc":
+        def worker(ct_a: str, ct_b: str):
+            return _pairwise_auc(
+                adata=adata,
+                ctypes=ctypes,
+                ref_cell_type=ref_cell_type,
+                ct_a=ct_a,
+                ct_b=ct_b,
+                max_fpr=max_fpr,
+                auc_pos_thresh=auc_pos_thresh,
+                auc_neg_thresh=auc_neg_thresh,
+                min_cells_per_type=min_cells_per_type,
+            )
+    elif mode == "de":
+        def worker(ct_a: str, ct_b: str):
+            return _pairwise_de(
+                adata=adata,
+                ctypes=ctypes,
+                ref_cell_type=ref_cell_type,
+                ct_a=ct_a,
+                ct_b=ct_b,
+                method=method,
+                pval_adj_thresh=pval_adj_thresh,
+                logfc_pos_thresh=logfc_pos_thresh,
+                logfc_neg_thresh=logfc_neg_thresh,
+                min_cells_per_type=min_cells_per_type,
+            )
+    else:
+        raise ValueError(f"Unknown mode '{mode}'. Use 'auc' or 'de'.")
+
+    # Run over all pairs, possibly in parallel
+    if n_jobs == 1:
+        results = [worker(ct_a, ct_b) for ct_a, ct_b in pairs]
+    else:
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(worker)(ct_a, ct_b) for ct_a, ct_b in pairs
+        )
+
+    # Initialize vote counters and pair counts
+    pos_votes = {ct: collections.Counter() for ct in types}
+    neg_votes = {ct: collections.Counter() for ct in types}
+    pair_counts = {ct: 0 for ct in types}
+
+    # Aggregate votes from pairwise results
+    for ct_a, ct_b, pos_genes_a, neg_genes_a, ok in results:
+        if not ok:
+            continue
+
+        # up in ct_a vs ct_b -> positive for a, negative for b
+        for g in pos_genes_a:
+            pos_votes[ct_a][g] += 1
+            neg_votes[ct_b][g] += 1
+
+        # down in ct_a vs ct_b -> negative for a, positive for b
+        for g in neg_genes_a:
+            neg_votes[ct_a][g] += 1
+            pos_votes[ct_b][g] += 1
+
+        pair_counts[ct_a] += 1
+        pair_counts[ct_b] += 1
+
+    # Build final marker lists using per-type voting thresholds
+    pos_lists: Dict[str, List[str]] = {}
+    neg_lists: Dict[str, List[str]] = {}
+
+    for ct in types:
+        M_c = pair_counts[ct]
+        if M_c == 0:
+            pos_lists[ct] = []
+            neg_lists[ct] = []
+            continue
+
+        min_pos_votes = max(1, int(np.ceil(vote_fraction_pos * M_c)))
+        min_neg_votes = max(1, int(np.ceil(vote_fraction_neg * M_c)))
+
+        pos_genes = [
+            g for g, k in pos_votes[ct].items()
+            if k >= min_pos_votes and neg_votes[ct].get(g, 0) == 0
+        ]
+        pos_genes = sorted(pos_genes, key=lambda g: pos_votes[ct][g], reverse=True)
+
+        neg_genes = [
+            g for g, k in neg_votes[ct].items()
+            if k >= min_neg_votes and pos_votes[ct].get(g, 0) == 0
+        ]
+        neg_genes = sorted(neg_genes, key=lambda g: neg_votes[ct][g], reverse=True)
+
+        pos_lists[ct] = pos_genes
+        neg_lists[ct] = neg_genes
+
+
+    pos_lists = _apply_overlap_filter(pos_lists, t=t_pos, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=t_neg, n_ct=n_types)
+
+    markers: Dict[str, Dict[str, List[str]]] = {
+        ct: {
+            "positive": pos_lists.get(ct, []),
+            "negative": neg_lists.get(ct, []),
+        }
+        for ct in types
+    }
+
+    return markers, results
+
 def get_ref_markers_auc(
     adata_ref: AnnData,
     ref_cell_type: str,
-    max_fpr: float | None = 0.1,
+    max_fpr: float | None = None,
     auc_pos_thresh: float = 0.9,
     auc_neg_thresh: float = 0.9,
     vote_fraction_pos: float = 0.5,
@@ -398,7 +754,7 @@ def get_ref_markers_auc(
     n_jobs: int = 1,
 ) -> Dict[str, Dict[str, List[str]]]:
     """
-    Compute positive and negative markers per cell type using pairwise pAUC + voting.
+    Compute positive and negative markers per cell type using pairwise (p)AUC + voting.
 
     For each unordered pair of cell types (c_i, c_j), we treat the problem as a
     binary classification (cells of c_i = 1, cells of c_j = 0), and compute per-gene
@@ -437,7 +793,7 @@ def get_ref_markers_auc(
         Reference single-cell dataset (cells x genes).
     ref_cell_type : str
         Column in `adata_ref.obs` containing cell type labels.
-    max_fpr : float or None, optional (default: 0.1)
+    max_fpr : float or None, optional (default: None)
         If None, compute full AUC. If in (0, 1], compute standardized pAUC over
         [0, max_fpr] using sklearn's `roc_auc_score(max_fpr=max_fpr)`.
     auc_pos_thresh : float, optional (default: 0.9)
@@ -609,7 +965,7 @@ def get_ref_markers_auc(
 
     # Overlap filter to remove ubiquitous markers
     pos_lists = _apply_overlap_filter(pos_lists, t=t, n_ct=n_types)
-    neg_lists = _apply_overlap_filter(neg_lists, t=t, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=1, n_ct=n_types)
 
     markers: Dict[str, Dict[str, List[str]]] = {
         ct: {
@@ -622,7 +978,7 @@ def get_ref_markers_auc(
     return markers, results
 
 
-def get_ref_markers(
+def get_ref_markers_DE(
     adata_ref: AnnData,
     ref_cell_type: str,
     method: str = "wilcoxon",
@@ -842,8 +1198,273 @@ def get_ref_markers(
 
     return markers
 
+def _benjamini_hochberg(pvals: np.ndarray) -> np.ndarray:
+    """
+    Benjamini-Hochberg FDR correction.
+    pvals: (n,) array of raw p-values.
+    returns: (n,) array of q-values.
+    """
+    pvals = np.asarray(pvals, float)
+    n = pvals.size
+    if n == 0:
+        return pvals
+
+    order = np.argsort(pvals)
+    ranks = np.arange(1, n + 1)
+    qvals = np.empty_like(pvals)
+    qvals[order] = pvals[order] * n / ranks
+    # monotone
+    qvals[order] = np.minimum.accumulate(qvals[order][::-1])[::-1]
+    qvals = np.clip(qvals, 0.0, 1.0)
+    return qvals
+
+
+def _mutual_exclusion_for_pair(
+    ct_a: str,
+    ct_b: str,
+    ctypes: pd.Categorical,
+    adata: AnnData,
+    markers: Dict[str, Dict[str, List[str]]],
+    gene_to_idx: Dict[str, int],
+    min_expr: float,
+    min_cells_per_pair: int,
+    min_pos_cells_per_gene: int,
+    max_coexpr_frac: float,
+    max_odds_ratio: float,
+) -> Tuple[List[dict], List[float]]:
+    """Worker: compute mutually exclusive marker pairs for a single (ct_a, ct_b)."""
+    # cells in this pair of types
+    cells_mask = (ctypes == ct_a) | (ctypes == ct_b)
+    idx_cells = np.where(cells_mask)[0]
+    n_cells = idx_cells.size
+    if n_cells < min_cells_per_pair:
+        return [], []
+
+    # positive markers present in adata
+    pos_a = [g for g in markers[ct_a]["positive"] if g in gene_to_idx]
+    pos_b = [g for g in markers[ct_b]["positive"] if g in gene_to_idx]
+    if len(pos_a) == 0 or len(pos_b) == 0:
+        return [], []
+
+    # extract expression for union of genes
+    genes_union = sorted(set(pos_a) | set(pos_b))
+    idx_union = np.array([gene_to_idx[g] for g in genes_union], dtype=int)
+    X = adata.X[idx_cells][:, idx_union]
+    if hasattr(X, "toarray"):
+        X = X.toarray()
+    else:
+        X = np.asarray(X)
+
+    # binarize
+    X_bin = X > min_expr
+    gene_bin = {g: X_bin[:, i] for i, g in enumerate(genes_union)}
+
+    results_pair: List[dict] = []
+    pvals_pair: List[float] = []
+
+    # all marker pairs
+    for g_a in pos_a:
+        x_a = gene_bin[g_a]
+        n_pos_a = x_a.sum()
+        if n_pos_a < min_pos_cells_per_gene:
+            continue
+
+        for g_b in pos_b:
+            if g_b == g_a:
+                continue
+
+            x_b = gene_bin[g_b]
+            n_pos_b = x_b.sum()
+            if n_pos_b < min_pos_cells_per_gene:
+                continue
+
+            both = np.logical_and(x_a, x_b)
+            a_only = np.logical_and(x_a, ~x_b)
+            b_only = np.logical_and(~x_a, x_b)
+            none = np.logical_and(~x_a, ~x_b)
+
+            n_both = int(both.sum())
+            n_a_only = int(a_only.sum())
+            n_b_only = int(b_only.sum())
+            n_none = int(none.sum())
+
+            if n_cells != (n_both + n_a_only + n_b_only + n_none):
+                continue
+
+            coexpr_frac = n_both / n_cells
+            if coexpr_frac > max_coexpr_frac:
+                continue
+
+            table = np.array(
+                [[n_none, n_b_only],
+                 [n_a_only, n_both]],
+                dtype=int,
+            )
+
+            # degenerate table → skip
+            if table.sum(axis=0).min() == 0 or table.sum(axis=1).min() == 0:
+                continue
+
+            odds_ratio, p_value = fisher_exact(table, alternative="less")
+
+            if np.isnan(odds_ratio):
+                continue
+            if odds_ratio > max_odds_ratio:
+                continue
+
+            results_pair.append(
+                dict(
+                    ct_a=ct_a,
+                    gene_a=g_a,
+                    ct_b=ct_b,
+                    gene_b=g_b,
+                    n_cells=n_cells,
+                    n_none=n_none,
+                    n_a_only=n_a_only,
+                    n_b_only=n_b_only,
+                    n_both=n_both,
+                    coexpr_frac=coexpr_frac,
+                    odds_ratio=odds_ratio,
+                    p_value=p_value,
+                )
+            )
+            pvals_pair.append(p_value)
+
+    return results_pair, pvals_pair
+
 
 def get_mut_excl_markers(
+    adata: AnnData,
+    markers: Dict[str, Dict[str, List[str]]],
+    ref_cell_type: str,
+    min_expr: float = 0.0,
+    min_cells_per_pair: int = 20,
+    min_pos_cells_per_gene: int = 5,
+    max_coexpr_frac: float = 0.05,
+    max_odds_ratio: float = 0.5,
+    fdr_alpha: float = 0.05,
+    n_jobs: int = 1,
+) -> pd.DataFrame:
+    """
+    Find mutually exclusive marker pairs between cell types using Fisher's exact test.
+
+    For each unordered pair of cell types (ct_a, ct_b), and for each gene pair
+    (g_a in positive markers of ct_a, g_b in positive markers of ct_b), we:
+      - restrict to cells with type in {ct_a, ct_b},
+      - binarize expression (expr > min_expr),
+      - build a 2x2 contingency table,
+      - test for *negative* association (alternative="less") with Fisher's exact test.
+
+    A pair is kept if:
+      - both genes are expressed in at least `min_pos_cells_per_gene` cells,
+      - co-expression fraction (both on) ≤ `max_coexpr_frac`,
+      - odds ratio ≤ `max_odds_ratio`,
+      - FDR-adjusted p-value (BH) < `fdr_alpha`.
+
+    Parameters
+    ----------
+    adata : AnnData
+        scRNA-seq data (cells x genes), normalized/logged as desired.
+    markers : dict
+        Output-like from `get_ref_markers`:
+            {cell_type: {"positive": [genes], "negative": [genes]}}
+    ref_cell_type : str
+        Column in `adata.obs` with cell type labels.
+    min_expr : float, optional (default: 0.0)
+        Threshold for calling a gene "expressed" (expr > min_expr).
+    min_cells_per_pair : int, optional (default: 20)
+        Minimum number of cells in ct_a and ct_b required to consider the pair.
+    min_pos_cells_per_gene : int, optional (default: 5)
+        Minimum number of expressing cells (per gene, within ct_a and ct_b).
+    max_coexpr_frac : float, optional (default: 0.05)
+        Maximum fraction of cells where both genes are on.
+    max_odds_ratio : float, optional (default: 0.5)
+        Maximum allowed odds ratio (OR) from Fisher's test.
+    fdr_alpha : float, optional (default: 0.05)
+        FDR threshold (BH-adjusted p-values).
+    n_jobs : int, optional (default: 1)
+        Number of parallel jobs over cell-type pairs. If joblib is not
+        installed, falls back to serial execution.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per mutually exclusive pair, with columns:
+            ["ct_a", "gene_a", "ct_b", "gene_b",
+             "n_cells", "n_none", "n_a_only", "n_b_only", "n_both",
+             "coexpr_frac", "odds_ratio", "p_value", "q_value"].
+    """
+    adata = adata  # no copy
+    var_names = np.asarray(adata.var_names)
+    gene_to_idx = {g: i for i, g in enumerate(var_names)}
+
+    ctypes = pd.Categorical(adata.obs[ref_cell_type])
+    all_types = list(ctypes.categories)
+    marker_types = [ct for ct in all_types if ct in markers]
+
+    ct_pairs = list(combinations(marker_types, 2))
+
+    all_results: List[dict] = []
+    all_pvals: List[float] = []
+
+    if n_jobs != 1 and Parallel is not None and delayed is not None:
+        # parallel over cell-type pairs
+        out = Parallel(n_jobs=n_jobs)(
+            delayed(_mutual_exclusion_for_pair)(
+                ct_a=ct_a,
+                ct_b=ct_b,
+                ctypes=ctypes,
+                adata=adata,
+                markers=markers,
+                gene_to_idx=gene_to_idx,
+                min_expr=min_expr,
+                min_cells_per_pair=min_cells_per_pair,
+                min_pos_cells_per_gene=min_pos_cells_per_gene,
+                max_coexpr_frac=max_coexpr_frac,
+                max_odds_ratio=max_odds_ratio,
+            )
+            for ct_a, ct_b in ct_pairs
+        )
+        for res_pair, pvals_pair in out:
+            all_results.extend(res_pair)
+            all_pvals.extend(pvals_pair)
+    else:
+        # serial fallback
+        for ct_a, ct_b in ct_pairs:
+            res_pair, pvals_pair = _mutual_exclusion_for_pair(
+                ct_a=ct_a,
+                ct_b=ct_b,
+                ctypes=ctypes,
+                adata=adata,
+                markers=markers,
+                gene_to_idx=gene_to_idx,
+                min_expr=min_expr,
+                min_cells_per_pair=min_cells_per_pair,
+                min_pos_cells_per_gene=min_pos_cells_per_gene,
+                max_coexpr_frac=max_coexpr_frac,
+                max_odds_ratio=max_odds_ratio,
+            )
+            all_results.extend(res_pair)
+            all_pvals.extend(pvals_pair)
+
+    if not all_results:
+        return pd.DataFrame(
+            columns=[
+                "ct_a", "gene_a", "ct_b", "gene_b",
+                "n_cells", "n_none", "n_a_only", "n_b_only", "n_both",
+                "coexpr_frac", "odds_ratio", "p_value", "q_value",
+            ]
+        )
+
+    df = pd.DataFrame(all_results)
+    qvals = _benjamini_hochberg(np.array(all_pvals, dtype=float))
+    df["q_value"] = qvals
+
+    df = df[df["q_value"] < fdr_alpha].reset_index(drop=True)
+    return df
+
+
+def get_mut_excl_markers_det(
     adata_ref,
     markers,
     ref_cell_type: str,
