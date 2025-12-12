@@ -17,6 +17,8 @@ class SegTraQ:
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
         tables_area_volume_key: str | None = "cell_area",
+        tables_centroid_x_key: str | None = "x_centroid", 
+        tables_centroid_y_key: str | None = "y_centroid",
         points_key: str = "transcripts",
         points_cell_id_key: str = "cell_id",
         points_background_id: str | int = "UNASSIGNED",
@@ -57,6 +59,12 @@ class SegTraQ:
             Column in the cell table with cell area (2D) or volume (3D/quasi-3D).
             If `None`, area/volume-based metrics will be computed via
             `segtraq.bl.morphological_features`.
+
+        tables_centroid_x_key : str or None, optional, default="x_centroid"
+            Column in the cell table with the x-coordinate of the cell centroid.
+
+        tables_centroid_y_key : str or None, optional, default="y_centroid"
+            Column in the cell table with the y-coordinate of the cell centroid.
 
         points_key : str, default="transcripts"
             Key in `sdata.points` for spot/transcript-level data.
@@ -123,6 +131,8 @@ class SegTraQ:
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             tables_area_volume_key=tables_area_volume_key,
+            tables_centroid_x_key=tables_centroid_x_key,
+            tables_centroid_y_key=tables_centroid_y_key,
             points_key=points_key,
             points_cell_id_key=points_cell_id_key,
             points_background_id=points_background_id,
@@ -143,6 +153,8 @@ class SegTraQ:
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
         self.tables_area_volume_key = tables_area_volume_key
+        self.tables_centroid_x_key = tables_centroid_x_key
+        self.tables_centroid_y_key = tables_centroid_y_key
 
         self.points_key = points_key
         self.points_cell_id_key = points_cell_id_key
@@ -466,6 +478,12 @@ class SegTraQ:
             inplace=inplace,
         )
 
+        per_cell_contam, cont_mat, cont_mat_bin = self.sp.calculate_neighbor_contamination(
+            cell_type_key=cell_type_key,
+            markers=markers,
+            inplace=inplace,
+        )
+
         de_results, summary = self.sp.calculate_diff_abundance(
             cell_type_key=cell_type_key,
             markers=markers,
@@ -486,6 +504,7 @@ class SegTraQ:
                 "MECR": mecr_res,
                 "contamination": (C_cnt, contamination_df, records_df),
                 "marker_purity": purity_df,
+                "neighbor_contamination": (per_cell_contam, contam_matrix),
                 "diff_abundance": (de_results, summary),
             }
             return out
@@ -825,6 +844,7 @@ class _SPFacade:
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
         use_quantiles: bool = True,
+        neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
     ):
         return sp.calculate_marker_purity(
@@ -834,10 +854,38 @@ class _SPFacade:
             use_quantiles=use_quantiles,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_centroid_x_key=self._p.tables_centroid_x_key,
+            tables_centroid_y_key=self._p.tables_centroid_y_key,
+            neighbors_key=neighbors_key,
             inplace=inplace,
         )
 
     calculate_marker_purity.__doc__ = sp.calculate_marker_purity.__doc__
+
+    def calculate_neighbor_contamination(
+        self,
+        cell_type_key: str,
+        markers: dict[str, dict[str, list[str]]],
+        neighbors_key: str | None = "spatial_connectivities",
+        uns_key: str = "negative_marker_contamination",
+        uns_key_binary: str = "negative_marker_contamination_binary",
+        inplace: bool = True,
+    ):
+        return sp.calculate_neighbor_contamination(
+            sdata=self._p.sdata,
+            cell_type_key=cell_type_key,
+            markers=markers,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_centroid_x_key=self._p.tables_centroid_x_key,
+            tables_centroid_y_key=self._p.tables_centroid_y_key,
+            neighbors_key=neighbors_key,
+            uns_key=uns_key,
+            uns_key_binary=uns_key_binary,
+            inplace=inplace,
+        )
+
+    calculate_neighbor_contamination.__doc__ = sp.calculate_neighbor_contamination.__doc__
 
     def calculate_diff_abundance(
         self,
