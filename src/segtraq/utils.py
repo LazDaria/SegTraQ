@@ -732,7 +732,7 @@ def validate_spatialdata(
         assert points_z_key in points.columns, (
             f"Points DataFrame must contain z coordinate column '{points_z_key}'. "
             f"Available columns: {points.columns.tolist()}. "
-            f"You can set this with the '{coord_key}' argument."
+            f"You can set this with the 'points_z_key' argument. Set to None if you do not have z coordinates."
         )
 
     # check gene key
@@ -926,6 +926,22 @@ def validate_spatialdata(
                     stacklevel=2,
                 )
 
+            # the checks above check the cell columns
+            # however, spatialdata performs all joins on the indices, making it important that they match between
+            # tables and shapes
+            # we check if there is at least some overlap between the indices of the shapes and the tables
+            # if not, we raise a warning
+            shapes_index_ids = set(shapes.index.tolist())
+            table_index_ids = set(table.obs.index.tolist())
+            common_index_ids = shapes_index_ids & table_index_ids
+            if len(common_index_ids) == 0:
+                warnings.warn(
+                    "The shapes and tables indices do not match. This will lead to errors when using spatialdata_plot. "
+                    f"IDs in shapes index: {list(shapes_index_ids)[:5]}..., "
+                    f"IDs in tables index: {list(table_index_ids)[:5]}...",
+                    stacklevel=2,
+                )
+
             # check that gene names in the table are compatible with those in the points
             genes_in_points = set(points[points_gene_key].unique())
             genes_in_table = set(table.var_names)
@@ -933,7 +949,7 @@ def validate_spatialdata(
             if len(common_genes) == 0:
                 raise ValueError(
                     "No common genes found between points and tables. "
-                    "Please ensure that the gene names in both are compatible."
+                    "Please ensure that the gene names in both are compatible. "
                     f"Genes in points: {list(genes_in_points)[:5]}..., "
                     f"Genes in tables: {list(genes_in_table)[:5]}..."
                 )
