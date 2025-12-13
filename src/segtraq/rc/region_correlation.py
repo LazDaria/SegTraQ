@@ -521,13 +521,13 @@ def compute_center_border_ncv_correlation(
     composition vector (NCV).
 
     Specifically, the function:
-      1. Erodes each cell polygon to obtain a center region.
-      2. Defines the border region as the set difference between the full cell
-         and its eroded center.
-      3. Computes gene expression profiles for center and border.
-      4. Computes the correlation between center and border expression.
-      5. Computes the correlation between border expression and the
-         NCV expression profile of the same cell.
+    1. Erodes each cell polygon to obtain a center region.
+    2. Defines the border region as the set difference between the full cell
+        and its eroded center.
+    3. Computes gene expression profiles for center and border.
+    4. Computes the correlation between center and border expression.
+    5. Computes the correlation between border expression and the
+        NCV expression profile of the same cell.
 
     Parameters
     ----------
@@ -610,6 +610,10 @@ def compute_center_border_ncv_correlation(
     expr_ncv = _norm_log_df(expr_ncv_raw)
 
     id_key = expr_center.index.name
+    # it can happen that the id_key is None
+    # in that case, we substitute it with a default value to avoid having a None column
+    if id_key is None:
+        id_key = "cell_id"
 
     rows = []
 
