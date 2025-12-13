@@ -612,6 +612,7 @@ def calculate_neighbor_contamination(
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
+    require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
     uns_key: str = "negative_marker_contamination",
     uns_key_binary: str = "negative_marker_contamination_binary",
@@ -641,6 +642,38 @@ def calculate_neighbor_contamination(
             Here “contaminated by c_src” is binary per target cell: at least one
             relevant gene (negative in target, positive in source) is detected in the
             target cell and detected in at least one neighbor of type c_src.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
+    cell_type_key : str
+        Column in the AnnData `.obs` with cell-type labels.
+    markers : dict
+        {cell_type: {"positive": list[str], "negative": list[str]}}.
+    tables_key : str, optional, default="table"
+        Key of the AnnData table in `sdata.tables`.
+    tables_cell_id_key : str, optional, default="cell_id"
+        Column in the AnnData `.obs` with unique cell IDs.
+    tables_centroid_x_key : str or None, optional, default="x_centroid"
+        Column in the cell table with the x-coordinate of the cell centroid.
+    tables_centroid_y_key : str or None, optional, default="y_centroid"
+        Column in the cell table with the y-coordinate of the cell centroid.
+    require_neighbor_expression : bool, optional, default=True
+        If True, contamination is only counted when the relevant gene is 
+        expressed in at least one neighboring cell of the source type.
+    neighbors_key : str, optional, default="spatial_connectivities"
+        Key in `adata.obsp` containing a cell x cell adjacency / connectivity
+        matrix that defines the spatial neighborhood.
+    uns_key : str, optional, default="negative_marker_contamination"
+        Key in `.uns` under which the directed source → target mean contamination
+        fraction matrix is stored.
+    uns_key_binary : str, optional, default="negative_marker_contamination_binary"
+        Key in `.uns` under which the directed source → target binary contamination
+        proportion matrix is stored.
+    inplace : bool, optional, default=True
+        If True, store per-cell contamination metrics in
+        `sdata.tables[tables_key].obs` and type-level matrices in `.uns`.
 
     Returns
     -------
@@ -706,7 +739,7 @@ def calculate_neighbor_contamination(
 
     # ----------------------------------------------------------------------
     # Precompute for each (c_src, c_tgt) which gene indices are relevant:
-    # genes ∈ negative(c_tgt) ∩ positive(c_src)
+    # negative(c_tgt) ∩ positive(c_src)
     # ----------------------------------------------------------------------
     type_pair_genes: Dict[Tuple[str, str], np.ndarray] = {}
 
@@ -778,13 +811,17 @@ def calculate_neighbor_contamination(
                 if x_i_g <= 0:
                     continue
 
+                #only call it contamination if at least one neighbor expresses the gene
                 x_nb_g = X_nb_src[:, k]
-                mask_pos = x_nb_g > 0
-                if not mask_pos.any():
-                    continue
+                if require_neighbor_expression:
+                    mask_pos = x_nb_g > 0
+                    if not mask_pos.any():
+                        continue
+                    mean_src = x_nb_g[mask_pos].mean()
+                else:
+                    mean_src = x_nb_g.mean()
 
-                mean_src = x_nb_g[mask_pos].mean()
-                if mean_src <= 0:
+                if not np.isfinite(mean_src):
                     continue
 
                 # binary “this target cell is contaminated by this source type”
@@ -794,25 +831,15 @@ def calculate_neighbor_contamination(
                 if g_idx not in used_genes:
                     numer_cell[i] += x_i_g
 
-                    # mean over all neighbors (any type) that express the gene
-                    x_nb_all = X_dense[nbs, g_idx]
-                    mask_all = x_nb_all > 0
-                    if mask_all.any():
-                        mean_all = x_nb_all[mask_all].mean()
-                        denom_all = x_i_g + mean_all
-                        if denom_all > 0:
-                            frac_g = x_i_g / denom_all
-                            sum_cell_frac[i] += frac_g
-                            count_cell_genes[i] += 1
+                    denom_all = x_i_g + mean_src
+                    if denom_all > 0:
+                        frac_g = x_i_g / denom_all
+                        sum_cell_frac[i] += frac_g
+                        count_cell_genes[i] += 1
+                        sum_pair[pair] += frac_g
+                        count_pair[pair] += 1
 
                     used_genes.add(g_idx)
-
-                # ---------------- Directed c_src → c_tgt ----------------
-                denom_g = x_i_g + mean_src
-                if denom_g > 0:
-                    contam_g = x_i_g / denom_g
-                    sum_pair[pair] += contam_g
-                    count_pair[pair] += 1
 
         # update per-(c_src, c_tgt) binary hit counts once per cell
         for c_src in contaminated_by_src:            
@@ -880,11 +907,13 @@ def calculate_marker_purity(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
-    use_quantiles: bool = True,
+    use_quantiles: bool = False,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
+    weight_cont: float = 0.7,
+    require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -904,12 +933,15 @@ def calculate_marker_purity(
             * Take c's negative markers: markers[c]["negative"].
             * Intersect them with the union of positive markers of the
               neighbor cell types.
-              → "relevant negatives" for this cell.
+            * Consider only genes that are present in at least one neighbor
+              of the source type (if `require_neighbor_expression=True`).
+            → "relevant negatives" for this cell.
         - Compute per-cell precision/recall/F1 for these relevant negatives.
 
     Finally:
         - Combine positive_F1 and negative_F1 into an overall F1_purity
-          that rewards high positive-F1 and low negative-F1.
+          that rewards high positive-F1 and low negative-F1. Weighting 
+          factor weight_cont controls the importance of negative-F1.
 
     Parameters
     ----------
@@ -919,36 +951,59 @@ def calculate_marker_purity(
         Column in the AnnData `.obs` with cell-type labels.
     markers : dict
         {cell_type: {"positive": list[str], "negative": list[str]}}.
-    use_quantiles : bool, optional
+    use_quantiles : bool, optional, default=False
         If True, define predictions by the top-|markers| fraction per cell (rank-based);
         if False, use direct expression-based criteria (expression > 0).
-    tables_key : str, optional
+    tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
-    tables_cell_id_key : str, optional
+    tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
         Column in the cell table with the x-coordinate of the cell centroid.
     tables_centroid_y_key : str or None, optional, default="y_centroid"
         Column in the cell table with the y-coordinate of the cell centroid.
-    neighbors_key : str, optional
+    require_neighbor_expression : bool, optional, default=True
+        If True, contamination is only counted when the relevant gene is 
+        expressed in at least one neighboring cell of the source type.
+    weight_cont : float, optional, default=0.7
+        Weighting factor for negative marker F1 in the overall F1_purity.
+        Higher values give more weight to negative F1. Must be in the range [0, 1].
+    neighbors_key : str, optional, default="spatial_connectivities"
         Key in `adata.obsp` containing a cell x cell adjacency / connectivity
         matrix that defines the spatial neighborhood.
-    inplace : bool, optional
+    inplace : bool, optional, default=True
         If True, store marker purity results in `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pandas.DataFrame
         Columns:
-            ['cell_type',
+            [
              'positive_precision', 'positive_recall', 'positive_F1',
              'negative_precision', 'negative_recall', 'negative_F1',
              'F1_purity']
         indexed by cell ID.
     """
+    if not (0 <= weight_cont <= 1):
+        raise ValueError(
+            f"weight_cont must be between 0 and 1 (inclusive), got {weight_cont}"
+        )
+
     adata = sdata.tables[tables_key]
 
     X = adata.X  # keep sparse if sparse
+    
+    if _looks_like_counts(X):
+        X_dense = X.toarray() if hasattr(X, "toarray") else X
+    elif "raw" not in adata.layers:
+        raise ValueError(
+            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            "and the main matrix does not look like counts."
+        )
+    else:
+        raw = adata.layers["raw"]
+        X_dense = raw.toarray() if hasattr(raw, "toarray") else raw
+
     genes = np.asarray(adata.var_names)
     var_index = pd.Index(genes)
     cell_types = np.asarray(adata.obs[cell_type_key])
@@ -985,6 +1040,10 @@ def calculate_marker_purity(
 
         m = markers[ct]
         pos_idx = _idx(m.get("positive", []))
+        neg_idx = _idx(m.get("negative", []))
+        pos_idx = pos_idx[pos_idx >= 0]
+        neg_idx = neg_idx[neg_idx >= 0]
+        all_idx = np.unique(np.concatenate([pos_idx, neg_idx])) if neg_idx.size else pos_idx
 
         # If no pos markers, nothing to compute
         if pos_idx.size == 0:
@@ -1000,6 +1059,7 @@ def calculate_marker_purity(
         p_prec_ct, p_rec_ct, p_f1_ct = _score_one_list(
             X_ct,
             pos_idx,
+            all_idx,
             use_quantiles=use_quantiles,
         )
         pos_prec[idx_cells] = p_prec_ct
@@ -1038,6 +1098,7 @@ def calculate_marker_purity(
         cell_types=cell_types,
         markers=markers,
         genes=genes,
+        require_neighbor_expression=require_neighbor_expression,
         neighbor_indices=neighbor_indices,
         use_quantiles=use_quantiles,
     )
@@ -1049,20 +1110,15 @@ def calculate_marker_purity(
     mask_valid = ~np.isnan(p_f1_all) & ~np.isnan(n_f1_all)
     if np.any(mask_valid):
         p = p_f1_all[mask_valid]
-        n = n_f1_all[mask_valid]
-        denom = (1.0 - n) + p
-        purity_vals = np.where(
-            denom > 0.0,
-            2.0 * (1.0 - n) * p / denom,
-            0.0,
-        )
+        n = 1 - n_f1_all[mask_valid]
+        weight_id = 1 - weight_cont
+        purity_vals = weight_cont * n + weight_id * p
         purity[mask_valid] = purity_vals
     # cells without pos or neg markers stay NaN for purity
 
     # Build DataFrame
     result = pd.DataFrame(
         {
-            "cell_type": cell_types,
             "positive_precision": pos_prec,
             "positive_recall": pos_rec,
             "positive_F1": pos_f1,
