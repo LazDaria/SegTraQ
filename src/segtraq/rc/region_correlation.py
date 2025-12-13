@@ -213,7 +213,6 @@ def compute_cell_nuc_correlation(
             inplace=inplace,
         )
     else:
-        # TODO: check if this breaks when the id_key is None
         iou_df = tbl.obs[[id_key, "best_nuc_id", "IoU"]].copy()
 
     X = tbl.X
@@ -257,8 +256,6 @@ def compute_cell_nuc_correlation(
     for _, row in iou_df.iterrows():
         cid, nid = row[id_key], row.best_nuc_id
         if pd.isna(nid):  # if no overlapping nucleus
-            # TODO: this likely breaks if id_key is None, need to fix
-            # (see compute_center_border_ncv_correlation for a fix)
             rows.append(
                 {
                     id_key: cid,
@@ -381,7 +378,6 @@ def compute_correlation_between_parts(
     pd.DataFrame
         DataFrame with columns [cell_id_key, "best_nuc_id", "correlation_parts"]
     """
-    # TODO: again, this method likely breaks if id_key is None, need to fix
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported")
 
