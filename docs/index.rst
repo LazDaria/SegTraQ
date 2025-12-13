@@ -27,6 +27,7 @@ SegTraQ documentation
    
    notebooks/10x_xenium_focus
    notebooks/vizgen_merscope_focus
+   notebooks/cosmx_focus
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
