@@ -213,6 +213,7 @@ def compute_cell_nuc_correlation(
             inplace=inplace,
         )
     else:
+        # TODO: check if this breaks when the id_key is None
         iou_df = tbl.obs[[id_key, "best_nuc_id", "IoU"]].copy()
 
     X = tbl.X
@@ -256,6 +257,8 @@ def compute_cell_nuc_correlation(
     for _, row in iou_df.iterrows():
         cid, nid = row[id_key], row.best_nuc_id
         if pd.isna(nid):  # if no overlapping nucleus
+            # TODO: this likely breaks if id_key is None, need to fix
+            # (see compute_center_border_ncv_correlation for a fix)
             rows.append(
                 {
                     id_key: cid,
@@ -378,6 +381,7 @@ def compute_correlation_between_parts(
     pd.DataFrame
         DataFrame with columns [cell_id_key, "best_nuc_id", "correlation_parts"]
     """
+    # TODO: again, this method likely breaks if id_key is None, need to fix
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported")
 
@@ -521,13 +525,13 @@ def compute_center_border_ncv_correlation(
     composition vector (NCV).
 
     Specifically, the function:
-      1. Erodes each cell polygon to obtain a center region.
-      2. Defines the border region as the set difference between the full cell
-         and its eroded center.
-      3. Computes gene expression profiles for center and border.
-      4. Computes the correlation between center and border expression.
-      5. Computes the correlation between border expression and the
-         NCV expression profile of the same cell.
+    1. Erodes each cell polygon to obtain a center region.
+    2. Defines the border region as the set difference between the full cell
+        and its eroded center.
+    3. Computes gene expression profiles for center and border.
+    4. Computes the correlation between center and border expression.
+    5. Computes the correlation between border expression and the
+        NCV expression profile of the same cell.
 
     Parameters
     ----------
@@ -610,6 +614,10 @@ def compute_center_border_ncv_correlation(
     expr_ncv = _norm_log_df(expr_ncv_raw)
 
     id_key = expr_center.index.name
+    # it can happen that the id_key is None
+    # in that case, we substitute it with a default value to avoid having a None column
+    if id_key is None:
+        id_key = "cell_id"
 
     rows = []
 
