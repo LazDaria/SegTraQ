@@ -383,13 +383,9 @@ class SegTraQ:
         markers: dict[str, dict[str, list[str]]],
         mut_exclusive_pairs: list[tuple[str, str]],
         cell_type_key: str = "transferred_cell_type",
-        radius: float = 15,
-        n_neighs: int = 10,
-        num_cells: int = 10_000,
         seed: int = 0,
         cell_centroid_x_key: str = "cell_centroid_x",
         cell_centroid_y_key: str = "cell_centroid_y",
-        weight_edges: bool = False,
         lfc_thresh: float = 1.0,
         pval_thresh: float = 0.05,
         min_n_cells: int = 20,
@@ -420,9 +416,6 @@ class SegTraQ:
 
         cell_type_key : str
             Cell-type column in `sdata.tables[tables_key].obs`.
-
-        radius, n_neighs, num_cells, seed, cell_centroid_x_key, cell_centroid_y_key, weight_edges :
-            Passed to SP.calculate_contamination.
 
         lfc_thresh, pval_thresh, min_n_cells, min_n_transcripts :
             Passed to SP.calculate_diff_abundance.
@@ -455,19 +448,6 @@ class SegTraQ:
         )
         mecr_res = self.sp.compute_MECR(
             gene_pairs=mut_exclusive_pairs,
-            inplace=inplace,
-        )
-
-        C_cnt, contamination_df, records_df = self.sp.calculate_contamination(
-            markers=markers,
-            cell_type_key=cell_type_key,
-            radius=radius,
-            n_neighs=n_neighs,
-            num_cells=num_cells,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
-            weight_edges=weight_edges,
             inplace=inplace,
         )
 
@@ -504,7 +484,7 @@ class SegTraQ:
                 "MECR": mecr_res,
                 "contamination": (C_cnt, contamination_df, records_df),
                 "marker_purity": purity_df,
-                "neighbor_contamination": (per_cell_contam, contam_matrix),
+                "neighbor_contamination": (per_cell_contam, cont_mat, cont_mat_bin),
                 "diff_abundance": (de_results, summary),
             }
             return out
@@ -809,41 +789,13 @@ class _SPFacade:
 
     compute_MECR.__doc__ = sp.compute_MECR.__doc__
 
-    def calculate_contamination(
-        self,
-        markers: dict,
-        cell_type_key: str,
-        radius: float = 15,
-        n_neighs: int = 10,
-        num_cells: int = 10_000,
-        seed: int = 0,
-        cell_centroid_x_key: str = "cell_centroid_x",
-        cell_centroid_y_key: str = "cell_centroid_y",
-        weight_edges: bool = False,
-        inplace: bool = True,
-    ):
-        return sp.calculate_contamination(
-            sdata=self._p.sdata,
-            markers=markers,
-            cell_type_key=cell_type_key,
-            tables_key=self._p.tables_key,
-            radius=radius,
-            n_neighs=n_neighs,
-            num_cells=num_cells,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
-            weight_edges=weight_edges,
-            inplace=inplace,
-        )
-
-    calculate_contamination.__doc__ = sp.calculate_contamination.__doc__
-
     def calculate_marker_purity(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
         use_quantiles: bool = True,
+        require_neighbor_expression: bool = True,
+        weight_cont: float = 0.7,
         neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
     ):
@@ -852,10 +804,12 @@ class _SPFacade:
             cell_type_key=cell_type_key,
             markers=markers,
             use_quantiles=use_quantiles,
+            require_neighbor_expression=require_neighbor_expression,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_centroid_x_key=self._p.tables_centroid_x_key,
             tables_centroid_y_key=self._p.tables_centroid_y_key,
+            weight_cont=weight_cont,
             neighbors_key=neighbors_key,
             inplace=inplace,
         )
@@ -866,6 +820,7 @@ class _SPFacade:
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
+        require_neighbor_expression: bool = True,
         neighbors_key: str | None = "spatial_connectivities",
         uns_key: str = "negative_marker_contamination",
         uns_key_binary: str = "negative_marker_contamination_binary",
@@ -879,6 +834,7 @@ class _SPFacade:
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_centroid_x_key=self._p.tables_centroid_x_key,
             tables_centroid_y_key=self._p.tables_centroid_y_key,
+            require_neighbor_expression = require_neighbor_expression,
             neighbors_key=neighbors_key,
             uns_key=uns_key,
             uns_key_binary=uns_key_binary,
