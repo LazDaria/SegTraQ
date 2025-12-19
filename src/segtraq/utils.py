@@ -15,6 +15,7 @@ import scanpy as sc
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
+from statsmodels.stats.multitest import multipletests
 from packaging import version as pkg_version
 from typing import Dict, List, Optional, Tuple
 from rasterio.features import shapes
@@ -69,7 +70,7 @@ def _score_one_list(
     X: np.ndarray,         
     marker_idx: np.ndarray, 
     all_markers_idx: np.ndarray | None = None,
-    use_quantiles: bool = True,
+    use_quantiles: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Computes precision, recall, F1 using upper-quantile rule for all cells simultaneously.
@@ -891,420 +892,199 @@ def get_ref_markers(
 
     return markers
 
-def _benjamini_hochberg(pvals: np.ndarray) -> np.ndarray:
-    """
-    Benjamini-Hochberg FDR correction.
-    pvals: (n,) array of raw p-values.
-    returns: (n,) array of q-values.
-    """
-    pvals = np.asarray(pvals, float)
-    n = pvals.size
-    if n == 0:
-        return pvals
-
-    order = np.argsort(pvals)
-    ranks = np.arange(1, n + 1)
-    qvals = np.empty_like(pvals)
-    qvals[order] = pvals[order] * n / ranks
-    # monotone
-    qvals[order] = np.minimum.accumulate(qvals[order][::-1])[::-1]
-    qvals = np.clip(qvals, 0.0, 1.0)
-    return qvals
-
-def _mutual_exclusion_for_pair(
-    ct_a: str,
-    ct_b: str,
-    ctypes: pd.Categorical,
-    adata: AnnData,
-    markers: Dict[str, Dict[str, List[str]]],
-    gene_to_idx: Dict[str, int],
-    min_expr: float,
-    min_cells_per_pair: int,
-    min_pos_cells_per_gene: int,
-    max_coexpr_frac: float,
-    max_odds_ratio: float,
-) -> Tuple[List[dict], List[float]]:
-    """Worker: compute mutually exclusive marker pairs for a single (ct_a, ct_b)."""
-    # cells in this pair of types
-    cells_mask = (ctypes == ct_a) | (ctypes == ct_b)
-    idx_cells = np.where(cells_mask)[0]
-    n_cells = idx_cells.size
-    if n_cells < min_cells_per_pair:
-        return [], []
-
-    # positive markers present in adata
-    pos_a = [g for g in markers[ct_a]["positive"] if g in gene_to_idx]
-    pos_b = [g for g in markers[ct_b]["positive"] if g in gene_to_idx]
-    if len(pos_a) == 0 or len(pos_b) == 0:
-        return [], []
-
-    # extract expression for union of genes
-    genes_union = sorted(set(pos_a) | set(pos_b))
-    idx_union = np.array([gene_to_idx[g] for g in genes_union], dtype=int)
-    X = adata.X[idx_cells][:, idx_union]
-    if hasattr(X, "toarray"):
-        X = X.toarray()
-    else:
-        X = np.asarray(X)
-
-    # binarize
-    X_bin = X > min_expr
-    gene_bin = {g: X_bin[:, i] for i, g in enumerate(genes_union)}
-
-    results_pair: List[dict] = []
-    pvals_pair: List[float] = []
-
-    # all marker pairs
-    for g_a in pos_a:
-        x_a = gene_bin[g_a]
-        n_pos_a = x_a.sum()
-        if n_pos_a < min_pos_cells_per_gene:
-            continue
-
-        for g_b in pos_b:
-            if g_b == g_a:
-                continue
-
-            x_b = gene_bin[g_b]
-            n_pos_b = x_b.sum()
-            if n_pos_b < min_pos_cells_per_gene:
-                continue
-
-            both = np.logical_and(x_a, x_b)
-            a_only = np.logical_and(x_a, ~x_b)
-            b_only = np.logical_and(~x_a, x_b)
-            none = np.logical_and(~x_a, ~x_b)
-
-            n_both = int(both.sum())
-            n_a_only = int(a_only.sum())
-            n_b_only = int(b_only.sum())
-            n_none = int(none.sum())
-
-            if n_cells != (n_both + n_a_only + n_b_only + n_none):
-                continue
-
-            coexpr_frac = n_both / n_cells
-            if coexpr_frac > max_coexpr_frac:
-                continue
-
-            table = np.array(
-                [[n_none, n_b_only],
-                 [n_a_only, n_both]],
-                dtype=int,
-            )
-
-            # degenerate table → skip
-            if table.sum(axis=0).min() == 0 or table.sum(axis=1).min() == 0:
-                continue
-
-            odds_ratio, p_value = fisher_exact(table, alternative="less")
-
-            if np.isnan(odds_ratio):
-                continue
-            if odds_ratio > max_odds_ratio:
-                continue
-
-            results_pair.append(
-                dict(
-                    ct_a=ct_a,
-                    gene_a=g_a,
-                    ct_b=ct_b,
-                    gene_b=g_b,
-                    n_cells=n_cells,
-                    n_none=n_none,
-                    n_a_only=n_a_only,
-                    n_b_only=n_b_only,
-                    n_both=n_both,
-                    coexpr_frac=coexpr_frac,
-                    odds_ratio=odds_ratio,
-                    p_value=p_value,
-                )
-            )
-            pvals_pair.append(p_value)
-
-    return results_pair, pvals_pair
-
-
 def get_mut_excl_markers(
-    adata: AnnData,
+    adata,
     markers: Dict[str, Dict[str, List[str]]],
-    ref_cell_type: str,
-    min_expr: float = 0.0,
-    min_cells_per_pair: int = 20,
-    min_pos_cells_per_gene: int = 5,
-    max_coexpr_frac: float = 0.05,
-    max_odds_ratio: float = 0.5,
-    fdr_alpha: float = 0.05,
-    n_jobs: int = 1,
-) -> pd.DataFrame:
+    ref_cell_type: str,                 
+    min_pos_frac: float | None = 0.10, 
+    max_neg_frac: float | None = 0.03, 
+    alpha: float = 0.05,
+    correction: str = "fdr_bh",
+    alternative: str = "less",
+    max_odds_ratio: float = 0.3,
+    chunk: int = 50_000,                # optional: keep your chunking tunable
+) -> List[Tuple[str, str]]:
     """
-    Find mutually exclusive marker pairs between cell types using Fisher's exact test.
+    Compute global mutually-exclusive gene pairs from per-cell-type positive/negative markers.
 
-    For each ordered pair of cell types (ct_a, ct_b), and for each gene pair
-    (g_a in positive markers of ct_a, g_b in positive markers of ct_b), we:
-      - restrict to cells with type in {ct_a, ct_b},
-      - binarize expression (expr > min_expr),
-      - build a 2x2 contingency table,
-      - test for *negative* association (alternative="less") with Fisher's exact test.
-
-    A pair is kept if:
-      - both genes are expressed in at least `min_pos_cells_per_gene` cells,
-      - co-expression fraction (both on) ≤ `max_coexpr_frac`,
-      - odds ratio ≤ `max_odds_ratio`,
-      - FDR-adjusted p-value (BH) < `fdr_alpha`.
+    Added preselection:
+      - Positive markers kept only if expressed in >= min_pos_frac of cells of that type.
+      - Negative markers kept only if expressed in <= max_neg_frac of cells of that type.
 
     Parameters
     ----------
     adata : AnnData
-        scRNA-seq data (cells x genes), normalized/logged as desired.
+        Reference dataset (cells x genes). Uses adata.X, adata.var_names, adata.obs[ref_cell_type].
     markers : dict
-        Output-like from `get_ref_markers`:
-            {cell_type: {"positive": [genes], "negative": [genes]}}
+        {cell_type: {"positive": [...], "negative": [...]}}.
     ref_cell_type : str
-        Column in `adata.obs` with cell type labels.
-    min_expr : float, optional (default: 0.0)
-        Threshold for calling a gene "expressed" (expr > min_expr).
-    min_cells_per_pair : int, optional (default: 20)
-        Minimum number of cells in ct_a and ct_b required to consider the pair.
-    min_pos_cells_per_gene : int, optional (default: 5)
-        Minimum number of expressing cells (per gene, within ct_a and ct_b).
-    max_coexpr_frac : float, optional (default: 0.05)
-        Maximum fraction of cells where both genes are on.
-    max_odds_ratio : float, optional (default: 0.5)
-        Maximum allowed odds ratio (OR) from Fisher's test.
-    fdr_alpha : float, optional (default: 0.05)
-        FDR threshold (BH-adjusted p-values).
-    n_jobs : int, optional (default: 1)
-        Number of parallel jobs over cell-type pairs. If joblib is not
-        installed, falls back to serial execution.
+        Column in adata.obs with cell type labels matching `markers` keys.
+    min_pos_frac : float, default = 0.10
+        If set, require positive markers to have detection fraction >= this value in that cell type.
+    max_neg_frac : float, default = 0.03
+        If set, require negative markers to have detection fraction <= this value in that cell type.
+    alpha, correction, alternative, max_odds_ratio : see original function.
+    chunk : int
+        Pair-chunk size for vectorized n11 computation.
 
     Returns
     -------
-    pandas.DataFrame
-        One row per mutually exclusive pair, with columns:
-            ["ct_a", "gene_a", "ct_b", "gene_b",
-             "n_cells", "n_none", "n_a_only", "n_b_only", "n_both",
-             "coexpr_frac", "odds_ratio", "p_value", "q_value"].
+    list of (gene1, gene2)
     """
-    adata = adata  # no copy
+    # ------------------------------------------------------------------
+    # Map genes to indices + force sparse once (we'll reuse for filtering and global tests)
+    # ------------------------------------------------------------------
     var_names = np.asarray(adata.var_names)
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
-    ctypes = pd.Categorical(adata.obs[ref_cell_type])
-    all_types = list(ctypes.categories)
-    marker_types = [ct for ct in all_types if ct in markers]
-
-    ct_pairs = list(combinations(marker_types, 2))
-
-    all_results: List[dict] = []
-    all_pvals: List[float] = []
-
-    if n_jobs != 1 and Parallel is not None and delayed is not None:
-        # parallel over cell-type pairs
-        out = Parallel(n_jobs=n_jobs)(
-            delayed(_mutual_exclusion_for_pair)(
-                ct_a=ct_a,
-                ct_b=ct_b,
-                ctypes=ctypes,
-                adata=adata,
-                markers=markers,
-                gene_to_idx=gene_to_idx,
-                min_expr=min_expr,
-                min_cells_per_pair=min_cells_per_pair,
-                min_pos_cells_per_gene=min_pos_cells_per_gene,
-                max_coexpr_frac=max_coexpr_frac,
-                max_odds_ratio=max_odds_ratio,
-            )
-            for ct_a, ct_b in ct_pairs
-        )
-        for res_pair, pvals_pair in out:
-            all_results.extend(res_pair)
-            all_pvals.extend(pvals_pair)
+    X = adata.X
+    if not sparse.issparse(X):
+        X = sparse.csr_matrix(X)
     else:
-        # serial fallback
-        for ct_a, ct_b in ct_pairs:
-            res_pair, pvals_pair = _mutual_exclusion_for_pair(
-                ct_a=ct_a,
-                ct_b=ct_b,
-                ctypes=ctypes,
-                adata=adata,
-                markers=markers,
-                gene_to_idx=gene_to_idx,
-                min_expr=min_expr,
-                min_cells_per_pair=min_cells_per_pair,
-                min_pos_cells_per_gene=min_pos_cells_per_gene,
-                max_coexpr_frac=max_coexpr_frac,
-                max_odds_ratio=max_odds_ratio,
-            )
-            all_results.extend(res_pair)
-            all_pvals.extend(pvals_pair)
-
-    if not all_results:
-        return pd.DataFrame(
-            columns=[
-                "ct_a", "gene_a", "ct_b", "gene_b",
-                "n_cells", "n_none", "n_a_only", "n_b_only", "n_both",
-                "coexpr_frac", "odds_ratio", "p_value", "q_value",
-            ]
-        )
-
-    df = pd.DataFrame(all_results)
-    qvals = _benjamini_hochberg(np.array(all_pvals, dtype=float))
-    df["q_value"] = qvals
-
-    df = df[df["q_value"] < fdr_alpha].reset_index(drop=True)
-    return df
-
-
-def get_mut_excl_markers_det(
-    adata_ref,
-    markers,
-    ref_cell_type: str,
-    pos_threshold: float = 0.20,
-    neg_threshold: float = 0.05,
-    max_codetect: float = 0.01,
-    cell_types: tuple[str, str] | None = None,
-) -> list[tuple[str, str]]:
-    """
-    Modified from https://github.com/dpeerlab/segger-analysis
-
-    Finds mutually exclusive markers (presence-based specificity) between cell types.
-    Therefore it picks highly specific genes for each type, 
-    then only keep pairs that almost never co-occur in single cells.
-    Optionally restricts computation to a specified pair of cell types.
-
-    Parameters
-    ----------
-    adata_ref : AnnData
-        Reference single-cell dataset (cells x genes).
-    markers : dict
-        Marker dictionary as returned by `find_markers`; only the "positive" list is used.
-    ref_cell_type : str
-        Column in `adata_ref.obs` containing cell-type labels.
-    pos_threshold : float, optional
-        Minimum fraction of cells within the target type where a gene must be present (>0).
-    neg_threshold : float, optional
-        Maximum fraction of cells in the complement (all other types) where the gene may be present.
-    max_codetect : float, optional
-        Maximum fraction of cells in which mutually exclusive gene pairs may be co-detected.
-    cell_types : tuple[str, str], optional
-        If provided, restrict computation to this pair of cell types.
-
-    Returns
-    -------
-    list of tuple
-        Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.
-    """
-    # Extract positive marker genes for each cell type
-    pos_by_ct = {ct: m.get("positive", []) for ct, m in markers.items()}
-
-    # Flatten all genes across cell types, remove duplicates, and sort alphabetically
-    all_genes = sorted({g for gs in pos_by_ct.values() for g in gs})
-
-    # Keep only genes present in the AnnData object
-    var_index = pd.Index(adata_ref.var_names)
-    genes = [g for g in all_genes if g in var_index]
-    if not genes:
-        return []
-
-    # Extract expression matrix for selected genes
-    X = adata_ref[:, genes].X
-
-    if sparse.issparse(X):
         X = X.tocsr()
-        # Convert to binary presence/absence matrix (0/1)
-        B = (X > 0).astype(np.uint8).tocsr()
-    else:
-        B = sparse.csr_matrix((np.asarray(X) > 0).astype(np.uint8))
 
-    gene2col = {g: i for i, g in enumerate(genes)}  # map gene to column index
-    labels = np.asarray(adata_ref.obs[ref_cell_type])
-    cell_types_all = list(pos_by_ct.keys())  # all available cell types
+    # ------------------------------------------------------------------
+    # (0) Optional: per-cell-type preselection of pos/neg markers by detection fractions
+    # ------------------------------------------------------------------
+    ctypes = np.asarray(adata.obs[ref_cell_type].values)
 
-    # === Restrict to user-specified cell types if provided ===
-    if cell_types is not None:
-        ct_subset = [ct for ct in cell_types if ct in cell_types_all]
-        if len(ct_subset) != 2:
-            raise ValueError(f"cell_types must contain exactly two valid types from: {cell_types_all}")
-        cell_types_all = ct_subset
+    filtered_markers: Dict[str, Dict[str, List[str]]] = {}
+    for ct, d in markers.items():
+        pos = d.get("positive", []) or []
+        neg = d.get("negative", []) or []
 
-    # Dictionary to hold exclusive genes per cell type
-    exclusive_genes = {ct: [] for ct in cell_types_all}
-    all_exclusive = []
+        # keep only genes present in adata
+        pos_idx = [(g, gene_to_idx[g]) for g in pos if g in gene_to_idx]
+        neg_idx = [(g, gene_to_idx[g]) for g in neg if g in gene_to_idx]
 
-    n_cells = B.shape[0]  # total number of cells
-
-    # === Step 1: Identify candidate exclusive genes per cell type ===
-    for ct in cell_types_all:
-        pos_genes = [g for g in pos_by_ct[ct] if g in gene2col]  # only genes in adata
-        if not pos_genes:
+        # if no filtering requested, just keep (present) genes
+        if min_pos_frac is None and max_neg_frac is None:
+            filtered_markers[ct] = {
+                "positive": [g for g, _ in pos_idx],
+                "negative": [g for g, _ in neg_idx],
+            }
             continue
 
-        # Boolean masks for cells of this type vs all others
-        mask_ct = labels == ct
+        mask_ct = (ctypes == ct)
         n_ct = int(mask_ct.sum())
         if n_ct == 0:
+            filtered_markers[ct] = {"positive": [], "negative": []}
             continue
-        mask_other = ~mask_ct
-        n_other = int(mask_other.sum())
 
-        # Subset binary matrix
-        B_ct = B[mask_ct]
-        B_other = B[mask_other]
+        X_ct = X[mask_ct]
 
-        # Count number of cells where each gene is expressed
-        ct_counts = np.asarray(B_ct.getnnz(axis=0)).ravel()
-        other_counts = np.asarray(B_other.getnnz(axis=0)).ravel()
+        # Filter positives
+        pos_keep: List[str] = []
+        if pos_idx:
+            gpos, ipos = zip(*pos_idx)
+            ipos = np.fromiter(ipos, dtype=np.int64, count=len(ipos))
+            frac_pos = np.asarray(X_ct[:, ipos].getnnz(axis=0)).ravel() / n_ct
+            if min_pos_frac is None:
+                pos_keep = list(gpos)
+            else:
+                pos_keep = [g for g, f in zip(gpos, frac_pos) if f >= min_pos_frac]
 
-        # Fraction of cells expressing each gene
-        frac_ct = ct_counts / max(n_ct, 1)
-        frac_other = other_counts / max(n_other, 1)
+        # Filter negatives
+        neg_keep: List[str] = []
+        if neg_idx:
+            gneg, ineg = zip(*neg_idx)
+            ineg = np.fromiter(ineg, dtype=np.int64, count=len(ineg))
+            frac_neg = np.asarray(X_ct[:, ineg].getnnz(axis=0)).ravel() / n_ct
+            if max_neg_frac is None:
+                neg_keep = list(gneg)
+            else:
+                neg_keep = [g for g, f in zip(gneg, frac_neg) if f <= max_neg_frac]
 
-        # Keep genes that are frequent in this type but rare in others
-        idx = [gene2col[g] for g in pos_genes]
-        keep = (frac_ct[idx] > pos_threshold) & (frac_other[idx] < neg_threshold)
-        kept_genes = [g for g, k in zip(pos_genes, keep, strict=False) if k]
+        filtered_markers[ct] = {"positive": pos_keep, "negative": neg_keep}
 
-        exclusive_genes[ct] = kept_genes
-        all_exclusive.extend(kept_genes)
+    # ------------------------------------------------------------------
+    # (1) Candidate generation from FILTERED markers
+    # ------------------------------------------------------------------
+    candidates_set: set[Tuple[str, str]] = set()
+    for _ct, d in filtered_markers.items():
+        pos = d.get("positive", []) or []
+        neg = d.get("negative", []) or []
+        for g1 in pos:
+            for g2 in neg:
+                if g1 == g2:
+                    continue
+                a, b = (g1, g2) if g1 < g2 else (g2, g1)
+                candidates_set.add((a, b))
 
-    # === Step 2: Keep only genes that are exclusive to exactly one type ===
-    freq = Counter(all_exclusive)
-    unique_exclusive = {g for g, c in freq.items() if c == 1}
-    filtered = {ct: [g for g in gs if g in unique_exclusive] for ct, gs in exclusive_genes.items()}
+    if not candidates_set:
+        return []
 
-    # === Step 3: Form gene pairs ===
-    if cell_types is not None:
-        # Only generate pairs between the two user-specified types
-        ct1, ct2 = cell_types
-        pairs = [(g1, g2) for g1 in filtered.get(ct1, []) for g2 in filtered.get(ct2, [])]
+    candidates = sorted(candidates_set)
+
+    # ------------------------------------------------------------------
+    # Convert candidates to index pairs (keep only those in adata.var_names)
+    # ------------------------------------------------------------------
+    kept_pairs: List[Tuple[str, str]] = []
+    idx_pairs: List[Tuple[int, int]] = []
+    for g1, g2 in candidates:
+        i = gene_to_idx.get(g1)
+        j = gene_to_idx.get(g2)
+        if i is None or j is None:
+            continue
+        kept_pairs.append((g1, g2))
+        idx_pairs.append((i, j))
+
+    if not kept_pairs:
+        return []
+
+    # ------------------------------------------------------------------
+    # Detection matrix across ALL cells (global Fisher tests)
+    # ------------------------------------------------------------------
+    n_cells = adata.n_obs
+    B = (X > 0).astype(np.uint8)  # stays sparse
+    det_counts = np.asarray(B.sum(axis=0)).ravel().astype(int)
+
+    # idx arrays for the pairs (same order as idx_pairs)
+    idx1 = np.fromiter((i for i, _ in idx_pairs), dtype=np.int64, count=len(idx_pairs))
+    idx2 = np.fromiter((j for _, j in idx_pairs), dtype=np.int64, count=len(idx_pairs))
+
+    # compute all n11 via chunked sparse ops
+    n11_all = np.empty(len(idx_pairs), dtype=np.int64)
+    for start in range(0, len(idx_pairs), chunk):
+        end = min(start + chunk, len(idx_pairs))
+        n11_all[start:end] = (
+            B[:, idx1[start:end]]
+            .multiply(B[:, idx2[start:end]])
+            .sum(axis=0)
+        ).A1.astype(np.int64)
+
+    # ------------------------------------------------------------------
+    # Fisher tests
+    # ------------------------------------------------------------------
+    pvals = np.empty(len(idx_pairs), dtype=float)
+    odds = np.empty(len(idx_pairs), dtype=float)
+
+    for k, (i, j) in enumerate(idx_pairs):
+        n1 = det_counts[i]
+        n2 = det_counts[j]
+        n11 = n11_all[k]
+
+        n10 = n1 - n11
+        n01 = n2 - n11
+        n00 = n_cells - (n11 + n10 + n01)
+
+        table = [[n11, n10], [n01, n00]]
+        orr, pv = fisher_exact(table, alternative=alternative)
+        odds[k] = orr
+        pvals[k] = pv
+
+    # ------------------------------------------------------------------
+    # Multiple testing correction + odds ratio filter
+    # ------------------------------------------------------------------
+    if multipletests is not None and correction is not None:
+        reject, _, _, _ = multipletests(pvals, alpha=alpha, method=correction)
+        sig_mask = reject
     else:
-        # Generate all cross-type pairs
-        pairs = [
-            (g1, g2) for ct1, ct2 in combinations(filtered.keys(), 2) for g1 in filtered[ct1] for g2 in filtered[ct2]
-        ]
+        sig_mask = (pvals <= alpha)
 
-    # === Step 4: Filter pairs that are co-detected above threshold ===
-    to_check = [p for p in pairs]
+    sig_mask &= (odds <= max_odds_ratio)
 
-    # Subset matrix to relevant columns for co-detection check
-    B_csc = B.tocsc()
-    cols_needed = np.array(sorted({gene2col[g] for p in to_check for g in p}), dtype=int)
-    B_sub = B_csc[:, cols_needed]
-
-    # Compute co-detection counts
-    co_counts = (B_sub.T @ B_sub).tocsr()
-    idx_map = {c: i for i, c in enumerate(cols_needed)}
-
-    result = []
-    for g1, g2 in to_check:
-        i = idx_map[gene2col[g1]]
-        j = idx_map[gene2col[g2]]
-        both = co_counts[i, j] / n_cells
-        if both <= max_codetect:
-            result.append((g1, g2))
-
-    return result
+    return [kept_pairs[k] for k in range(len(kept_pairs)) if sig_mask[k]]
 
 def _is_missing(x):
     """Return True for any kind of NA / NaN / None."""
@@ -1313,8 +1093,7 @@ def _is_missing(x):
         return pd.isna(x) or (isinstance(x, float) and math.isnan(x))
     except Exception:
         return False
-
-
+    
 def validate_spatialdata(
     sdata: sd.SpatialData,
     images_key: str | None = "morphology_focus",

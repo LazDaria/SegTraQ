@@ -543,67 +543,6 @@ def compute_MECR_global(
 
     return or_dict, pval_dict
 
-def compute_MECR_deterministic(
-    sdata, gene_pairs: list[tuple[str, str]], tables_key: str = "table", inplace: bool = True
-) -> dict[tuple[str, str], float]:
-    """
-    Modified from https://github.com/dpeerlab/segger-analysis
-
-    Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.
-
-    Parameters
-    ----------
-    sdata : SpatialData-like
-        Container with `.tables[tables_key]` as AnnData.
-    gene_pairs : list of tuple
-        Collection of (gene1, gene2) pairs computed via `segtraq.get_mut_excl_markers`.
-    tables_key : str
-        Key of the AnnData table in `sdata.tables`.
-    inplace : bool, optional
-        If True, store MECR results in `sdata.tables['table'].uns['MECR']`.
-
-    Returns
-    -------
-    dict
-        Mapping {(gene1, gene2): MECR}, where MECR = P(both>0) / P(at least one>0).
-    """
-    expr_df = sdata.tables[tables_key].to_df()
-    mecr = {}
-    adj = {}
-
-    for g1, g2 in gene_pairs:
-        e1 = expr_df[g1] > 0
-        e2 = expr_df[g2] > 0
-
-        pA = e1.mean()
-        pB = e2.mean()
-        p_any = (e1 | e2).mean()
-        p_both = (e1 & e2).mean()
-
-        # Ordinary MECR
-        if p_any > 0:
-            mecr_val = p_both / p_any
-        else:
-            mecr_val = np.nan
-
-        # Expected co-detection under independence
-        p_exp = pA * pB
-
-        # Adjusted MECR
-        if p_exp > 0:
-            adj_val = mecr_val / p_exp
-        else:
-            adj_val = np.nan
-
-        mecr[(g1, g2)] = mecr_val
-        adj[(g1, g2)] = adj_val
-
-    if inplace:
-        sdata.tables[tables_key].uns.setdefault("MECR", {}).update(mecr)
-        sdata.tables[tables_key].uns.setdefault("AdjMECR", {}).update(adj)
-
-    return mecr, adj
-
 def calculate_neighbor_contamination(
     sdata,
     cell_type_key: str,
@@ -738,8 +677,7 @@ def calculate_neighbor_contamination(
     tgt_totals = {ct: int(np.sum(cell_types == ct)) for ct in all_cts}  
 
     # ----------------------------------------------------------------------
-    # Precompute for each (c_src, c_tgt) which gene indices are relevant:
-    # negative(c_tgt) ∩ positive(c_src)
+    # Precompute for each (c_src, c_tgt): negative(c_tgt) ∩ positive(c_src)
     # ----------------------------------------------------------------------
     type_pair_genes: Dict[Tuple[str, str], np.ndarray] = {}
 
@@ -770,7 +708,7 @@ def calculate_neighbor_contamination(
     contam_cells_hit = defaultdict(int)  #target cells hit by source (binary)
 
     # ----------------------------------------------------------------------
-    # Main loop
+    # Loop over cells
     # ----------------------------------------------------------------------
     for i in range(n_cells):
         c_tgt = cell_types[i]
@@ -790,7 +728,7 @@ def calculate_neighbor_contamination(
         # track which source types contaminate this target cell at least once
         contaminated_by_src = set()  
 
-        for c_src in set(nb_cts):
+        for c_src in {ct for ct in nb_cts if not pd.isna(ct)}:
             pair = (c_src, c_tgt)
             if pair not in type_pair_genes:
                 continue
@@ -827,18 +765,21 @@ def calculate_neighbor_contamination(
                 # binary “this target cell is contaminated by this source type”
                 contaminated_by_src.add(c_src) 
 
-                # ---------------- Per-cell contamination ----------------
+                
+                denom_all = x_i_g + mean_src
+                if denom_all <= 0:
+                    continue
+                frac_g = x_i_g / denom_all
+
+                # pair stats: always update (no used_genes gating)
+                sum_pair[pair] += frac_g
+                count_pair[pair] += 1
+
+                # per-cell stats: update once per gene per cell
                 if g_idx not in used_genes:
                     numer_cell[i] += x_i_g
-
-                    denom_all = x_i_g + mean_src
-                    if denom_all > 0:
-                        frac_g = x_i_g / denom_all
-                        sum_cell_frac[i] += frac_g
-                        count_cell_genes[i] += 1
-                        sum_pair[pair] += frac_g
-                        count_pair[pair] += 1
-
+                    sum_cell_frac[i] += frac_g
+                    count_cell_genes[i] += 1
                     used_genes.add(g_idx)
 
         # update per-(c_src, c_tgt) binary hit counts once per cell
@@ -864,9 +805,7 @@ def calculate_neighbor_contamination(
     )
 
     # ----------------------------------------------------------------------
-    # Build type×type contamination matrices
-    #   - contam_matrix_df: mean contamination fraction across contributing genes
-    #   - contam_binary_df: fraction of target cells hit by each source
+    # Build contamination matrices contam_matrix_df, contam_binary_df
     # ----------------------------------------------------------------------
     ct_list = all_cts
     idxmap = {ct: j for j, ct in enumerate(ct_list)}
@@ -888,7 +827,7 @@ def calculate_neighbor_contamination(
     contam_binary_df = pd.DataFrame(contam_bin, index=ct_list, columns=ct_list) 
 
     # ----------------------------------------------------------------------
-    # Inplace writing
+    # Write to .obs and .uns
     # ----------------------------------------------------------------------
     if inplace:
         merge_into_obs(
@@ -899,7 +838,7 @@ def calculate_neighbor_contamination(
             df_cell_id_key=tables_cell_id_key,
         )
         sdata.tables[tables_key].uns[uns_key] = contam_matrix_df
-        sdata.tables[tables_key].uns[uns_key_binary] = contam_binary_df  # NEW
+        sdata.tables[tables_key].uns[uns_key_binary] = contam_binary_df  
 
     return per_cell_df, contam_matrix_df, contam_binary_df
 
@@ -1049,12 +988,7 @@ def calculate_marker_purity(
         if pos_idx.size == 0:
             continue
 
-        # Extract all genes for these cells; densify only this block
-        X_ct = X[mask_cells]
-        if hasattr(X_ct, "toarray"):
-            X_ct = X_ct.toarray()
-        else:
-            X_ct = np.asarray(X_ct)  # (n_cells_ct, n_genes)
+        X_ct = X_dense[mask_cells]
 
         p_prec_ct, p_rec_ct, p_f1_ct = _score_one_list(
             X_ct,
@@ -1074,9 +1008,8 @@ def calculate_marker_purity(
             RuntimeWarning,
             stacklevel=2,
         )
-        sdata["table"].obsm["spatial"] = sdata["table"].obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
+        sdata[tables_key].obsm["spatial"] = sdata[tables_key].obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
-        G = adata.obsp[neighbors_key].tocsr()
 
     G = adata.obsp[neighbors_key]
 
@@ -1086,12 +1019,6 @@ def calculate_marker_purity(
     else:
         G = np.asarray(G)
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
-
-    # dense expression for per-cell scoring
-    if hasattr(X, "toarray"):
-        X_dense = X.toarray()
-    else:
-        X_dense = np.asarray(X)
 
     neg_prec, neg_rec, neg_f1 = _score_negative_with_neighbors(
         X_dense=X_dense,
@@ -1140,208 +1067,3 @@ def calculate_marker_purity(
         )
 
     return result
-
-def calculate_diff_abundance(
-    sdata,
-    cell_type_key: str,
-    markers: dict[str, dict[str, list[str]]],
-    tables_key: str = "table",
-    lfc_thresh: float = 1.0,  # noqa
-    pval_thresh: float = 0.05,  # noqa
-    min_n_cells: int = 20,
-    min_n_transcripts: int = 20,
-    seed: int = 0,
-    cell_centroid_x_key: str = "cell_centroid_x",
-    cell_centroid_y_key: str = "cell_centroid_y",
-    inplace: bool = True,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Calculate differential transcript abundance between bordering and non-bordering cells
-    for every ordered pair of cell types using a spatial graph (Delaunay triangulation).
-    This function builds a spatial neighbor graph from the provided AnnData table, classifies
-    cells of each source cell type (ct1) into two groups depending on whether they border
-    cells of a target cell type (ct2), and performs a differential abundance test (Scanpy's
-    rank_genes_groups with Wilcoxon test) between the "bordering" and "non_bordering" groups.
-    Results are filtered by transcript counts and by provided marker lists so that only genes
-    likely to originate from spillover (positive markers of the source cell type ct2 and
-    not negative markers of the receiver ct1) are retained. A summary table of significant
-    genes per (ct1, ct2) pair is returned.
-
-    Parameters
-    ----------
-    sdata : object
-        Object containing AnnData tables, expected to expose a mapping-like attribute
-        `tables` such that `sdata.tables[tables_key]` is an AnnData instance. The function
-        creates a local copy of that AnnData and operates on it.
-    cell_type_key : str
-        Column name in adata.obs that contains cell type labels.
-    markers : dict[str, dict[str, list[str]]]
-        Marker specification mapping cell type -> {"positive": [...], "negative": [...]}
-        - markers[ct]['positive'] should list genes expected to be present in source cells (ct2).
-        - markers[ct]['negative'] should list genes expected to be absent in receiver cells (ct1).
-    tables_key : str, optional
-        Key to select the AnnData table from sdata.tables (default: "table").
-    min_n_cells : int, optional
-        Minimum number of cells required in each group (bordering or non_bordering)
-        for a (ct1, ct2) pair to be tested (default: 20).
-    min_n_transcripts : int, optional
-        Minimum total transcript counts (sum across both groups) required for a gene
-        to be kept in the results (default: 20).
-    seed : int, optional
-        Random seed for reproducible subsampling (default: 0).
-    cell_centroid_x_key, cell_centroid_y_key : str, optional
-        Column names in adata.obs that contain the X and Y cell centroids used to
-        construct the spatial graph (default: "cell_centroid_x", "cell_centroid_y").
-    inplace : bool, optional
-        If True, store differential abundance results in `sdata.tables[tables_key].uns['diff_abundance']`.
-
-    Returns
-    -------
-    de_results : pandas.DataFrame
-        Concatenated differential abundance results for all tested (ct1, ct2) pairs.
-        Columns include:
-        - gene: gene name (string)
-        - log2FC: reported log fold-change from rank_genes_groups
-        - pval: p-value from the differential test
-        - ct1: receiver cell type (string)
-        - ct2: source cell type (string)
-        - group1_size: number of ct1 cells bordering ct2 (int)
-        - group2_size: number of ct1 cells not bordering ct2 (int)
-        - transcript_counts_group1: total counts of the gene across group1 (int)
-        - transcript_counts_group2: total counts of the gene across group2 (int)
-        - transcript_counts_in_both_groups: sum of the two previous columns (int)
-    summary : pandas.DataFrame
-        A matrix (DataFrame) where rows are receiver cell types (ct1) and columns are
-        source cell types (ct2). Each cell contains the number of genes passing the
-        significance criteria for that ordered pair. Note: significance filtering uses
-        the thresholds lfc_thresh and pval_thresh from the calling/global scope
-        (see Notes).
-    Raises
-    ------
-    ValueError
-        If no differential expression results are produced (e.g., because no
-        (ct1, ct2) pairs passed the min_n_cells / marker / transcript filters).
-    """
-    adata = sdata.tables[tables_key].copy()
-    adata.obsm["spatial"] = adata.obs[[cell_centroid_x_key, cell_centroid_y_key]].to_numpy()
-
-    # Replace NA cell types
-    col = adata.obs[cell_type_key]
-    if pd.api.types.is_categorical_dtype(col):
-        if "Unknown" not in col.cat.categories:
-            col = col.cat.add_categories(["Unknown"])
-        adata.obs[cell_type_key] = col.fillna("Unknown")
-    else:
-        adata.obs[cell_type_key] = col.fillna("Unknown")
-
-    # 1. Build spatial graph (Delaunay triangulation)
-    sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
-    G = adata.obsp["spatial_connectivities"].tocsr()
-
-    types = np.asarray(adata.obs[cell_type_key])
-    cell_types = np.unique(types)
-
-    X = adata.X
-    if sparse.issparse(X):
-        X = X.toarray()
-
-    de_records = []
-
-    # 2. Iterate over cell-type pairs
-    for ct1 in tqdm(cell_types):
-        idx_ct1 = np.where(types == ct1)[0]
-        for ct2 in cell_types:
-            if ct1 == ct2:
-                continue
-
-            # Find ct1 cells with ct2 neighbors
-            neigh_counts = np.array([np.any(types[G.indices[G.indptr[i] : G.indptr[i + 1]]] == ct2) for i in idx_ct1])
-            group1 = idx_ct1[neigh_counts]  # bordering
-            group2 = idx_ct1[~neigh_counts]  # non-bordering
-            group1_size, group2_size = len(group1), len(group2)
-
-            if group1_size < min_n_cells or group2_size < min_n_cells:
-                continue
-
-            # Create condition labels
-            adata.obs["_temp_condition"] = "not_used"
-            adata.obs.iloc[group1, adata.obs.columns.get_loc("_temp_condition")] = "bordering"
-            adata.obs.iloc[group2, adata.obs.columns.get_loc("_temp_condition")] = "non_bordering"
-
-            # Differential test
-            sc.tl.rank_genes_groups(
-                adata,
-                use_raw=False,
-                groupby="_temp_condition",
-                groups=["bordering"],
-                reference="non_bordering",
-                method="wilcoxon",
-                pts=True,
-            )
-
-            res_dict = adata.uns["rank_genes_groups"]
-
-            # ensure everything is in the right order
-            genes = res_dict["names"]["bordering"]
-            log2fc = res_dict["logfoldchanges"]["bordering"]
-            pval = res_dict["pvals"]["bordering"]
-
-            # transcript counts per group (while ensuring this is in the correct order)
-            gene_idx = [adata.var_names.get_loc(g) for g in genes]
-            transcript_counts_group1 = np.array(adata.raw.X[group1, :][:, gene_idx].sum(axis=0)).ravel()
-            transcript_counts_group2 = np.array(adata.raw.X[group2, :][:, gene_idx].sum(axis=0)).ravel()
-
-            res = pd.DataFrame(
-                {
-                    "gene": genes,
-                    "log2FC": log2fc,
-                    "pval": pval,
-                    "ct1": ct1,
-                    "ct2": ct2,
-                    "group1_size": group1_size,
-                    "group2_size": group2_size,
-                    "transcript_counts_group1": transcript_counts_group1,
-                    "transcript_counts_group2": transcript_counts_group2,
-                    "transcript_counts_in_both_groups": transcript_counts_group1 + transcript_counts_group2,
-                }
-            )
-
-            # removing rows with transcript counts lower than a certain minimum
-            res = res[res["transcript_counts_in_both_groups"] >= min_n_transcripts]
-
-            # only keeping genes that are positive in the source (ct2) and negative in the receiver (ct1)
-            try:
-                ct1_markers = markers[ct1]["negative"]
-            except KeyError:
-                if ct1 != "Unknown":
-                    print(f"Could not find markers for cell type {ct1}")
-                ct1_markers = []
-            res = res[~res["gene"].isin(ct1_markers)]
-
-            try:
-                ct2_markers = markers[ct2]["positive"]
-            except KeyError:
-                if ct2 != "Unknown":
-                    print(f"Could not find markers for cell type {ct2}")
-                ct2_markers = []
-            res = res[res["gene"].isin(ct2_markers)]
-
-            de_records.append(res)
-
-    # Combine results
-    if not de_records:
-        raise ValueError("No DE results produced — check thresholds or data sparsity.")
-    de_results = pd.concat(de_records, ignore_index=True)
-
-    # 4. Summarize significant DE genes
-    # we are only interested in positive log2FC here, since we want to find genes that originate from spillover events
-    sig = de_results.query("log2FC >= @lfc_thresh and pval <= @pval_thresh")
-    summary = sig.groupby(["ct1", "ct2"]).size().unstack(fill_value=0)
-
-    if inplace:
-        if "diff_abundance" not in sdata.tables[tables_key].uns:
-            sdata.tables[tables_key].uns["diff_abundance"] = {}
-        sdata.tables[tables_key].uns["diff_abundance"]["de_results"] = de_results
-        sdata.tables[tables_key].uns["diff_abundance"]["summary"] = summary
-
-    return de_results, summary
