@@ -260,6 +260,7 @@ def distance_to_membrane(
         gdf.index.name = id_key
 
     gdf = gdf.merge(df, how="inner", left_on=points_cell_id_key, right_on=id_key)
+    gdf = gdf.explode()
 
     # compute the linear outline of the cell segmentation
     gdf["linear_geometry"] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis=1)
