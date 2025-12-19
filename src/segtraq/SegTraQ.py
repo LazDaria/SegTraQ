@@ -383,14 +383,7 @@ class SegTraQ:
         markers: dict[str, dict[str, list[str]]],
         mut_exclusive_pairs: list[tuple[str, str]],
         cell_type_key: str = "transferred_cell_type",
-        seed: int = 0,
-        cell_centroid_x_key: str = "cell_centroid_x",
-        cell_centroid_y_key: str = "cell_centroid_y",
-        lfc_thresh: float = 1.0,
-        pval_thresh: float = 0.05,
-        min_n_cells: int = 20,
-        min_n_transcripts: int = 20,
-        use_quantiles: bool = True,
+        use_quantiles: bool = False,
         inplace: bool = True,
     ):
         """
@@ -417,9 +410,6 @@ class SegTraQ:
         cell_type_key : str
             Cell-type column in `sdata.tables[tables_key].obs`.
 
-        lfc_thresh, pval_thresh, min_n_cells, min_n_transcripts :
-            Passed to SP.calculate_diff_abundance.
-
         use_quantiles : bool, optional
             Passed to SP.calculate_marker_purity.
 
@@ -436,7 +426,6 @@ class SegTraQ:
                 "MECR": ...,
                 "contamination": ...,
                 "marker_purity": ...,
-                "diff_abundance": ...,
                 }
         """
 
@@ -464,19 +453,6 @@ class SegTraQ:
             inplace=inplace,
         )
 
-        de_results, summary = self.sp.calculate_diff_abundance(
-            cell_type_key=cell_type_key,
-            markers=markers,
-            lfc_thresh=lfc_thresh,
-            pval_thresh=pval_thresh,
-            min_n_cells=min_n_cells,
-            min_n_transcripts=min_n_transcripts,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
-            inplace=inplace,
-        )
-
         if inplace:
             return None
         else:
@@ -485,7 +461,6 @@ class SegTraQ:
                 "contamination": (C_cnt, contamination_df, records_df),
                 "marker_purity": purity_df,
                 "neighbor_contamination": (per_cell_contam, cont_mat, cont_mat_bin),
-                "diff_abundance": (de_results, summary),
             }
             return out
 
@@ -793,7 +768,7 @@ class _SPFacade:
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
-        use_quantiles: bool = True,
+        use_quantiles: bool = False,
         require_neighbor_expression: bool = True,
         weight_cont: float = 0.7,
         neighbors_key: str | None = "spatial_connectivities",
@@ -842,37 +817,6 @@ class _SPFacade:
         )
 
     calculate_neighbor_contamination.__doc__ = sp.calculate_neighbor_contamination.__doc__
-
-    def calculate_diff_abundance(
-        self,
-        cell_type_key: str,
-        markers: dict[str, dict[str, list[str]]],
-        lfc_thresh: float = 1.0,
-        pval_thresh: float = 0.05,
-        min_n_cells: int = 20,
-        min_n_transcripts: int = 20,
-        seed: int = 0,
-        cell_centroid_x_key: str = "cell_centroid_x",
-        cell_centroid_y_key: str = "cell_centroid_y",
-        inplace: bool = True,
-    ):
-        return sp.calculate_diff_abundance(
-            sdata=self._p.sdata,
-            cell_type_key=cell_type_key,
-            markers=markers,
-            tables_key=self._p.tables_key,
-            lfc_thresh=lfc_thresh,
-            pval_thresh=pval_thresh,
-            min_n_cells=min_n_cells,
-            min_n_transcripts=min_n_transcripts,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
-            inplace=inplace,
-        )
-
-    calculate_diff_abundance.__doc__ = sp.calculate_diff_abundance.__doc__
-
 
 class _PSFacade:
     """
