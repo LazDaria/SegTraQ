@@ -171,14 +171,12 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
-
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
 
@@ -434,21 +432,18 @@ the shape index is used as the cell ID.</p></li>
 gene expression in an eroded interior (“center”) and a thin outer shell
 (“border”), and (2) comparing the border with the neighborhood
 composition vector (NCV).</p>
-<p>Specifically, the function:
-1. Erodes each cell polygon to obtain a center region.
-2. Defines the border region as the set difference between the full cell</p>
-<blockquote>
-<div><p>and its eroded center.</p>
-</div></blockquote>
-<ol class="arabic simple" start="3">
+<dl class="simple">
+<dt>Specifically, the function:</dt><dd><ol class="arabic simple">
+<li><p>Erodes each cell polygon to obtain a center region.</p></li>
+<li><p>Defines the border region as the set difference between the full cell
+and its eroded center.</p></li>
 <li><p>Computes gene expression profiles for center and border.</p></li>
 <li><p>Computes the correlation between center and border expression.</p></li>
-<li><dl class="simple">
-<dt>Computes the correlation between border expression and the</dt><dd><p>NCV expression profile of the same cell.</p>
+<li><p>Computes the correlation between border expression and the
+NCV expression profile of the same cell.</p></li>
+</ol>
 </dd>
 </dl>
-</li>
-</ol>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

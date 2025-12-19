@@ -171,14 +171,12 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
-
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
 
@@ -392,65 +390,223 @@ If False, returns a DataFrame with [‘cell_id’, ‘transferred_cell_type’, 
 
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.get_ref_markers">
-<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">get_ref_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_neg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.get_ref_markers" title="Link to this definition">#</a></dt>
-<dd><p>Translated and modified from <a class="github reference external" href="https://github.com/SydneyBioX/CellSPA">SydneyBioX/CellSPA</a></p>
-<dl class="simple">
-<dt>For each cell type c:</dt><dd><p>w_g = mean(expression of gene g in cells of c) - mean(expression of g in all other cells)
-- positive markers(c): genes with w_g &gt; quantile(w, q)
-- negative markers(c): genes with w_g &lt; quantile(w, 1 - q)</p>
+<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">get_ref_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'de'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_fpr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auc_pos_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.9</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'wilcoxon'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pval_adj_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logfc_pos_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vote_fraction_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vote_fraction_neg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_neg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_cells_per_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.get_ref_markers" title="Link to this definition">#</a></dt>
+<dd><p>Compute positive and negative markers per cell type using pairwise contrasts
+(AUC/pAUC or DE) followed by voting and a rarity-based definition of
+negative markers.</p>
+<section id="two-modes">
+<h2>Two modes:<a class="headerlink" href="#two-modes" title="Link to this heading">#</a></h2>
+<dl>
+<dt>mode=”auc” :</dt><dd><p>For each ordered pair of cell types (c_i, c_j), compute per-gene AUC or
+partial AUC (if max_fpr is set). A gene is “up in c_i” if:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>AUC &gt;= auc_pos_thresh and mean(c_i) &gt; mean(c_j).</p></li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>mode=”de” (default):</dt><dd><p>For each pair (c, d), run Scanpy’s <cite>rank_genes_groups</cite>
+(groups=[c], reference=d, method=method).
+A gene is “up in c” if:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>adjusted p-value &lt; pval_adj_thresh and logFC &gt; logfc_pos_thresh.</p></li>
+</ul>
+</div></blockquote>
 </dd>
 </dl>
-<p>After building per-type lists, remove genes that occur in &gt;= t * n_types lists
-(done separately for positives and negatives) to keep type-specific markers.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>adata_ref</strong> (<em>AnnData</em>) – Reference single-cell dataset (cells x genes).</p></li>
-<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> containing cell type labels.</p></li>
-<li><p><strong>q_pos</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.95</em><em>)</em>) – Upper quantile for positives.</p></li>
-<li><p><strong>q_neg</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.10</em><em>)</em>) – Lower quantile for negatives.</p></li>
-<li><p><strong>t</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.25</em><em>)</em>) – Overlap filter: drop genes that appear in &gt;= t * n_types marker lists.</p></li>
+</section>
+<section id="positive-markers">
+<h2>Positive markers:<a class="headerlink" href="#positive-markers" title="Link to this heading">#</a></h2>
+<p>For each cell type c, a gene g is considered a positive marker if it is
+“up in c” in at least ceil(vote_fraction_pos * M_c) of its valid pairwise
+comparisons (M_c). This matches the original pairwise + voting scheme for
+positive markers.</p>
+</section>
+<section id="negative-markers">
+<h2>Negative markers:<a class="headerlink" href="#negative-markers" title="Link to this heading">#</a></h2>
+<p>Negative markers are defined from the positive markers and the reference
+expression patterns:</p>
+<blockquote>
+<div><ul>
+<li><p>For a focal type c, consider the union of positive markers of all
+<em>other</em> cell types d != c.</p></li>
+<li><dl>
+<dt>A gene g from this union is considered a negative marker of c if:</dt><dd><blockquote>
+<div><ol class="lowerroman simple">
+<li><p>g is expressed (&gt; 0) in at most vote_fraction_neg
+fraction of cells of type c in the reference dataset, and</p></li>
+</ol>
+</div></blockquote>
+<ol class="lowerroman simple" start="2">
+<li><p>g is not a positive marker of c itself.</p></li>
+</ol>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</section>
+<section id="overlap-filtering">
+<h2>Overlap filtering:<a class="headerlink" href="#overlap-filtering" title="Link to this heading">#</a></h2>
+<dl class="simple">
+<dt>Overlap filtering is applied separately to positive and negative markers:</dt><dd><ul class="simple">
+<li><p>Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.</p></li>
+<li><p>Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>{cell_type: {“positive”: [genes], “negative”: [genes]}}</p>
+</dl>
+</section>
+<section id="returned-structure">
+<h2>Returned structure:<a class="headerlink" href="#returned-structure" title="Link to this heading">#</a></h2>
+<blockquote>
+<div><p>{cell_type: {“positive”: […], “negative”: […]}}</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">param adata_ref<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference single-cell dataset (cells x genes).</p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict</p>
+<dt class="field-even">type adata_ref<span class="colon">:</span></dt>
+<dd class="field-even"><p>AnnData</p>
+</dd>
+<dt class="field-odd">param ref_cell_type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Column in <cite>adata_ref.obs</cite> containing cell type labels.</p>
+</dd>
+<dt class="field-even">type ref_cell_type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">param mode<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>“auc”: compute markers using pairwise AUC/pAUC.</p></li>
+<li><p>“de” : compute markers using pairwise DE.</p></li>
+</ul>
+</dd>
+<dt class="field-even">type mode<span class="colon">:</span></dt>
+<dd class="field-even"><p>{“auc”, “de”}, optional (default: “de”)</p>
+</dd>
+<dt class="field-odd">param max_fpr<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(AUC mode only)
+If None, compute full AUC. If in (0, 1], compute standardized pAUC over
+[0, max_fpr] using sklearn’s <cite>roc_auc_score(max_fpr=max_fpr)</cite>.</p>
+</dd>
+<dt class="field-even">type max_fpr<span class="colon">:</span></dt>
+<dd class="field-even"><p>float or None, optional (default: None)</p>
+</dd>
+<dt class="field-odd">param auc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(AUC mode only)
+Minimum AUC/pAUC for a gene to be considered “up in c_i vs c_j”.</p>
+</dd>
+<dt class="field-even">type auc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.9)</p>
+</dd>
+<dt class="field-odd">param method<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(DE mode only)
+DE method passed to <cite>sc.tl.rank_genes_groups</cite> (“wilcoxon”, “t-test”, “logreg”, …).</p>
+</dd>
+<dt class="field-even">type method<span class="colon">:</span></dt>
+<dd class="field-even"><p>str, optional (default: “wilcoxon”)</p>
+</dd>
+<dt class="field-odd">param pval_adj_thresh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(DE mode only)
+FDR (adjusted p-value) cutoff for positive markers.</p>
+</dd>
+<dt class="field-even">type pval_adj_thresh<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.05)</p>
+</dd>
+<dt class="field-odd">param logfc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(DE mode only)
+Minimum log fold-change for <em>positive</em> markers (c &gt; d).</p>
+</dd>
+<dt class="field-even">type logfc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 1.0)</p>
+</dd>
+<dt class="field-odd">param vote_fraction_pos<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Fraction of valid pairwise contrasts in which a gene must be “up in c”
+(AUC mode) / significantly up in c (DE mode) to be called a positive
+marker of c.</p>
+</dd>
+<dt class="field-even">type vote_fraction_pos<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.5)</p>
+</dd>
+<dt class="field-odd">param vote_fraction_neg<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Maximum fraction of cells of type c in which a gene may be expressed
+(counts &gt; 0) in the reference dataset to be considered a <em>negative</em>
+marker of c, given that it is a positive marker of at least one
+other cell type.</p>
+</dd>
+<dt class="field-even">type vote_fraction_neg<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.05)</p>
+</dd>
+<dt class="field-odd">param t_pos<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Overlap filter threshold for positive markers.</p>
+</dd>
+<dt class="field-even">type t_pos<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.25)</p>
+</dd>
+<dt class="field-odd">param t_neg<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Overlap filter threshold for negative markers.</p>
+</dd>
+<dt class="field-even">type t_neg<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 1.0)</p>
+</dd>
+<dt class="field-odd">param min_cells_per_type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Minimum number of cells required per cell type to be included in pairwise
+computations.</p>
+</dd>
+<dt class="field-even">type min_cells_per_type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int, optional (default: 10)</p>
+</dd>
+<dt class="field-odd">param n_jobs<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of parallel jobs for running pairwise computations.</p>
+</dd>
+<dt class="field-even">type n_jobs<span class="colon">:</span></dt>
+<dd class="field-even"><p>int, optional (default: 1)</p>
+</dd>
+<dt class="field-odd">returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>{cell_type: {“positive”: [genes], “negative”: [genes]}}</p>
+</dd>
+<dt class="field-even">rtype<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
 </dd>
 </dl>
+</section>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.get_mut_excl_markers">
-<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">get_mut_excl_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neg_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_codetect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.get_mut_excl_markers" title="Link to this definition">#</a></dt>
-<dd><p>Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
-<p>Finds mutually exclusive markers (presence-based specificity) between cell types.</p>
-<p>Optionally restricts computation to a specified pair of cell types.</p>
+<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">get_mut_excl_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pos_frac</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_neg_frac</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'fdr_bh'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'less'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_odds_ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.get_mut_excl_markers" title="Link to this definition">#</a></dt>
+<dd><p>Compute global mutually-exclusive gene pairs from per-cell-type positive/negative markers.</p>
+<dl class="simple">
+<dt>Added preselection:</dt><dd><ul class="simple">
+<li><p>Positive markers kept only if expressed in &gt;= min_pos_frac of cells of that type.</p></li>
+<li><p>Negative markers kept only if expressed in &lt;= max_neg_frac of cells of that type.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>adata_ref</strong> (<em>AnnData</em>) – Reference single-cell dataset (cells × genes).</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – Marker dictionary as returned by <cite>find_markers</cite>; only the “positive” list is used.</p></li>
-<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> containing cell-type labels.</p></li>
-<li><p><strong>pos_threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum fraction of cells within the target type where a gene must be present (&gt;0).</p></li>
-<li><p><strong>neg_threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum fraction of cells in the complement (all other types) where the gene may be present.</p></li>
-<li><p><strong>max_codetect</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum fraction of cells in which mutually exclusive gene pairs may be co-detected.</p></li>
-<li><p><strong>cell_types</strong> (<em>tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em><em>, </em><em>optional</em>) – If provided, restrict computation to this pair of cell types.</p></li>
+<li><p><strong>adata</strong> (<em>AnnData</em>) – Reference dataset (cells x genes). Uses adata.X, adata.var_names, adata.obs[ref_cell_type].</p></li>
+<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: […], “negative”: […]}}.</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in adata.obs with cell type labels matching <cite>markers</cite> keys.</p></li>
+<li><p><strong>min_pos_frac</strong> (<em>float</em><em>, </em><em>default = 0.10</em>) – If set, require positive markers to have detection fraction &gt;= this value in that cell type.</p></li>
+<li><p><strong>max_neg_frac</strong> (<em>float</em><em>, </em><em>default = 0.03</em>) – If set, require negative markers to have detection fraction &lt;= this value in that cell type.</p></li>
+<li><p><strong>alpha</strong> (<em>see original function.</em>)</p></li>
+<li><p><strong>correction</strong> (<em>see original function.</em>)</p></li>
+<li><p><strong>alternative</strong> (<em>see original function.</em>)</p></li>
+<li><p><strong>max_odds_ratio</strong> (<em>see original function.</em>)</p></li>
+<li><p><strong>chunk</strong> (<em>int</em>) – Pair-chunk size for vectorized n11 computation.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Pairs of genes (gene1, gene2) that are mutually exclusive across cell types.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list of tuple</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of (gene1, gene2)</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.validate_spatialdata">
-<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">validate_spatialdata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'morphology_focus'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_area_volume_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_area'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_background_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_z_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#segtraq.validate_spatialdata" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">validate_spatialdata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'morphology_focus'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_area_volume_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_area'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_background_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_z_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#segtraq.validate_spatialdata" title="Link to this definition">#</a></dt>
 <dd><p>Validates the integrity of a SpatialData object by checking the consistency of cell IDs
 across points, shapes, and tables.</p>
 <p>This function ensures that:
@@ -464,6 +620,8 @@ across points, shapes, and tables.</p>
 <li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object to validate.</p></li>
 <li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing tables in the SpatialData. Default is “table”.</p></li>
 <li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in the tables DataFrame (AnnData.obs) that contains cell IDs. Default is “cell_id”.</p></li>
+<li><p><strong>tables_centroid_x_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;x_centroid&quot;</em>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
+<li><p><strong>tables_centroid_y_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;y_centroid&quot;</em>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
 <li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key for accessing points (e.g., transcripts) in the SpatialData. Default is “transcripts”.</p></li>
 <li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in the points DataFrame indicating cell assignments. Default is “cell_id”.</p></li>
 <li><p><strong>points_background_id</strong> (<em>str</em><em>, </em><em>optional</em>) – Identifier used for unassigned or background transcripts in the points DataFrame. Default is “UNASSIGNED”.</p></li>
