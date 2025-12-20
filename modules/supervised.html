@@ -171,12 +171,14 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
+
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
 
@@ -327,11 +329,11 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.supervised">Supervised metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_contamination()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_neighbor_contamination()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR_global"><code class="docutils literal notranslate"><span class="pre">compute_MECR_global()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR_uns"><code class="docutils literal notranslate"><span class="pre">compute_MECR_uns()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_prediction"><code class="docutils literal notranslate"><span class="pre">neighbor_prediction()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -351,74 +353,132 @@ document.write(`
 <section id="module-segtraq.sp.supervised">
 <span id="supervised-metrics"></span><h2>Supervised metrics<a class="headerlink" href="#module-segtraq.sp.supervised" title="Link to this heading">#</a></h2>
 <dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_contamination">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_neighs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_cells</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_contamination" title="Link to this definition">#</a></dt>
+<dd><p># Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
+<p>Compute directional contamination (“leakage”) between cell types from spatial neighbors using
+ct-specific positive markers: for each ct cell and neighbor ct2, measure the fraction of ct-marker
+signal in ct2 neighbors relative to the ct neighborhood total, then average over interactions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as AnnData with expression and coordinates.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str] (optional)}}, using only “positive”.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>radius</strong> (<em>float</em><em>, </em><em>optional</em>) – Radius for spatial neighbor construction.</p></li>
+<li><p><strong>n_neighs</strong> (<em>int</em><em>, </em><em>optional</em>) – Max number of neighbors per cell (used with <cite>radius</cite>).</p></li>
+<li><p><strong>num_cells</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of cells to sample (speed/precision trade-off).</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – RNG seed for reproducible sampling.</p></li>
+<li><p><strong>cell_centroid_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – <cite>.obs</cite> key for x-coordinates (used to build <cite>.obsm[“spatial”]</cite> if needed).</p></li>
+<li><p><strong>cell_centroid_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – <cite>.obs</cite> key for y-coordinates (used to build <cite>.obsm[“spatial”]</cite> if needed).</p></li>
+<li><p><strong>weight_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Weight neighbor contributions by graph edge weights if True.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store contamination matrix in <cite>sdata.tables[‘table’].uns[‘contamination’]</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>out</strong> (<em>pandas.DataFrame</em>) – Rows = source types (ct), columns = target types (ct2); entry is the mean fraction of
+ct-specific marker counts found in ct2 neighbors relative to ct neighborhood totals (directional).</p></li>
+<li><p><strong>records_df</strong> (<em>pandas.DataFrame</em>) – Pandas dataframe with per-cell cell_id (ct), cell_type (ct), neighbor_id (ct2), neigbhor_type (ct2) and ratio
+(ct-specific markers counts found in ct2 neighbors relative to ct neighborhood total counts).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_diff_abundance">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_diff_abundance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lfc_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pval_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_n_cells</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_n_transcripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_diff_abundance" title="Link to this definition">#</a></dt>
+<dd><p>Calculate differential transcript abundance between bordering and non-bordering cells
+for every ordered pair of cell types using a spatial graph (Delaunay triangulation).
+This function builds a spatial neighbor graph from the provided AnnData table, classifies
+cells of each source cell type (ct1) into two groups depending on whether they border
+cells of a target cell type (ct2), and performs a differential abundance test (Scanpy’s
+rank_genes_groups with Wilcoxon test) between the “bordering” and “non_bordering” groups.
+Results are filtered by transcript counts and by provided marker lists so that only genes
+likely to originate from spillover (positive markers of the source cell type ct2 and
+not negative markers of the receiver ct1) are retained. A summary table of significant
+genes per (ct1, ct2) pair is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>object</em>) – Object containing AnnData tables, expected to expose a mapping-like attribute
+<cite>tables</cite> such that <cite>sdata.tables[tables_key]</cite> is an AnnData instance. The function
+creates a local copy of that AnnData and operates on it.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column name in adata.obs that contains cell type labels.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em><em>]</em>) – Marker specification mapping cell type -&gt; {“positive”: […], “negative”: […]}
+- markers[ct][‘positive’] should list genes expected to be present in source cells (ct2).
+- markers[ct][‘negative’] should list genes expected to be absent in receiver cells (ct1).</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key to select the AnnData table from sdata.tables (default: “table”).</p></li>
+<li><p><strong>min_n_cells</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum number of cells required in each group (bordering or non_bordering)
+for a (ct1, ct2) pair to be tested (default: 20).</p></li>
+<li><p><strong>min_n_transcripts</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum total transcript counts (sum across both groups) required for a gene
+to be kept in the results (default: 20).</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Random seed for reproducible subsampling (default: 0).</p></li>
+<li><p><strong>cell_centroid_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in adata.obs that contain the X and Y cell centroids used to
+construct the spatial graph (default: “cell_centroid_x”, “cell_centroid_y”).</p></li>
+<li><p><strong>cell_centroid_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in adata.obs that contain the X and Y cell centroids used to
+construct the spatial graph (default: “cell_centroid_x”, “cell_centroid_y”).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store differential abundance results in <cite>sdata.tables[tables_key].uns[‘diff_abundance’]</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>de_results</strong> (<em>pandas.DataFrame</em>) – Concatenated differential abundance results for all tested (ct1, ct2) pairs.
+Columns include:
+- gene: gene name (string)
+- log2FC: reported log fold-change from rank_genes_groups
+- pval: p-value from the differential test
+- ct1: receiver cell type (string)
+- ct2: source cell type (string)
+- group1_size: number of ct1 cells bordering ct2 (int)
+- group2_size: number of ct1 cells not bordering ct2 (int)
+- transcript_counts_group1: total counts of the gene across group1 (int)
+- transcript_counts_group2: total counts of the gene across group2 (int)
+- transcript_counts_in_both_groups: sum of the two previous columns (int)</p></li>
+<li><p><strong>summary</strong> (<em>pandas.DataFrame</em>) – A matrix (DataFrame) where rows are receiver cell types (ct1) and columns are
+source cell types (ct2). Each cell contains the number of genes passing the
+significance criteria for that ordered pair. Note: significance filtering uses
+the thresholds lfc_thresh and pval_thresh from the calling/global scope
+(see Notes).</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If no differential expression results are produced (e.g., because no
+    (ct1, ct2) pairs passed the min_n_cells / marker / transcript filters).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_marker_purity">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_marker_purity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_quantiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_cont</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_marker_purity" title="Link to this definition">#</a></dt>
-<dd><p>Compute per-cell marker purity using positive markers globally
-and negative markers restricted to the focal cell’s neighborhood.</p>
-<dl>
-<dt>Positive markers:</dt><dd><ul class="simple">
-<li><p>For each cell’s annotated type c, use markers[c][“positive”].</p></li>
-<li><p>Compute per-cell precision/recall/F1 relative to these markers,
-using either a quantile-based threshold or expression &gt; 0.</p></li>
-</ul>
-</dd>
-<dt>Negative markers (neighborhood-aware):</dt><dd><ul>
-<li><dl>
-<dt>For a cell i of type c:</dt><dd><ul class="simple">
-<li><p>Find the cell types present in its spatial neighborhood,
-using <cite>adata.obsp[neighbors_key]</cite>.</p></li>
-<li><p>Take c’s negative markers: markers[c][“negative”].</p></li>
-<li><p>Intersect them with the union of positive markers of the
-neighbor cell types.</p></li>
-<li><p>Consider only genes that are present in at least one neighbor
-of the source type (if <cite>require_neighbor_expression=True</cite>).</p></li>
-</ul>
-<p>→ “relevant negatives” for this cell.</p>
-</dd>
-</dl>
-</li>
-<li><p>Compute per-cell precision/recall/F1 for these relevant negatives.</p></li>
-</ul>
-</dd>
-<dt>Finally:</dt><dd><ul class="simple">
-<li><p>Combine positive_F1 and negative_F1 into an overall F1_purity
-that rewards high positive-F1 and low negative-F1. Weighting
-factor weight_cont controls the importance of negative-F1.</p></li>
-</ul>
-</dd>
-</dl>
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_marker_purity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_quantiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_marker_purity" title="Link to this definition">#</a></dt>
+<dd><p># Translated and modified from <a class="github reference external" href="https://github.com/SydneyBioX/CellSPA">SydneyBioX/CellSPA</a></p>
+<p>Compute per-cell marker purity: for each cell’s annotated type, evaluate Precision/Recall/F1
+using its positive and negative marker lists, then summarize into an overall <cite>F1_purity</cite>
+that rewards high positive-F1 and low negative-F1.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
 <li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}.</p></li>
-<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If True, define predictions by the top-<a href="#id1"><span class="problematic" id="id2">|markers|</span></a> fraction per cell (rank-based);
-if False, use direct expression-based criteria (expression &gt; 0).</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;table&quot;</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
-<li><p><strong>tables_centroid_x_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;x_centroid&quot;</em>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_centroid_y_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;y_centroid&quot;</em>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
-<li><p><strong>require_neighbor_expression</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, contamination is only counted when the relevant gene is
-expressed in at least one neighboring cell of the source type.</p></li>
-<li><p><strong>weight_cont</strong> (<em>float</em><em>, </em><em>optional</em><em>, </em><em>default=0.7</em>) – Weighting factor for negative marker F1 in the overall F1_purity.
-Higher values give more weight to negative F1. Must be in the range [0, 1].</p></li>
-<li><p><strong>neighbors_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;spatial_connectivities&quot;</em>) – Key in <cite>adata.obsp</cite> containing a cell x cell adjacency / connectivity
-matrix that defines the spatial neighborhood.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, store marker purity results in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}; both lists are required.</p></li>
+<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, define predictions by the top-<a href="#id1"><span class="problematic" id="id2">|markers|</span></a> fraction per cell (rank-based);
+if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store marker purity results in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><dl class="simple">
-<dt>Columns:</dt><dd><dl class="simple">
-<dt>[</dt><dd><p>‘positive_precision’, ‘positive_recall’, ‘positive_F1’,
-‘negative_precision’, ‘negative_recall’, ‘negative_F1’,
-‘F1_purity’]</p>
+<dt>Columns: [‘positive_precision’,’positive_recall’,’positive_F1’,</dt><dd><p>’negative_precision’,’negative_recall’,’negative_F1’,
+‘F1_purity’,’cell_type’] indexed by cell.</p>
 </dd>
 </dl>
-</dd>
-</dl>
-<p>indexed by cell ID.</p>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -428,278 +488,120 @@ matrix that defines the spatial neighborhood.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_neighbor_contamination">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_neighbor_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uns_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'negative_marker_contamination'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uns_key_binary</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'negative_marker_contamination_binary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.calculate_neighbor_contamination" title="Link to this definition">#</a></dt>
-<dd><p>Compute per-cell negative-marker contamination and directed c_src→c_tgt
-contamination summaries.</p>
-<dl class="simple">
-<dt>Per-cell outputs (written to .obs):</dt><dd><ul class="simple">
-<li><dl class="simple">
-<dt>neg_marker_contam_counts:</dt><dd><p>Total transcripts in the focal cell that belong to genes that are
-(i) negative markers of the focal cell type and
-(ii) positive markers of at least one neighboring cell type.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>neg_marker_contam_fraction:</dt><dd><p>For each such gene g, compute x_i(g) / (x_i(g) + mean_neighbor(g)),
-averaged across genes (neighbors pooled across all neighbor types).</p>
-</dd>
-</dl>
-</li>
-</ul>
-</dd>
-<dt>Type x type outputs (written to .uns):</dt><dd><ul class="simple">
-<li><dl class="simple">
-<dt>uns_key:</dt><dd><p>A directed matrix with entries = mean over genes of
-x_i(g) / (x_i(g) + mean_src(g)), aggregated across all contributing
-(cell, gene) observations for (c_src, c_tgt).</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>uns_key_binary:</dt><dd><p>A directed matrix with entries =
-(# target cells of type c_tgt contaminated by c_src) / (# target cells of type c_tgt).
-Here “contaminated by c_src” is binary per target cell: at least one
-relevant gene (negative in target, positive in source) is detected in the
-target cell and detected in at least one neighbor of type c_src.</p>
-</dd>
-</dl>
-</li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;table&quot;</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
-<li><p><strong>tables_centroid_x_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;x_centroid&quot;</em>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_centroid_y_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;y_centroid&quot;</em>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
-<li><p><strong>require_neighbor_expression</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, contamination is only counted when the relevant gene is
-expressed in at least one neighboring cell of the source type.</p></li>
-<li><p><strong>neighbors_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;spatial_connectivities&quot;</em>) – Key in <cite>adata.obsp</cite> containing a cell x cell adjacency / connectivity
-matrix that defines the spatial neighborhood.</p></li>
-<li><p><strong>uns_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;negative_marker_contamination&quot;</em>) – Key in <cite>.uns</cite> under which the directed source → target mean contamination
-fraction matrix is stored.</p></li>
-<li><p><strong>uns_key_binary</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;negative_marker_contamination_binary&quot;</em>) – Key in <cite>.uns</cite> under which the directed source → target binary contamination
-proportion matrix is stored.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, store per-cell contamination metrics in
-<cite>sdata.tables[tables_key].obs</cite> and type-level matrices in <cite>.uns</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><strong>per_cell_df</strong> (<em>pd.DataFrame</em>) – Per-cell contamination metrics, indexed by cell ID.</p></li>
-<li><p><strong>contam_matrix_df</strong> (<em>pd.DataFrame</em>) – Directed type x type mean contamination fraction matrix (c_src rows, c_tgt columns).</p></li>
-<li><p><strong>contam_binary_df</strong> (<em>pd.DataFrame</em>) – Directed type x type binary contamination proportion matrix (c_src rows, c_tgt columns).</p></li>
-</ul>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">me_pairs_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_key_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'MECR_contam_score'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_key_n_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'MECR_n_pairs'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_key_n_coexpr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'MECR_n_coexpr'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR" title="Link to this definition">#</a></dt>
-<dd><p>Compute a per-cell contamination score based on mutually exclusive marker pairs.</p>
-<dl>
-<dt>For each spatial cell i:</dt><dd><ul>
-<li><p>take its cell type c_i,</p></li>
-<li><p>find all neighbor cells via <cite>neighbors_key</cite>,</p></li>
-<li><p>collect the neighbor types B(i),</p></li>
-<li><p>look up all mutually exclusive marker pairs (gene_a, gene_b) for each
-(ct_a=c_i, ct_b in B(i)) in <cite>me_pairs_df</cite>,</p></li>
-<li><p>count how many of these (gene_a, gene_b) pairs are co-expressed in cell i
-(both genes &gt; 0),</p></li>
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR" title="Link to this definition">#</a></dt>
+<dd><p>Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
+<p>Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[tables_key]</cite> as AnnData.</p></li>
+<li><p><strong>gene_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Collection of (gene1, gene2) pairs computed via <cite>segtraq.get_mut_excl_markers</cite>.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store MECR results in <cite>sdata.tables[‘table’].uns[‘MECR’]</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping {(gene1, gene2): MECR}, where MECR = P(both&gt;0) / P(at least one&gt;0).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.neighbor_prediction">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">neighbor_prediction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ct1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ct2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_x_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_y_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(10,</span> <span class="pre">10)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_permutations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.neighbor_prediction" title="Link to this definition">#</a></dt>
+<dd><p>See if it is possible to predict adjacency of ct1 next to ct2 based on ct1’s expression profiles using
+logistic regression.
+:param sdata: Container object expected to expose a mapping-like attribute <cite>tables</cite> such</p>
+<blockquote>
+<div><p>that <cite>sdata.tables[tables_key]</cite> returns an AnnData-like object. The AnnData
+must provide:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>.obs: a pandas.DataFrame containing at least the <cite>cell_type_key</cite> column</p></li>
+<li><p>.var_names: iterable of gene names</p></li>
+<li><p>.X: expression matrix (numpy array or sparse matrix)</p></li>
+<li><p>.obsm: a dict-like object; the function will look for or add
+“neighbor_celltype_binary”</p></li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ct1</strong> (<em>str</em><em> or </em><em>int</em>) – The focal cell type (as stored in <cite>.obs[cell_type_key]</cite>) for which to
+predict the presence of neighboring ct2 cells.</p></li>
+<li><p><strong>ct2</strong> (<em>str</em><em> or </em><em>int</em>) – The neighbor cell type (column name in <cite>adata.obsm[“neighbor_celltype_binary”]</cite>)
+whose presence/absence among neighbors is the target binary outcome.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key in <cite>sdata.tables</cite> to read the AnnData from (default: “table”).</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name in <cite>.obs</cite> containing transferred/annotated cell types
+(default: “transferred_cell_type”).</p></li>
+<li><p><strong>tables_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in <cite>.obs</cite> used as spatial coordinates for grid splitting and
+for computing neighbor relations if <cite>neighbor_celltype_binary</cite> must be added.
+(default: “x_centroid”, “y_centroid”).</p></li>
+<li><p><strong>tables_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in <cite>.obs</cite> used as spatial coordinates for grid splitting and
+for computing neighbor relations if <cite>neighbor_celltype_binary</cite> must be added.
+(default: “x_centroid”, “y_centroid”).</p></li>
+<li><p><strong>grid_shape</strong> (<em>tuple</em><em> of </em><em>two ints</em><em>, </em><em>optional</em>) – Number of spatial grid cells along (nx, ny) used to assign spatial folds;
+cells within the same grid tile go to the same split (default: (10, 10)).</p></li>
+<li><p><strong>n_permutations</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of permutations to build an empirical null distribution of AP scores
+(default: 100).</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Random seed used for reproducible splitting and permutation seeds (default: 0).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, operate on the AnnData in <cite>sdata.tables[tables_key]</cite> directly and
+write results into its <cite>.uns</cite>. If False, operate on a copy and return the
+result without mutating the original (default: True).</p></li>
+<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of parallel jobs for permutation computation. Passed to joblib. If
+-1, use all available cores. The implementation uses the ‘threading’
+backend to reduce memory-copy overhead (default: -1).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A dictionary describing the trained model and permutation results, saved
+into <cite>adata.uns[“neighbor_prediction”]</cite> and also returned. Keys include:</p>
+<blockquote>
+<div><ul class="simple">
 <li><dl class="simple">
-<dt>define:</dt><dd><p>score_i = n_coexpressed_pairs / n_relevant_pairs</p>
+<dt>”model_params”: {“weights”: array, “intercept”: float}</dt><dd><p>Coefficients of the trained high-precision logistic regression.</p>
 </dd>
 </dl>
-<p>where n_relevant_pairs is the number of unique ME pairs relevant for
-the neighborhood of cell i.</p>
+</li>
+<li><dl class="simple">
+<dt>”test_ap”: float</dt><dd><p>Observed average-precision (AP) on the spatial test fold.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>”empirical_p_value”: float</dt><dd><p>Fraction of permutation APs greater than or equal to observed AP.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>”null_aps”: ndarray, shape (n_permutations,)</dt><dd><p>AP scores computed under the null (permuted) models.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>”gene_names”: ndarray</dt><dd><p>Names of features (genes) corresponding to model coefficients.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>”splits”: {“train_indices”: array, “test_indices”: array}</dt><dd><p>Indices (into the focal-cell index set) of the train/test split.</p>
+</dd>
+</dl>
 </li>
 </ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[tables_key]</cite> as AnnData and a neighbor graph
-in <cite>.tables[tables_key].obsp[neighbors_key]</cite>.</p></li>
-<li><p><strong>me_pairs_df</strong> (<em>pd.DataFrame</em>) – <dl class="simple">
-<dt>DataFrame with mutually exclusive marker pairs, with at least columns:</dt><dd><ul>
-<li><p>”ct_a”: focal cell type,</p></li>
-<li><p>”ct_b”: neighbor cell type,</p></li>
-<li><p>”gene_a”: marker gene of ct_a,</p></li>
-<li><p>”gene_b”: marker gene of ct_b.</p></li>
-</ul>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in <cite>sdata.tables[tables_key].obs</cite> with cell-type labels.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;table&quot;</em><em>)</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>neighbors_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;spatial_connectivities&quot;</em><em>)</em>) – Key in <cite>adata.obsp</cite> containing the cell-cell adjacency / connectivity
-matrix.</p></li>
-<li><p><strong>use_raw</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – If True, use <cite>.layers[“raw”]</cite> if present, otherwise <cite>.X</cite>.</p></li>
-<li><p><strong>obs_key_score</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the <cite>.obs</cite> column where the contamination score is stored.</p></li>
-<li><p><strong>obs_key_n_pairs</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the <cite>.obs</cite> column storing the number of relevant ME pairs per cell.</p></li>
-<li><p><strong>obs_key_n_coexpr</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the <cite>.obs</cite> column storing the number of co-expressed ME pairs
-per cell.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p><strong>result_df</strong> –</p>
-<dl class="simple">
-<dt>DataFrame with one row per cell containing:</dt><dd><ul class="simple">
-<li><p>”cell_id”: index of the cell (adata.obs_names),</p></li>
-<li><p>”cell_type”,</p></li>
-<li><p>obs_key_score,</p></li>
-<li><p>obs_key_n_pairs,</p></li>
-<li><p>obs_key_n_coexpr.</p></li>
-</ul>
-</dd>
-</dl>
-<p>The same information is also written into <cite>adata.obs</cite> under the
-specified column names.</p>
+</div></blockquote>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
+<dd class="field-odd"><p>dict</p>
 </dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR_global">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR_global" title="Link to this definition">#</a></dt>
-<dd><p>Compute Fisher’s exact test for mutual exclusivity per gene pair.</p>
-<dl>
-<dt>For each (gene1, gene2) pair, this function:</dt><dd><ul>
-<li><p>binarizes expression as &gt; 0 (present/absent),</p></li>
-<li><p>builds a 2x2 contingency table:</p>
-<blockquote>
-<div><p>B&gt;0   B=0</p>
-</div></blockquote>
-<p>A&gt;0  a     b
-A=0  c     d</p>
-</li>
-<li><p>runs Fisher’s exact test with alternative=”less”, i.e.:</p>
-<blockquote>
-<div><p>H0: A and B are independent
-H1: A and B co-occur LESS than expected (mutual exclusivity)</p>
-</div></blockquote>
-</li>
-<li><p>returns the odds ratio and p-value for each pair.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[tables_key]</cite> as AnnData.</p></li>
-<li><p><strong>gene_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Collection of (gene1, gene2) pairs (e.g. from <cite>segtraq.get_mut_excl_markers</cite>).</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;table&quot;</em><em>)</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – <dl class="simple">
-<dt>If True, store results in:</dt><dd><p>sdata.tables[tables_key].uns[“Fisher_OR”]
-sdata.tables[tables_key].uns[“Fisher_pval”]</p>
-</dd>
-</dl>
-</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><strong>or_dict</strong> (<em>dict</em>) – Mapping {(gene1, gene2): odds_ratio}.
-Odds ratio &lt; 1 suggests mutual exclusivity (given a small p-value).</p></li>
-<li><p><strong>pval_dict</strong> (<em>dict</em>) – Mapping {(gene1, gene2): p_value} for the one-sided test
-(alternative=”less”). Small p-values indicate significant
-under-co-occurrence (mutual exclusivity).</p></li>
-</ul>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR_uns">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR_uns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">me_pairs_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uns_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'MECR_neighbors'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR_uns" title="Link to this definition">#</a></dt>
-<dd><p>Compute MECR (Fisher’s exact test for mutual exclusivity) for mutually
-exclusive marker pairs, restricted to A cells that neighbor B cells.</p>
-<p>For each row in <cite>me_pairs_df</cite> (ct_a, ct_b, gene_a, gene_b):</p>
-<blockquote>
-<div><ol class="arabic">
-<li><p>Select spatial cells of type ct_a that have at least one neighbor
-of type ct_b (based on <cite>neighbors_key</cite> in .obsp).</p></li>
-<li><p>On this subset of ct_a cells, build a 2x2 contingency table for
-gene_a and gene_b:</p>
-<blockquote>
-<div><blockquote>
-<div><p>gene_b&gt;0   gene_b=0</p>
-</div></blockquote>
-<p>gene_a&gt;0    n11        n10
-gene_a=0    n01        n00</p>
-</div></blockquote>
-</li>
-<li><p>Run Fisher’s exact test with alternative=”less”:</p>
-<blockquote>
-<div><p>H0: gene_a and gene_b are independent
-H1: co-occurrence is LESS than expected (mutual exclusivity)</p>
-</div></blockquote>
-</li>
-</ol>
-</div></blockquote>
-<p>This quantifies how much the B marker (gene_b) appears in A cells that
-are directly adjacent to B cells, i.e. a contamination-like signal.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[tables_key]</cite> as AnnData.</p></li>
-<li><p><strong>me_pairs_df</strong> (<em>pd.DataFrame</em>) – <dl class="simple">
-<dt>DataFrame with at least the columns:</dt><dd><ul>
-<li><p>”ct_a”   : focal cell type (where MECR is computed)</p></li>
-<li><p>”ct_b”   : neighbor cell type</p></li>
-<li><p>”gene_a” : marker gene of ct_a</p></li>
-<li><p>”gene_b” : marker gene of ct_b</p></li>
-</ul>
-</dd>
-</dl>
-<p>Typically derived from mutually exclusive marker pairs in scRNA-seq.</p>
-</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in <cite>sdata.tables[tables_key].obs</cite> with cell type labels for
-the spatial cells.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;table&quot;</em><em>)</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>neighbors_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;spatial_connectivities&quot;</em><em>)</em>) – Key in <cite>adata.obsp</cite> containing the adjacency / connectivity matrix
-(e.g. produced by Squidpy / Scanpy).</p></li>
-<li><p><strong>use_raw</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – If True, use <cite>.layers[“raw”]</cite> if present, otherwise <cite>.X</cite>.
-If False, always use <cite>.X</cite>.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default: True</em><em>)</em>) – <dl class="simple">
-<dt>If True, store the result DataFrame in</dt><dd><p>sdata.tables[tables_key].uns[uns_key].</p>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>uns_key</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;MECR_neighbors&quot;</em><em>)</em>) – Key in <cite>.uns</cite> under which the result DataFrame is stored if
-<cite>inplace=True</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p><strong>result_df</strong> –</p>
-<dl class="simple">
-<dt>One row per input pair with columns:</dt><dd><dl class="simple">
-<dt>[“ct_a”, “ct_b”, “gene_a”, “gene_b”,</dt><dd><p>”odds_ratio”, “pval”,
-“n_cells”, “n11”, “n10”, “n01”, “n00”]</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p>Rows where genes are missing or no cells are available contain NaNs.</p>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If fewer than 10 cells of type <cite>ct1</cite> are available (insufficient data).</p>
 </dd>
 </dl>
 </dd></dl>
@@ -753,11 +655,11 @@ If False, always use <cite>.X</cite>.</p></li>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.supervised">Supervised metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_contamination()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_neighbor_contamination()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR_global"><code class="docutils literal notranslate"><span class="pre">compute_MECR_global()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR_uns"><code class="docutils literal notranslate"><span class="pre">compute_MECR_uns()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_prediction"><code class="docutils literal notranslate"><span class="pre">neighbor_prediction()</span></code></a></li>
 </ul>
 </li>
 </ul>

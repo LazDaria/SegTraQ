@@ -170,12 +170,14 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
+
 <li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
 
@@ -307,31 +309,31 @@ document.write(`
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_marker_purity">calculate_marker_purity() (in module segtraq.sp.supervised)</a>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_contamination">calculate_contamination() (in module segtraq.sp.supervised)</a>
 </li>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_neighbor_contamination">calculate_neighbor_contamination() (in module segtraq.sp.supervised)</a>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_diff_abundance">calculate_diff_abundance() (in module segtraq.sp.supervised)</a>
+</li>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_marker_purity">calculate_marker_purity() (in module segtraq.sp.supervised)</a>
 </li>
       <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.centroid_mean_coord_diff">centroid_mean_coord_diff() (in module segtraq.ps.point_statistics)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
+      <li><a href="modules/volume.html#segtraq.vl.volume.compute_cell_cell_IoU">compute_cell_cell_IoU() (in module segtraq.vl.volume)</a>
+</li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.rc.region_correlation)</a>
 </li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.rc.region_correlation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_center_border_ncv_correlation">compute_center_border_ncv_correlation() (in module segtraq.rc.region_correlation)</a>
 </li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.rc.region_correlation)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
 </li>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR">compute_MECR() (in module segtraq.sp.supervised)</a>
-</li>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR_global">compute_MECR_global() (in module segtraq.sp.supervised)</a>
-</li>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR_uns">compute_MECR_uns() (in module segtraq.sp.supervised)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_purity">compute_purity() (in module segtraq.cs.clustering_stability)</a>
 </li>
@@ -396,6 +398,8 @@ document.write(`
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/supervised.html#segtraq.sp.supervised.neighbor_prediction">neighbor_prediction() (in module segtraq.sp.supervised)</a>
+</li>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.num_cells">num_cells() (in module segtraq.bl.baseline)</a>
 </li>
   </ul></td>
@@ -415,6 +419,8 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.perc_unassigned_transcripts_per_gene">perc_unassigned_transcripts_per_gene() (in module segtraq.bl.baseline)</a>
+</li>
+      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.periphery_enrichment_score">periphery_enrichment_score() (in module segtraq.ps.point_statistics)</a>
 </li>
   </ul></td>
 </tr></table>
