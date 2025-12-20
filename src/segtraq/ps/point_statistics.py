@@ -123,7 +123,7 @@ def centroid_mean_coord_diff(
     df_total_y = df_centroids_y.merge(y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
-    
+
     # calculate the euclidean distance
     df_total["distance"] = np.linalg.norm(
         df_total.loc[:, [centroid_key[0], centroid_key[1]]].values
