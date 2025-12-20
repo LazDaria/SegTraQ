@@ -506,6 +506,7 @@ class SegTraQ:
     def run_point_statistics(
         self,
         genes: str | list[str] = None,
+        erosion_fraction_of_radius: float = 0.3,
         inplace: bool = True,
     ):
         """
@@ -539,7 +540,9 @@ class SegTraQ:
 
         cmd_df = self.ps.centroid_mean_coord_diff(genes=genes, inplace=inplace)
         dtm_df = self.ps.distance_to_membrane(genes=genes, inplace=inplace)
-        pe_df = self.ps.periphery_enrichment_score(genes=genes, inplace=inplace)
+        pe_df = self.ps.periphery_enrichment_score(
+            genes=genes, erosion_fraction_of_radius=erosion_fraction_of_radius, inplace=inplace
+        )
 
         if inplace:
             return None
@@ -939,7 +942,6 @@ class _PSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             shapes_key=self._p.shapes_key,
-            centroid_key=["centroid_x", "centroid_y"],
             inplace=inplace,
         )
 
