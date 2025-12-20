@@ -540,7 +540,9 @@ class SegTraQ:
 
         cmd_df = self.ps.centroid_mean_coord_diff(genes=genes, inplace=inplace)
         dtm_df = self.ps.distance_to_membrane(genes=genes, inplace=inplace)
-        pe_df = self.ps.periphery_enrichment_score(genes=genes, erosion_fraction_of_radius=erosion_fraction_of_radius, inplace=inplace)
+        pe_df = self.ps.periphery_enrichment_score(
+            genes=genes, erosion_fraction_of_radius=erosion_fraction_of_radius, inplace=inplace
+        )
 
         if inplace:
             return None
