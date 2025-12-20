@@ -721,11 +721,14 @@ def validate_spatialdata(
     )
 
     # check coordinate columns in points
-    for coord_key in [points_x_key, points_y_key]:
+    for coord_key, arg_name in [
+        (points_x_key, "points_x_key"),
+        (points_y_key, "points_y_key"),
+    ]:
         assert coord_key in points.columns, (
             f"Points DataFrame must contain coordinate column '{coord_key}'. "
             f"Available columns: {points.columns.tolist()}. "
-            f"You can set this with the '{coord_key}' argument."
+            f"You can set this with the '{arg_name}' argument."
         )
 
     if points_z_key is not None:
