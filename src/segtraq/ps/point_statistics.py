@@ -20,7 +20,6 @@ def centroid_mean_coord_diff(
     points_x_key: str = "x",
     points_y_key: str = "y",
     shapes_key: str = "cell_boundaries",
-    centroid_key: list = ("centroid_x", "centroid_y"),
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -55,8 +54,6 @@ def centroid_mean_coord_diff(
         Column for the y-coordinate of each transcript/spot.
     shapes_key: str, optional
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
-    centroid_key: list, optional
-        The keys to access the centroids in the `sdata.shapes` slot. Defaults are "centroid_x" and "centroid_y"
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -77,32 +74,30 @@ def centroid_mean_coord_diff(
     )
 
     # extract the transcript information
-    df = sdata.points[points_key].compute()
+    transcript_df = sdata.points[points_key].compute()
 
     # filter to those cells which are in the anndata object
-    df = df[df[points_cell_id_key].isin(sdata[tables_key].obs[points_cell_id_key])]
+    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(sdata[tables_key].obs[points_cell_id_key])]
 
     # subset transcript dataframe to the feature
     if genes is not None:
         if isinstance(genes, str):
-            df = df[df[points_gene_key] == genes]
+            transcript_df = transcript_df[transcript_df[points_gene_key] == genes]
         else:
-            df = df[df[points_gene_key].isin(genes)]
+            transcript_df = transcript_df[transcript_df[points_gene_key].isin(genes)]
 
         # check if the dataframe is empty after filtering
-        if df.empty:
+        if transcript_df.empty:
             raise ValueError(f"No transcripts found for the specified gene(s): {genes}.")
 
-    # drop the background transcripts in cell_id == -1
-    df = df[df[points_cell_id_key] != points_background_id]
-
+    # drop the background transcripts
+    transcript_df = transcript_df[transcript_df[points_cell_id_key] != points_background_id]
     # group by cell id
-    df = df.groupby(points_cell_id_key)
+    transcript_df = transcript_df.groupby(points_cell_id_key)
 
-    # compute the mean x,y coordiantes of the transcripts per cell
-    x_mean = df[points_x_key].mean()
-    y_mean = df[points_y_key].mean()
-
+    # compute the mean x, y coordinates of the transcripts per cell
+    x_mean = transcript_df[points_x_key].mean()
+    y_mean = transcript_df[points_y_key].mean()
     x_mean = pd.DataFrame(x_mean)
     y_mean = pd.DataFrame(y_mean)
 
@@ -118,6 +113,8 @@ def centroid_mean_coord_diff(
         gdf.index.name = id_key
 
     # extract the centroids
+    # it is important here that the centroid keys are not identical to the points_x_key and points_y_key
+    centroid_key = [f"{points_x_key}_cell", f"{points_y_key}_cell"]
     df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
@@ -126,7 +123,7 @@ def centroid_mean_coord_diff(
     df_total_y = df_centroids_y.merge(y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
-
+    
     # calculate the euclidean distance
     df_total["distance"] = np.linalg.norm(
         df_total.loc[:, [centroid_key[0], centroid_key[1]]].values
@@ -150,8 +147,8 @@ def centroid_mean_coord_diff(
     df_total = df_total.reset_index(drop=True)
 
     if inplace:
-        # removing the area, since it already exists in the object
-        df_total = df_total.drop(columns=["cell_area"])
+        # only keep new, relevant columns
+        df_total = df_total[[id_key, f"distance_{feature}"]]
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
@@ -228,25 +225,25 @@ def distance_to_membrane(
     )
 
     # extract the transcript information
-    df = sdata.points[points_key].compute()
+    transcript_df = sdata.points[points_key].compute()
 
     # filter to those cells which are in the anndata object
-    df = df[df[points_cell_id_key].isin(sdata[tables_key].obs[tables_cell_id_key])]
+    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(sdata[tables_key].obs[tables_cell_id_key])]
 
     # subset transcript dataframe to the feature
     if genes is not None:
         if isinstance(genes, str):
             genes = [genes]
-        df = df[df[points_gene_key].isin(genes)]
+        transcript_df = transcript_df[transcript_df[points_gene_key].isin(genes)]
 
     # drop the background transcripts
-    df = df[df[points_cell_id_key] != points_background_id]
+    transcript_df = transcript_df[transcript_df[points_cell_id_key] != points_background_id]
 
     # zip the coordinates to a common column as tuple
-    df["coordinates"] = list(zip(df[points_x_key], df[points_y_key], strict=False))
+    transcript_df["coordinates"] = list(zip(transcript_df[points_x_key], transcript_df[points_y_key], strict=False))
 
     # make the coordinates into a Point object
-    df["coordinate_points"] = df["coordinates"].map(lambda x: Point(x))
+    transcript_df["coordinate_points"] = transcript_df["coordinates"].map(lambda x: Point(x))
 
     gdf = sdata[shapes_key].copy()
 
@@ -259,7 +256,7 @@ def distance_to_membrane(
         id_key = tables_cell_id_key
         gdf.index.name = id_key
 
-    gdf = gdf.merge(df, how="inner", left_on=points_cell_id_key, right_on=id_key)
+    gdf = gdf.merge(transcript_df, how="inner", left_on=points_cell_id_key, right_on=id_key)
     gdf = gdf.explode()
 
     # compute the linear outline of the cell segmentation
@@ -301,12 +298,14 @@ def distance_to_membrane(
     mean_distance_to_outline = mean_distance_to_outline.reset_index(drop=True)
 
     if inplace:
+        # only keep new, relevant columns
+        mean_distance_to_outline = mean_distance_to_outline[
+            [id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
+        ]
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=mean_distance_to_outline[
-                [id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
-            ],
+            df_to_merge=mean_distance_to_outline,
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=id_key,
         )
