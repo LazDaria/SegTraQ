@@ -381,7 +381,7 @@ class SegTraQ:
     def run_supervised_metrics(
         self,
         markers: dict[str, dict[str, list[str]]],
-        mut_exclusive_pairs: list[tuple[str, str]],
+        mutually_exclusive_pairs: list[tuple[str, str]],
         cell_type_key: str = "transferred_cell_type",
         use_quantiles: bool = False,
         inplace: bool = True,
@@ -404,7 +404,7 @@ class SegTraQ:
             Required. Precomputed marker dictionary:
             {cell_type: {"positive": [...], "negative": [...]}}
 
-        mut_exclusive_pairs : list of tuple
+        mutually_exclusive_pairs : list of tuple
             Precomputed mutually exclusive gene pairs.
 
         cell_type_key : str
@@ -431,12 +431,12 @@ class SegTraQ:
 
         out = {}
 
-        assert mut_exclusive_pairs is not None and len(mut_exclusive_pairs) > 0, (
-            "MECR requires `mut_exclusive_pairs`. Please compute them externally "
+        assert mutually_exclusive_pairs is not None and len(mutually_exclusive_pairs) > 0, (
+            "MECR requires `mutually_exclusive_pairs`. Please compute them externally "
             "with `segtraq.get_mut_excl_markers` and pass them here."
         )
         mecr_res = self.sp.compute_MECR(
-            gene_pairs=mut_exclusive_pairs,
+            mutually_exclusive_pairs=mutually_exclusive_pairs,
             inplace=inplace,
         )
 
@@ -754,10 +754,10 @@ class _SPFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_MECR(self, gene_pairs: list[tuple[str, str]], inplace: bool = True):
+    def compute_MECR(self, mutually_exclusive_pairs: list[tuple[str, str]], inplace: bool = True):
         return sp.compute_MECR(
             sdata=self._p.sdata,
-            gene_pairs=gene_pairs,
+            mutually_exclusive_pairs=mutually_exclusive_pairs,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
