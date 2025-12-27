@@ -328,7 +328,6 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">run_label_transfer()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.get_ref_markers"><code class="docutils literal notranslate"><span class="pre">get_ref_markers()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.get_mut_excl_markers"><code class="docutils literal notranslate"><span class="pre">get_mut_excl_markers()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.validate_spatialdata"><code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.add_nuc_shapes_via_cellpose"><code class="docutils literal notranslate"><span class="pre">add_nuc_shapes_via_cellpose()</span></code></a></li>
 </ul>
@@ -410,65 +409,120 @@ type (computed across all ordered contrasts).</p>
 </section>
 <section id="overlap-filtering">
 <h2>Overlap filtering:<a class="headerlink" href="#overlap-filtering" title="Link to this heading">#</a></h2>
-<dl>
+<dl class="simple">
 <dt>Overlap filtering is applied separately to positive and negative markers:</dt><dd><ul class="simple">
 <li><p>Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.</p></li>
 <li><p>Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.</p></li>
 </ul>
-<p>Parameters</p>
 </dd>
 </dl>
-<dl class="simple">
-<dt>ref_cell_type<span class="classifier">str</span></dt><dd><p>Column in <cite>adata_ref.obs</cite> containing cell type labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">param adata_ref<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference single-cell dataset (cells x genes).</p>
 </dd>
-<dt>mode<span class="classifier">{“auc”, “de”}, optional (default: “de”)</span></dt><dd><ul class="simple">
+<dt class="field-even">type adata_ref<span class="colon">:</span></dt>
+<dd class="field-even"><p>AnnData</p>
+</dd>
+<dt class="field-odd">param ref_cell_type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Column in <cite>adata_ref.obs</cite> containing cell type labels.</p>
+</dd>
+<dt class="field-even">type ref_cell_type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">param mode<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
 <li><p>“auc”: compute markers using pairwise AUC/pAUC.</p></li>
 <li><p>“de” : compute markers using pairwise DE.</p></li>
 </ul>
 </dd>
-<dt>max_fpr<span class="classifier">float or None, optional (default: None)</span></dt><dd><p>(AUC mode only)
+<dt class="field-even">type mode<span class="colon">:</span></dt>
+<dd class="field-even"><p>{“auc”, “de”}, optional (default: “de”)</p>
+</dd>
+<dt class="field-odd">param max_fpr<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(AUC mode only)
 If None, compute full AUC. If in (0, 1], compute standardized pAUC over
 [0, max_fpr] using sklearn’s <cite>roc_auc_score(max_fpr=max_fpr)</cite>.</p>
 </dd>
-<dt>auc_pos_thresh<span class="classifier">float, optional (default: 0.9)</span></dt><dd><p>(AUC mode only)
+<dt class="field-even">type max_fpr<span class="colon">:</span></dt>
+<dd class="field-even"><p>float or None, optional (default: None)</p>
+</dd>
+<dt class="field-odd">param auc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(AUC mode only)
 Minimum AUC/pAUC for a gene to be considered “up in c_i vs c_j”.</p>
 </dd>
-<dt>method<span class="classifier">str, optional (default: “wilcoxon”)</span></dt><dd><p>(DE mode only)
+<dt class="field-even">type auc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.9)</p>
+</dd>
+<dt class="field-odd">param method<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(DE mode only)
 DE method passed to <cite>sc.tl.rank_genes_groups</cite> (“wilcoxon”, “t-test”, “logreg”, …).</p>
 </dd>
-<dt>pval_adj_thresh<span class="classifier">float, optional (default: 0.05)</span></dt><dd><p>(DE mode only)
+<dt class="field-even">type method<span class="colon">:</span></dt>
+<dd class="field-even"><p>str, optional (default: “wilcoxon”)</p>
+</dd>
+<dt class="field-odd">param pval_adj_thresh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(DE mode only)
 FDR (adjusted p-value) cutoff for positive markers.</p>
 </dd>
-<dt>logfc_pos_thresh<span class="classifier">float, optional (default: 1.0)</span></dt><dd><p>(DE mode only)
+<dt class="field-even">type pval_adj_thresh<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.05)</p>
+</dd>
+<dt class="field-odd">param logfc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(DE mode only)
 Minimum log fold-change for <em>positive</em> markers (c &gt; d).</p>
 </dd>
-<dt>vote_fraction_pos<span class="classifier">float, optional (default: 0.5)</span></dt><dd><p>Fraction of valid pairwise contrasts in which a gene must be “up in c”
+<dt class="field-even">type logfc_pos_thresh<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 1.0)</p>
+</dd>
+<dt class="field-odd">param vote_fraction_pos<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Fraction of valid pairwise contrasts in which a gene must be “up in c”
 (AUC mode) / significantly up in c (DE mode) to be called a positive
 marker of c.</p>
 </dd>
-<dt>vote_fraction_neg<span class="classifier">float, optional (default: 0.5)</span></dt><dd><p>Fraction of valid ordered pairwise contrasts against type c in which a
-gene must be up in the other type and rare in c to be called a negative
-marker of c.</p>
+<dt class="field-even">type vote_fraction_pos<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.5)</p>
 </dd>
-<dt>min_pos_frac<span class="classifier">float, optional (default: 0.1)</span></dt><dd><p>Minimum fraction of cells of type c in which a gene must be expressed
+<dt class="field-odd">param min_pos_frac<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Minimum fraction of cells of type c in which a gene must be expressed
 (counts &gt; 0) in the reference dataset to be considered a <em>positive</em>
 marker of c.</p>
 </dd>
-<dt>max_neg_frac<span class="classifier">float, optional (default: 0.05)</span></dt><dd><p>Maximum fraction of cells of type c in which a gene may be expressed
+<dt class="field-even">type min_pos_frac<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.1)</p>
+</dd>
+<dt class="field-odd">param max_neg_frac<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Maximum fraction of cells of type c in which a gene may be expressed
 (counts &gt; 0) in the reference dataset to be considered a <em>negative</em>
 marker of c.</p>
 </dd>
-<dt>t_pos<span class="classifier">float, optional (default: 0.25)</span></dt><dd><p>Overlap filter threshold for positive markers.</p>
+<dt class="field-even">type max_neg_frac<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.05)</p>
 </dd>
-<dt>t_neg<span class="classifier">float, optional (default: 1.0)</span></dt><dd><p>Overlap filter threshold for negative markers.</p>
+<dt class="field-odd">param t_pos<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Overlap filter threshold for positive markers.</p>
 </dd>
-<dt>min_cells_per_type<span class="classifier">int, optional (default: 10)</span></dt><dd><p>Minimum number of cells required per cell type to be included in pairwise
+<dt class="field-even">type t_pos<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 0.25)</p>
+</dd>
+<dt class="field-odd">param t_neg<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Overlap filter threshold for negative markers.</p>
+</dd>
+<dt class="field-even">type t_neg<span class="colon">:</span></dt>
+<dd class="field-even"><p>float, optional (default: 1.0)</p>
+</dd>
+<dt class="field-odd">param min_cells_per_type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Minimum number of cells required per cell type to be included in pairwise
 computations.</p>
 </dd>
-<dt>n_jobs<span class="classifier">int, optional (default: 1)</span></dt><dd><p>Number of parallel jobs for running pairwise computations.</p>
+<dt class="field-even">type min_cells_per_type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int, optional (default: 10)</p>
 </dd>
-</dl>
-<dl class="field-list simple">
+<dt class="field-odd">param n_jobs<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Number of parallel jobs for running pairwise computations.</p>
+</dd>
+<dt class="field-even">type n_jobs<span class="colon">:</span></dt>
+<dd class="field-even"><p>int, optional (default: 1)</p>
+</dd>
 <dt class="field-odd">returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>{cell_type: {“positive”: [genes], “negative”: [genes]}}</p>
 </dd>
@@ -477,44 +531,6 @@ computations.</p>
 </dd>
 </dl>
 </section>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.get_mut_excl_markers">
-<span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">get_mut_excl_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_coexpr_ct</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_coexpr_all</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k_per_ct</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.get_mut_excl_markers" title="Link to this definition">#</a></dt>
-<dd><p>Finding mutually-exclusive pairs.</p>
-<dl class="simple">
-<dt>For each cell type ct:</dt><dd><ul class="simple">
-<li><p>pos genes: markers[ct][“positive”]</p></li>
-<li><p>neg candidates: markers[ct][“negative”] intersect (union of positive genes of other types)</p></li>
-</ul>
-</dd>
-<dt>Keep pairs (pos, neg) that satisfy:</dt><dd><ul class="simple">
-<li><p>coexpr within ct:  P(pos&gt;0 &amp; neg&gt;0 | ct)  &lt;= max_coexpr_ct</p></li>
-<li><p>coexpr overall:    P(pos&gt;0 &amp; neg&gt;0 | all) &lt;= max_coexpr_all</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>adata</strong> (<em>AnnData</em>) – Reference dataset (cells x genes).</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: […], “negative”: […]}}.</p></li>
-<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in adata.obs containing the cell type labels (must match markers keys).</p></li>
-<li><p><strong>max_coexpr_ct</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.01</em><em>)</em>) – Maximum allowed within-cell-type co-expression fraction for a kept pair.</p></li>
-<li><p><strong>max_coexpr_all</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.001</em><em>)</em>) – Maximum allowed global co-expression fraction for a kept pair.</p></li>
-<li><p><strong>top_k_per_ct</strong> (<em>int</em><em> or </em><em>None</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – If provided, keep only the top K pairs per cell type (ranked by low coexpr_ct,
-then low coexpr_all).</p></li>
-<li><p><strong>chunk</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 50_000</em><em>)</em>) – Chunk size for sparse computations over many gene pairs.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Columns: [“cell_type”, “pos_gene”, “neg_gene”, “coexpr_ct”, “coexpr_all”].</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -638,7 +654,6 @@ of the spatialdata object. Defaults to “nucleus_boundaries”.</p></li>
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">run_label_transfer()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.get_ref_markers"><code class="docutils literal notranslate"><span class="pre">get_ref_markers()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.get_mut_excl_markers"><code class="docutils literal notranslate"><span class="pre">get_mut_excl_markers()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.validate_spatialdata"><code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.add_nuc_shapes_via_cellpose"><code class="docutils literal notranslate"><span class="pre">add_nuc_shapes_via_cellpose()</span></code></a></li>
 </ul>
