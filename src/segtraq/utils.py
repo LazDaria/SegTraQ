@@ -649,7 +649,7 @@ def get_ref_markers(
         - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
         - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
 
-        Parameters
+    Parameters
     ----------
     adata_ref : AnnData
         Reference single-cell dataset (cells x genes).
@@ -677,10 +677,6 @@ def get_ref_markers(
     vote_fraction_pos : float, optional (default: 0.5)
         Fraction of valid pairwise contrasts in which a gene must be "up in c"
         (AUC mode) / significantly up in c (DE mode) to be called a positive
-        marker of c.
-    vote_fraction_neg : float, optional (default: 0.5)
-        Fraction of valid ordered pairwise contrasts against type c in which a
-        gene must be up in the other type and rare in c to be called a negative
         marker of c.
     min_pos_frac : float, optional (default: 0.1)
         Minimum fraction of cells of type c in which a gene must be expressed
@@ -864,6 +860,11 @@ def get_ref_markers(
     # ------------------------------------------------------------
     # Build negative marker lists
     # ------------------------------------------------------------
+    # Keep negative markers only if they are positive markers of at least one other cell type
+    pos_any_final: set[str] = set().union(*pos_lists.values()) if len(pos_lists) else set()
+    for ct in usable_types:
+        neg_sets[ct] = {g for g in neg_sets[ct] if g in pos_any_final}
+        
     neg_lists: Dict[str, List[str]] = {ct: sorted(list(neg_sets[ct])) for ct in usable_types}
 
     # Overlap filter for negative markers
@@ -874,143 +875,6 @@ def get_ref_markers(
         for ct in usable_types
     }
     return markers
-
-def get_mut_excl_markers(
-    adata_ref,
-    markers: Dict[str, Dict[str, List[str]]],
-    ref_cell_type: str,
-    max_coexpr_ct: float = 0.01,
-    max_coexpr_all: float = 0.001,
-    top_k_per_ct: Optional[int] = None,
-    chunk: int = 50_000,
-) -> pd.DataFrame:
-    """
-    Finding mutually-exclusive pairs.
-
-    For each cell type ct:
-      - pos genes: markers[ct]["positive"]
-      - neg candidates: markers[ct]["negative"] intersect (union of positive genes of other types)
-
-    Keep pairs (pos, neg) that satisfy:
-      - coexpr within ct:  P(pos>0 & neg>0 | ct)  <= max_coexpr_ct
-      - coexpr overall:    P(pos>0 & neg>0 | all) <= max_coexpr_all
-
-    Parameters
-    ----------
-    adata : AnnData
-        Reference dataset (cells x genes). 
-    markers : dict
-        {cell_type: {"positive": [...], "negative": [...]}}.
-    ref_cell_type : str
-        Column in adata.obs containing the cell type labels (must match markers keys).
-    max_coexpr_ct : float, optional (default: 0.01)
-        Maximum allowed within-cell-type co-expression fraction for a kept pair.
-    max_coexpr_all : float, optional (default: 0.001)
-        Maximum allowed global co-expression fraction for a kept pair.
-    top_k_per_ct : int or None, optional (default: None)
-        If provided, keep only the top K pairs per cell type (ranked by low coexpr_ct,
-        then low coexpr_all).
-    chunk : int, optional (default: 50_000)
-        Chunk size for sparse computations over many gene pairs.
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns: ["cell_type", "pos_gene", "neg_gene", "coexpr_ct", "coexpr_all"].
-    """
-    # --- indexing + detection matrix ---
-    var_names = np.asarray(adata.var_names)
-    gene_to_idx = {g: i for i, g in enumerate(var_names)}
-
-    X = adata.X
-    X = sparse.csr_matrix(X) if not sparse.issparse(X) else X.tocsr()
-    B = (X > 0).astype(np.uint8)  # sparse detection matrix
-
-    n_all = int(adata.n_obs)
-    ctypes = pd.Categorical(adata.obs[ref_cell_type])
-    types = list(ctypes.categories)
-
-    # positives per type + global union of positives
-    pos_by_ct = {ct: set(markers.get(ct, {}).get("positive", []) or []) for ct in types}
-    all_pos_union = set().union(*pos_by_ct.values())
-
-    rows: List[dict] = []
-
-    for ct in types:
-        mask_ct = (ctypes == ct)
-        n_ct = int(mask_ct.sum())
-
-        pos_genes = pos_by_ct.get(ct, set())
-        if not pos_genes:
-            continue
-
-        neg_raw = markers.get(ct, {}).get("negative", []) or []
-        neg_genes = set(neg_raw).intersection(all_pos_union - pos_genes)
-        if not neg_genes:
-            continue
-
-        pos_idx = np.fromiter((gene_to_idx[g] for g in pos_genes if g in gene_to_idx), dtype=np.int64)
-        neg_idx = np.fromiter((gene_to_idx[g] for g in neg_genes if g in gene_to_idx), dtype=np.int64)
-        if pos_idx.size == 0 or neg_idx.size == 0:
-            continue
-
-        # cartesian product of pos_idx x neg_idx
-        idx1 = np.repeat(pos_idx, neg_idx.size)
-        idx2 = np.tile(neg_idx, pos_idx.size)
-        P = int(idx1.size)
-        if P == 0:
-            continue
-
-        B_ct = B[mask_ct]
-
-        n11_ct = np.empty(P, dtype=np.int64)
-        n11_all = np.empty(P, dtype=np.int64)
-
-        for start in range(0, P, chunk):
-            end = min(start + chunk, P)
-            n11_ct[start:end] = (
-                B_ct[:, idx1[start:end]]
-                .multiply(B_ct[:, idx2[start:end]])
-                .sum(axis=0)
-            ).A1.astype(np.int64)
-            n11_all[start:end] = (
-                B[:, idx1[start:end]]
-                .multiply(B[:, idx2[start:end]])
-                .sum(axis=0)
-            ).A1.astype(np.int64)
-
-        coexpr_ct = n11_ct / float(n_ct)
-        coexpr_all = n11_all / float(n_all)
-
-        keep = (coexpr_ct <= max_coexpr_ct) & (coexpr_all <= max_coexpr_all)
-        if not np.any(keep):
-            continue
-
-        kept = np.nonzero(keep)[0]
-        for k in kept:
-            rows.append(
-                {
-                    "cell_type": ct,
-                    "pos_gene": str(var_names[int(idx1[k])]),
-                    "neg_gene": str(var_names[int(idx2[k])]),
-                    "coexpr_ct": float(coexpr_ct[k]),
-                    "coexpr_all": float(coexpr_all[k]),
-                }
-            )
-
-    df = pd.DataFrame(rows, columns=["cell_type", "pos_gene", "neg_gene", "coexpr_ct", "coexpr_all"])
-    if df.empty:
-        return df
-
-    df = df.sort_values(
-        ["cell_type", "coexpr_ct", "coexpr_all"],
-        ascending=[True, True, True],
-    ).reset_index(drop=True)
-
-    if top_k_per_ct is not None:
-        df = df.groupby("cell_type", as_index=False).head(int(top_k_per_ct)).reset_index(drop=True)
-
-    return df
 
 def _is_missing(x):
     """Return True for any kind of NA / NaN / None."""
