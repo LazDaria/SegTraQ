@@ -436,7 +436,7 @@ class SegTraQ:
             "with `segtraq.get_mut_excl_markers` and pass them here."
         )
         mecr_res = self.sp.compute_MECR(
-            mutually_exclusive_pairs=mutually_exclusive_pairs,
+            markers=markers,
             inplace=inplace,
         )
 
@@ -754,10 +754,15 @@ class _SPFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_MECR(self, mutually_exclusive_pairs: list[tuple[str, str]], inplace: bool = True):
+    def compute_MECR(self, 
+        markers: dict[str, dict[str, list[str]]],
+        pseudocount: float = 0.5,
+        inplace: bool = True
+    ):
         return sp.compute_MECR(
             sdata=self._p.sdata,
-            mutually_exclusive_pairs=mutually_exclusive_pairs,
+            markers=markers,
+            pseudocount = pseudocount,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )

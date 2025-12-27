@@ -18,139 +18,103 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 
-
 def compute_MECR(
     sdata,
-    mutually_exclusive_pairs: pd.DataFrame,
+    markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
+    pseudocount: float = 0.5,
     inplace: bool = True,
-    gene1_col: str = "pos_gene",
-    gene2_col: str = "neg_gene",
 ) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], float]]:
     """
-    Compute Fisher's exact test for mutual exclusivity per gene pair.
+    Compute mutual exclusivity between marker genes using Fisher's exact test.
 
-    For each (gene1, gene2) pair, this function:
-        - binarizes expression as > 0 (present/absent),
-        - builds a 2x2 contingency table:
+    Mutually exclusive pairs are constructed as unique, unordered (pos, neg)
+    marker pairs across cell types. A pair is discarded if both genes appear
+    as positive markers in the same cell type.
 
-              B>0   B=0
-          A>0  a     b
-          A=0  c     d
-
-        - runs Fisher's exact test with alternative="less", i.e.:
-
-              H0: A and B are independent
-              H1: A and B co-occur LESS than expected (mutual exclusivity)
-
-        - returns the odds ratio and p-value for each pair.
+    Fisher's exact test (alternative="less") is run globally across all cells.
+    Odds ratios are reported with a pseudocount correction to avoid infinities.
 
     Parameters
     ----------
-    sdata : SpatialData-like
-        Container with `.tables[tables_key]` as AnnData.
-    mutually_exclusive_pairs : pd.DataFrame
-        DataFrame containing gene pairs. By default uses columns
-        ["pos_gene", "neg_gene"] but can be changed via gene1_col/gene2_col.
-        Pairs are deduplicated before testing.
-    tables_key : str, optional (default: "table")
+    sdata
+        SpatialData-like object containing an AnnData table.
+    markers
+        {cell_type: {"positive": [...], "negative": [...]}}.
+    tables_key
         Key of the AnnData table in `sdata.tables`.
-    inplace : bool, optional (default: True)
-        If True, store results in:
-            sdata.tables[tables_key].uns["Fisher_OR"]
-            sdata.tables[tables_key].uns["Fisher_pval"]
-    gene1_col : str, optional (default: "pos_gene")
-        Column name in mutually_exclusive_pairs for gene1.
-    gene2_col : str, optional (default: "neg_gene")
-        Column name in mutually_exclusive_pairs for gene2.
+    pseudocount
+        Pseudocount used only for odds ratio computation.
+    inplace
+        If True, stores results in `tbl.uns["Fisher_OR"]` and `tbl.uns["Fisher_pval"]`.
 
     Returns
     -------
-    or_dict : dict
-        Mapping {(gene1, gene2): odds_ratio}.
-        Odds ratio < 1 suggests mutual exclusivity (given a small p-value).
-    pval_dict : dict
-        Mapping {(gene1, gene2): p_value} for the one-sided test
-        (alternative="less"). Small p-values indicate significant
-        under-co-occurrence (mutual exclusivity).
+    or_dict
+        {(gene1, gene2): odds_ratio}, unordered gene pairs.
+    pval_dict
+        {(gene1, gene2): p_value}, Fisher exact test (alternative="less").
     """
-
-    if gene1_col not in mutually_exclusive_pairs.columns or gene2_col not in mutually_exclusive_pairs.columns:
-        raise ValueError(
-            f"mutually_exclusive_pairs must contain columns '{gene1_col}' and '{gene2_col}'. "
-            f"Found columns: {list(mutually_exclusive_pairs.columns)}"
-        )
-
-    # Deduplicate pairs
-    pairs_unique = (
-        mutually_exclusive_pairs[[gene1_col, gene2_col]]
-        .dropna()
-        .astype(str)
-        .apply(lambda r: tuple(sorted((r[gene1_col], r[gene2_col]))), axis=1)
-        .drop_duplicates()
-        .tolist()
-    )
-    gene_pairs: List[Tuple[str, str]] = [(g1, g2) for g1, g2 in pairs_unique]
-
     tbl = sdata.tables[tables_key]
 
     X = tbl.X
-
-    if _looks_like_counts(X):
-        arr = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
-    elif "raw" not in tbl.layers:
-        raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
-            "and the main matrix does not look like counts."
-        )
-    else:
-        raw = tbl.layers["raw"]
-        arr = raw.toarray() if hasattr(raw, "toarray") else np.asarray(raw)
+    arr = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
     var_index = pd.Index(tbl.var_names)
-    n_cells = int(arr.shape[0])
+    n_cells = arr.shape[0]
+    pc = float(pseudocount)
+
+    # --- build unique unordered candidate pairs ---
+    candidate_pairs = set()
+    pos_sets = {}
+
+    for ct, d in markers.items():
+        pos = set((d or {}).get("positive", []) or [])
+        neg = set((d or {}).get("negative", []) or [])
+        pos_sets[ct] = pos
+
+        for g1 in pos:
+            for g2 in neg:
+                if g1 != g2:
+                    a, b = (g1, g2) if g1 < g2 else (g2, g1)
+                    candidate_pairs.add((a, b))
+
+    # --- drop pairs co-positive in any cell type ---
+    kept_pairs = []
+    for g1, g2 in candidate_pairs:
+        if any(g1 in ps and g2 in ps for ps in pos_sets.values()):
+            continue
+        kept_pairs.append((g1, g2))
+
+    det = (arr > 0)
 
     or_dict: Dict[Tuple[str, str], float] = {}
     pval_dict: Dict[Tuple[str, str], float] = {}
 
-    for g1, g2 in gene_pairs:
-        if g1 not in var_index or g2 not in var_index:
-            or_dict[(g1, g2)] = np.nan
-            pval_dict[(g1, g2)] = np.nan
-            continue
+    for g1, g2 in kept_pairs:
+        i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
+        e1, e2 = det[:, i1], det[:, i2]
 
-        idx1 = var_index.get_loc(g1)
-        idx2 = var_index.get_loc(g2)
+        a = int((e1 & e2).sum())
+        b = int((e1 & ~e2).sum())
+        c = int((~e1 & e2).sum())
+        d = n_cells - a - b - c
 
-        expr1 = arr[:, idx1]
-        expr2 = arr[:, idx2]
-
-        e1 = expr1 > 0
-        e2 = expr2 > 0
-
-        a = int((e1 & e2).sum())    # A>0, B>0
-        b = int((e1 & ~e2).sum())   # A>0, B=0
-        c = int((~e1 & e2).sum())   # A=0, B>0
-        d = n_cells - a - b - c     # A=0, B=0
-
-        if (a + b + c) == 0:
-            or_dict[(g1, g2)] = np.nan
-            pval_dict[(g1, g2)] = np.nan
-            continue
-
-        table = [[a, b], [c, d]]
-
+        # Fisher's exact returns exact p-value for under-co-occurrence (mutual exclusivity)
         try:
-            odds_ratio, pval = fisher_exact(table, alternative="less")
+            _, pval = fisher_exact([[a, b], [c, d]], alternative="less")
         except Exception:
-            odds_ratio, pval = np.nan, np.nan
+            pval = np.nan
 
-        or_dict[(g1, g2)] = odds_ratio
-        pval_dict[(g1, g2)] = pval
+        # odds ratio is computed with a pseudocount (Haldane–Anscombe correction)
+        or_pc = ((a + pc) * (d + pc)) / ((b + pc) * (c + pc))
+
+        or_dict[(g1, g2)] = float(or_pc)
+        pval_dict[(g1, g2)] = float(pval) if np.isfinite(pval) else np.nan
 
     if inplace:
-        tbl.uns.setdefault("Fisher_OR", {}).update(or_dict)
-        tbl.uns.setdefault("Fisher_pval", {}).update(pval_dict)
+        tbl.uns["Fisher_OR"] = dict(or_dict)
+        tbl.uns["Fisher_pval"] = dict(pval_dict)
 
     return or_dict, pval_dict
 
