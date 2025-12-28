@@ -17,8 +17,8 @@ class SegTraQ:
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
         tables_area_volume_key: str | None = "cell_area",
-        tables_x_key: str | None = "x",
-        tables_y_key: str | None = "y",
+        tables_centroid_x_key: str | None = "x_centroid",
+        tables_centroid_y_key: str | None = "y_centroid",
         points_key: str = "transcripts",
         points_cell_id_key: str = "cell_id",
         points_background_id: str | int = "UNASSIGNED",
@@ -60,10 +60,10 @@ class SegTraQ:
             If `None`, area/volume-based metrics will be computed via
             `segtraq.bl.morphological_features`.
 
-        tables_x_key : str or None, optional, default="x"
+        tables_centroid_x_key : str or None, optional, default="x_centroid"
             Column in the cell table with the x-coordinate of the cell centroid.
 
-        tables_y_key : str or None, optional, default="y"
+        tables_centroid_y_key : str or None, optional, default="y_centroid"
             Column in the cell table with the y-coordinate of the cell centroid.
 
         points_key : str, default="transcripts"
@@ -131,8 +131,8 @@ class SegTraQ:
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             tables_area_volume_key=tables_area_volume_key,
-            tables_x_key=tables_x_key,
-            tables_y_key=tables_y_key,
+            tables_centroid_x_key=tables_centroid_x_key,
+            tables_centroid_y_key=tables_centroid_y_key,
             points_key=points_key,
             points_cell_id_key=points_cell_id_key,
             points_background_id=points_background_id,
@@ -153,8 +153,8 @@ class SegTraQ:
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
         self.tables_area_volume_key = tables_area_volume_key
-        self.tables_x_key = tables_x_key
-        self.tables_y_key = tables_y_key
+        self.tables_centroid_x_key = tables_centroid_x_key
+        self.tables_centroid_y_key = tables_centroid_y_key
 
         self.points_key = points_key
         self.points_cell_id_key = points_cell_id_key
@@ -380,20 +380,9 @@ class SegTraQ:
     def run_supervised_metrics(
         self,
         markers: dict[str, dict[str, list[str]]],
-        mut_exclusive_pairs: list[tuple[str, str]],
+        mutually_exclusive_pairs: list[tuple[str, str]],
         cell_type_key: str = "transferred_cell_type",
-        radius: float = 15,
-        n_neighs: int = 10,
-        num_cells: int = 10_000,
-        seed: int = 0,
-        cell_centroid_x_key: str = "cell_centroid_x",
-        cell_centroid_y_key: str = "cell_centroid_y",
-        weight_edges: bool = False,
-        lfc_thresh: float = 1.0,
-        pval_thresh: float = 0.05,
-        min_n_cells: int = 20,
-        min_n_transcripts: int = 20,
-        use_quantiles: bool = True,
+        use_quantiles: bool = False,
         inplace: bool = True,
     ):
         """
@@ -414,17 +403,11 @@ class SegTraQ:
             Required. Precomputed marker dictionary:
             {cell_type: {"positive": [...], "negative": [...]}}
 
-        mut_exclusive_pairs : list of tuple
+        mutually_exclusive_pairs : list of tuple
             Precomputed mutually exclusive gene pairs.
 
         cell_type_key : str
             Cell-type column in `sdata.tables[tables_key].obs`.
-
-        radius, n_neighs, num_cells, seed, cell_centroid_x_key, cell_centroid_y_key, weight_edges :
-            Passed to SP.calculate_contamination.
-
-        lfc_thresh, pval_thresh, min_n_cells, min_n_transcripts :
-            Passed to SP.calculate_diff_abundance.
 
         use_quantiles : bool, optional
             Passed to SP.calculate_marker_purity.
@@ -442,31 +425,17 @@ class SegTraQ:
                 "MECR": ...,
                 "contamination": ...,
                 "marker_purity": ...,
-                "diff_abundance": ...,
                 }
         """
 
         out = {}
 
-        assert mut_exclusive_pairs is not None and len(mut_exclusive_pairs) > 0, (
-            "MECR requires `mut_exclusive_pairs`. Please compute them externally "
+        assert mutually_exclusive_pairs is not None and len(mutually_exclusive_pairs) > 0, (
+            "MECR requires `mutually_exclusive_pairs`. Please compute them externally "
             "with `segtraq.get_mut_excl_markers` and pass them here."
         )
-        mecr_res = self.sp.compute_MECR(
-            gene_pairs=mut_exclusive_pairs,
-            inplace=inplace,
-        )
-
-        C_cnt, contamination_df, records_df = self.sp.calculate_contamination(
+        fisher_or, fisher_pval = self.sp.compute_MECR(
             markers=markers,
-            cell_type_key=cell_type_key,
-            radius=radius,
-            n_neighs=n_neighs,
-            num_cells=num_cells,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
-            weight_edges=weight_edges,
             inplace=inplace,
         )
 
@@ -477,16 +446,9 @@ class SegTraQ:
             inplace=inplace,
         )
 
-        de_results, summary = self.sp.calculate_diff_abundance(
+        per_cell_contam, cont_mat, cont_mat_bin = self.sp.calculate_neighbor_contamination(
             cell_type_key=cell_type_key,
             markers=markers,
-            lfc_thresh=lfc_thresh,
-            pval_thresh=pval_thresh,
-            min_n_cells=min_n_cells,
-            min_n_transcripts=min_n_transcripts,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
             inplace=inplace,
         )
 
@@ -496,10 +458,9 @@ class SegTraQ:
             return None
         else:
             out = {
-                "MECR": mecr_res,
-                "contamination": (C_cnt, contamination_df, records_df),
+                "MECR": (fisher_or, fisher_pval),
                 "marker_purity": purity_df,
-                "diff_abundance": (de_results, summary),
+                "neighbor_contamination": (per_cell_contam, cont_mat, cont_mat_bin),
             }
             return out
 
@@ -804,51 +765,25 @@ class _SPFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_MECR(self, gene_pairs: list[tuple[str, str]], inplace: bool = True):
+    def compute_MECR(self, markers: dict[str, dict[str, list[str]]], pseudocount: float = 0.5, inplace: bool = True):
         return sp.compute_MECR(
             sdata=self._p.sdata,
-            gene_pairs=gene_pairs,
+            markers=markers,
+            pseudocount=pseudocount,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
 
     compute_MECR.__doc__ = sp.compute_MECR.__doc__
 
-    def calculate_contamination(
-        self,
-        markers: dict,
-        cell_type_key: str,
-        radius: float = 15,
-        n_neighs: int = 10,
-        num_cells: int = 10_000,
-        seed: int = 0,
-        cell_centroid_x_key: str = "cell_centroid_x",
-        cell_centroid_y_key: str = "cell_centroid_y",
-        weight_edges: bool = False,
-        inplace: bool = True,
-    ):
-        return sp.calculate_contamination(
-            sdata=self._p.sdata,
-            markers=markers,
-            cell_type_key=cell_type_key,
-            tables_key=self._p.tables_key,
-            radius=radius,
-            n_neighs=n_neighs,
-            num_cells=num_cells,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
-            weight_edges=weight_edges,
-            inplace=inplace,
-        )
-
-    calculate_contamination.__doc__ = sp.calculate_contamination.__doc__
-
     def calculate_marker_purity(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
-        use_quantiles: bool = True,
+        use_quantiles: bool = False,
+        require_neighbor_expression: bool = True,
+        weight_cont: float = 0.7,
+        neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
     ):
         return sp.calculate_marker_purity(
@@ -856,42 +791,44 @@ class _SPFacade:
             cell_type_key=cell_type_key,
             markers=markers,
             use_quantiles=use_quantiles,
+            require_neighbor_expression=require_neighbor_expression,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_centroid_x_key=self._p.tables_centroid_x_key,
+            tables_centroid_y_key=self._p.tables_centroid_y_key,
+            weight_cont=weight_cont,
+            neighbors_key=neighbors_key,
             inplace=inplace,
         )
 
     calculate_marker_purity.__doc__ = sp.calculate_marker_purity.__doc__
 
-    def calculate_diff_abundance(
+    def calculate_neighbor_contamination(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
-        lfc_thresh: float = 1.0,
-        pval_thresh: float = 0.05,
-        min_n_cells: int = 20,
-        min_n_transcripts: int = 20,
-        seed: int = 0,
-        cell_centroid_x_key: str = "cell_centroid_x",
-        cell_centroid_y_key: str = "cell_centroid_y",
+        require_neighbor_expression: bool = True,
+        neighbors_key: str | None = "spatial_connectivities",
+        uns_key: str = "negative_marker_contamination",
+        uns_key_binary: str = "negative_marker_contamination_binary",
         inplace: bool = True,
     ):
-        return sp.calculate_diff_abundance(
+        return sp.calculate_neighbor_contamination(
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
             tables_key=self._p.tables_key,
-            lfc_thresh=lfc_thresh,
-            pval_thresh=pval_thresh,
-            min_n_cells=min_n_cells,
-            min_n_transcripts=min_n_transcripts,
-            seed=seed,
-            cell_centroid_x_key=cell_centroid_x_key,
-            cell_centroid_y_key=cell_centroid_y_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_centroid_x_key=self._p.tables_centroid_x_key,
+            tables_centroid_y_key=self._p.tables_centroid_y_key,
+            require_neighbor_expression=require_neighbor_expression,
+            neighbors_key=neighbors_key,
+            uns_key=uns_key,
+            uns_key_binary=uns_key_binary,
             inplace=inplace,
         )
 
-    calculate_diff_abundance.__doc__ = sp.calculate_diff_abundance.__doc__
+    calculate_neighbor_contamination.__doc__ = sp.calculate_neighbor_contamination.__doc__
 
     def neighbor_prediction(
         self,
