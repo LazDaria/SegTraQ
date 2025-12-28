@@ -171,6 +171,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
@@ -493,7 +494,7 @@ If False, returns a DataFrame with [‘cell_id’, ‘transferred_cell_type’, 
 
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_point_statistics">
-<span class="sig-name descname"><span class="pre">run_point_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">feature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_point_statistics" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">run_point_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">erosion_fraction_of_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_point_statistics" title="Link to this definition">#</a></dt>
 <dd><p>Compute point-statistics metrics per feature and optionally merge into the cell table.</p>
 <p>This runs:
 1) <cite>centroid_mean_coord_diff</cite>  → per-cell distance between mean transcript coords and cell centroid
@@ -519,8 +520,8 @@ If False, returns a DataFrame with [‘cell_id’, ‘transferred_cell_type’, 
 <li><p>If <cite>inplace=True</cite>: returns None (results written to <cite>.obs</cite>).</p></li>
 <li><dl class="simple">
 <dt>If <cite>inplace=False</cite>: returns</dt><dd><p>{
-“centroid_mean_coord_diff”: {feature: DataFrame, …},
-“distance_to_membrane”:    {feature: DataFrame, …},
+“centroid_mean_coord_diff”: {genes: DataFrame, …},
+“distance_to_membrane”:    {genes: DataFrame, …},
 }</p>
 </dd>
 </dl>
