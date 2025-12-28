@@ -7,7 +7,6 @@ from . import bl, cs, pl, ps, rc, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
     add_nuc_shapes_via_cellpose,
-    get_mut_excl_markers,
     get_ref_markers,
     run_label_transfer,
     validate_spatialdata,
@@ -17,7 +16,6 @@ from .utils import (
 for _f in (
     run_label_transfer,
     get_ref_markers,
-    get_mut_excl_markers,
     validate_spatialdata,
     add_nuc_shapes_via_cellpose,
 ):
