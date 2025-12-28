@@ -1,22 +1,14 @@
+import warnings
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import squidpy as sq
-import warnings
 from scipy import sparse
-from tqdm.auto import tqdm
-
-from ..utils import _score_one_list, _score_negative_with_neighbors, merge_into_obs, _looks_like_counts
-
-from typing import Dict, Tuple, List
-import numpy as np
 from scipy.stats import fisher_exact
 
-from typing import Dict, Tuple
-import numpy as np
-import pandas as pd
+from ..utils import _looks_like_counts, _score_negative_with_neighbors, _score_one_list, merge_into_obs
+
 
 def compute_MECR(
     sdata,
@@ -24,7 +16,7 @@ def compute_MECR(
     tables_key: str = "table",
     pseudocount: float = 0.5,
     inplace: bool = True,
-) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], float]]:
+) -> tuple[dict[tuple[str, str], float], dict[tuple[str, str], float]]:
     """
     Compute mutual exclusivity between marker genes using Fisher's exact test.
 
@@ -86,10 +78,10 @@ def compute_MECR(
             continue
         kept_pairs.append((g1, g2))
 
-    det = (arr > 0)
+    det = arr > 0
 
-    or_dict: Dict[Tuple[str, str], float] = {}
-    pval_dict: Dict[Tuple[str, str], float] = {}
+    or_dict: dict[tuple[str, str], float] = {}
+    pval_dict: dict[tuple[str, str], float] = {}
 
     for g1, g2 in kept_pairs:
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
@@ -118,10 +110,11 @@ def compute_MECR(
 
     return or_dict, pval_dict
 
+
 def calculate_neighbor_contamination(
     sdata,
     cell_type_key: str,
-    markers: Dict[str, Dict[str, List[str]]],
+    markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
@@ -174,7 +167,7 @@ def calculate_neighbor_contamination(
     tables_centroid_y_key : str or None, optional, default="y_centroid"
         Column in the cell table with the y-coordinate of the cell centroid.
     require_neighbor_expression : bool, optional, default=True
-        If True, contamination is only counted when the relevant gene is 
+        If True, contamination is only counted when the relevant gene is
         expressed in at least one neighboring cell of the source type.
     neighbors_key : str, optional, default="spatial_connectivities"
         Key in `adata.obsp` containing a cell x cell adjacency / connectivity
@@ -226,11 +219,11 @@ def calculate_neighbor_contamination(
         warnings.warn(
             f"neighbors_key={neighbors_key} missing; computing Delaunay neighbors.",
             RuntimeWarning,
+            stacklevel=2,
         )
-        adata.obsm["spatial"] = adata.obs[
-            [tables_centroid_x_key, tables_centroid_y_key]
-        ].to_numpy()
+        adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
         import squidpy as sq  # local import so this function doesn't hard-require squidpy
+
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
 
     G = adata.obsp[neighbors_key]
@@ -249,12 +242,12 @@ def calculate_neighbor_contamination(
     all_cts = sorted({ct for ct in cell_types if not pd.isna(ct)})
 
     # denominator per target type for binary matrix
-    tgt_totals = {ct: int(np.sum(cell_types == ct)) for ct in all_cts}  
+    tgt_totals = {ct: int(np.sum(cell_types == ct)) for ct in all_cts}
 
     # ----------------------------------------------------------------------
     # Precompute for each (c_src, c_tgt): negative(c_tgt) ∩ positive(c_src)
     # ----------------------------------------------------------------------
-    type_pair_genes: Dict[Tuple[str, str], np.ndarray] = {}
+    type_pair_genes: dict[tuple[str, str], np.ndarray] = {}
 
     for c_tgt in all_cts:
         neg = neg_sets.get(c_tgt, set())
@@ -277,10 +270,10 @@ def calculate_neighbor_contamination(
     sum_cell_frac = np.zeros(n_cells, dtype=float)
     count_cell_genes = np.zeros(n_cells, dtype=int)
 
-    sum_pair = defaultdict(float)   # mean fraction numerator per (c_src, c_tgt)
-    count_pair = defaultdict(int)   # gene contributions per (c_src, c_tgt)
+    sum_pair = defaultdict(float)  # mean fraction numerator per (c_src, c_tgt)
+    count_pair = defaultdict(int)  # gene contributions per (c_src, c_tgt)
 
-    contam_cells_hit = defaultdict(int)  #target cells hit by source (binary)
+    contam_cells_hit = defaultdict(int)  # target cells hit by source (binary)
 
     # ----------------------------------------------------------------------
     # Loop over cells
@@ -301,7 +294,7 @@ def calculate_neighbor_contamination(
         used_genes = set()
 
         # track which source types contaminate this target cell at least once
-        contaminated_by_src = set()  
+        contaminated_by_src = set()
 
         for c_src in {ct for ct in nb_cts if not pd.isna(ct)}:
             pair = (c_src, c_tgt)
@@ -324,7 +317,7 @@ def calculate_neighbor_contamination(
                 if x_i_g <= 0:
                     continue
 
-                #only call it contamination if at least one neighbor expresses the gene
+                # only call it contamination if at least one neighbor expresses the gene
                 x_nb_g = X_nb_src[:, k]
                 if require_neighbor_expression:
                     mask_pos = x_nb_g > 0
@@ -338,9 +331,8 @@ def calculate_neighbor_contamination(
                     continue
 
                 # binary “this target cell is contaminated by this source type”
-                contaminated_by_src.add(c_src) 
+                contaminated_by_src.add(c_src)
 
-                
                 denom_all = x_i_g + mean_src
                 if denom_all <= 0:
                     continue
@@ -358,8 +350,8 @@ def calculate_neighbor_contamination(
                     used_genes.add(g_idx)
 
         # update per-(c_src, c_tgt) binary hit counts once per cell
-        for c_src in contaminated_by_src:            
-            contam_cells_hit[(c_src, c_tgt)] += 1     
+        for c_src in contaminated_by_src:
+            contam_cells_hit[(c_src, c_tgt)] += 1
 
     # ----------------------------------------------------------------------
     # Build per-cell output
@@ -394,12 +386,12 @@ def calculate_neighbor_contamination(
     contam_matrix_df = pd.DataFrame(contam_mat, index=ct_list, columns=ct_list)
 
     # binary target-normalized matrix
-    contam_bin = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)  
-    for (c_src, c_tgt), hits in contam_cells_hit.items():                   
-        denom = tgt_totals.get(c_tgt, 0)                                    
-        if denom > 0:                                                    
-            contam_bin[idxmap[c_src], idxmap[c_tgt]] = hits / denom          
-    contam_binary_df = pd.DataFrame(contam_bin, index=ct_list, columns=ct_list) 
+    contam_bin = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)
+    for (c_src, c_tgt), hits in contam_cells_hit.items():
+        denom = tgt_totals.get(c_tgt, 0)
+        if denom > 0:
+            contam_bin[idxmap[c_src], idxmap[c_tgt]] = hits / denom
+    contam_binary_df = pd.DataFrame(contam_bin, index=ct_list, columns=ct_list)
 
     # ----------------------------------------------------------------------
     # Write to .obs and .uns
@@ -413,9 +405,10 @@ def calculate_neighbor_contamination(
             df_cell_id_key=tables_cell_id_key,
         )
         sdata.tables[tables_key].uns[uns_key] = contam_matrix_df
-        sdata.tables[tables_key].uns[uns_key_binary] = contam_binary_df  
+        sdata.tables[tables_key].uns[uns_key_binary] = contam_binary_df
 
     return per_cell_df, contam_matrix_df, contam_binary_df
+
 
 def calculate_marker_purity(
     sdata,
@@ -454,7 +447,7 @@ def calculate_marker_purity(
 
     Finally:
         - Combine positive_F1 and negative_F1 into an overall F1_purity
-          that rewards high positive-F1 and low negative-F1. Weighting 
+          that rewards high positive-F1 and low negative-F1. Weighting
           factor weight_cont controls the importance of negative-F1.
 
     Parameters
@@ -477,7 +470,7 @@ def calculate_marker_purity(
     tables_centroid_y_key : str or None, optional, default="y_centroid"
         Column in the cell table with the y-coordinate of the cell centroid.
     require_neighbor_expression : bool, optional, default=True
-        If True, contamination is only counted when the relevant gene is 
+        If True, contamination is only counted when the relevant gene is
         expressed in at least one neighboring cell of the source type.
     weight_cont : float, optional, default=0.7
         Weighting factor for negative marker F1 in the overall F1_purity.
@@ -499,14 +492,12 @@ def calculate_marker_purity(
         indexed by cell ID.
     """
     if not (0 <= weight_cont <= 1):
-        raise ValueError(
-            f"weight_cont must be between 0 and 1 (inclusive), got {weight_cont}"
-        )
+        raise ValueError(f"weight_cont must be between 0 and 1 (inclusive), got {weight_cont}")
 
     adata = sdata.tables[tables_key]
 
     X = adata.X  # keep sparse if sparse
-    
+
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
     elif "raw" not in adata.layers:
@@ -530,20 +521,20 @@ def calculate_marker_purity(
 
     # Output arrays
     pos_prec = np.full(n_cells, np.nan, dtype=float)
-    pos_rec  = np.full(n_cells, np.nan, dtype=float)
-    pos_f1   = np.full(n_cells, np.nan, dtype=float)
+    pos_rec = np.full(n_cells, np.nan, dtype=float)
+    pos_f1 = np.full(n_cells, np.nan, dtype=float)
 
     neg_prec = np.full(n_cells, np.nan, dtype=float)
-    neg_rec  = np.full(n_cells, np.nan, dtype=float)
-    neg_f1   = np.full(n_cells, np.nan, dtype=float)
+    neg_rec = np.full(n_cells, np.nan, dtype=float)
+    neg_f1 = np.full(n_cells, np.nan, dtype=float)
 
-    purity   = np.full(n_cells, np.nan, dtype=float)
+    purity = np.full(n_cells, np.nan, dtype=float)
 
     # ---------------- POSITIVE markers (per type, global) -------------------
     unique_cts = pd.unique(cell_types)
 
     for ct in unique_cts:
-        mask_cells = (cell_types == ct)
+        mask_cells = cell_types == ct
         idx_cells = np.where(mask_cells)[0]
         if idx_cells.size == 0:
             continue
@@ -572,8 +563,8 @@ def calculate_marker_purity(
             use_quantiles=use_quantiles,
         )
         pos_prec[idx_cells] = p_prec_ct
-        pos_rec[idx_cells]  = p_rec_ct
-        pos_f1[idx_cells]   = p_f1_ct
+        pos_rec[idx_cells] = p_rec_ct
+        pos_f1[idx_cells] = p_f1_ct
 
     # ------------- NEGATIVE markers: neighborhood-aware ---------------------
     if neighbors_key not in adata.obsp:
@@ -583,7 +574,9 @@ def calculate_marker_purity(
             RuntimeWarning,
             stacklevel=2,
         )
-        sdata[tables_key].obsm["spatial"] = sdata[tables_key].obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
+        sdata[tables_key].obsm["spatial"] = (
+            sdata[tables_key].obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
+        )
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
 
     G = adata.obsp[neighbors_key]
