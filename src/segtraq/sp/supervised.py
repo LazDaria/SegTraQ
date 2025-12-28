@@ -1,17 +1,20 @@
 import warnings
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import squidpy as sq
 from joblib import Parallel, delayed
-from collections import defaultdict
 from scipy import sparse
+from scipy.stats import fisher_exact
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import StandardScaler
-from tqdm.auto import tqdm
-from ..utils import _looks_like_counts, _score_one_list, merge_into_obs, _score_negative_with_neighbors
+
+from ..utils import _looks_like_counts, _score_negative_with_neighbors, _score_one_list, merge_into_obs
 from .utils import add_neighbor_celltype_binary, assign_grid_splits, run_single_permutation
-from scipy.stats import fisher_exact
+
 
 def compute_MECR(
     sdata,
@@ -638,6 +641,7 @@ def calculate_marker_purity(
         )
 
     return result
+
 
 def neighbor_prediction(
     sdata,
