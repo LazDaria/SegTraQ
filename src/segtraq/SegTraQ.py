@@ -17,7 +17,7 @@ class SegTraQ:
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
         tables_area_volume_key: str | None = "cell_area",
-        tables_centroid_x_key: str | None = "x_centroid", 
+        tables_centroid_x_key: str | None = "x_centroid",
         tables_centroid_y_key: str | None = "y_centroid",
         points_key: str = "transcripts",
         points_cell_id_key: str = "cell_id",
@@ -435,7 +435,7 @@ class SegTraQ:
             "MECR requires `mutually_exclusive_pairs`. Please compute them externally "
             "with `segtraq.get_mut_excl_markers` and pass them here."
         )
-        mecr_res = self.sp.compute_MECR(
+        fisher_or, fisher_pval = self.sp.compute_MECR(
             markers=markers,
             inplace=inplace,
         )
@@ -457,8 +457,7 @@ class SegTraQ:
             return None
         else:
             out = {
-                "MECR": mecr_res,
-                "contamination": (C_cnt, contamination_df, records_df),
+                "MECR": (fisher_or, fisher_pval),
                 "marker_purity": purity_df,
                 "neighbor_contamination": (per_cell_contam, cont_mat, cont_mat_bin),
             }
@@ -754,15 +753,11 @@ class _SPFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_MECR(self, 
-        markers: dict[str, dict[str, list[str]]],
-        pseudocount: float = 0.5,
-        inplace: bool = True
-    ):
+    def compute_MECR(self, markers: dict[str, dict[str, list[str]]], pseudocount: float = 0.5, inplace: bool = True):
         return sp.compute_MECR(
             sdata=self._p.sdata,
             markers=markers,
-            pseudocount = pseudocount,
+            pseudocount=pseudocount,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
@@ -814,7 +809,7 @@ class _SPFacade:
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_centroid_x_key=self._p.tables_centroid_x_key,
             tables_centroid_y_key=self._p.tables_centroid_y_key,
-            require_neighbor_expression = require_neighbor_expression,
+            require_neighbor_expression=require_neighbor_expression,
             neighbors_key=neighbors_key,
             uns_key=uns_key,
             uns_key_binary=uns_key_binary,
@@ -822,6 +817,7 @@ class _SPFacade:
         )
 
     calculate_neighbor_contamination.__doc__ = sp.calculate_neighbor_contamination.__doc__
+
 
 class _PSFacade:
     """

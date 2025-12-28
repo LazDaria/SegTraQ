@@ -1,30 +1,25 @@
+import collections
 import copy
 import math
 import warnings
-from collections import Counter
 from collections.abc import Callable
 from importlib.metadata import version
-from itertools import combinations
-from joblib import Parallel, delayed
 
 import geopandas as gpd
 import numpy as np
-import collections
 import pandas as pd
 import scanpy as sc
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
-from statsmodels.stats.multitest import multipletests
+from joblib import Parallel, delayed
 from packaging import version as pkg_version
-from typing import Dict, List, Optional, Tuple
 from rasterio.features import shapes
 from scipy import sparse
-from scipy.stats import fisher_exact
 from scipy.spatial.distance import cdist
-from sklearn.metrics import roc_auc_score
 from shapely.affinity import affine_transform, translate
 from shapely.geometry import shape
+from sklearn.metrics import roc_auc_score
 from spatialdata.transformations import (
     get_transformation,
     get_transformation_between_coordinate_systems,
@@ -66,9 +61,10 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     drop_genes = set(counts[counts >= (t * n_ct)].index)
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
+
 def _score_one_list(
-    X: np.ndarray,         
-    marker_idx: np.ndarray, 
+    X: np.ndarray,
+    marker_idx: np.ndarray,
     all_markers_idx: np.ndarray | None = None,
     use_quantiles: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -80,36 +76,29 @@ def _score_one_list(
         recall:    (n_cells,)
         F1:        (n_cells,)
     """
-    # Restrict scoring to a positive and negative markers 
+    # Restrict scoring to a positive and negative markers
     all_markers_idx = np.asarray(all_markers_idx, dtype=int)
     X = X[:, all_markers_idx]
     n_cells, n_genes = X.shape
 
     # remap marker_idx into the all_markers_idx
     marker_set = set(np.asarray(marker_idx, dtype=int))
-    marker_idx = np.array(
-        [k for k, g in enumerate(all_markers_idx) if g in marker_set],
-        dtype=int
-    )
+    marker_idx = np.array([k for k, g in enumerate(all_markers_idx) if g in marker_set], dtype=int)
 
     # No markers -> all metrics NaN for all cells
     if marker_idx.size == 0:
-        return (
-            np.full(n_cells, np.nan),
-            np.full(n_cells, np.nan),
-            np.full(n_cells, np.nan)
-        )
+        return (np.full(n_cells, np.nan), np.full(n_cells, np.nan), np.full(n_cells, np.nan))
 
     # Boolean array marking actual positives
     actual = np.zeros(n_genes, dtype=bool)
     actual[marker_idx] = True
 
-    frac = actual.mean()     
+    frac = actual.mean()
 
     if use_quantiles:
         # Compute quantile threshold per cell
-        thr = np.quantile(X, 1.0 - frac, axis=1)    
-        predicted = X > thr[:, None]                 
+        thr = np.quantile(X, 1.0 - frac, axis=1)
+        predicted = X > thr[:, None]
     else:
         predicted = X > 0
 
@@ -121,8 +110,8 @@ def _score_one_list(
 
     with np.errstate(divide="ignore", invalid="ignore"):
         precision = np.where(tp + fp > 0, tp / (tp + fp), 0.0)
-        recall    = np.where(tp + fn > 0, tp / (tp + fn), 0.0)
-        F1        = np.where(
+        recall = np.where(tp + fn > 0, tp / (tp + fn), 0.0)
+        F1 = np.where(
             (precision + recall) > 0,
             2 * precision * recall / (precision + recall),
             0.0,
@@ -130,13 +119,14 @@ def _score_one_list(
 
     return precision, recall, F1
 
+
 def _score_negative_with_neighbors(
     X_dense: np.ndarray,
     cell_types: np.ndarray,
-    markers: Dict[str, Dict[str, List[str]]],
+    markers: dict[str, dict[str, list[str]]],
     genes: np.ndarray,
     require_neighbor_expression: bool,
-    neighbor_indices: List[np.ndarray],
+    neighbor_indices: list[np.ndarray],
     use_quantiles: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -160,15 +150,15 @@ def _score_negative_with_neighbors(
     var_index = pd.Index(genes)
 
     # Precompute per-type sets for fast membership checks
-    pos_sets: Dict[str, set] = {}
-    neg_sets: Dict[str, set] = {}
+    pos_sets: dict[str, set] = {}
+    neg_sets: dict[str, set] = {}
     for ct, m in markers.items():
         pos_sets[ct] = set(m.get("positive", []))
         neg_sets[ct] = set(m.get("negative", []))
 
     neg_prec = np.full(n_cells, np.nan, dtype=float)
-    neg_rec  = np.full(n_cells, np.nan, dtype=float)
-    neg_f1   = np.full(n_cells, np.nan, dtype=float)
+    neg_rec = np.full(n_cells, np.nan, dtype=float)
+    neg_f1 = np.full(n_cells, np.nan, dtype=float)
 
     for i in range(n_cells):
         ct = cell_types[i]
@@ -210,7 +200,7 @@ def _score_negative_with_neighbors(
                     if g not in pos_sets.get(nb_ct, set()):
                         continue
 
-                    nb_mask = (cell_types[nbs] == nb_ct)
+                    nb_mask = cell_types[nbs] == nb_ct
                     if nb_mask.any() and (X_dense[nbs[nb_mask], g_idx] > 0).any():
                         keep_genes.append(g)
                         break
@@ -238,10 +228,11 @@ def _score_negative_with_neighbors(
         )
 
         neg_prec[i] = n_prec_i[0]
-        neg_rec[i]  = n_rec_i[0]
-        neg_f1[i]   = n_f1_i[0]
+        neg_rec[i] = n_rec_i[0]
+        neg_f1[i] = n_f1_i[0]
 
     return neg_prec, neg_rec, neg_f1
+
 
 def _assign_celltype_by_pearson(
     adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, tables_cell_id_key: str = "cell_id"
@@ -511,6 +502,7 @@ def merge_into_var(sdata, tables_key, df_to_merge):
 
     sdata.tables[tables_key].var = df
 
+
 def _pairwise_auc(
     adata: AnnData,
     ctypes: pd.Categorical,
@@ -520,7 +512,7 @@ def _pairwise_auc(
     max_fpr: float | None,
     auc_pos_thresh: float,
     min_cells_per_type: int,
-) -> Tuple[str, str, List[str], bool]:
+) -> tuple[str, str, list[str], bool]:
     """
     Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b)
     and return genes up in ct_a vs ct_b.
@@ -567,6 +559,7 @@ def _pairwise_auc(
 
     return (ct_a, ct_b, pos_genes_a, True)
 
+
 def _pairwise_de(
     adata: AnnData,
     ctypes: pd.Categorical,
@@ -577,7 +570,7 @@ def _pairwise_de(
     pval_adj_thresh: float,
     logfc_pos_thresh: float,
     min_cells_per_type: int,
-) -> Tuple[str, str, List[str], bool]:
+) -> tuple[str, str, list[str], bool]:
     """
     Helper: run DE for one pair (ct_a, ct_b) and return genes up in ct_a.
     """
@@ -598,14 +591,12 @@ def _pairwise_de(
     )
     df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
 
-    pos_df = df[
-        (df["pvals_adj"] < pval_adj_thresh)
-        & (df["logfoldchanges"] > logfc_pos_thresh)
-    ]
+    pos_df = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
 
     pos_genes_a = pos_df["names"].tolist()
 
     return (ct_a, ct_b, pos_genes_a, True)
+
 
 def get_ref_markers(
     adata_ref: AnnData,
@@ -623,7 +614,7 @@ def get_ref_markers(
     t_neg: float = 1.0,
     min_cells_per_type: int = 10,
     n_jobs: int = 1,
-) -> Dict[str, Dict[str, List[str]]]:
+) -> dict[str, dict[str, list[str]]]:
     """
     Compute positive and negative markers per cell type using pairwise contrasts
     (AUC/pAUC or DE) followed by voting and a rarity-based definition of
@@ -641,7 +632,7 @@ def get_ref_markers(
     For each ordered pair (a, b), take genes up in a vs b and consider them
     negative-marker candidates for b if they are expressed (> 0) in at most
     max_neg_frac fraction of cells of type b, and are not up in b vs any cell
-    type (computed across all ordered contrasts). 
+    type (computed across all ordered contrasts).
 
     Overlap filtering:
     ------------------
@@ -727,8 +718,7 @@ def get_ref_markers(
     n_types = len(usable_types)
     if n_types < 2:
         raise ValueError(
-            "Fewer than two cell types have at least "
-            f"{min_cells_per_type} cells; cannot perform pairwise contrasts."
+            f"Fewer than two cell types have at least {min_cells_per_type} cells; cannot perform pairwise contrasts."
         )
 
     # ordered pairs (a, b), a != b
@@ -738,10 +728,10 @@ def get_ref_markers(
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # Precompute fraction of cells with counts > 0 per type
-    expr_frac: Dict[str, np.ndarray] = {}
+    expr_frac: dict[str, np.ndarray] = {}
     X = adata.X
     for ct in usable_types:
-        mask_ct = (ctypes == ct)
+        mask_ct = ctypes == ct
         X_ct = X[mask_ct]
         if sparse.issparse(X_ct):
             frac = X_ct.getnnz(axis=0) / X_ct.shape[0]
@@ -792,9 +782,8 @@ def get_ref_markers(
     pair_df = pd.DataFrame(results, columns=["ct_a", "ct_b", "pos_genes_a", "ok"])
     pair_df = pair_df[pair_df["ok"]].reset_index(drop=True)
 
-    up_by_pair: dict[tuple[str, str], List[str]] = {
-        (row.ct_a, row.ct_b): list(row.pos_genes_a)
-        for row in pair_df.itertuples(index=False)
+    up_by_pair: dict[tuple[str, str], list[str]] = {
+        (row.ct_a, row.ct_b): list(row.pos_genes_a) for row in pair_df.itertuples(index=False)
     }
 
     # per-cell-type union of all "up" genes
@@ -841,7 +830,7 @@ def get_ref_markers(
     # ------------------------------------------------------------
     # Build positive marker lists using per-type voting thresholds
     # ------------------------------------------------------------
-    pos_lists: Dict[str, List[str]] = {}
+    pos_lists: dict[str, list[str]] = {}
     for ct in usable_types:
         M_c = pair_counts_pos.get(ct, 0)
         if M_c == 0:
@@ -864,17 +853,17 @@ def get_ref_markers(
     pos_any_final: set[str] = set().union(*pos_lists.values()) if len(pos_lists) else set()
     for ct in usable_types:
         neg_sets[ct] = {g for g in neg_sets[ct] if g in pos_any_final}
-        
-    neg_lists: Dict[str, List[str]] = {ct: sorted(list(neg_sets[ct])) for ct in usable_types}
+
+    neg_lists: dict[str, list[str]] = {ct: sorted(list(neg_sets[ct])) for ct in usable_types}
 
     # Overlap filter for negative markers
     neg_lists = _apply_overlap_filter(neg_lists, t=t_neg, n_ct=n_types)
 
-    markers: Dict[str, Dict[str, List[str]]] = {
-        ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])}
-        for ct in usable_types
+    markers: dict[str, dict[str, list[str]]] = {
+        ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in usable_types
     }
     return markers
+
 
 def _is_missing(x):
     """Return True for any kind of NA / NaN / None."""
@@ -883,7 +872,8 @@ def _is_missing(x):
         return pd.isna(x) or (isinstance(x, float) and math.isnan(x))
     except Exception:
         return False
-    
+
+
 def validate_spatialdata(
     sdata: sd.SpatialData,
     images_key: str | None = "morphology_focus",

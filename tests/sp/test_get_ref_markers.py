@@ -38,8 +38,8 @@ def test_get_ref_markers_real_adata_structure_and_overlap(adata_ref):
 
 
 def test_overlap_filter_effect_without_internals(adata_ref):
-    markers_loose = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t=0.5)
-    markers_strict = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t=0.1)
+    markers_loose = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t_pos=0.5)
+    markers_strict = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t_pos=0.1)
 
     n_types = adata_ref.obs["celltype_major"].nunique()
 
@@ -52,9 +52,9 @@ def test_overlap_filter_effect_without_internals(adata_ref):
 
     # 1) Contract checks: outputs must respect their own thresholds
     if not pos_counts_loose.empty:
-        assert (pos_counts_loose < (0.5 * n_types)).all(), "Loose markers violate t=0.5 overlap contract"
+        assert (pos_counts_loose < (0.5 * n_types)).all(), "Loose markers violate t_pos=0.5 overlap contract"
     if not pos_counts_strict.empty:
-        assert (pos_counts_strict < (0.1 * n_types)).all(), "Strict markers violate t=0.1 overlap contract"
+        assert (pos_counts_strict < (0.1 * n_types)).all(), "Strict markers violate t_pos=0.1 overlap contract"
 
     if not pos_counts_loose.empty and not pos_counts_strict.empty:
         assert pos_counts_strict.max() <= pos_counts_loose.max()
