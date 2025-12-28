@@ -1014,18 +1014,18 @@ def validate_spatialdata(
                 f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
             )
 
-        if tables_x_key is not None:
-            assert tables_x_key in table.obs.columns, (
-                f"Tables DataFrame must contain x coordinate column '{tables_x_key}'. "
+        if tables_centroid_x_key is not None:
+            assert tables_centroid_x_key in table.obs.columns, (
+                f"Tables DataFrame must contain x coordinate column '{tables_centroid_x_key}'. "
                 f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_x_key' argument (set to None if you do not have this)."
+                f"You can set this with the 'tables_centroid_x_key' argument (set to None if you do not have this)."
             )
 
-        if tables_y_key is not None:
-            assert tables_y_key in table.obs.columns, (
-                f"Tables DataFrame must contain y coordinate column '{tables_y_key}'. "
+        if tables_centroid_y_key is not None:
+            assert tables_centroid_y_key in table.obs.columns, (
+                f"Tables DataFrame must contain y coordinate column '{tables_centroid_y_key}'. "
                 f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_y_key' argument (set to None if you do not have this)."
+                f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
             )
 
     # get unique cell IDs from points
@@ -1143,17 +1143,6 @@ def validate_spatialdata(
                         f"{type(shapes_sample)} (shapes) vs {table_dtype} (tables). "
                         f"Please ensure that cell IDs are all strings or all numeric."
                     )
-            assert tables_centroid_x_key in table.obs.columns, (
-                f"Tables DataFrame must contain column: {tables_centroid_x_key}. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"If you want to use a different column, set the tables_centroid_x_key parameter."
-            )
-
-            assert tables_centroid_y_key in table.obs.columns, (
-                f"Tables DataFrame must contain column: {tables_centroid_y_key}. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"If you want to use a different column, set the tables_centroid_y_key parameter."
-            )
 
             # --- Ensure consistent types between shapes and tables ---
             # Ignore missing values (e.g. NaN, None) when checking type
