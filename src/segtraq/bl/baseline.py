@@ -294,6 +294,77 @@ def genes_per_cell(
 
     return gene_counts
 
+def mean_transcripts_per_gene_per_cell(
+    sdata: sd.SpatialData,
+    tables_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_gene_key: str = "feature_name",
+    tables_key: str = "table",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Computes the mean number of transcripts per gene per cell.
+
+    Transcripts are first counted per (cell, gene). Then, for each cell,
+    we compute the mean of these per-gene transcript counts across genes
+    detected in that cell.
+
+    Notes
+    -----
+    This mean is computed across *detected* genes only (i.e., genes with at least
+    one transcript in the cell). Genes with zero transcripts in a cell are not included.
+
+    Parameters
+    ----------
+    sdata : object
+        An object containing spatial transcriptomics data with a `points` attribute.
+    tables_cell_id_key : str
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
+    points_key : str, optional
+        The key to access the transcript data within `sdata.points` (default is "transcripts").
+    points_cell_id_key : str, optional
+        The column name in the transcript data representing cell identifiers (default is "cell_id").
+    points_gene_key : str, optional
+        The column name in the transcript data representing gene names (default is "feature_name").
+    tables_key : str, optional
+        The key to access the AnnData table from `sdata.tables`. Default is "table".
+    inplace : bool, optional
+        If True, modifies the SpatialData object in place. Default is True.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with one row per cell containing the mean transcripts per detected gene:
+        columns are `[points_cell_id_key, "mean_transcripts_per_gene"]`.
+    """
+    df = sdata.points[points_key].compute()
+
+    # Count transcripts per (cell, gene)
+    per_gene_counts = (
+        df.groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .reset_index(name="transcript_count")
+    )
+
+    # For each cell, compute mean transcripts across detected genes
+    per_cell_mean = (
+        per_gene_counts.groupby(points_cell_id_key, observed=True)["transcript_count"]
+        .mean()
+        .reset_index(name="mean_transcripts_per_gene")
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata,
+            tables_key,
+            per_cell_mean,
+            tables_cell_id_key,
+            points_cell_id_key,
+            fillna_cols=["mean_transcripts_per_gene"],
+        )
+
+    return per_cell_mean
 
 def transcript_density(
     sdata: sd.SpatialData,

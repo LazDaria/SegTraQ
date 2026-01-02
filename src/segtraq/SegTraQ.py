@@ -196,6 +196,7 @@ class SegTraQ:
         -------
         - genes_per_cell
         - transcripts_per_cell
+        - mean_transcripts_per_gene_per_cell
         - transcript_density (only if `tables_area_volume_key` is set)
         - morphological features per cell
         - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
@@ -212,11 +213,13 @@ class SegTraQ:
         None or dict
             - If `inplace=True`: returns None after writing to `sdata`.
             - If `inplace=False`: returns a dict with keys:
-            `summary`, `genes_per_cell`, `transcripts_per_cell`, and optionally `transcript_density`.
+            `summary`, `genes_per_cell`, `transcripts_per_cell`, 
+                `mean_transcripts_per_gene_per_cell`and optionally `transcript_density`.
         """
 
         gpc = self.bl.genes_per_cell(inplace=inplace)
         tpc = self.bl.transcripts_per_cell(inplace=inplace)
+        tgc = self.bl.mean_transcripts_per_gene_per_cell(inplace=inplace)
         mrp = self.bl.morphological_features(inplace=inplace)
 
         dens_raw = self.bl.transcript_density(inplace=inplace)
@@ -237,6 +240,7 @@ class SegTraQ:
                 "summary": summary,
                 "genes_per_cell": gpc,
                 "transcripts_per_cell": tpc,
+                "mean_transcripts_per_gene_per_cell": tgc,
                 "morphological_feautres": mrp,
             }
             if dens is not None:
@@ -588,6 +592,19 @@ class _BLFacade:
         )
 
     genes_per_cell.__doc__ = bl.genes_per_cell.__doc__
+
+    def mean_transcripts_per_gene_per_cell(self, inplace: bool = True):
+        return bl.mean_transcripts_per_gene_per_cell(
+            sdata=self._p.sdata,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_gene_key=self._p.points_gene_key,
+            tables_key=self._p.tables_key,
+            inplace=inplace,
+    )
+
+    mean_transcripts_per_gene_per_cell.__doc__ = bl.mean_transcripts_per_gene_per_cell.__doc__
 
     def perc_unassigned_transcripts_per_gene(self, inplace: bool = True):
         return bl.perc_unassigned_transcripts_per_gene(
