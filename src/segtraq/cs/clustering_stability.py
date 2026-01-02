@@ -188,7 +188,7 @@ def compute_silhouette_score(
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
-    If a cell_type_key is provided, compute the silhouette score for that clustering only.
+    If a cell_type_key is provided, compute the silhouette score for provided labels.
 
     Parameters
     ----------
@@ -203,7 +203,7 @@ def compute_silhouette_score(
     random_state : int, optional
         Seed for reproducibility, by default 42.
     cell_type_key : str, optional
-        If provided, compute the silhouette score for this clustering only.
+        If provided, compute the silhouette score for provided labels.
     inplace : bool, optional
         Whether to store the computed silhouette score in sdata.uns, by default True.
 
@@ -230,38 +230,41 @@ def compute_silhouette_score(
             # remove NaN labels
             adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
             labels = adata_subset.obs[cell_type_key].values
-            silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
-            return float(silhouette_avg)
+            silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric) 
+            best_silhouette_score = float(silhouette_avg)
+            key = "silhouette_score_labels"
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
-    # ensure that we already have neighbors computed
-    # this way we avoid recomputing neighbors multiple times (for the different resolutions)
-    if "neighbors" not in adata.uns:
-        raise ValueError(
-            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
-        )
+    else: 
+        # ensure that we already have neighbors computed
+        # this way we avoid recomputing neighbors multiple times (for the different resolutions)
+        if "neighbors" not in adata.uns:
+            raise ValueError(
+                "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+            )
 
-    for res in resolution:
-        # Run clustering for each resolution
-        key_added, pca = run_leiden_clustering_on_random_subset(
-            sdata,
-            resolution=res,
-            frac_cells_subset=1.0,  # Use all cells
-            key_prefix=key_prefix,
-            random_state=random_state,
-            recompute_neighbors=False,
-        )
+        key = "silhouette_score"
+        for res in resolution:
+            # Run clustering for each resolution
+            key_added, pca = run_leiden_clustering_on_random_subset(
+                sdata,
+                resolution=res,
+                frac_cells_subset=1.0,  # Use all cells
+                key_prefix=key_prefix,
+                random_state=random_state,
+                recompute_neighbors=False,
+            )
 
-        # Compute silhouette score
-        labels = adata.obs[key_added]
-        if len(set(labels)) > 1:  # Ensure more than one cluster exists
-            silhouette_avg = silhouette_score(pca, labels, metric=metric)
-            if silhouette_avg > best_silhouette_score:
-                best_silhouette_score = silhouette_avg
+            # Compute silhouette score
+            labels = adata.obs[key_added]
+            if len(set(labels)) > 1:  # Ensure more than one cluster exists
+                silhouette_avg = silhouette_score(pca, labels, metric=metric)
+                if silhouette_avg > best_silhouette_score:
+                    best_silhouette_score = silhouette_avg
 
     if inplace:
-        sdata.tables["table"].uns["silhouette_score"] = best_silhouette_score
+        sdata.tables["table"].uns[key] = best_silhouette_score
 
     return best_silhouette_score
 
