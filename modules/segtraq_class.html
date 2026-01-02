@@ -423,6 +423,7 @@ merge them into the cell table.</p>
 <ul class="simple">
 <li><p>genes_per_cell</p></li>
 <li><p>transcripts_per_cell</p></li>
+<li><p>mean_transcripts_per_gene_per_cell</p></li>
 <li><p>transcript_density (only if <cite>tables_area_volume_key</cite> is set)</p></li>
 <li><p>morphological features per cell</p></li>
 <li><p>global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)</p></li>
@@ -441,7 +442,10 @@ If False, returns the computed objects.</p>
 <li><p>If <cite>inplace=True</cite>: returns None after writing to <cite>sdata</cite>.</p></li>
 <li><p>If <cite>inplace=False</cite>: returns a dict with keys:</p></li>
 </ul>
-<p><cite>summary</cite>, <cite>genes_per_cell</cite>, <cite>transcripts_per_cell</cite>, and optionally <cite>transcript_density</cite>.</p>
+<dl class="simple">
+<dt><cite>summary</cite>, <cite>genes_per_cell</cite>, <cite>transcripts_per_cell</cite>,</dt><dd><p><cite>mean_transcripts_per_gene_per_cell`and optionally `transcript_density</cite>.</p>
+</dd>
+</dl>
 </dd>
 <dt class="field-even">rtype<span class="colon">:</span></dt>
 <dd class="field-even"><p>None or dict</p>
