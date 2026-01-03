@@ -230,13 +230,13 @@ def compute_silhouette_score(
             # remove NaN labels
             adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
             labels = adata_subset.obs[cell_type_key].values
-            silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric) 
+            silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
             best_silhouette_score = float(silhouette_avg)
             key = "silhouette_score_labels"
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
-    else: 
+    else:
         # ensure that we already have neighbors computed
         # this way we avoid recomputing neighbors multiple times (for the different resolutions)
         if "neighbors" not in adata.uns:
