@@ -213,7 +213,7 @@ class SegTraQ:
         None or dict
             - If `inplace=True`: returns None after writing to `sdata`.
             - If `inplace=False`: returns a dict with keys:
-            `summary`, `genes_per_cell`, `transcripts_per_cell`, 
+            `summary`, `genes_per_cell`, `transcripts_per_cell`,
                 `mean_transcripts_per_gene_per_cell`and optionally `transcript_density`.
         """
 
@@ -602,7 +602,7 @@ class _BLFacade:
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
             inplace=inplace,
-    )
+        )
 
     mean_transcripts_per_gene_per_cell.__doc__ = bl.mean_transcripts_per_gene_per_cell.__doc__
 

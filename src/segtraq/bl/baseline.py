@@ -294,6 +294,7 @@ def genes_per_cell(
 
     return gene_counts
 
+
 def mean_transcripts_per_gene_per_cell(
     sdata: sd.SpatialData,
     tables_cell_id_key: str = "cell_id",
@@ -342,9 +343,7 @@ def mean_transcripts_per_gene_per_cell(
 
     # Count transcripts per (cell, gene)
     per_gene_counts = (
-        df.groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .reset_index(name="transcript_count")
+        df.groupby([points_cell_id_key, points_gene_key], observed=True).size().reset_index(name="transcript_count")
     )
 
     # For each cell, compute mean transcripts across detected genes
@@ -365,6 +364,7 @@ def mean_transcripts_per_gene_per_cell(
         )
 
     return per_cell_mean
+
 
 def transcript_density(
     sdata: sd.SpatialData,
