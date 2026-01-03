@@ -1,5 +1,6 @@
 from .baseline import (
     genes_per_cell,
+    mean_transcripts_per_gene_per_cell,
     morphological_features,
     num_cells,
     num_genes,
@@ -8,7 +9,6 @@ from .baseline import (
     perc_unassigned_transcripts_per_gene,
     transcript_density,
     transcripts_per_cell,
-    mean_transcripts_per_gene_per_cell
 )
 
 __all__ = [
