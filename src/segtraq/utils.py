@@ -1225,8 +1225,8 @@ def validate_spatialdata(
             assert nucleus_shapes_cell_id_key in nucleus_shapes.columns, (
                 f"Nucleus shapes DataFrame must contain cell ID column '{nucleus_shapes_cell_id_key}'. "
                 f"Available columns: {nucleus_shapes.columns.tolist()}. "
-                f"You can set this with the 'nucleus_shapes_cell_id_key' argument "
-                f"(set to None if you do not have this)."
+                "You can set this with the 'nucleus_shapes_cell_id_key' argument "
+                "If you want to use the index as cell IDs, set nucleus_shapes_cell_id_key=None."
             )
 
     return True
