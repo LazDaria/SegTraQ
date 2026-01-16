@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+import geopandas as gpd
 from geopandas import GeoDataFrame
 from joblib import Parallel, delayed
 from pandas import Series
@@ -9,247 +10,486 @@ from scipy.stats import pearsonr
 from shapely.validation import make_valid
 from tqdm import tqdm
 
-from ..utils import merge_into_obs
+from ..utils import merge_into_obs, _is_background
 
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+from shapely.ops import unary_union
 
-def compute_z_plane_correlation(
-    sdata: sd.SpatialData,
-    quantile: float = 25,
-    points_key: str = "transcripts",
-    points_z_key: str = "z",
-    tables_key: str = "table",
-    points_cell_id_key: str = "cell_id",
-    points_gene_key: str = "feature_name",
-    inplace: bool = True,
-) -> pd.DataFrame:
-    """
-    Compute the Pearson correlation between the top and bottom quantiles of transcripts in the z-plane.
-
-    This function computes the Pearson correlation between the top and bottom quantiles of transcripts
-    in the z-plane for each cell. It subsets the transcripts based on the z-coordinate and calculates
-    the correlation for each cell.
-
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing transcript data.
-    quantile : float, optional
-        The quantile to use for bottom and top subsets, by default 25.
-    points_key : str, optional
-        The key for transcripts in sdata.points, by default "transcripts".
-    points_z_key : str, optional
-        The key for z-coordinates in sdata.points, by default "z".
-    tables_key : str, optional
-        The key for tables in sdata.tables, by default "table".
-    points_cell_id_key : str, optional
-        The key for cell IDs in sdata.points, by default "cell_id".
-    points_gene_key : str, optional
-        The key for gene names in sdata.points, by default "feature_name".
-    inplace : bool, optional
-        Whether to store the computed correlations in sdata.uns, by default True.
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame with cell IDs as index and Pearson correlations as values.
-    """
-    z = sdata.points[points_key][points_z_key]
-
-    # Compute percentiles (assuming z is a dask array or similar)
-    z_bottom = np.percentile(z.compute(), quantile)
-    z_top = np.percentile(z.compute(), 100 - quantile)
-
-    # Subset the original transcripts DataFrame
-    transcripts = sdata.points[points_key]
-
-    # Bottom subset (z <= quantile percentile)
-    bottom_df = transcripts[transcripts[points_z_key] <= z_bottom]
-
-    # Top subset (z >= 1 - quantile percentile)
-    top_df = transcripts[transcripts[points_z_key] >= z_top]
-
-    # Force compute if it's a Dask DataFrame
-    top_df_pd = top_df.compute() if hasattr(top_df, "compute") else top_df
-    bottom_df_pd = bottom_df.compute() if hasattr(bottom_df, "compute") else bottom_df
-
-    top_counts = (
-        top_df_pd.groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .rename("count")
-        .reset_index()
-        .pivot(index=points_cell_id_key, columns=points_gene_key, values="count")
-        .fillna(0)
-        .astype(int)
-    )
-
-    bottom_counts = (
-        bottom_df_pd.groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .rename("count")
-        .reset_index()
-        .pivot(index=points_cell_id_key, columns=points_gene_key, values="count")
-        .fillna(0)
-        .astype(int)
-    )
-
-    # Ensure same order of cell_ids and same set of features
-    common_cells = top_counts.index.intersection(bottom_counts.index)
-    common_features = top_counts.columns.intersection(bottom_counts.columns)
-
-    # Align both dataframes
-    top_aligned = top_counts.loc[common_cells, common_features]
-    bottom_aligned = bottom_counts.loc[common_cells, common_features]
-
-    # Compute Pearson correlation for each row (cell_id)
-    correlations = [pearsonr(top_aligned.loc[cell_id], bottom_aligned.loc[cell_id])[0] for cell_id in common_cells]
-
-    # Create the result dataframe
-    correlation_df = pd.DataFrame({points_cell_id_key: common_cells, "correlation": correlations}).set_index(
-        points_cell_id_key
-    )
-
-    if inplace:
-        merge_into_obs(
-            sdata,
-            tables_key=tables_key,
-            df_to_merge=correlation_df,
-            tables_cell_id_key=points_cell_id_key,
-            df_cell_id_key=points_cell_id_key,
-            fillna_cols=["correlation"],
-        )
-
-    return correlation_df
-
-
-# code adapt from Daria Lazic
-def _process_cell(
-    cell_row: Series,
-    shapes_cell_id_key: str | None,
-    id_key: str | None,
-    cell_boundaries_total: GeoDataFrame,
-    cell_sindex: Index,
-) -> list:
-    """For one cell polygon compute the IoU with overlapping cells in z"""
-
-    cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
-
-    cell_geom1 = make_valid(cell_row.geometry)
-    # Get candidate cell bounding boxes that overlap this cell's bbox
-    candidate_idx = list(cell_sindex.intersection(cell_geom1.bounds))
-
-    # if there are no candidates, return 0.0
-    if not candidate_idx:
-        return {"cell_id": cell_id, "IoU": 0.0, "IoU_sum": 0.0}
-
-    candidates = cell_boundaries_total.iloc[candidate_idx]
-    # go over candidates per cell and calculate intersection are
-    IoU_ls = []
-    for _, cell in candidates.iterrows():
-        cell_id2 = cell[shapes_cell_id_key] if shapes_cell_id_key is not None else cell.name
-        # if it is the same cell, break
-        if cell_id == cell_id2:
-            break
-        cell_geom2 = make_valid(cell.geometry)
-        intersection = cell_geom1.intersection(cell_geom2).area
-        union = cell_geom1.union(cell_geom2).area
-        IoU = intersection / union if union > 0 else 0.0
-        IoU_ls.append(IoU)
-    IoU_ls.sort(reverse=True)
-
-    return {"cell_id": cell_id, "IoU": IoU_ls, "IoU_sum": sum(IoU_ls)}
-
-
-# code adapt from Daria Lazic
-def compute_cell_cell_IoU(
-    sdata: sd.SpatialData,
+def compute_mean_vsi_per_cell(
+    sdata,
+    vsi_map: np.ndarray,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
-    shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str = "cell_id",
-    nucleus_shapes_key: str = "nucleus_boundaries",
-    n_jobs: int = -1,
-    use_progress: bool = True,
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    shift_to_origin: bool = True,
     inplace: bool = True,
-) -> pd.DataFrame:
+):
     """
-    Compute per-cell IoU between cell and nearby cell boundaries in a SpatialData object.
+    Compute per-cell mean VSI by sampling a precomputed VSI map at transcript locations.
+
+    This metric assumes `vsi_map` is defined on the same coordinate system and scaling
+    as the transcript coordinates in `sdata.points[points_key]`, i.e. VSI values are
+    indexed directly by integer x/y coordinates (after optional shift-to-origin).
+    For each transcript, the VSI value is read from `vsi_map[y_int, x_int]` and then
+    averaged across transcripts belonging to each cell.
 
     Parameters
     ----------
     sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned spatial
-        transcriptomics data (images, tables, points, shapes and optional labels).
+        A `SpatialData` object containing transcript-assigned spatial transcriptomics data.
+    vsi_map : np.ndarray
+        2D array of VSI values. Must be indexable as `vsi_map[y, x]`, where x/y correspond
+        to transcript coordinates (after optional shift-to-origin).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
+        Key in `sdata.tables` for the cell-level metadata table. If `inplace=True`,
+        results are merged into `sdata.tables[tables_key].obs`.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
-    shapes_key : str, default="cell_boundaries"
-        Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str,  default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
-    n_jobs : int, optional
-        Number of parallel jobs. Default=-1 uses all CPUs.
-    use_progress : bool, optional
-        Whether to display a progress bar with tqdm.
-    inplace : bool, optional
-        Whether to add the results to `sdata.tables`. Default is True.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript. Used to filter
+        transcripts to features present in `sdata.tables[tables_key].var_names`.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript.
+    shift_to_origin : bool, default=True
+        If True, shift transcript coordinates by subtracting global min(x) and min(y)
+        (computed from the filtered transcripts) before sampling `vsi_map`.
+        If False, transcript coordinates are used directly as indices.
+    inplace : bool, default=True
+        Whether to add the results to `sdata.tables[tables_key].obs`.
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
+        DataFrame with columns [tables_cell_id_key, "mean_vsi"]
     """
+    if vsi_map.ndim != 2:
+        raise ValueError(f"`vsi_map` must be a 2D array. Got shape {vsi_map.shape}.")
 
-    # Get GeoDataFrames
-    cell_boundaries = sdata.shapes[shapes_key]
-    # extract the names of the shape layers that are not the nucleus
-    shape_layers = [k for k in sdata.shapes if k not in [nucleus_shapes_key]]
-    # extrac the actual gdfs and add them to a list
-    selected_shapes = [sdata.shapes[name] for name in shape_layers]
-    # concatenate all the GeoDataFrames to one gdf
-    cell_boundaries_total = GeoDataFrame(
-        pd.concat(selected_shapes, ignore_index=True), crs=sdata.shapes[shapes_key].crs
+    pts = sdata.points[points_key]
+    needed = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
+
+    tx = pts[needed].dropna(subset=[points_cell_id_key, points_x_key, points_y_key])
+
+    is_bg = _is_background(tx[points_cell_id_key], points_background_id)
+    tx = tx[~is_bg]
+
+    valid_features = pd.Index(sdata.tables[tables_key].var_names)
+    tx = tx[tx[points_gene_key].isin(valid_features)]
+
+    tx = tx.compute() if hasattr(tx, "compute") else tx
+    tx = tx.reset_index(drop=True)
+
+    xs = tx[points_x_key].to_numpy(dtype=float)
+    ys = tx[points_y_key].to_numpy(dtype=float)
+
+    if shift_to_origin:
+        x0 = float(np.min(xs))
+        y0 = float(np.min(ys))
+        xs = xs - x0
+        ys = ys - y0
+
+    # int rounding for indexing
+    print("round")
+    xi = np.rint(xs).astype(int)
+    yi = np.rint(ys).astype(int)
+
+    vsi_vals = vsi_map[yi, xi].astype(float, copy=False)
+
+    df = pd.DataFrame(
+        {
+            tables_cell_id_key: tx[points_cell_id_key].to_numpy(),
+            "mean_vsi": vsi_vals,
+        }
     )
-    # Build spatial index once
-    cell_sindex = cell_boundaries_total.sindex
-    # Iterator for cells
-    iterator = cell_boundaries.iterrows()
-    if use_progress:
-        iterator = tqdm(
-            iterator,
-            total=len(cell_boundaries),
-            desc="Processing IoU between overlapping cells",
-        )
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-    elif cell_boundaries.index.name is not None:
-        id_key = cell_boundaries.index.name
-    else:
-        id_key = tables_cell_id_key
-
-    # Parallel loop over cells
-    results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
-        delayed(_process_cell)(
-            cell_row=cell_row,
-            shapes_cell_id_key=shapes_cell_id_key,
-            id_key=id_key,
-            cell_boundaries_total=cell_boundaries_total,
-            cell_sindex=cell_sindex,
-        )
-        for _, cell_row in iterator
+    out = (
+        df.groupby(tables_cell_id_key, observed=True)["mean_vsi"]
+        .mean()
+        .reset_index()
     )
-    IoU_df = pd.DataFrame(results).set_index(tables_cell_id_key)
 
     if inplace:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=IoU_df,
+            df_to_merge=out,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=tables_cell_id_key,
         )
 
-    return IoU_df
+    return out
+
+def compute_sim_top_bottom_z(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
+    points_gene_key: str = "feature_name",
+    points_z_key: str = "z",
+    q: float = 0.30,
+    scale: float = 1e4,
+    min_genes: int = 5,
+    min_transcripts: int = 10,
+    inplace: bool = True,
+):
+    """
+    Compute cosine similarity between gene expression profiles of the bottom and top
+    z-quantiles of transcripts within each cell.
+
+    For each cell, transcripts are split into:
+      - bottom part: z <= q-quantile within that cell
+      - top part:    z >= (1-q)-quantile within that cell
+
+    Gene counts are aggregated separately for bottom and top, then normalized using
+    within-cell library size normalization (bottom+top total), scaled by `scale`,
+    log1p-transformed, and compared using cosine similarity.
+
+    Cells are filtered / set to NaN if either part is too sparse:
+      - at least `min_transcripts` transcripts in BOTH bottom and top parts
+      - at least `min_genes` genes with nonzero counts across (bottom OR top)
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing transcript-assigned spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript.
+    points_z_key : str, default="z"
+        Column specifying the z coordinate / depth for each transcript.
+    q : float, default=0.30
+        Quantile defining bottom and top parts. bottom = q, top = 1-q.
+    scale : float, default=1e4
+        Scale for within-cell library size normalization (bottom+top).
+    min_genes : int, default=5
+        Minimum number of genes with nonzero counts in (bottom OR top) required to score a cell.
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in EACH part (bottom and top) to score a cell.
+    inplace : bool, default=True
+        Whether to add the results to `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns [tables_cell_id_key, "cosine_sim_top_bottom_z"].
+    """
+    if not (0.0 < q < 0.5):
+        raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
+
+    pts = sdata.points[points_key]
+    cols = [points_cell_id_key, points_gene_key, points_z_key]
+
+    tx = pts[cols]
+    tx = tx.dropna(subset=[points_cell_id_key, points_gene_key, points_z_key])
+
+    is_bg = _is_background(tx[points_cell_id_key], points_background_id)
+    tx = tx[~is_bg]
+
+    # ensure genes match table var_names
+    valid_features = pd.Index(sdata.tables[tables_key].var_names)
+    tx = tx[tx[points_gene_key].isin(valid_features)]
+
+    tx = tx.compute() if hasattr(tx, "compute") else tx
+    tx = tx.reset_index(drop=True)
+
+    # compute per-cell quantile cutoffs
+    z = tx[points_z_key]
+    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(
+        lambda s: s.quantile(q)
+    )
+    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(
+        lambda s: s.quantile(1.0 - q)
+    )
+
+    tx["_is_bottom"] = z <= tx["_z_bottom"]
+    tx["_is_top"] = z >= tx["_z_top"]
+
+    # counts per part
+    counts_bottom = (
+        tx[tx["_is_bottom"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
+    )
+    counts_top = (
+        tx[tx["_is_top"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
+    )
+
+    # align
+    common_cells = counts_bottom.index.intersection(counts_top.index)
+    common_genes = counts_bottom.columns.intersection(counts_top.columns)
+
+    counts_bottom_raw = counts_bottom.loc[common_cells, common_genes]
+    counts_top_raw = counts_top.loc[common_cells, common_genes]
+
+    n_tx_bottom = counts_bottom_raw.sum(axis=1)
+    n_tx_top = counts_top_raw.sum(axis=1)
+
+    # within-cell normalization using (bottom + top)
+    total_counts = (counts_bottom_raw + counts_top_raw).sum(axis=1).replace(0, np.nan)
+    bottom_norm = counts_bottom_raw.div(total_counts, axis=0) * scale
+    top_norm = counts_top_raw.div(total_counts, axis=0) * scale
+    bottom_norm = np.log1p(bottom_norm).fillna(0.0)
+    top_norm = np.log1p(top_norm).fillna(0.0)
+
+    rows = []
+    for cid in common_cells:
+        x_raw = counts_bottom_raw.loc[cid].to_numpy(dtype=float)
+        y_raw = counts_top_raw.loc[cid].to_numpy(dtype=float)
+
+        # genes nonzero in at least one part
+        mask = (x_raw != 0) | (y_raw != 0)
+        n_genes_kept = int(mask.sum())
+
+        # thresholds
+        if (
+            n_tx_bottom.loc[cid] < min_transcripts
+            or n_tx_top.loc[cid] < min_transcripts
+            or n_genes_kept < min_genes
+        ):
+            sim = np.nan
+        else:
+            x = bottom_norm.loc[cid].to_numpy(dtype=float)[mask]
+            y = top_norm.loc[cid].to_numpy(dtype=float)[mask]
+
+            if np.all(x == 0) or np.all(y == 0):
+                sim = np.nan
+            else:
+                sim = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+
+        rows.append((cid, sim))
+
+    out = pd.DataFrame(
+        rows,
+        columns=[
+            tables_cell_id_key,
+            "cosine_sim_top_bottom_z",
+        ],
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return out
+
+def compute_heterotypic_overlap_fraction(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    cell_type_key: str = "transferred_cell_type",
+    shapes_key_list: list[str] = (
+        "cell_boundaries_z0",
+        "cell_boundaries_z1",
+        "cell_boundaries_z2",
+        "cell_boundaries_z3",
+    ),
+    shapes_cell_id_key: str | None = "cell_id",
+    unknown_label: str = "Unknown",
+    unknown_policy: str = "treat_as_label",  # {"exclude", "treat_as_label"}
+    inplace: bool = True
+) -> pd.DataFrame:
+    """
+    Compute cross-depth heterotypic overlap fraction per cell using one representative polygon per cell
+    (chosen as the polygon with the largest area across z layers).
+
+    For a representative polygon i (cell_id, z_layer) with geometry P_i and type t_i:
+
+        overlap_area_i = Area( P_i ∩ Union_{j: z_j != z_i, id_j != id_i, t_j != t_i} P_j )
+        overlap_fraction_i = overlap_area_i / Area(P_i)
+
+    Candidates are restricted to bbox-overlapping polygons via a spatial index.
+
+    Unknown/NA types:
+      - unknown_policy="exclude": cells with NA/unknown type return NaN, and unknown-type
+        candidates are excluded from overlap.
+      - unknown_policy="treat_as_label": NA is replaced by `unknown_label` and treated as a
+        real category.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing cell boundary polygons in multiple z layers and a
+        cell table with transferred cell type labels.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    cell_type_key : str, default="transferred_cell_type"
+        Column in the cell table containing cell-type labels (e.g. transferred from scRNA-seq).
+    shapes_key_list : list[str] or tuple[str, ...]
+        Keys in `sdata.shapes` for per-z-layer cell boundary polygons
+        (e.g. ["cell_boundaries_z0", ..., "cell_boundaries_z3"]).
+    shapes_cell_id_key : str or None, default="cell_id"
+        Column in each shapes GeoDataFrame linking polygons to cell IDs.
+        If None, the shape index is used as the cell ID.
+    unknown_label : str, default="Unknown"
+        Label name to use when treating NA as a separate category (unknown_policy="treat_as_label").
+    unknown_policy : str, default="exclude"
+        How to handle Unknown/NA cell types:
+          - "exclude": exclude polygons with NA/unknown types from comparisons. If the focal cell
+            has NA/unknown type, its overlap fraction is set to NaN.
+          - "treat_as_label": convert NA to `unknown_label` and treat it as a valid category.
+    inplace : bool, default=True
+        Whether to merge the aggregated per-cell result into `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns [tables_cell_id_key, "heterotypic_overlap_area", "heterotypic_overlap_fraction"].
+    """
+    if unknown_policy not in {"exclude", "treat_as_label"}:
+        raise ValueError(f"unknown_policy must be one of {{'exclude','treat_as_label'}}. Got: {unknown_policy}")
+
+    obs = sdata.tables[tables_key].obs
+    if cell_type_key not in obs.columns:
+        raise KeyError(f"{cell_type_key!r} not found in sdata.tables[{tables_key!r}].obs")
+
+    cell_type_map = obs.set_index(tables_cell_id_key)[cell_type_key].copy()
+
+    gdfs = []
+    for k, skey in enumerate(shapes_key_list):
+        if skey not in sdata.shapes:
+            raise KeyError(f"shapes key {skey!r} not found in sdata.shapes")
+
+        gdf = sdata.shapes[skey].copy()
+
+        if shapes_cell_id_key is not None:
+            if shapes_cell_id_key not in gdf.columns:
+                raise KeyError(f"{shapes_cell_id_key!r} not found in sdata.shapes[{skey!r}]")
+            gdf["_cell_id"] = gdf[shapes_cell_id_key]
+        else:
+            gdf["_cell_id"] = gdf.index
+
+        gdf["_z_layer"] = k
+        gdf["_cell_type"] = gdf["_cell_id"].map(cell_type_map)
+
+        if unknown_policy == "treat_as_label":
+            gdf["_cell_type"] = gdf["_cell_type"].astype("object").where(
+                gdf["_cell_type"].notna(), other=unknown_label
+            )
+
+        gdf = gdf[gdf.geometry.notna()].copy()
+        gdf = gdf[~gdf.geometry.is_empty].copy()
+
+        gdfs.append(gdf[["_cell_id", "_z_layer", "_cell_type", "geometry"]])
+
+    gdf_all = pd.concat(gdfs, ignore_index=True)
+    #making sure the concatenated table is a proper GeoPandas GeoDataFrame
+    gdf_all = gpd.GeoDataFrame(gdf_all, geometry="geometry", crs=gdfs[0].crs if len(gdfs) else None)
+
+    if unknown_policy == "exclude":
+        gdf_all["_is_unknown"] = gdf_all["_cell_type"].isna() | (
+            gdf_all["_cell_type"].astype("object") == unknown_label
+        )
+    else:
+        gdf_all["_is_unknown"] = False
+
+    gdf_all["_area"] = gdf_all.geometry.area.replace(0, np.nan)
+
+    #pick representative polygon per cell: max area across layers
+    rep_idx = gdf_all.groupby("_cell_id")["_area"].idxmax()
+    reps = gdf_all.loc[rep_idx].copy()
+
+    sindex = gdf_all.sindex
+
+    #compute overlap fraction only for representative polygons
+    out_rows = []
+    for i, row in reps.iterrows():
+        cid = row["_cell_id"]
+        z_i = row["_z_layer"]
+        t_i = row["_cell_type"]
+        geom_i = row.geometry
+        area_i = row["_area"]
+
+        if area_i is None or np.isnan(area_i) or area_i <= 0:
+            out_rows.append((cid, np.nan))
+            continue
+
+        if unknown_policy == "exclude":
+            if bool(row["_is_unknown"]) or pd.isna(t_i):
+                out_rows.append((cid, np.nan))
+                continue
+
+        cand_idx = list(sindex.intersection(geom_i.bounds))
+        cand_idx = [j for j in cand_idx if j != i]
+
+        if not cand_idx:
+            out_rows.append((cid, 0.0))
+            continue
+
+        cands = gdf_all.iloc[cand_idx]
+
+        cands = cands[cands["_z_layer"] != z_i]
+        cands = cands[cands["_cell_id"] != cid]
+
+        if unknown_policy == "exclude":
+            cands = cands[~cands["_is_unknown"]]
+
+        cands = cands[cands["_cell_type"] != t_i]
+
+        if cands.empty:
+            out_rows.append((cid, 0.0))
+            continue
+
+        inter_geoms = []
+        for geom_j in cands.geometry:
+            inter = geom_i.intersection(geom_j)
+            if (not inter.is_empty) and (inter.area > 0):
+                inter_geoms.append(inter)
+
+        if not inter_geoms:
+            overlap_area = 0.0
+        else:
+            overlap_area = float(unary_union(inter_geoms).area)
+
+        out_rows.append((cid, overlap_area, overlap_area / float(area_i)))
+
+    per_cell_overlap_fraction = pd.DataFrame(out_rows, 
+                                             columns=[tables_cell_id_key, "heterotypic_overlap_area", 
+                                                      "heterotypic_overlap_fraction"])
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=per_cell_overlap_fraction,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return per_cell_overlap_fraction
