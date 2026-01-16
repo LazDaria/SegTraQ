@@ -1547,3 +1547,28 @@ def _is_background(series: pd.Series, background_id):
         is_background = series == background_id
 
     return is_background
+
+
+def filter_cells(adata, col: str, func: Callable):
+    """
+    Filter cells in an AnnData object based on a condition applied to a specified column.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData object containing cell data.
+    col : str
+        The column name in the cell metadata to apply the filter on.
+    func : Callable
+        A function that takes a Pandas Series (column data) and returns a boolean mask.
+
+    Returns
+    -------
+    AnnData
+        A new AnnData object containing only the cells that satisfy the condition.
+    """
+    assert col in adata.obs.columns, (
+        f"Column '{col}' not found in adata.obs. Available columns: {adata.obs.columns.tolist()}"
+    )
+    mask = func(adata.obs[col])
+    return adata[mask]

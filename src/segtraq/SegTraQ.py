@@ -1,10 +1,13 @@
+import copy
 import warnings
+from collections.abc import Callable
 
 import numpy as np
 import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, ps, rc, sp, vl
+from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
 from .utils import validate_spatialdata
 
@@ -525,6 +528,61 @@ class SegTraQ:
                 f"periphery_enrichment_score_{feature}": pe_df[f"periphery_enrichment_score_{feature}"],
             }
             return out
+
+    def filter_cells(
+        self,
+        col: str,
+        func: Callable,
+        inplace: bool = True,
+    ):
+        """
+        Filter cells from the cell table based on a user-defined function.
+
+        Parameters
+        ----------
+        col : str
+            Column in the cell table to apply the filtering function on.
+        func : Callable
+            A function that takes a single argument (the column value) and returns
+            True if the cell should be kept, False otherwise.
+        inplace : bool, default=True
+            If True, modifies `self.sdata` in place.
+            If False, returns a new SpatialData object with the filtered cells.
+
+        Returns
+        -------
+        None or SpatialData
+            - If `inplace=True`: returns None after modifying `self.sdata`.
+            - If `inplace=False`: returns a new SpatialData object with filtered cells.
+
+        Example
+        -------
+        >>> st.filter_cells(col='cell_area', func=lambda x: x > 100)
+        """
+        adata = _filter_cells(
+            adata=self.sdata.tables[self.tables_key],
+            col=col,
+            func=func,
+        )
+
+        # synchronizing the rest of the sdata object to the now filtered table
+        # (removes e.g. shapes whose cell_id is gone after filtering)
+        if not inplace:
+            sdata = copy.deepcopy(self.sdata)
+        else:
+            sdata = self.sdata
+
+        assert adata.n_obs > 0, "Filtering removed all cells; no cells remain after filtering."
+
+        sdata.tables[self.tables_key] = adata
+        sdata = sd.match_sdata_to_table(sdata, "table")
+
+        if inplace:
+            self.sdata = sdata
+            return None
+        return sdata
+
+    filter_cells.__doc__ = filter_cells.__doc__
 
 
 class _BLFacade:

@@ -7,6 +7,7 @@ from . import bl, cs, pl, ps, rc, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
     add_nuc_shapes_via_cellpose,
+    filter_cells,
     get_ref_markers,
     run_label_transfer,
     validate_spatialdata,
@@ -18,6 +19,7 @@ for _f in (
     get_ref_markers,
     validate_spatialdata,
     add_nuc_shapes_via_cellpose,
+    filter_cells,
 ):
     _f.__module__ = "segtraq"
 
@@ -34,5 +36,6 @@ __all__ = [
     "run_label_transfer",
     "validate_spatialdata",
     "add_nuc_shapes_via_cellpose",
+    "filter_cells",
     "SegTraQ",
 ]
