@@ -374,12 +374,13 @@ class SegTraQ:
         """
         Run volume metrics for SegTraQ.
         """
-        z_plane_correlation = self.vl.compute_z_plane_correlation(inplace=inplace)
-        cell_cell_IoU = self.vl.compute_cell_cell_IoU(inplace=inplace)
+        sim_top_bottom = self.vl.compute_sim_top_bottom_z(inplace=inplace)
+        heterotypic_overlap = self.vl.compute_heterotypic_overlap_fraction(inplace=inplace)
+        mean_vsi = self.vl.compute_mean_vsi_per_cell(inplace=inplace)
         if inplace:
             return None
         else:
-            return {"z_plane_correlation": z_plane_correlation, "cell_cell_IoU": cell_cell_IoU}
+            return {"cosine_sim_top_bottom_z": sim_top_bottom, "heterotypic_overlap": heterotypic_overlap, "mean_vsi": mean_vsi}
 
     def run_supervised_metrics(
         self,
@@ -1047,30 +1048,72 @@ class _VLFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_z_plane_correlation(
+    def compute_sim_top_bottom_z(
         self,
-        quantile: float = 25,
+        q: float = 0.30,
+        scale: float = 1e4,
+        min_genes: int = 5,
+        min_transcripts: int = 10,
         inplace: bool = True,
     ):
-        return vl.compute_z_plane_correlation(
+        return vl.compute_sim_top_bottom_z(
             self._p.sdata,
-            quantile=quantile,
-            points_key=self._p.points_key,
-            points_z_key=self._p.points_z_key,
             tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            points_key=self._p.points_key,
+            points_background_id=self._p.points_background_id,
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
-            inplace=inplace,
+            points_z_key=self._p.points_z_key,
+            q=q,
+            scale=scale,
+            min_genes=min_genes,
+            min_transcripts=min_transcripts,
+            inplace=inplace
         )
 
-    def compute_cell_cell_IoU(self, n_jobs: int = -1, inplace: bool = True):
-        return vl.compute_cell_cell_IoU(
+    def compute_heterotypic_overlap_fraction(
+            self, 
+            cell_type_key: str = "transferred_cell_type", 
+            shapes_key_list: list[str] = (
+                "cell_boundaries_z0",
+                "cell_boundaries_z1",
+                "cell_boundaries_z2",
+                "cell_boundaries_z3",
+            ),
+            unknown_label: str = "Unknown",
+            unknown_policy: str = "treat_as_label", 
+            inplace: bool = True
+        ):
+        return vl.compute_heterotypic_overlap_fraction(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
-            n_jobs=n_jobs,
-            use_progress=True,
+            cell_type_key=cell_type_key,
+            shapes_key_list=shapes_key_list,
+            unknown_label=unknown_label,
+            unknown_policy=unknown_policy,
             inplace=inplace,
+        )
+    
+    def compute_mean_vsi_per_cell(
+        self,
+        vsi_map: np.ndarray,
+        shift_to_origin: bool = True,
+        inplace: bool = True,
+    ):
+        return vl.compute_mean_vsi_per_cell(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            points_key=self._p.points_key,
+            points_background_id=self._p.points_background_id,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            vsi_map=vsi_map,
+            shift_to_origin=shift_to_origin,
+            inplace=inplace
         )
