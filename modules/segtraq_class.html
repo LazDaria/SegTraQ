@@ -176,6 +176,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
@@ -328,7 +329,6 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq-class">SegTraQ class</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ"><code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
@@ -413,37 +413,6 @@ directly from the object using its module facades.</p>
 </pre></div>
 </div>
 <p>Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="segtraq.SegTraQ.filter_cells">
-<span class="sig-name descname"><span class="pre">filter_cells</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.filter_cells" title="Link to this definition">#</a></dt>
-<dd><p>Filter cells from the cell table based on a user-defined function.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>col</strong> (<em>str</em>) – Column in the cell table to apply the filtering function on.</p></li>
-<li><p><strong>func</strong> (<em>Callable</em>) – A function that takes a single argument (the column value) and returns
-True if the cell should be kept, False otherwise.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, modifies <cite>self.sdata</cite> in place.
-If False, returns a new SpatialData object with the filtered cells.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p>If <cite>inplace=True</cite>: returns None after modifying <cite>self.sdata</cite>.</p></li>
-<li><p>If <cite>inplace=False</cite>: returns a new SpatialData object with filtered cells.</p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>None or SpatialData</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">st</span><span class="o">.</span><span class="n">filter_cells</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="s1">&#39;cell_area&#39;</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span>
-</pre></div>
-</div>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_baseline">
 <span class="sig-name descname"><span class="pre">run_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_baseline" title="Link to this definition">#</a></dt>
@@ -719,7 +688,6 @@ If False: return a dictionary of all computed results.</p></li>
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq-class">SegTraQ class</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ"><code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>

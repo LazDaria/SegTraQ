@@ -175,6 +175,7 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
 </ul>
@@ -286,7 +287,6 @@ document.write(`
  <a href="#A"><strong>A</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
- | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -316,19 +316,21 @@ document.write(`
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
-      <li><a href="modules/volume.html#segtraq.vl.volume.compute_cell_cell_IoU">compute_cell_cell_IoU() (in module segtraq.vl.volume)</a>
-</li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.rc.region_correlation)</a>
 </li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_ious">compute_cell_nuc_ious() (in module segtraq.rc.region_correlation)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_center_border_ncv_correlation">compute_center_border_ncv_correlation() (in module segtraq.rc.region_correlation)</a>
 </li>
       <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.rc.region_correlation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/volume.html#segtraq.vl.volume.compute_heterotypic_overlap_fraction">compute_heterotypic_overlap_fraction() (in module segtraq.vl.volume)</a>
+</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
+</li>
+      <li><a href="modules/volume.html#segtraq.vl.volume.compute_mean_vsi_per_cell">compute_mean_vsi_per_cell() (in module segtraq.vl.volume)</a>
 </li>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR">compute_MECR() (in module segtraq.sp.supervised)</a>
 </li>
@@ -338,7 +340,7 @@ document.write(`
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_silhouette_score">compute_silhouette_score() (in module segtraq.cs.clustering_stability)</a>
 </li>
-      <li><a href="modules/volume.html#segtraq.vl.volume.compute_z_plane_correlation">compute_z_plane_correlation() (in module segtraq.vl.volume)</a>
+      <li><a href="modules/volume.html#segtraq.vl.volume.compute_sim_top_bottom_z">compute_sim_top_bottom_z() (in module segtraq.vl.volume)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -347,14 +349,6 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.distance_to_membrane">distance_to_membrane() (in module segtraq.ps.point_statistics)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.filter_cells">filter_cells() (segtraq.SegTraQ method)</a>
 </li>
   </ul></td>
 </tr></table>
