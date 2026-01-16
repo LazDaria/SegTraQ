@@ -48,7 +48,7 @@ def test_sdata_new():
 def test_adata_ref():
     """Load the AnnData reference sample once per test session."""
 
-    test_data_path = Path(__file__).parent / "data" / "scRNAseq_ref.h5ad"
+    test_data_path = Path(__file__).parent / "data" / "scRNAseq_ref_subset.h5ad"
     adata_ref = ad.read_h5ad(test_data_path)
     return adata_ref
 
