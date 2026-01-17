@@ -383,7 +383,11 @@ class SegTraQ:
         if inplace:
             return None
         else:
-            return {"cosine_sim_top_bottom_z": sim_top_bottom, "heterotypic_overlap": heterotypic_overlap, "mean_vsi": mean_vsi}
+            return {
+                "cosine_sim_top_bottom_z": sim_top_bottom,
+                "heterotypic_overlap": heterotypic_overlap,
+                "mean_vsi": mean_vsi,
+            }
 
     def run_supervised_metrics(
         self,
@@ -1127,22 +1131,22 @@ class _VLFacade:
             scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
-            inplace=inplace
+            inplace=inplace,
         )
 
     def compute_heterotypic_overlap_fraction(
-            self, 
-            cell_type_key: str = "transferred_cell_type", 
-            shapes_key_list: list[str] = (
-                "cell_boundaries_z0",
-                "cell_boundaries_z1",
-                "cell_boundaries_z2",
-                "cell_boundaries_z3",
-            ),
-            unknown_label: str = "Unknown",
-            unknown_policy: str = "treat_as_label", 
-            inplace: bool = True
-        ):
+        self,
+        cell_type_key: str = "transferred_cell_type",
+        shapes_key_list: list[str] = (
+            "cell_boundaries_z0",
+            "cell_boundaries_z1",
+            "cell_boundaries_z2",
+            "cell_boundaries_z3",
+        ),
+        unknown_label: str = "Unknown",
+        unknown_policy: str = "treat_as_label",
+        inplace: bool = True,
+    ):
         return vl.compute_heterotypic_overlap_fraction(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
@@ -1154,7 +1158,7 @@ class _VLFacade:
             unknown_policy=unknown_policy,
             inplace=inplace,
         )
-    
+
     def compute_mean_vsi_per_cell(
         self,
         vsi_map: np.ndarray,
@@ -1173,5 +1177,5 @@ class _VLFacade:
             points_y_key=self._p.points_y_key,
             vsi_map=vsi_map,
             shift_to_origin=shift_to_origin,
-            inplace=inplace
+            inplace=inplace,
         )

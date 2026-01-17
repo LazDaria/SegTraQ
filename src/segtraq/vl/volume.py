@@ -1,21 +1,12 @@
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-import geopandas as gpd
-from geopandas import GeoDataFrame
-from joblib import Parallel, delayed
-from pandas import Series
-from rtree.index import Index
-from scipy.stats import pearsonr
-from shapely.validation import make_valid
-from tqdm import tqdm
-
-from ..utils import merge_into_obs, _is_background
-
-import numpy as np
-import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
 from shapely.ops import unary_union
+from sklearn.metrics.pairwise import cosine_similarity
+
+from ..utils import _is_background, merge_into_obs
+
 
 def compute_mean_vsi_per_cell(
     sdata,
@@ -116,11 +107,7 @@ def compute_mean_vsi_per_cell(
         }
     )
 
-    out = (
-        df.groupby(tables_cell_id_key, observed=True)["mean_vsi"]
-        .mean()
-        .reset_index()
-    )
+    out = df.groupby(tables_cell_id_key, observed=True)["mean_vsi"].mean().reset_index()
 
     if inplace:
         merge_into_obs(
@@ -132,6 +119,7 @@ def compute_mean_vsi_per_cell(
         )
 
     return out
+
 
 def compute_sim_top_bottom_z(
     sdata,
@@ -219,28 +207,18 @@ def compute_sim_top_bottom_z(
 
     # compute per-cell quantile cutoffs
     z = tx[points_z_key]
-    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(
-        lambda s: s.quantile(q)
-    )
-    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(
-        lambda s: s.quantile(1.0 - q)
-    )
+    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(lambda s: s.quantile(q))
+    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(lambda s: s.quantile(1.0 - q))
 
     tx["_is_bottom"] = z <= tx["_z_bottom"]
     tx["_is_top"] = z >= tx["_z_top"]
 
     # counts per part
     counts_bottom = (
-        tx[tx["_is_bottom"]]
-        .groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .unstack(fill_value=0)
+        tx[tx["_is_bottom"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
     )
     counts_top = (
-        tx[tx["_is_top"]]
-        .groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .unstack(fill_value=0)
+        tx[tx["_is_top"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
     )
 
     # align
@@ -270,11 +248,7 @@ def compute_sim_top_bottom_z(
         n_genes_kept = int(mask.sum())
 
         # thresholds
-        if (
-            n_tx_bottom.loc[cid] < min_transcripts
-            or n_tx_top.loc[cid] < min_transcripts
-            or n_genes_kept < min_genes
-        ):
+        if n_tx_bottom.loc[cid] < min_transcripts or n_tx_top.loc[cid] < min_transcripts or n_genes_kept < min_genes:
             sim = np.nan
         else:
             x = bottom_norm.loc[cid].to_numpy(dtype=float)[mask]
@@ -306,6 +280,7 @@ def compute_sim_top_bottom_z(
 
     return out
 
+
 def compute_heterotypic_overlap_fraction(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -320,7 +295,7 @@ def compute_heterotypic_overlap_fraction(
     shapes_cell_id_key: str | None = "cell_id",
     unknown_label: str = "Unknown",
     unknown_policy: str = "treat_as_label",  # {"exclude", "treat_as_label"}
-    inplace: bool = True
+    inplace: bool = True,
 ) -> pd.DataFrame:
     """
     Compute cross-depth heterotypic overlap fraction per cell using one representative polygon per cell
@@ -398,9 +373,7 @@ def compute_heterotypic_overlap_fraction(
         gdf["_cell_type"] = gdf["_cell_id"].map(cell_type_map)
 
         if unknown_policy == "treat_as_label":
-            gdf["_cell_type"] = gdf["_cell_type"].astype("object").where(
-                gdf["_cell_type"].notna(), other=unknown_label
-            )
+            gdf["_cell_type"] = gdf["_cell_type"].astype("object").where(gdf["_cell_type"].notna(), other=unknown_label)
 
         gdf = gdf[gdf.geometry.notna()].copy()
         gdf = gdf[~gdf.geometry.is_empty].copy()
@@ -408,7 +381,7 @@ def compute_heterotypic_overlap_fraction(
         gdfs.append(gdf[["_cell_id", "_z_layer", "_cell_type", "geometry"]])
 
     gdf_all = pd.concat(gdfs, ignore_index=True)
-    #making sure the concatenated table is a proper GeoPandas GeoDataFrame
+    # making sure the concatenated table is a proper GeoPandas GeoDataFrame
     gdf_all = gpd.GeoDataFrame(gdf_all, geometry="geometry", crs=gdfs[0].crs if len(gdfs) else None)
 
     if unknown_policy == "exclude":
@@ -420,13 +393,13 @@ def compute_heterotypic_overlap_fraction(
 
     gdf_all["_area"] = gdf_all.geometry.area.replace(0, np.nan)
 
-    #pick representative polygon per cell: max area across layers
+    # pick representative polygon per cell: max area across layers
     rep_idx = gdf_all.groupby("_cell_id")["_area"].idxmax()
     reps = gdf_all.loc[rep_idx].copy()
 
     sindex = gdf_all.sindex
 
-    #compute overlap fraction only for representative polygons
+    # compute overlap fraction only for representative polygons
     out_rows = []
     for i, row in reps.iterrows():
         cid = row["_cell_id"]
@@ -478,9 +451,9 @@ def compute_heterotypic_overlap_fraction(
 
         out_rows.append((cid, overlap_area, overlap_area / float(area_i)))
 
-    per_cell_overlap_fraction = pd.DataFrame(out_rows, 
-                                             columns=[tables_cell_id_key, "heterotypic_overlap_area", 
-                                                      "heterotypic_overlap_fraction"])
+    per_cell_overlap_fraction = pd.DataFrame(
+        out_rows, columns=[tables_cell_id_key, "heterotypic_overlap_area", "heterotypic_overlap_fraction"]
+    )
 
     if inplace:
         merge_into_obs(
