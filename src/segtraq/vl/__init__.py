@@ -1,6 +1,7 @@
 from .volume import (
-    compute_cell_cell_IoU,
-    compute_z_plane_correlation,
+    compute_heterotypic_overlap_fraction,
+    compute_sim_top_bottom_z,
+    compute_mean_vsi_per_cell
 )
 
-__all__ = ["compute_z_plane_correlation", "compute_cell_cell_IoU"]
+__all__ = ["compute_sim_top_bottom_z", "compute_heterotypic_overlap_fraction", "compute_mean_vsi_per_cell"]
