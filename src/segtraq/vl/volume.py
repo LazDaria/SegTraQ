@@ -104,7 +104,6 @@ def compute_mean_vsi_per_cell(
         ys = ys - y0
 
     # int rounding for indexing
-    print("round")
     xi = np.rint(xs).astype(int)
     yi = np.rint(ys).astype(int)
 
