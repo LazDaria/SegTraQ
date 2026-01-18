@@ -94,9 +94,9 @@ def compute_mean_vsi_per_cell(
         xs = xs - x0
         ys = ys - y0
 
-    # int rounding for indexing
-    xi = np.rint(xs).astype(int)
-    yi = np.rint(ys).astype(int)
+    # int floor for indexing
+    xi = np.floor(xs).astype(int)
+    yi = np.floor(ys).astype(int)
 
     vsi_vals = vsi_map[yi, xi].astype(float, copy=False)
 
