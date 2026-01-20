@@ -964,10 +964,18 @@ class _PSFacade:
 
     centroid_mean_coord_diff.__doc__ = ps.centroid_mean_coord_diff.__doc__
 
-    def distance_to_membrane(self, genes: str | list[str] | None = None, inplace: bool = True):
+    def distance_to_membrane(
+        self,
+        genes: str | list[str] | None = None,
+        cell_type_key: str | None = None,
+        cell_type_query: str | None = None,
+        inplace: bool = True,
+    ):
         return ps.distance_to_membrane(
             sdata=self._p.sdata,
             genes=genes,
+            cell_type_key=cell_type_key,
+            cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
