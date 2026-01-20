@@ -5,6 +5,7 @@ import spatialdata as sd
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
+from .utils import _correct_z_drift
 from ..utils import _is_background, merge_into_obs
 
 
@@ -129,7 +130,14 @@ def compute_sim_top_bottom_z(
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
     points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
     points_z_key: str = "z",
+    correct_z_drift: bool = True,
+    max_points: int = 1_000_000,
+    q0: float = 0.01,
+    q1: float = 0.99,
+    seed: int | None = 0,
     q: float = 0.30,
     scale: float = 1e4,
     min_genes: int = 5,
@@ -139,6 +147,10 @@ def compute_sim_top_bottom_z(
     """
     Compute cosine similarity between gene expression profiles of the bottom and top
     z-quantiles of transcripts within each cell.
+
+    Optionally, a global z-drift correction is applied before computing within-cell
+    quantiles (default: True). This is useful when raw z coordinates show tilt/warping
+    across the field of view (e.g. slide not even in z).
 
     For each cell, transcripts are split into:
       - bottom part: z <= q-quantile within that cell
@@ -168,8 +180,21 @@ def compute_sim_top_bottom_z(
         Identifier for transcripts not assigned to any cell (background).
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript.
     points_z_key : str, default="z"
         Column specifying the z coordinate / depth for each transcript.
+    correct_z_drift : bool, default=True
+        If True, correct global z-drift before computing within-cell z-quantiles.
+        The corrected values are used only for defining top/bottom subsets.
+    max_points : int, default=1_000_000
+        Max. number of points used to fit the regression (random subsampling) in z drift correction.
+    q0, q1 : float, default=0.01, 0.99
+        Quantiles for clipping residual z values in z drift correction.
+    seed : int or None, default=0
+        Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.
     q : float, default=0.30
         Quantile defining bottom and top parts. bottom = q, top = 1-q.
     scale : float, default=1e4
@@ -190,10 +215,10 @@ def compute_sim_top_bottom_z(
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
 
     pts = sdata.points[points_key]
-    cols = [points_cell_id_key, points_gene_key, points_z_key]
+    cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key, points_z_key]
 
     tx = pts[cols]
-    tx = tx.dropna(subset=[points_cell_id_key, points_gene_key, points_z_key])
+    tx = tx.dropna(subset=cols)
 
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
@@ -203,12 +228,27 @@ def compute_sim_top_bottom_z(
     tx = tx[tx[points_gene_key].isin(valid_features)]
 
     tx = tx.compute() if hasattr(tx, "compute") else tx
-    tx = tx.reset_index(drop=True)
+    tx = tx.reset_index(drop=True) 
+
+    # Optionally correct z-drift before defining top/bottom subsets
+    if correct_z_drift:
+        tx["_z_for_split"] = _correct_z_drift(
+            tx=tx, 
+            points_x_key=points_x_key, 
+            points_y_key=points_y_key, 
+            points_z_key=points_z_key, 
+            max_points=max_points,
+            q0=q0,
+            q1=q1,
+            seed=seed
+        )
+    else:
+        tx["_z_for_split"] = tx[points_z_key].to_numpy(dtype=float)
 
     # compute per-cell quantile cutoffs
-    z = tx[points_z_key]
-    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(lambda s: s.quantile(q))
-    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)[points_z_key].transform(lambda s: s.quantile(1.0 - q))
+    z = tx["_z_for_split"]
+    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(q))
+    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(1.0 - q))
 
     tx["_is_bottom"] = z <= tx["_z_bottom"]
     tx["_is_top"] = z >= tx["_z_top"]
@@ -279,7 +319,6 @@ def compute_sim_top_bottom_z(
         )
 
     return out
-
 
 def compute_heterotypic_overlap_fraction(
     sdata: sd.SpatialData,
