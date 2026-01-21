@@ -5,8 +5,8 @@ import spatialdata as sd
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
-from .utils import _correct_z_drift
 from ..utils import _is_background, merge_into_obs
+from .utils import _correct_z_drift
 
 
 def compute_mean_vsi_per_cell(
@@ -228,19 +228,19 @@ def compute_sim_top_bottom_z(
     tx = tx[tx[points_gene_key].isin(valid_features)]
 
     tx = tx.compute() if hasattr(tx, "compute") else tx
-    tx = tx.reset_index(drop=True) 
+    tx = tx.reset_index(drop=True)
 
     # Optionally correct z-drift before defining top/bottom subsets
     if correct_z_drift:
         tx["_z_for_split"] = _correct_z_drift(
-            tx=tx, 
-            points_x_key=points_x_key, 
-            points_y_key=points_y_key, 
-            points_z_key=points_z_key, 
+            tx=tx,
+            points_x_key=points_x_key,
+            points_y_key=points_y_key,
+            points_z_key=points_z_key,
             max_points=max_points,
             q0=q0,
             q1=q1,
-            seed=seed
+            seed=seed,
         )
     else:
         tx["_z_for_split"] = tx[points_z_key].to_numpy(dtype=float)
@@ -248,7 +248,9 @@ def compute_sim_top_bottom_z(
     # compute per-cell quantile cutoffs
     z = tx["_z_for_split"]
     tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(q))
-    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(1.0 - q))
+    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(
+        lambda s: s.quantile(1.0 - q)
+    )
 
     tx["_is_bottom"] = z <= tx["_z_bottom"]
     tx["_is_top"] = z >= tx["_z_top"]
@@ -319,6 +321,7 @@ def compute_sim_top_bottom_z(
         )
 
     return out
+
 
 def compute_heterotypic_overlap_fraction(
     sdata: sd.SpatialData,
