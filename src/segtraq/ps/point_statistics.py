@@ -1,15 +1,18 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from shapely import LinearRing, Point
+from shapely import LinearRing, Point, Polygon
 
 from ..rc.utils import _align_expression_dfs, _assign_transcripts_to_center_or_border
-from ..utils import merge_into_obs
+from ..utils import filter_cells, merge_into_obs
 
 
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    aggregate: bool = True,
+    cell_type_key: str = "transferred_celltype_plot",
+    cell_type_query: str = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
@@ -33,6 +36,8 @@ def centroid_mean_coord_diff(
     genes: Optional[Union[str, List[str]]] = None,
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
         If None, all genes are used.
+    aggregate: bool,
+        Whether or not to aggregate the
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     tables_cell_id_key : str, default="cell_id"
@@ -73,11 +78,17 @@ def centroid_mean_coord_diff(
         "Please compute cell areas before using this function, e. g. by using st.bl.morphological_features()."
     )
 
+    # filter cells that are in query
+    if cell_type_query is not None:
+        adata = filter_cells(adata=sdata.tables[tables_key], col=cell_type_key, func=lambda x: x.isin(cell_type_query))
+    else:
+        adata = sdata.tables[tables_key]
+
     # extract the transcript information
     transcript_df = sdata.points[points_key].compute()
 
     # filter to those cells which are in the anndata object
-    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(sdata[tables_key].obs[points_cell_id_key])]
+    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(adata.obs[points_cell_id_key])]
 
     # subset transcript dataframe to the feature
     if genes is not None:
@@ -89,6 +100,9 @@ def centroid_mean_coord_diff(
         # check if the dataframe is empty after filtering
         if transcript_df.empty:
             raise ValueError(f"No transcripts found for the specified gene(s): {genes}.")
+
+    if aggregate:
+        transcript_df[points_gene_key] = "aggregate"
 
     # drop the background transcripts
     transcript_df = transcript_df[transcript_df[points_cell_id_key] != points_background_id]
@@ -163,6 +177,9 @@ def centroid_mean_coord_diff(
 def distance_to_membrane(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    aggregate: bool = True,
+    cell_type_key: str = "transferred_celltype_plot",
+    cell_type_query: str = None,
     tables_key: str = "table",
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
@@ -224,17 +241,26 @@ def distance_to_membrane(
         "Please compute cell areas before using this function, e. g. by using st.bl.morphological_features()."
     )
 
+    # filter cells that are in query
+    if cell_type_query is not None:
+        adata = filter_cells(adata=sdata.tables[tables_key], col=cell_type_key, func=lambda x: x.isin(cell_type_query))
+    else:
+        adata = sdata.tables[tables_key]
+
     # extract the transcript information
     transcript_df = sdata.points[points_key].compute()
 
     # filter to those cells which are in the anndata object
-    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(sdata[tables_key].obs[tables_cell_id_key])]
+    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(adata.obs[tables_cell_id_key])]
 
     # subset transcript dataframe to the feature
     if genes is not None:
         if isinstance(genes, str):
             genes = [genes]
         transcript_df = transcript_df[transcript_df[points_gene_key].isin(genes)]
+
+    if aggregate:
+        transcript_df[points_gene_key] = "aggregate"
 
     # drop the background transcripts
     transcript_df = transcript_df[transcript_df[points_cell_id_key] != points_background_id]
@@ -271,9 +297,18 @@ def distance_to_membrane(
     elif len(genes) == 1:
         feature = genes[0]
     else:
-        feature = f"{len(genes)}_genes"
+        if aggregate:
+            feature = "aggregated_genes"
+        else:
+            feature = f"{len(genes)}_genes"
+
+    # check whether the coordinate points are within the linear geometry
+    # potentially overkill if transcript id is checked
+    gdf["is_within"] = gdf.apply(lambda x: Polygon(x["linear_geometry"]).contains(x["coordinate_points"]), axis=1)
+
+    # Then calculate distance only for inside points
     gdf[f"distance_to_outline_{feature}"] = gdf.apply(
-        lambda x: x["coordinate_points"].distance(x["linear_geometry"]), axis=1
+        lambda x: x["coordinate_points"].distance(x["linear_geometry"]) if x["is_within"] else None, axis=1
     )
 
     # calculate the mean transcript distance to the cell outline per cell
@@ -286,7 +321,7 @@ def distance_to_membrane(
     )
 
     # normalise by area
-    mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = (
+    mean_distance_to_outline[f"distance_to_outline_norm_{feature}"] = (
         mean_distance_to_outline[f"distance_to_outline_{feature}"] / mean_distance_to_outline["cell_area"]
     )
 
@@ -300,7 +335,12 @@ def distance_to_membrane(
     if inplace:
         # only keep new, relevant columns
         mean_distance_to_outline = mean_distance_to_outline[
-            [id_key, f"distance_to_outline_{feature}", f"distance_to_outline_inverse_{feature}"]
+            [
+                id_key,
+                f"distance_to_outline_{feature}",
+                f"distance_to_outline_norm_{feature}",
+                f"distance_to_outline_inverse_{feature}",
+            ]
         ]
         merge_into_obs(
             sdata=sdata,
@@ -316,6 +356,7 @@ def distance_to_membrane(
 def periphery_enrichment_score(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    aggregate: bool = True,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
