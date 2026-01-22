@@ -1028,6 +1028,14 @@ def validate_spatialdata(
                 f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
             )
 
+        if tables_centroid_x_key is None or tables_centroid_y_key is None:
+            warnings.warn(
+                "No centroids specified for tables. Centroids will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(sdata, features_to_compute=["centroid"], inplace=True)
+
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
     shapes_cell_ids = set()
