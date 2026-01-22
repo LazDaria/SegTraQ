@@ -156,8 +156,9 @@ class SegTraQ:
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
         self.tables_area_volume_key = tables_area_volume_key
-        self.tables_centroid_x_key = tables_centroid_x_key
-        self.tables_centroid_y_key = tables_centroid_y_key
+        # if these are set to None, the validate_spatialdata automatically computes them
+        self.tables_centroid_x_key = tables_centroid_x_key if tables_centroid_x_key is not None else "centroid_x"
+        self.tables_centroid_y_key = tables_centroid_y_key if tables_centroid_y_key is not None else "centroid_y"
 
         self.points_key = points_key
         self.points_cell_id_key = points_cell_id_key
