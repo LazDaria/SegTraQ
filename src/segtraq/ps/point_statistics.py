@@ -19,7 +19,6 @@ def centroid_mean_coord_diff(
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
-    shapes_cell_id_key: str = "cell_id",
     points_x_key: str = "x",
     points_y_key: str = "y",
     shapes_key: str = "cell_boundaries",
@@ -50,9 +49,6 @@ def centroid_mean_coord_diff(
         Column in the points table linking each transcript/spot to a cell.
     points_background_id : str or int, default="UNASSIGNED"
         The cell ID value indicating background transcripts that should be ignored.
-    shapes_cell_id_key : str or None, optional, default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     points_x_key : str, default="x"
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
@@ -117,15 +113,6 @@ def centroid_mean_coord_diff(
 
     gdf = sdata[shapes_key].copy()
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        gdf.set_index(id_key, inplace=True)
-    elif sdata[shapes_key].index.name is not None:
-        id_key = sdata[shapes_key].index.name
-    else:
-        id_key = tables_cell_id_key
-        gdf.index.name = id_key
-
     # extract the centroids
     # it is important here that the centroid keys are not identical to the points_x_key and points_y_key
     centroid_key = [f"{points_x_key}_cell", f"{points_y_key}_cell"]
@@ -133,8 +120,8 @@ def centroid_mean_coord_diff(
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner merge on the cell ids - some cells have no transcripts
-    df_total_x = df_centroids_x.merge(x_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
-    df_total_y = df_centroids_y.merge(y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
+    df_total_x = df_centroids_x.merge(x_mean, left_on=gdf.index.name, right_on=points_cell_id_key, how="inner")
+    df_total_y = df_centroids_y.merge(y_mean, left_on=gdf.index.name, right_on=points_cell_id_key, how="inner")
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
 
@@ -147,8 +134,8 @@ def centroid_mean_coord_diff(
     )
 
     # extract the cell area
-    area_df = sdata[tables_key].obs[[id_key, "cell_area"]]
-    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=id_key, how="left")
+    area_df = sdata[tables_key].obs[[gdf.index.name, "cell_area"]]
+    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=gdf.index.name, how="left")
 
     # normalise the cell area
     if genes is None:
@@ -162,13 +149,13 @@ def centroid_mean_coord_diff(
 
     if inplace:
         # only keep new, relevant columns
-        df_total = df_total[[id_key, f"distance_{feature}"]]
+        df_total = df_total[[gdf.index.name, f"distance_{feature}"]]
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
             df_to_merge=df_total,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=gdf.index.name,
         )
 
     return df_total
@@ -188,7 +175,6 @@ def distance_to_membrane(
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
     tables_cell_id_key: str = "cell_id",
-    shapes_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
     inplace: bool = True,
 ):
@@ -218,9 +204,6 @@ def distance_to_membrane(
         Column in the cell table uniquely identifying each cell.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
-    shapes_cell_id_key : str or None, optional, default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     shapes_key: str, optional
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
     inplace : bool, optional
@@ -273,16 +256,8 @@ def distance_to_membrane(
 
     gdf = sdata[shapes_key].copy()
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        gdf.set_index(id_key, inplace=True)
-    elif sdata[shapes_key].index.name is not None:
-        id_key = sdata[shapes_key].index.name
-    else:
-        id_key = tables_cell_id_key
-        gdf.index.name = id_key
-
-    gdf = gdf.merge(transcript_df, how="inner", left_on=points_cell_id_key, right_on=id_key)
+    gdf = gdf.merge(transcript_df, how="inner", left_index=True, right_on=points_cell_id_key)
+    gdf = gdf.set_index(points_cell_id_key)
     gdf = gdf.explode()
 
     # compute the linear outline of the cell segmentation
@@ -312,12 +287,12 @@ def distance_to_membrane(
     )
 
     # calculate the mean transcript distance to the cell outline per cell
-    mean_distance_to_outline = gdf.groupby(id_key)[[f"distance_to_outline_{feature}"]].mean()
+    mean_distance_to_outline = gdf.groupby(gdf.index.name)[[f"distance_to_outline_{feature}"]].mean()
 
     # extract the cell area
     area_df = sdata[tables_key].obs[[tables_cell_id_key, "cell_area"]]
     mean_distance_to_outline = mean_distance_to_outline.merge(
-        area_df, left_on=shapes_cell_id_key, right_on=tables_cell_id_key, how="left"
+        area_df, left_on=gdf.index.name, right_on=tables_cell_id_key, how="left"
     )
 
     # normalise by area
@@ -336,7 +311,7 @@ def distance_to_membrane(
         # only keep new, relevant columns
         mean_distance_to_outline = mean_distance_to_outline[
             [
-                id_key,
+                gdf.index.name,
                 f"distance_to_outline_{feature}",
                 f"distance_to_outline_norm_{feature}",
                 f"distance_to_outline_inverse_{feature}",
@@ -347,7 +322,7 @@ def distance_to_membrane(
             tables_key=tables_key,
             df_to_merge=mean_distance_to_outline,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=gdf.index.name,
         )
 
     return mean_distance_to_outline
@@ -360,7 +335,6 @@ def periphery_enrichment_score(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_x_key: str = "x",
@@ -372,7 +346,6 @@ def periphery_enrichment_score(
     center_gdf, border_gdf, expr_center, expr_border = _assign_transcripts_to_center_or_border(
         sdata,
         shapes_key=shapes_key,
-        shapes_cell_id_key=shapes_cell_id_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_x_key=points_x_key,
@@ -421,10 +394,10 @@ def periphery_enrichment_score(
 
     # merging areas into the df
     df = df.merge(
-        pd.DataFrame({"cell_id": center_gdf["cell_id"], f"center_area_{feature}": center_gdf.geometry.area.values}),
+        pd.DataFrame({"cell_id": center_gdf.index, f"center_area_{feature}": center_gdf.geometry.area.values}),
         on="cell_id",
     ).merge(
-        pd.DataFrame({"cell_id": border_gdf["cell_id"], f"border_area_{feature}": border_gdf.geometry.area.values}),
+        pd.DataFrame({"cell_id": border_gdf.index, f"border_area_{feature}": border_gdf.geometry.area.values}),
         on="cell_id",
     )
 

@@ -220,7 +220,7 @@ def transcripts_per_cell(
     sdata : sd.SpatialData
         A SpatialData object containing transcript and cell assignment information.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
     points_key : str, optional
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
     points_cell_id_key : str, optional
@@ -265,7 +265,7 @@ def genes_per_cell(
     sdata : object
         An object containing spatial transcriptomics data with a `points` attribute.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
     points_key : str, optional
         The key to access the transcript data within `sdata.points` (default is "transcripts").
     points_cell_id_key : str, optional
@@ -321,7 +321,7 @@ def mean_transcripts_per_gene_per_cell(
     sdata : object
         An object containing spatial transcriptomics data with a `points` attribute.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
     points_key : str, optional
         The key to access the transcript data within `sdata.points` (default is "transcripts").
     points_cell_id_key : str, optional
@@ -425,7 +425,6 @@ def morphological_features(
     sdata: sd.SpatialData,
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str = "cell_id",
     features_to_compute: list | None = None,
     n_jobs: int = -1,  # number of parallel jobs, -1 uses all CPUs
     tables_key: str = "table",
@@ -439,11 +438,9 @@ def morphological_features(
     sdata : object
         Spatial data object containing cell shape information. Must have a `.shapes` attribute with geometries.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
+        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
     shapes_key : str, optional
         Key in `sdata.shapes` specifying the geometry column (default is "cell_boundaries").
-    shapes_cell_id_key : str, optional
-        Key in `sdata.shapes` specifying the unique cell identifier column (default is "cell_id").
     features_to_compute : list of str, optional
         List of morphological features to compute. If None, all available features are computed.
         Available features: "cell_area", "perimeter", "circularity", "bbox_width", "bbox_height",
@@ -458,7 +455,7 @@ def morphological_features(
     Returns
     -------
     features : pandas.DataFrame
-        DataFrame containing the computed morphological features for each cell, indexed by `shapes_cell_id_key`.
+        DataFrame containing the computed morphological features for each cell, indexed by sdata[shapes_key].index.name.
 
     Raises
     ------
@@ -505,12 +502,8 @@ def morphological_features(
     cells = cells[cells.geometry.notnull() & cells.geometry.is_valid].copy()
 
     features = pd.DataFrame()
-    if shapes_cell_id_key is None:
-        features_cell_id = "cell_id"
-        features[features_cell_id] = cells.index.values
-    else:
-        features_cell_id = shapes_cell_id_key
-        features[features_cell_id] = cells[shapes_cell_id_key].values
+
+    features[cells.index.name] = cells.index.values
 
     geom = cells.geometry
 
@@ -628,6 +621,6 @@ def morphological_features(
         features["num_polygons"] = geom.apply(count_polygons).values
 
     if inplace:
-        merge_into_obs(sdata, tables_key, features, tables_cell_id_key, features_cell_id)
+        merge_into_obs(sdata, tables_key, features, tables_cell_id_key, cells.index.name)
 
     return features
