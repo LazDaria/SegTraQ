@@ -1572,3 +1572,74 @@ def filter_cells(adata, col: str, func: Callable):
     )
     mask = func(adata.obs[col])
     return adata[mask]
+
+
+def _filter_control_and_poor_quality_transcripts(
+    sdata,
+    min_qv: float = 20.0,
+    control_genes: tuple | list = (),
+    points_key: str = "transcripts",
+    tables_key: str = "table",
+    points_gene_key: str = "feature_name",
+    inplace: bool = True,
+) -> sd.SpatialData:
+    """
+    Filter control and poor-quality transcripts from the SpatialData object.
+    This is always done in place.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing transcript data.
+    min_qv : float, default=20.0
+        Minimum quality value (qv) threshold for transcripts to be considered valid.
+    control_keywords : tuple | list, default=()
+        Additional keywords to identify control probes in gene names.
+        By default, only standard control prefixes are used.
+        These are: "NegControlProbe_", "antisense_", "NegControlCodeword", "BLANK_", "Blank-", "NegPrb",
+        "DeprecatedCodeword_", "UnassignedCodeword_".
+    points_key : str, default="transcripts"
+        The key in the SpatialData points attribute that contains transcript data.
+    tables_key : str, default="table"
+        The key in the SpatialData tables attribute that contains the main AnnData table.
+    points_gene_key : str, default="feature_name"
+        The column name in the points DataFrame that contains gene names.
+    inplace : bool, default=True
+        Whether to modify the SpatialData object in place. Defaults to True.
+
+    Returns
+    -------
+    sd.SpatialData
+        The updated SpatialData object with invalid transcripts marked (in an extra column).
+    """
+    if not inplace:
+        sdata = copy.deepcopy(sdata)
+
+    pts = sdata.points[points_key]
+    adata = sdata.tables[tables_key]
+
+    prefixes = (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+    ) + tuple(control_genes)
+
+    # ---- transcripts ----
+    invalid_mask = pts[points_gene_key].str.startswith(prefixes) | (pts["qv"] < min_qv)
+
+    # removing points that are invalid
+    pts = pts[~invalid_mask]
+    sdata.points[points_key] = pts
+
+    # ---- tables ----
+    # on the anndata object, we remove genes that are control genes
+    # filtering by quality does not make sense here, as we do not have per-gene quality values
+    adata = adata[:, ~adata.var_names.str.startswith(prefixes)]
+    sdata.tables[tables_key] = adata
+
+    return sdata

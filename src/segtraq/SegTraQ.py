@@ -7,9 +7,9 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, ps, rc, sp, vl
+from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
-from .utils import validate_spatialdata
 
 
 class SegTraQ:
@@ -588,6 +588,41 @@ class SegTraQ:
         return sdata
 
     filter_cells.__doc__ = filter_cells.__doc__
+
+    def filter_control_and_poor_quality_transcripts(
+        self,
+        min_qv: float = 20.0,
+        control_genes: tuple | list = (),
+        inplace: bool = True,
+    ):
+        """
+        Filter control and poor-quality transcripts from the SpatialData object.
+
+        Parameters
+        ----------
+        min_qv : float, default=20.0
+            Minimum quality value (QV) threshold for transcripts to be retained.
+        control_genes : tuple or list, optional
+            List of gene name prefixes indicating control genes to be filtered out.
+        inplace : bool, default=True
+            If True, modifies `self.sdata` in place.
+            If False, returns a new SpatialData object with filtered transcripts.
+
+        Returns
+        -------
+        None or SpatialData
+            - If `inplace=True`: returns None after modifying `self.sdata`.
+            - If `inplace=False`: returns a new SpatialData object with filtered transcripts.
+        """
+        _filter_control_and_poor_quality_transcripts(
+            sdata=self.sdata,
+            min_qv=min_qv,
+            control_genes=control_genes,
+            points_gene_key=self.points_gene_key,
+            inplace=inplace,
+        )
+
+    filter_control_and_poor_quality_transcripts.__doc__ = _filter_control_and_poor_quality_transcripts.__doc__
 
 
 class _BLFacade:
