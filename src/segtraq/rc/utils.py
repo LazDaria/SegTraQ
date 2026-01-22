@@ -14,7 +14,7 @@ from ..utils import _is_background, _looks_like_counts
 def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
     """Compute IoU between two shape polygons."""
 
-    if not (poly1.is_valid and poly2.is_valid):  # TODO - make polygons valid later
+    if not (poly1.is_valid and poly2.is_valid):  
         return np.nan
     inter_area = poly1.intersection(poly2).area
     union_area = poly1.union(poly2).area
@@ -30,22 +30,20 @@ def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
 
 def _process_cell(
     cell_row: Series,
-    shapes_cell_id_key: str | None,
-    id_key: str | None,
     nucleus_shapes: GeoDataFrame,
-    nucleus_shapes_cell_id_key: str | None,
+    id_name: str,
     nuc_sindex: Index,
 ) -> dict[str | int, str | int, int | None | float]:
     """For one cell polygon compute the IoU with the best-matching nucleus."""
     cell_geom = cell_row.geometry
 
-    cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
+    cell_id = cell_row.name
 
     # Get candidate nuclei bounding boxes that overlap this cell's bbox
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
 
     if not candidate_idx:
-        return {id_key: cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
+        return {id_name: cell_id, "best_nuc_id": np.nan, "IoU": 0.0}
 
     candidates = nucleus_shapes.iloc[candidate_idx]
 
@@ -56,20 +54,17 @@ def _process_cell(
         iou = _compute_iou(cell_geom, nuc_geom)
         if pd.notna(iou) and iou > best_iou:
             best_iou = iou
-            if nucleus_shapes_cell_id_key is None:
-                best_nuc_id = nuc.name
-            else:
-                best_nuc_id = nuc[nucleus_shapes_cell_id_key]
+            best_nuc_id = nuc.name
 
-    return {id_key: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
+    return {id_name: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
 
 
 def _shapes_by_feature_df(
     sdata: sd.SpatialData,
-    tables_cell_id_key: str = "cell_id",
     region_key: str = "nucleus_boundaries",
-    region_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
     points_gene_key: str = "feature_name",
 ) -> pd.DataFrame:
     """
@@ -80,14 +75,14 @@ def _shapes_by_feature_df(
         sdata : SpatialData
             A `SpatialData` object containing segmented and transcript-assigned spatial
             transcriptomics data (images, tables, points, shapes and optional labels).
-        tables_cell_id_key : str, default="cell_id"
-            Column in the cell table uniquely identifying each cell.
         region_key : str, default="nucleus_boundaries"
-            Key in `sdata.shapes` for defining the regions to aggregate by.
-        region_cell_id_key : str default="cell_id"
-            Column linking polygons to cell IDs. If `None` is provided, the shape index is used as the cell ID.
+            Key in `sdata.shapes` for defining the regions to aggregate by. The index should be the region ID.
         points_key : str, default="transcripts"
             Key in `sdata.points` for spot/transcript-level data.
+        points_x_key : str, default="x"
+            Column for the x-coordinate of each transcript/spot.
+        points_y_key : str, default="y"
+            Column for the y-coordinate of each transcript/spot.
         points_gene_key : str, default="feature_name"
             Column specifying the gene/feature name for each transcript/spot.
 
@@ -97,34 +92,36 @@ def _shapes_by_feature_df(
         DataFrame indexed by shapes ID, columns = features (genes/proteins), values = counts.
     """
 
-    # perform aggregation
-    sdata2 = sdata.aggregate(
-        values=points_key,
-        by=region_key,
-        value_key=points_gene_key,
-        agg_func="count",
-        deep_copy=False,
+    shapes = sdata.shapes[region_key].copy()
+
+    tx = sdata.points[points_key].compute()
+
+    tx_gdf = GeoDataFrame(
+        tx,
+        geometry=gpd.points_from_xy(tx[points_x_key], tx[points_y_key]),
+        crs=shapes.crs,
     )
-    ad = sdata2.tables["table"]
 
-    arr = ad.X.toarray() if hasattr(ad.X, "toarray") else ad.X
+    joined = gpd.sjoin(
+        tx_gdf[[points_gene_key, "geometry"]],
+        shapes[["geometry"]],    
+        how="inner",
+        predicate="intersects",        
+    ).rename(columns={"index_right": shapes.index.name})
 
-    gdf = sdata.shapes[region_key].copy()
+    df_out = (
+        joined.groupby([shapes.index.name, points_gene_key])
+            .size()
+            .unstack(fill_value=0)
+            .reindex(shapes.index, fill_value=0)
+            .sort_index()
+    )
 
-    if region_cell_id_key is not None:
-        gdf = gdf.set_index(region_cell_id_key, drop=True)
-    elif gdf.index.name is None:
-        gdf.index.name = tables_cell_id_key
-
-    df_out = pd.DataFrame(arr, index=gdf.index, columns=ad.var_names)
     return df_out
-
 
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
-    tables_cell_id_key: str = "cell_id",
     erosion_fraction_of_radius: float = 0.3,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """
@@ -137,11 +134,6 @@ def _get_center_and_border_shapes(
         SpatialData object with cell boundary polygons in `sdata.shapes[shapes_key]`.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str, default="cell_id"
-        Column name linking shapes to cell IDs.
-        If `None`, the shape index is used as the cell ID.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
     erosion_fraction_of_radius : float, default=0.3
         Fraction of the equivalent radius to use as erosion
         Example: 0.3 means erode by 30% of the radius.
@@ -155,14 +147,7 @@ def _get_center_and_border_shapes(
     """
     cells_gdf = sdata.shapes[shapes_key].copy()
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        cells_gdf = cells_gdf.set_index(id_key, drop=True)
-    elif cells_gdf.index.name is not None:
-        id_key = cells_gdf.index.name
-    else:
-        id_key = tables_cell_id_key
-        cells_gdf.index.name = id_key
+    id_key = cells_gdf.index.name
 
     center_records = []
     border_records = []
@@ -207,9 +192,8 @@ def _get_center_and_border_shapes(
     center_gdf = gpd.GeoDataFrame(center_records, geometry="geometry", crs=cells_gdf.crs)
     border_gdf = gpd.GeoDataFrame(border_records, geometry="geometry", crs=cells_gdf.crs)
 
-    if shapes_cell_id_key is None:
-        center_gdf.set_index(id_key, drop=True, inplace=True)
-        border_gdf.set_index(id_key, drop=True, inplace=True)
+    center_gdf.set_index(id_key, drop=True, inplace=True)
+    border_gdf.set_index(id_key, drop=True, inplace=True)
 
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
@@ -257,10 +241,9 @@ def _assign_nuc_to_transcripts(
     -------
     tx : pandas.DataFrame
         A subset transcripts dataframe with nuclear assignments in
-        column `nuc_id`.
+        column `id`.
     """
-    nucs_gdf = sdata.shapes[nucleus_shapes_key].copy()
-    nucs_gdf.index.name = "nuc_id"
+    nucs_gdf = sdata.shapes[nucleus_shapes_key]
 
     # Subset transcripts
     pts = sdata.points[points_key]
@@ -292,10 +275,13 @@ def _assign_nuc_to_transcripts(
         nucs_gdf[["geometry"]],
         how="left",
         predicate="within",
-    )[["nuc_id"]]
+    )
+
+    nuc_id_col = nucs_gdf.index.name
+    tx_in_nuc = tx_in_nuc.rename(columns={"index_right": nuc_id_col})[[nuc_id_col]]
 
     # remove duplicate assignments
-    tx_in_nuc = tx_in_nuc[["nuc_id"]].groupby(level=0, observed=True).first()
+    tx_in_nuc = tx_in_nuc.groupby(level=0, observed=True).first()
 
     tx_in_cell = transcripts[[points_gene_key, points_cell_id_key]]
     tx = tx_in_cell.join(tx_in_nuc, how="left")
@@ -306,13 +292,11 @@ def _assign_nuc_to_transcripts(
 def _group_points_by_regions(
     sdata: sd.SpatialData,
     region_key: str,
-    tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
-    region_cell_id_key: str | None = "cell_id",
 ) -> gpd.GeoDataFrame:
     """
     Aggregate transcript counts per region (e.g., cell centers or cell borders)
@@ -332,8 +316,6 @@ def _group_points_by_regions(
     region_key : str
         Key in `sdata.shapes` specifying which regions to use (e.g., `"cell_centers"`,
         `"cell_borders"`). Must contain a `geometry` column with polygons.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_gene_key : str, default="feature_name"
@@ -344,9 +326,6 @@ def _group_points_by_regions(
         Column for the y-coordinate of each transcript/spot.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
-    region_cell_id_key : str or None, default="cell_id"
-        Column in `sdata.shapes[region_key]` mapping each region polygon to a cell ID.
-        If `None`, the shape index is used as the cell ID.
 
     Returns
     -------
@@ -367,17 +346,10 @@ def _group_points_by_regions(
 
     region_gdf = sdata.shapes[region_key].copy()
 
-    if region_cell_id_key is not None:
-        id_key = region_cell_id_key
-        region_gdf = region_gdf.rename(columns={region_cell_id_key: "region_id"})
-    elif region_gdf.index.name is not None:
-        id_key = region_gdf.index.name
-        region_gdf.index.name = "region_id"
-        region_gdf.reset_index(inplace=True)
-    else:
-        id_key = tables_cell_id_key
-        region_gdf.index.name = "region_id"
-        region_gdf.reset_index(inplace=True)
+
+    id_key = region_gdf.index.name
+    region_gdf.index.name = "region_id"
+    region_gdf.reset_index(inplace=True)
 
     region_gdf = region_gdf[["region_id", "geometry"]]
 
@@ -406,7 +378,6 @@ def _compute_ncvs_within_radius(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     radius_factor: float = 2.0,
 ) -> pd.DataFrame:
     """
@@ -423,9 +394,6 @@ def _compute_ncvs_within_radius(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str or None, default="cell_id"
-        Column in the shapes GeoDataFrame linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     radius_factor : float, default=2.0
         Neighborhood radius factor in the same coordinate units as the shapes.
 
@@ -437,14 +405,6 @@ def _compute_ncvs_within_radius(
     """
     # Get centroids for each cell shape
     cells_gdf = sdata.shapes[shapes_key].copy()
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        cells_gdf = cells_gdf.set_index(id_key, drop=True)
-    elif cells_gdf.index.name is not None:
-        id_key = cells_gdf.index.name
-    else:
-        id_key = tables_cell_id_key
-        cells_gdf.index.name = id_key
 
     ad = sdata.tables[tables_key]
     X = ad.X
@@ -502,7 +462,6 @@ def _compute_ncvs_within_radius(
 def _assign_transcripts_to_center_or_border(
     sdata,
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
@@ -514,8 +473,6 @@ def _assign_transcripts_to_center_or_border(
     center_gdf, border_gdf = _get_center_and_border_shapes(
         sdata=sdata,
         shapes_key=shapes_key,
-        shapes_cell_id_key=shapes_cell_id_key,
-        tables_cell_id_key=tables_cell_id_key,
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
@@ -529,25 +486,21 @@ def _assign_transcripts_to_center_or_border(
     expr_center = _group_points_by_regions(
         sdata=sdata,
         region_key="cell_centers",
-        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
-        region_cell_id_key=shapes_cell_id_key,
     )
 
     expr_border = _group_points_by_regions(
         sdata=sdata,
         region_key="cell_borders",
-        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
-        region_cell_id_key=shapes_cell_id_key,
     )
 
     return center_gdf, border_gdf, expr_center, expr_border

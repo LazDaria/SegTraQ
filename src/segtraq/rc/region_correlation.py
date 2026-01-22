@@ -24,9 +24,7 @@ def compute_cell_nuc_ious(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     nucleus_shapes_key: str = "nucleus_boundaries",
-    nucleus_shapes_cell_id_key: str | None = None,
     n_jobs: int = -1,
     use_progress: bool = True,
     inplace: bool = True,
@@ -47,14 +45,8 @@ def compute_cell_nuc_ious(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str,  default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
-    nucleus_shapes_cell_id_key : str or None, optional, default=None
-        Column linking nucleus polygons to cell IDs. If `None` is provided,
-        the shape index is used as the cell ID.
     n_jobs : int, optional
         Number of parallel jobs. Default=-1 uses all CPUs.
     use_progress : bool, optional
@@ -88,21 +80,12 @@ def compute_cell_nuc_ious(
             desc="Processing IoU between cells and nuclei",
         )
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-    elif cell_boundaries.index.name is not None:
-        id_key = cell_boundaries.index.name
-    else:
-        id_key = tables_cell_id_key
-
     # Parallel loop over cells
     results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
         delayed(_process_cell)(
             cell_row=cell_row,
-            shapes_cell_id_key=shapes_cell_id_key,
-            id_key=id_key,
             nucleus_shapes=nuc_boundaries,
-            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
+            id_name=cell_boundaries.index.name,
             nuc_sindex=nuc_sindex,
         )
         for _, cell_row in iterator
@@ -116,7 +99,7 @@ def compute_cell_nuc_ious(
             tables_key=tables_key,
             df_to_merge=iou_df,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=cell_boundaries.index.name,
         )
 
     return iou_df
@@ -127,11 +110,11 @@ def compute_cell_nuc_correlation(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     nucleus_shapes_key: str = "nucleus_boundaries",
-    nucleus_shapes_cell_id_key: str | None = None,
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
     metric: str = "cosine_sim",
     n_jobs_iou: int = -1,
     inplace: bool = True,
@@ -154,16 +137,14 @@ def compute_cell_nuc_correlation(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str or None, default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
-    nucleus_shapes_cell_id_key : str or None, optional, default=None
-        Column linking nucleus polygons to cell IDs. If `None` but
-        `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
     metric : str, default="cosine_sim"
@@ -191,13 +172,7 @@ def compute_cell_nuc_correlation(
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-    elif sdata[shapes_key].index.name is not None:
-        id_key = sdata[shapes_key].index.name
-    else:
-        id_key = tables_cell_id_key
-
+    id_key = sdata[shapes_key].index.name
     tbl = sdata.tables[tables_key]
 
     if "best_nuc_id" not in tbl.obs.columns:
@@ -206,9 +181,7 @@ def compute_cell_nuc_correlation(
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             shapes_key=shapes_key,
-            shapes_cell_id_key=shapes_cell_id_key,
             nucleus_shapes_key=nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
             n_jobs=n_jobs_iou,
             inplace=inplace,
         )
@@ -238,10 +211,10 @@ def compute_cell_nuc_correlation(
 
     expr_nucleus = _shapes_by_feature_df(
         sdata=sdata,
-        tables_cell_id_key=tables_cell_id_key,
         region_key=nucleus_shapes_key,
-        region_cell_id_key=nucleus_shapes_cell_id_key,
         points_key=points_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
         points_gene_key=points_gene_key,
     )
 
@@ -284,6 +257,7 @@ def compute_cell_nuc_correlation(
                     corr, _ = spearmanr(x, y)
                 elif metric == "cosine_sim":
                     corr = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+
             rows.append(
                 {
                     id_key: cid,
@@ -306,15 +280,12 @@ def compute_cell_nuc_correlation(
 
     return corr_df, iou_df
 
-
 def compute_correlation_between_parts(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     nucleus_shapes_key: str = "nucleus_boundaries",
-    nucleus_shapes_cell_id_key: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
@@ -344,14 +315,8 @@ def compute_correlation_between_parts(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str,  default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
-    nucleus_shapes_cell_id_key : str or None, optional, default=None
-        Column linking nucleus polygons to cell IDs. If `None` but
-        `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
@@ -388,23 +353,15 @@ def compute_correlation_between_parts(
     )
 
     cells_gdf = sdata.shapes[shapes_key]
-
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-    elif cells_gdf.index.name is not None:
-        id_key = cells_gdf.index.name
-    else:
-        id_key = tables_cell_id_key
+    id_key = cells_gdf.index.name
 
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
         iou_df = compute_cell_nuc_ious(
             sdata=sdata,
-            shapes_cell_id_key=shapes_cell_id_key,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             shapes_key=shapes_key,
             nucleus_shapes_key=nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
             n_jobs=n_jobs,
             inplace=inplace,
         )
@@ -424,9 +381,9 @@ def compute_correlation_between_parts(
         points_x_key=points_x_key,
         points_y_key=points_y_key,
     )
-
+    nuc_id_name = sdata.shapes[nucleus_shapes_key].index.name
     tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
-    tx["in_intersection"] = (tx["nuc_id"].notna()) & (tx["nuc_id"] == tx["best_nuc_id"])
+    tx["in_intersection"] = (tx[nuc_id_name].notna()) & (tx[nuc_id_name] == tx["best_nuc_id"])
 
     # intersection: cell ∩ best nucleus
     counts_intersection = (
@@ -503,7 +460,6 @@ def compute_center_border_ncv_correlation(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_x_key: str = "x",
@@ -540,9 +496,6 @@ def compute_center_border_ncv_correlation(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str, default="cell_id"
-        Column in `sdata.shapes[shapes_key]` linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
@@ -576,7 +529,6 @@ def compute_center_border_ncv_correlation(
     _, _, expr_center, expr_border = _assign_transcripts_to_center_or_border(
         sdata,
         shapes_key=shapes_key,
-        shapes_cell_id_key=shapes_cell_id_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_x_key=points_x_key,
@@ -591,7 +543,6 @@ def compute_center_border_ncv_correlation(
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
         shapes_key=shapes_key,
-        shapes_cell_id_key=shapes_cell_id_key,
         radius_factor=radius_factor,
     )
 
@@ -610,10 +561,6 @@ def compute_center_border_ncv_correlation(
     expr_ncv = _norm_log_df(expr_ncv_raw)
 
     id_key = expr_center.index.name
-    # it can happen that the id_key is None
-    # in that case, we substitute it with a default value to avoid having a None column
-    if id_key is None:
-        id_key = "cell_id"
 
     rows = []
 

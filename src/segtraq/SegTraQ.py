@@ -30,9 +30,9 @@ class SegTraQ:
         points_z_key: str | None = "z",
         points_gene_key: str = "feature_name",
         shapes_key: str = "cell_boundaries",
-        shapes_cell_id_key: str | None = "cell_id",
+        shapes_cell_id_key: str = "cell_id",
         nucleus_shapes_key: str | None = "nucleus_boundaries",
-        nucleus_shapes_cell_id_key: str | None = None,
+        nucleus_shapes_cell_id_key: str = "cell_id",
     ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
@@ -93,17 +93,17 @@ class SegTraQ:
         shapes_key : str, default="cell_boundaries"
             Key in `sdata.shapes` for cell boundary polygons.
 
-        shapes_cell_id_key : str or None, optional, default="cell_id"
-            Column in the cell-boundary shapes linking polygons to cell IDs.
-            If `None`, the shape index is used as the cell ID.
+        shapes_cell_id_key : str, optional, default="cell_id"
+            Cell ID key for `sdata.shapes[shapes_key]`. Must match either the shapes index name
+            or a column name (which will be set as the index if needed).
 
         nucleus_shapes_key : str or None, optional, default="nucleus_boundaries"
             Key in `sdata.shapes` for nucleus boundary polygons, if available.
             If None, a nucleus mask can be obtained via `segtraq.run_cellpose`.
 
-        nucleus_shapes_cell_id_key : str or None, optional, default=None
-            Column linking nucleus polygons to cell IDs. If `None` but
-            `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
+        nucleus_shapes_cell_id_key : str, optional, default="cell_id"
+            Cell ID key for `sdata.shapes[nucleus_shapes_key]`. Must match either the shapes
+            index name or a column name (which will be set as the index if needed).
 
         Notes
         -----
@@ -170,7 +170,6 @@ class SegTraQ:
         self.shapes_key = shapes_key
         self.shapes_cell_id_key = shapes_cell_id_key
         self.nucleus_shapes_key = nucleus_shapes_key
-        self.nucleus_shapes_cell_id_key = nucleus_shapes_cell_id_key
 
         self.bl = _BLFacade(self)
         self.rc = _RCFacade(self)
@@ -699,7 +698,6 @@ class _BLFacade:
             sdata=self._p.sdata,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             features_to_compute=features_to_compute,
             n_jobs=n_jobs,
             tables_key=self._p.tables_key,
@@ -750,9 +748,7 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             n_jobs=n_jobs,
             use_progress=True,
             inplace=inplace,
@@ -770,10 +766,10 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             points_key=self._p.points_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             metric=metric,
             n_jobs_iou=n_jobs_iou,
@@ -792,9 +788,7 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_background_id=self._p.points_background_id,
@@ -820,7 +814,6 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_x_key=self._p.points_x_key,
@@ -954,7 +947,6 @@ class _PSFacade:
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
@@ -982,7 +974,6 @@ class _PSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_cell_id_key=self._p.points_cell_id_key,
             inplace=inplace,
         )
@@ -1001,7 +992,6 @@ class _PSFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_x_key=self._p.points_x_key,
