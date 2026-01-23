@@ -756,7 +756,13 @@ class _RCFacade:
 
     compute_cell_nuc_ious.__doc__ = rc.compute_cell_nuc_ious.__doc__
 
-    def compute_cell_nuc_correlation(self, metric: str = "cosine_sim", n_jobs_iou: int = -1, inplace: bool = True):
+    def compute_cell_nuc_correlation(self, 
+                                     min_transcripts: int = 10,
+                                     min_genes: int = 5, 
+                                     metric: str = "cosine_sim", 
+                                     n_jobs_iou: int = -1, 
+                                     inplace: bool = True):
+        
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -771,6 +777,8 @@ class _RCFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
+            min_transcripts=min_transcripts,
+            min_genes = min_genes,
             metric=metric,
             n_jobs_iou=n_jobs_iou,
             inplace=inplace,
@@ -778,7 +786,12 @@ class _RCFacade:
 
     compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
 
-    def compute_correlation_between_parts(self, metric: str = "cosine_sim", n_jobs: int = -1, inplace: bool = True):
+    def compute_correlation_between_parts(self, 
+                                          min_transcripts: int = 10,
+                                          min_genes: int = 5, 
+                                          metric: str = "cosine_sim", 
+                                          n_jobs: int = -1, 
+                                          inplace: bool = True):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -795,6 +808,8 @@ class _RCFacade:
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
+            min_transcripts=min_transcripts,
+            min_genes = min_genes,            
             metric=metric,
             n_jobs=n_jobs,
             inplace=inplace,
@@ -806,6 +821,8 @@ class _RCFacade:
         self,
         erosion_fraction_of_radius: float = 0.2,
         radius_factor: float = 2.0,
+        min_transcripts: int = 10,
+        min_genes: int = 5, 
         metric: str = "cosine_sim",
         inplace: bool = True,
     ):
@@ -816,10 +833,13 @@ class _RCFacade:
             shapes_key=self._p.shapes_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             erosion_fraction_of_radius=erosion_fraction_of_radius,
+            min_transcripts=min_transcripts,
+            min_genes = min_genes,    
             radius_factor=radius_factor,
             metric=metric,
             inplace=inplace,
