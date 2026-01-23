@@ -594,6 +594,7 @@ class SegTraQ:
         self,
         min_qv: float = 20.0,
         control_genes: tuple | list = (),
+        recompute_expression: bool = False,
         inplace: bool = True,
     ):
         """
@@ -605,6 +606,8 @@ class SegTraQ:
             Minimum quality value (QV) threshold for transcripts to be retained.
         control_genes : tuple or list, optional
             List of gene name prefixes indicating control genes to be filtered out.
+        recompute_expression : bool, default=False
+            If True, recomputes the per-cell expression matrix after filtering transcripts.
         inplace : bool, default=True
             If True, modifies `self.sdata` in place.
             If False, returns a new SpatialData object with filtered transcripts.
@@ -619,7 +622,12 @@ class SegTraQ:
             sdata=self.sdata,
             min_qv=min_qv,
             control_genes=control_genes,
+            points_key=self.points_key,
             points_gene_key=self.points_gene_key,
+            points_cell_id_key=self.points_cell_id_key,
+            tables_key=self.tables_key,
+            shapes_key=self.shapes_key,
+            recompute_expression=recompute_expression,
             inplace=inplace,
         )
 
