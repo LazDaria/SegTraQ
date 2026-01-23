@@ -9,7 +9,6 @@ from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
-    _align_expression_dfs,
     _assign_nuc_to_transcripts,
     _assign_transcripts_to_center_or_border,
     _compute_ncvs_within_radius,
@@ -104,7 +103,6 @@ def compute_cell_nuc_ious(
 
     return iou_df
 
-
 def compute_cell_nuc_correlation(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -115,6 +113,8 @@ def compute_cell_nuc_correlation(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
+    min_transcripts: int = 10,
+    min_genes: int = 5,
     metric: str = "cosine_sim",
     n_jobs_iou: int = -1,
     inplace: bool = True,
@@ -130,9 +130,7 @@ def compute_cell_nuc_correlation(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
+        Key in `sdata.tables` for the cell-level metadata table. 
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -147,6 +145,12 @@ def compute_cell_nuc_correlation(
         Column for the y-coordinate of each transcript/spot.
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
+    min_transcripts : int, default=10
+        Minimum number of transcripts (raw counts) required per region (cell and nucleus) to compute a correlation.
+        If either region has fewer than `min_transcripts` counts, the correlation is set to NaN.
+    min_genes : int, default=5
+        Minimum number of non-zero genes required to compute a correlation.
+        If fewer genes are available, the correlation is set to NaN.
     metric : str, default="cosine_sim"
         Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
     n_jobs_iou: int
@@ -161,7 +165,7 @@ def compute_cell_nuc_correlation(
             - cell_id_key : identifier of each cell,
             - `best_nuc_id`: matching nucleus ID with highest IoU (or None),
             - `corr_nc_cell`: Pearson correlation between the cell and its matched nucleus gene counts
-            (0.0 if no match).
+            (NaN if no match).
     """
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported")
@@ -206,7 +210,7 @@ def compute_cell_nuc_correlation(
         index=sdata.tables[tables_key].obs[tables_cell_id_key],
         columns=sdata.tables[
             tables_key
-        ].var.index,  # TODO - this might break, if var.index and points_gene_key do not match!
+        ].var_names,  # TODO - this might break, if var.index and points_gene_key do not match!
     )
 
     expr_nucleus = _shapes_by_feature_df(
@@ -232,23 +236,26 @@ def compute_cell_nuc_correlation(
             rows.append(
                 {
                     id_key: cid,
-                    "best_nuc_id": np.nan,
+                    "best_nuc_id": nid,
                     "IoU": row.IoU,
-                    "corr_nc_cell": 0.0,
+                    "corr_nc_cell": np.nan,
                 }
             )
         else:
-            x_raw = expr_cells.loc[cid, :].to_numpy().ravel()
-            y_raw = expr_nucleus.loc[nid, :].to_numpy().ravel()
+            x_raw = expr_cells.loc[cid, :].to_numpy()
+            y_raw = expr_nucleus.loc[nid, :].to_numpy()
 
-            x_norm = expr_cells_norm.loc[cid, :].to_numpy().ravel()
-            y_norm = expr_nucleus_norm.loc[nid, :].to_numpy().ravel()
+            x_norm = expr_cells_norm.loc[cid, :].to_numpy()
+            y_norm = expr_nucleus_norm.loc[nid, :].to_numpy()
 
             mask = (x_raw != 0) | (y_raw != 0)
             x = x_norm[mask]
             y = y_norm[mask]
 
-            if np.all(x == 0) or np.all(y == 0):
+            x_counts = x_raw[mask].sum()
+            y_counts = y_raw[mask].sum()
+
+            if (mask.sum() < min_genes) or (x_counts < min_transcripts) or (y_counts < min_transcripts):
                 corr = np.nan
             else:
                 if metric == "pearson":
@@ -278,7 +285,7 @@ def compute_cell_nuc_correlation(
             df_cell_id_key=id_key,
         )
 
-    return corr_df, iou_df
+    return corr_df
 
 def compute_correlation_between_parts(
     sdata,
@@ -292,6 +299,8 @@ def compute_correlation_between_parts(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
+    min_transcripts: int = 10,
+    min_genes: int = 5,
     metric: str = "cosine_sim",
     scale: float = 1e4,
     n_jobs: int = 1,  # joblib not strictly needed; most win is from vectorization
@@ -329,6 +338,12 @@ def compute_correlation_between_parts(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
+    min_transcripts : int, default=10
+        Minimum number of transcripts (raw counts) required per region (cytoplasm and nucleus) to compute a correlation.
+        If either region has fewer than `min_transcripts` counts, the correlation is set to NaN.
+    min_genes : int, default=5
+        Minimum number of non-zero genes required to compute a correlation.
+        If fewer genes are available, the correlation is set to NaN.
     metric : str, default="cosine_sim"
         Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
     scale: float, default=1e4,
@@ -385,27 +400,26 @@ def compute_correlation_between_parts(
     tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
     tx["in_intersection"] = (tx[nuc_id_name].notna()) & (tx[nuc_id_name] == tx["best_nuc_id"])
 
+    all_cells = pd.Index(tx[points_cell_id_key].unique())
+    all_genes = pd.Index(tx[points_gene_key].unique())
+
     # intersection: cell ∩ best nucleus
-    counts_intersection = (
+    counts_intersection_raw = (
         tx[tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .groupby([points_cell_id_key, points_gene_key])
         .size()
         .unstack(fill_value=0)
+        .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
 
     # remainder: rest of the cell
-    counts_remainder = (
+    counts_remainder_raw = (
         tx[~tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .groupby([points_cell_id_key, points_gene_key])
         .size()
         .unstack(fill_value=0)
+        .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
-
-    common_cells = counts_intersection.index.intersection(counts_remainder.index)
-    common_genes = counts_intersection.columns.intersection(counts_remainder.columns)
-
-    counts_intersection_raw = counts_intersection.loc[common_cells, common_genes]
-    counts_remainder_raw = counts_remainder.loc[common_cells, common_genes]
 
     # normalize
     total_counts = (counts_intersection_raw + counts_remainder_raw).sum(axis=1).replace(0, np.nan)
@@ -415,27 +429,34 @@ def compute_correlation_between_parts(
     counts_remainder_norm = np.log1p(counts_remainder_norm).fillna(0.0)
 
     rows = []
-    for cid in common_cells:
-        x_raw = counts_intersection_raw.loc[cid].to_numpy(dtype=float)
-        y_raw = counts_remainder_raw.loc[cid].to_numpy(dtype=float)
-
-        # keep genes that are non-zero in at least one part
-        mask = (x_raw != 0) | (y_raw != 0)
-
-        x = counts_intersection_norm.loc[cid].to_numpy(dtype=float)[mask]
-        y = counts_remainder_norm.loc[cid].to_numpy(dtype=float)[mask]
-
-        if np.all(x == 0) or np.all(y == 0):
+    for cid in all_cells:
+        nid = best_nuc_map.get(cid)
+        if pd.isna(nid):  # if no overlapping nucleus
             r = np.nan
         else:
-            if metric == "pearson":
-                r, _ = pearsonr(x, y)
-            elif metric == "spearman":
-                r, _ = spearmanr(x, y)
-            elif metric == "cosine_sim":
-                r = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+            x_raw = counts_intersection_raw.loc[cid].to_numpy(dtype=float)
+            y_raw = counts_remainder_raw.loc[cid].to_numpy(dtype=float)
+
+            # keep genes that are non-zero in at least one part
+            mask = (x_raw != 0) | (y_raw != 0)
+
+            x_counts = x_raw[mask].sum()
+            y_counts = y_raw[mask].sum()
+
+            x = counts_intersection_norm.loc[cid].to_numpy(dtype=float)[mask]
+            y = counts_remainder_norm.loc[cid].to_numpy(dtype=float)[mask]
+
+            if (mask.sum() < min_genes) or (x_counts < min_transcripts) or (y_counts < min_transcripts):
+                r = np.nan
             else:
-                raise ValueError(f"Metric {metric} not supported")
+                if metric == "pearson":
+                    r, _ = pearsonr(x, y)
+                elif metric == "spearman":
+                    r, _ = spearmanr(x, y)
+                elif metric == "cosine_sim":
+                    r = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+                else:
+                    raise ValueError(f"Metric {metric} not supported")
 
         rows.append((cid, r))
 
@@ -454,7 +475,6 @@ def compute_correlation_between_parts(
 
     return out
 
-
 def compute_center_border_ncv_correlation(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -462,11 +482,14 @@ def compute_center_border_ncv_correlation(
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
     erosion_fraction_of_radius: float = 0.2,
     radius_factor: float = 2.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
     metric: str = "cosine_sim",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -500,6 +523,8 @@ def compute_center_border_ncv_correlation(
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
     points_x_key : str, default="x"
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
@@ -511,6 +536,12 @@ def compute_center_border_ncv_correlation(
     erosion_fraction_of_radius : float, default=0.2
         Fraction of the equivalent radius to use as erosion
         Example: 0.2 means erode by 20% of the radius.
+    min_transcripts : int, default=10
+        Minimum number of transcripts (raw counts) required per region to compute a correlation.
+        If either region has fewer than `min_transcripts` counts, the correlation is set to NaN.
+    min_genes : int, default=5
+        Minimum number of non-zero genes required to compute a correlation.
+        If fewer genes are available, the correlation is set to NaN.
     metric : str, default="cosine_sim"
         Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
     inplace : bool, optional
@@ -525,12 +556,16 @@ def compute_center_border_ncv_correlation(
             - `corr_border_ncv`: correlation between border and NCV expression
             - `corr_ncv_vs_center`: ratio of the two correlations
     """
+    if metric not in ["pearson", "spearman", "cosine_sim"]:
+        raise ValueError(f"Metric {metric} not supported")
 
-    _, _, expr_center, expr_border = _assign_transcripts_to_center_or_border(
+    expr_center_raw, expr_border_raw = _assign_transcripts_to_center_or_border(
         sdata,
+        tables_key=tables_key,
         shapes_key=shapes_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_gene_key=points_gene_key,
@@ -538,7 +573,7 @@ def compute_center_border_ncv_correlation(
     )
 
     # NCV: neighborhood composition vector
-    expr_ncv = _compute_ncvs_within_radius(
+    expr_ncv_raw = _compute_ncvs_within_radius(
         sdata=sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
@@ -546,14 +581,10 @@ def compute_center_border_ncv_correlation(
         radius_factor=radius_factor,
     )
 
-    # next, we align the three expression DataFrames to have the same cells and genes
-    aligned_expression_dfs = _align_expression_dfs(
-        {"expr_center": expr_center, "expr_border": expr_border, "expr_ncv": expr_ncv}, sdata, tables_key
-    )
-
-    expr_center_raw = aligned_expression_dfs["expr_center"]
-    expr_border_raw = aligned_expression_dfs["expr_border"]
-    expr_ncv_raw = aligned_expression_dfs["expr_ncv"]
+    common_cells = expr_border_raw.index.intersection(expr_center_raw.index)
+    expr_center_raw = expr_center_raw.loc[common_cells, expr_ncv_raw.columns]
+    expr_border_raw = expr_border_raw.loc[common_cells, expr_ncv_raw.columns]
+    expr_ncv_raw = expr_ncv_raw.loc[common_cells,:]
 
     # normalization and log1p
     expr_center = _norm_log_df(expr_center_raw)
@@ -565,13 +596,13 @@ def compute_center_border_ncv_correlation(
     rows = []
 
     for cid in expr_center.index:
-        x_center = expr_center.loc[cid].to_numpy().ravel()
-        x_border = expr_border.loc[cid].to_numpy().ravel()
-        x_ncv = expr_ncv.loc[cid].to_numpy().ravel()
+        x_center = expr_center.loc[cid].to_numpy()
+        x_border = expr_border.loc[cid].to_numpy()
+        x_ncv = expr_ncv.loc[cid].to_numpy()
 
-        x_center_raw = expr_center_raw.loc[cid].to_numpy().ravel()
-        x_border_raw = expr_border_raw.loc[cid].to_numpy().ravel()
-        x_ncv_raw = expr_ncv_raw.loc[cid].to_numpy().ravel()
+        x_center_raw = expr_center_raw.loc[cid].to_numpy()
+        x_border_raw = expr_border_raw.loc[cid].to_numpy()
+        x_ncv_raw = expr_ncv_raw.loc[cid].to_numpy()
 
         # Filter out genes that are zero in all three regions
         mask = (x_center_raw != 0) | (x_border_raw != 0) | (x_ncv_raw != 0)
@@ -583,11 +614,12 @@ def compute_center_border_ncv_correlation(
         corr_border_ncv = np.nan
         corr_ncv_vs_center = np.nan
 
-        if metric not in ["pearson", "spearman", "cosine_sim"]:
-            raise ValueError(f"Metric {metric} not supported")
+        x_center_counts = x_center_raw[mask].sum()
+        x_border_counts = x_border_raw[mask].sum()
+        x_ncv_counts = x_ncv_raw[mask].sum()
 
         # center–border similarity
-        if not (np.all(x_center == 0) or np.all(x_border == 0)):
+        if (mask.sum() >= min_genes) and (x_center_counts >= min_transcripts) and (x_border_counts >= min_transcripts):
             if metric == "pearson":
                 corr_center_border, _ = pearsonr(x_center, x_border)
             elif metric == "spearman":
@@ -596,7 +628,7 @@ def compute_center_border_ncv_correlation(
                 corr_center_border = cosine_similarity(x_center.reshape(1, -1), x_border.reshape(1, -1))[0, 0]
 
         # border–NCV similarity
-        if not (np.all(x_border == 0) or np.all(x_ncv == 0)):
+        if (mask.sum() >= min_genes) and (x_ncv_counts >= min_transcripts) and (x_border_counts >= min_transcripts):
             if metric == "pearson":
                 corr_border_ncv, _ = pearsonr(x_border, x_ncv)
             elif metric == "spearman":
@@ -608,7 +640,7 @@ def compute_center_border_ncv_correlation(
         if (
             not np.isnan(corr_center_border)
             and not np.isnan(corr_border_ncv)
-            and not np.isclose(corr_center_border, 0.0)  # TODO - set to very small value instead?
+            and not np.isclose(corr_center_border, 0.0) 
         ):
             corr_ncv_vs_center = corr_border_ncv / corr_center_border
 
