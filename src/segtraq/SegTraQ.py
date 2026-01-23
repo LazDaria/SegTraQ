@@ -626,7 +626,6 @@ class SegTraQ:
             points_gene_key=self.points_gene_key,
             points_cell_id_key=self.points_cell_id_key,
             tables_key=self.tables_key,
-            shapes_key=self.shapes_key,
             recompute_expression=recompute_expression,
             inplace=inplace,
         )
@@ -1085,6 +1084,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_rmsd.__doc__ = cs.compute_rmsd.__doc__
+
     def compute_mean_cosine_distance(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
@@ -1101,6 +1102,8 @@ class _CSFacade:
             cell_type_key=cell_type_key,
             inplace=inplace,
         )
+
+    compute_mean_cosine_distance.__doc__ = cs.compute_mean_cosine_distance.__doc__
 
     def compute_silhouette_score(
         self,
@@ -1121,6 +1124,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_silhouette_score.__doc__ = cs.compute_silhouette_score.__doc__
+
     def compute_purity(
         self,
         resolution: float = 1.0,
@@ -1136,6 +1141,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_purity.__doc__ = cs.compute_purity.__doc__
+
     def compute_ari(
         self,
         resolution: float = 1.0,
@@ -1150,6 +1157,27 @@ class _CSFacade:
             key_prefix=key_prefix,
             inplace=inplace,
         )
+
+    compute_ari.__doc__ = cs.compute_ari.__doc__
+
+    def compute_cluster_connectedness(
+        self,
+        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        key_prefix: str = "leiden_subset",
+        random_state: int = 42,
+        cell_type_key: str | None = None,
+        inplace: bool = True,
+    ):
+        return cs.compute_cluster_connectedness(
+            sdata=self._p.sdata,
+            resolution=resolution,
+            key_prefix=key_prefix,
+            random_state=random_state,
+            cell_type_key=cell_type_key,
+            inplace=inplace,
+        )
+
+    compute_cluster_connectedness.__doc__ = cs.compute_cluster_connectedness.__doc__
 
 
 class _VLFacade:
