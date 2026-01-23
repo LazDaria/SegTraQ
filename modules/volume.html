@@ -304,9 +304,7 @@ document.write(`
   </button>
 `);
 </script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -322,16 +320,6 @@ document.write(`
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_heterotypic_overlap_fraction"><code class="docutils literal notranslate"><span class="pre">compute_heterotypic_overlap_fraction()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_mean_vsi_per_cell"><code class="docutils literal notranslate"><span class="pre">compute_mean_vsi_per_cell()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_sim_top_bottom_z"><code class="docutils literal notranslate"><span class="pre">compute_sim_top_bottom_z()</span></code></a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -344,159 +332,6 @@ document.write(`
   <section id="the-volume-vl-accessor">
 <h1>The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor<a class="headerlink" href="#the-volume-vl-accessor" title="Link to this heading">#</a></h1>
 <p>The volume accessor provides metrics about the 3D spatial distribution of transcripts.</p>
-<dl class="py function" id="module-segtraq.vl.volume">
-<dt class="sig sig-object py" id="segtraq.vl.volume.compute_heterotypic_overlap_fraction">
-<span class="sig-prename descclassname"><span class="pre">segtraq.vl.volume.</span></span><span class="sig-name descname"><span class="pre">compute_heterotypic_overlap_fraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('cell_boundaries_z0',</span> <span class="pre">'cell_boundaries_z1',</span> <span class="pre">'cell_boundaries_z2',</span> <span class="pre">'cell_boundaries_z3')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unknown_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Unknown'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unknown_policy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'treat_as_label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.vl.volume.compute_heterotypic_overlap_fraction" title="Link to this definition">#</a></dt>
-<dd><p>Compute cross-depth heterotypic overlap fraction per cell using one representative polygon per cell
-(chosen as the polygon with the largest area across z layers).</p>
-<p>For a representative polygon i (cell_id, z_layer) with geometry P_i and type t_i:</p>
-<blockquote>
-<div><p>overlap_area_i = Area( P_i ∩ Union_{j: z_j != z_i, id_j != id_i, t_j != t_i} P_j )
-overlap_fraction_i = overlap_area_i / Area(P_i)</p>
-</div></blockquote>
-<p>Candidates are restricted to bbox-overlapping polygons via a spatial index.</p>
-<dl class="simple">
-<dt>Unknown/NA types:</dt><dd><ul class="simple">
-<li><p>unknown_policy=”exclude”: cells with NA/unknown type return NaN, and unknown-type
-candidates are excluded from overlap.</p></li>
-<li><p>unknown_policy=”treat_as_label”: NA is replaced by <cite>unknown_label</cite> and treated as a
-real category.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData</em>) – A <cite>SpatialData</cite> object containing cell boundary polygons in multiple z layers and a
-cell table with transferred cell type labels.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – Key in <cite>sdata.tables</cite> for the cell-level metadata table.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the cell table uniquely identifying each cell.</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>default=&quot;transferred_cell_type&quot;</em>) – Column in the cell table containing cell-type labels (e.g. transferred from scRNA-seq).</p></li>
-<li><p><strong>shapes_key_list</strong> (<em>list</em><em>[</em><em>str</em><em>] or </em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em>) – Keys in <cite>sdata.shapes</cite> for per-z-layer cell boundary polygons
-(e.g. [“cell_boundaries_z0”, …, “cell_boundaries_z3”]).</p></li>
-<li><p><strong>shapes_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Index name of shapes GeoDataFrame linking polygons to cell IDs.</p></li>
-<li><p><strong>unknown_label</strong> (<em>str</em><em>, </em><em>default=&quot;Unknown&quot;</em>) – Label name to use when treating NA as a separate category (unknown_policy=”treat_as_label”).</p></li>
-<li><p><strong>unknown_policy</strong> (<em>str</em><em>, </em><em>default=&quot;exclude&quot;</em>) – <dl class="simple">
-<dt>How to handle Unknown/NA cell types:</dt><dd><ul>
-<li><p>”exclude”: exclude polygons with NA/unknown types from comparisons. If the focal cell
-has NA/unknown type, its overlap fraction is set to NaN.</p></li>
-<li><p>”treat_as_label”: convert NA to <cite>unknown_label</cite> and treat it as a valid category.</p></li>
-</ul>
-</dd>
-</dl>
-</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to merge the aggregated per-cell result into <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame with columns [tables_cell_id_key, “heterotypic_overlap_area”, “heterotypic_overlap_fraction”].</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.vl.volume.compute_mean_vsi_per_cell">
-<span class="sig-prename descclassname"><span class="pre">segtraq.vl.volume.</span></span><span class="sig-name descname"><span class="pre">compute_mean_vsi_per_cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vsi_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_background_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_to_origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.vl.volume.compute_mean_vsi_per_cell" title="Link to this definition">#</a></dt>
-<dd><p>Compute per-cell mean VSI by sampling a precomputed VSI map at transcript locations.</p>
-<p>This metric assumes <cite>vsi_map</cite> is defined on the same coordinate system and scaling
-as the transcript coordinates in <cite>sdata.points[points_key]</cite>, i.e. VSI values are
-indexed directly by integer x/y coordinates (after optional shift-to-origin).
-For each transcript, the VSI value is read from <cite>vsi_map[y_int, x_int]</cite> and then
-averaged across transcripts belonging to each cell.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData</em>) – A <cite>SpatialData</cite> object containing transcript-assigned spatial transcriptomics data.</p></li>
-<li><p><strong>vsi_map</strong> (<em>np.ndarray</em>) – 2D array of VSI values. Must be indexable as <cite>vsi_map[y, x]</cite>, where x/y correspond
-to transcript coordinates (after optional shift-to-origin).</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – Key in <cite>sdata.tables</cite> for the cell-level metadata table. If <cite>inplace=True</cite>,
-results are merged into <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the cell table uniquely identifying each cell.</p></li>
-<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>default=&quot;transcripts&quot;</em>) – Key in <cite>sdata.points</cite> for transcript-level data.</p></li>
-<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the points table linking each transcript to a cell.</p></li>
-<li><p><strong>points_background_id</strong> (<em>str</em><em> or </em><em>int</em><em>, </em><em>default=&quot;UNASSIGNED&quot;</em>) – Identifier for transcripts not assigned to any cell (background).</p></li>
-<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>default=&quot;feature_name&quot;</em>) – Column specifying the gene/feature name for each transcript. Used to filter
-transcripts to features present in <cite>sdata.tables[tables_key].var_names</cite>.</p></li>
-<li><p><strong>points_x_key</strong> (<em>str</em><em>, </em><em>default=&quot;x&quot;</em>) – Column for the x-coordinate of each transcript.</p></li>
-<li><p><strong>points_y_key</strong> (<em>str</em><em>, </em><em>default=&quot;y&quot;</em>) – Column for the y-coordinate of each transcript.</p></li>
-<li><p><strong>shift_to_origin</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, shift transcript coordinates by subtracting global min(x) and min(y)
-(computed from the filtered transcripts) before sampling <cite>vsi_map</cite>.
-If False, transcript coordinates are used directly as indices.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to add the results to <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame with columns [tables_cell_id_key, “mean_vsi”]</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.vl.volume.compute_sim_top_bottom_z">
-<span class="sig-prename descclassname"><span class="pre">segtraq.vl.volume.</span></span><span class="sig-name descname"><span class="pre">compute_sim_top_bottom_z</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_background_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_z_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_z_drift</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.99</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_transcripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.vl.volume.compute_sim_top_bottom_z" title="Link to this definition">#</a></dt>
-<dd><p>Compute cosine similarity between gene expression profiles of the bottom and top
-z-quantiles of transcripts within each cell.</p>
-<p>Optionally, a global z-drift correction is applied before computing within-cell
-quantiles (default: True). This is useful when raw z coordinates show tilt/warping
-across the field of view (e.g. slide not even in z).</p>
-<dl class="simple">
-<dt>For each cell, transcripts are split into:</dt><dd><ul class="simple">
-<li><p>bottom part: z &lt;= q-quantile within that cell</p></li>
-<li><p>top part:    z &gt;= (1-q)-quantile within that cell</p></li>
-</ul>
-</dd>
-</dl>
-<p>Gene counts are aggregated separately for bottom and top, then normalized using
-within-cell library size normalization (bottom+top total), scaled by <cite>scale</cite>,
-log1p-transformed, and compared using cosine similarity.</p>
-<dl class="simple">
-<dt>Cells are filtered / set to NaN if either part is too sparse:</dt><dd><ul class="simple">
-<li><p>at least <cite>min_transcripts</cite> transcripts in BOTH bottom and top parts</p></li>
-<li><p>at least <cite>min_genes</cite> genes with nonzero counts across (bottom OR top)</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData</em>) – A <cite>SpatialData</cite> object containing transcript-assigned spatial transcriptomics data.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – Key in <cite>sdata.tables</cite> for the cell-level metadata table.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the cell table uniquely identifying each cell.</p></li>
-<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>default=&quot;transcripts&quot;</em>) – Key in <cite>sdata.points</cite> for transcript-level data.</p></li>
-<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the points table linking each transcript to a cell.</p></li>
-<li><p><strong>points_background_id</strong> (<em>str</em><em> or </em><em>int</em><em>, </em><em>default=&quot;UNASSIGNED&quot;</em>) – Identifier for transcripts not assigned to any cell (background).</p></li>
-<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>default=&quot;feature_name&quot;</em>) – Column specifying the gene/feature name for each transcript.</p></li>
-<li><p><strong>points_x_key</strong> (<em>str</em><em>, </em><em>default=&quot;x&quot;</em>) – Column for the x-coordinate of each transcript.</p></li>
-<li><p><strong>points_y_key</strong> (<em>str</em><em>, </em><em>default=&quot;y&quot;</em>) – Column for the y-coordinate of each transcript.</p></li>
-<li><p><strong>points_z_key</strong> (<em>str</em><em>, </em><em>default=&quot;z&quot;</em>) – Column specifying the z coordinate / depth for each transcript.</p></li>
-<li><p><strong>correct_z_drift</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, correct global z-drift before computing within-cell z-quantiles.
-The corrected values are used only for defining top/bottom subsets.</p></li>
-<li><p><strong>max_points</strong> (<em>int</em><em>, </em><em>default=1_000_000</em>) – Max. number of points used to fit the regression (random subsampling) in z drift correction.</p></li>
-<li><p><strong>q0</strong> (<em>float</em><em>, </em><em>default=0.01</em><em>, </em><em>0.99</em>) – Quantiles for clipping residual z values in z drift correction.</p></li>
-<li><p><strong>q1</strong> (<em>float</em><em>, </em><em>default=0.01</em><em>, </em><em>0.99</em>) – Quantiles for clipping residual z values in z drift correction.</p></li>
-<li><p><strong>seed</strong> (<em>int</em><em> or </em><em>None</em><em>, </em><em>default=0</em>) – Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.</p></li>
-<li><p><strong>q</strong> (<em>float</em><em>, </em><em>default=0.30</em>) – Quantile defining bottom and top parts. bottom = q, top = 1-q.</p></li>
-<li><p><strong>scale</strong> (<em>float</em><em>, </em><em>default=1e4</em>) – Scale for within-cell library size normalization (bottom+top).</p></li>
-<li><p><strong>min_genes</strong> (<em>int</em><em>, </em><em>default=5</em>) – Minimum number of genes with nonzero counts in (bottom OR top) required to score a cell.</p></li>
-<li><p><strong>min_transcripts</strong> (<em>int</em><em>, </em><em>default=10</em>) – Minimum number of transcripts required in EACH part (bottom and top) to score a cell.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to add the results to <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame with columns [tables_cell_id_key, “cosine_sim_top_bottom_z”].</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
 </section>
 
 
@@ -534,23 +369,6 @@ The corrected values are used only for defining top/bottom subsets.</p></li>
             </div>
             
             
-              
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_heterotypic_overlap_fraction"><code class="docutils literal notranslate"><span class="pre">compute_heterotypic_overlap_fraction()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_mean_vsi_per_cell"><code class="docutils literal notranslate"><span class="pre">compute_mean_vsi_per_cell()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.vl.volume.compute_sim_top_bottom_z"><code class="docutils literal notranslate"><span class="pre">compute_sim_top_bottom_z()</span></code></a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>
