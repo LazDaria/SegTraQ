@@ -2,6 +2,7 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
@@ -313,3 +314,49 @@ def compute_mean_purity(purity_matrix: np.ndarray) -> float:
     """
     n = purity_matrix.shape[0]
     return np.mean(purity_matrix[np.triu_indices(n, k=1)])
+
+
+def _compute_cluster_connectedness(
+    connectivities: sp.spmatrix,
+    labels: np.ndarray,
+) -> float:
+    """
+    Compute how well connected a clustering is in a kNN graph.
+
+    Parameters
+    ----------
+    connectivities : scipy.sparse.spmatrix
+        Sparse connectivity matrix (n_cells × n_cells), e.g. from Scanpy.
+        Nonzero entries indicate graph neighbors.
+    labels : np.ndarray
+        Cluster labels of shape (n_cells,).
+
+    Returns
+    -------
+    float
+        Mean cluster connectedness in [0, 1].
+    """
+
+    if not sp.issparse(connectivities):
+        raise ValueError("connectivities must be a scipy sparse matrix")
+
+    if connectivities.shape[0] != len(labels):
+        raise ValueError("connectivities and labels must have compatible shapes")
+
+    G = connectivities.tocsr()
+    labels = np.asarray(labels)
+
+    n = G.shape[0]
+    per_cell = np.empty(n)
+    per_cell.fill(np.nan)
+
+    for i in range(n):
+        start, end = G.indptr[i], G.indptr[i + 1]
+        neighbors = G.indices[start:end]
+
+        if len(neighbors) == 0:
+            continue
+
+        per_cell[i] = np.mean(labels[neighbors] == labels[i])
+
+    return np.nanmean(per_cell)
