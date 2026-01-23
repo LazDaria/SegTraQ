@@ -26,7 +26,7 @@ dependencies = [
   "igraph",
   "rtree",
   "rasterio",
-  "squidpy>=1.6.2",
+  "squidpy>=1.6.2,<1.6.6",
   "tqdm",
   "anndata",
 ]
