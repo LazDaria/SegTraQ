@@ -27,7 +27,6 @@ def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
     df_norm = df.div(sums, axis=0) * scale
     return np.log1p(df_norm).fillna(0.0)
 
-
 def _process_cell(
     cell_row: Series,
     nucleus_shapes: GeoDataFrame,
@@ -59,66 +58,6 @@ def _process_cell(
         best_iou = np.nan 
 
     return {id_name: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
-
-def _shapes_by_feature_df(
-    sdata: sd.SpatialData,
-    region_key: str = "nucleus_boundaries",
-    points_key: str = "transcripts",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_gene_key: str = "feature_name",
-) -> pd.DataFrame:
-    """
-    Aggregate feature counts per region (nucleus or other), converting transcripts to 2D if needed.
-
-    Parameters
-    ----------
-        sdata : SpatialData
-            A `SpatialData` object containing segmented and transcript-assigned spatial
-            transcriptomics data (images, tables, points, shapes and optional labels).
-        region_key : str, default="nucleus_boundaries"
-            Key in `sdata.shapes` for defining the regions to aggregate by. The index should be the region ID.
-        points_key : str, default="transcripts"
-            Key in `sdata.points` for spot/transcript-level data.
-        points_x_key : str, default="x"
-            Column for the x-coordinate of each transcript/spot.
-        points_y_key : str, default="y"
-            Column for the y-coordinate of each transcript/spot.
-        points_gene_key : str, default="feature_name"
-            Column specifying the gene/feature name for each transcript/spot.
-
-    Returns
-    -------
-    pandas.DataFrame
-        DataFrame indexed by shapes ID, columns = features (genes/proteins), values = counts.
-    """
-
-    shapes = sdata.shapes[region_key].copy()
-
-    tx = sdata.points[points_key].compute()
-
-    tx_gdf = GeoDataFrame(
-        tx,
-        geometry=gpd.points_from_xy(tx[points_x_key], tx[points_y_key]),
-        crs=shapes.crs,
-    )
-
-    joined = gpd.sjoin(
-        tx_gdf[[points_gene_key, "geometry"]],
-        shapes[["geometry"]],    
-        how="inner",
-        predicate="intersects",        
-    )
-
-    df_out = (
-        joined.groupby([shapes.index.name, points_gene_key])
-            .size()
-            .unstack(fill_value=0)
-            .reindex(shapes.index, fill_value=0)
-            .sort_index()
-    )
-
-    return df_out
 
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
@@ -198,20 +137,35 @@ def _get_center_and_border_shapes(
 
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
-def _assign_nuc_to_transcripts(
-    sdata,
+def _join_points_regions(
+    sdata: sd.SpatialData,
+    region_key: str,
     tables_key: str = "table",
-    nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str | int = "UNASSIGNED",
     points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
-):
+    predicate: str = "intersects",
+    require_points_region_ID_match: bool = True
+) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
     """
-    Assigns nucleus IDs to transcripts by performing a spatial join
-    between transcript coordinates and nucleus polygons.
+    Spatially join transcript points to region polygons and return:
+      1) per-point region assignments, and
+      2) a region x gene count matrix.
+
+    This can be applied for nuclei, cell centers, cell borders, etc.
+
+    The function:
+      - filters background points and genes not present in `sdata.tables[tables_key].var_names`
+      - converts points to a GeoDataFrame
+      - performs a spatial join against `sdata.shapes[region_key]`
+      - deduplicates points that intersect multiple polygons by keeping the first match
+      - optionally keeps only points whose assigned region id equals points_cell_id_key
+        (useful when region ids are cell ids, e.g. centers/borders; ensures compatibility 
+        with 3D-aware segmentation, where transcripts may share x/y coordinates but 
+        belong to different z-resolved cells)
 
     Parameters
     ----------
@@ -219,11 +173,10 @@ def _assign_nuc_to_transcripts(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
-    nucleus_shapes_key : str, default="nucleus_boundaries"
-        Key in `sdata.shapes` for nucleus boundary polygons, if available.
+        Key in `sdata.tables` for the cell-level metadata table. 
+    region_key : str
+        Key in `sdata.shapes` specifying which regions to use (e.g., `"nucleus_boundaries"`,
+        `"cell_centers"`, `"cell_borders"`). Must contain a `geometry` column with polygons.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
@@ -236,110 +189,25 @@ def _assign_nuc_to_transcripts(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-
-    Returns
-    -------
-    tx : pandas.DataFrame
-        A subset transcripts dataframe with nuclear assignments in
-        column `id`.
-    """
-    nucs_gdf = sdata.shapes[nucleus_shapes_key]
-
-    # Subset transcripts
-    pts = sdata.points[points_key]
-    cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
-    pts = pts[cols]
-    is_background = _is_background(pts[points_cell_id_key], points_background_id)
-    pts = pts[~is_background]
-
-    valid_features = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  
-
-    pts = pts.dropna(subset=[points_gene_key])
-    pts = pts[pts[points_gene_key].isin(valid_features)]
-
-    transcripts = pts.compute()
-    transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
-    transcripts = transcripts.reset_index(drop=True)
-    transcripts[points_gene_key] = transcripts[points_gene_key].astype("category")
-
-    pts_gdf = gpd.GeoDataFrame(
-        transcripts,
-        geometry=gpd.points_from_xy(transcripts[points_x_key], transcripts[points_y_key]),
-        crs=nucs_gdf.crs,  # assume same CRS
-    )
-
-    tx_in_nuc = gpd.sjoin(
-        pts_gdf[["geometry"]],
-        nucs_gdf[["geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-
-    # multiple nuclei can be assigned to the same transcript - avoid duplicates
-    tx_in_nuc = tx_in_nuc.groupby(level=0, observed=True).first()
-
-    nuc_id_col = nucs_gdf.index.name
-    tx_in_nuc = tx_in_nuc[[nuc_id_col]]
-
-    tx_in_cell = transcripts[[points_gene_key, points_cell_id_key]]
-    tx = tx_in_cell.join(tx_in_nuc, how="left")
-
-    return tx
-
-def _group_points_by_regions(
-    sdata: sd.SpatialData,
-    region_key: str,
-    tables_key: str = "table",
-    points_key: str = "transcripts",
-    points_gene_key: str = "feature_name",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED"
-) -> gpd.GeoDataFrame:
-    """
-    Aggregate transcript counts per region (e.g., cell centers or cell borders)
-    by annotating each transcript with the region polygon it falls into.
-
-    The function converts transcript coordinates into a GeoDataFrame, performs a
-    spatial join with the region polygons (e.g., centers, borders), and then
-    counts only those transcripts whose assigned region ID matches their cell ID.
-    This ensures compatibility with 3D-aware segmentation, where transcripts may
-    share x/y coordinates but belong to different z-resolved cells.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned spatial
-        transcriptomics data (images, tables, points, shapes and optional labels).
-    tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
-    region_key : str
-        Key in `sdata.shapes` specifying which regions to use (e.g., `"cell_centers"`,
-        `"cell_borders"`). Must contain a `geometry` column with polygons.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for spot/transcript-level data.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
+    predicate: str, default="intersects"
+        Spatial predicate passed to `geopandas.sjoin`.
+        Common options: "intersects" (default), "within", "contains".
+        For points-in-polygons, "within" is often appropriate; "intersects" includes boundary hits.
+    require_points_region_ID_match: bool, default=True
+        If not None, keep only points where the joined region id equals the values in this
+        points column. Typical use: require_region_id_equals="cell_id" when `region_key`
+        contains per-cell regions indexed by cell id (centers/borders).
+        Set to None for nuclei (region ids are nucleus ids, not cell ids).
 
     Returns
     -------
-    df_region : pandas.DataFrame
-        A gene-by-region count matrix where:
-            - Rows (`index`) correspond to region IDs (cell IDs).
-            - Columns correspond to gene names.
-            - Values are transcript counts within each region.
-        Only transcripts whose region ID matches their own cell ID are counted.
+    pts_joined : geopandas.GeoDataFrame
+        Points with assigned region ids in column "region_id" (and geometry).
+        Points that do not intersect any region have NA in "region_id" (because join is left).
+    counts : pandas.DataFrame
+        Region x gene count matrix (rows = all regions from shapes index, columns = all genes).
     """
 
     # prepare points
@@ -349,55 +217,57 @@ def _group_points_by_regions(
     is_background = _is_background(pts[points_cell_id_key], points_background_id)
     pts = pts[~is_background]
 
-    all_genes = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  
-
+    # subset to genes present in the table
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)  
     pts = pts.dropna(subset=[points_gene_key])
     pts = pts[pts[points_gene_key].isin(all_genes)]
 
+    # compute after subsetting for efficiency
     transcripts = pts.compute()
     transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
-    transcripts = transcripts.reset_index(drop=True)
+    
+    # ensure we have a clean, unique point index for deduplication after sjoin
+    transcripts = transcripts.reset_index(drop=True) 
 
     pts_gdf = gpd.GeoDataFrame(
         transcripts,
-        geometry=gpd.points_from_xy(pts[points_x_key], pts[points_y_key]),
+        geometry=gpd.points_from_xy(transcripts[points_x_key], transcripts[points_y_key]),
         crs=sdata.shapes[region_key].crs,  # assume same CRS
-    )
-    pts_gdf = pts_gdf[[points_cell_id_key, points_gene_key, "geometry"]]
+    )[[points_cell_id_key, points_gene_key, "geometry"]]
 
-    # prepare shapes
+    # prepare shapes/regions
     region_gdf = sdata.shapes[region_key].copy()
-    all_cells = region_gdf.index
-    id_key = region_gdf.index.name
+    all_regions = region_gdf.index
+
+    # normalize region id into a plain column for join output clarity
     region_gdf.index.name = "region_id"
     region_gdf.reset_index(inplace=True)
     region_gdf = region_gdf[["region_id", "geometry"]]
 
-    pts_gdf_region = gpd.sjoin(
+    pts_joined = gpd.sjoin(
         pts_gdf,
         region_gdf,
         how="left",
-        predicate="intersects",
-    )
+        predicate=predicate,
+    ).drop(columns=["index_right"])
 
-    # multiple regions can be assigned to the same transcript - avoid duplicates
-    pts_gdf_region = pts_gdf_region.groupby(level=0, observed=True).first()
+    # if a point intersects multiple polygons, keep the first match
+    pts_joined = pts_joined.groupby(level=0, observed=True).first()
 
-    df_region = (
-        pts_gdf_region.loc[
-            # only use transcripts that are actually assigned to the cell and intersect with the region
-            pts_gdf_region["region_id"] == pts_gdf_region[points_cell_id_key], ["region_id", points_gene_key]
-        ]
+    # optionally restrict to points whose region id matches another point column
+    if require_points_region_ID_match:
+        pts_joined = pts_joined[pts_joined["region_id"] == pts_joined[points_cell_id_key]]
+
+    # aggregate into region x gene counts
+    counts = (
+        pts_joined[["region_id", points_gene_key]]
         .groupby(["region_id", points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
-        .reindex(index=all_cells, columns=all_genes, fill_value=0)
+        .reindex(index=all_regions, columns=all_genes, fill_value=0)
     )
-    df_region.index.name = id_key
     
-    return df_region
+    return pts_joined, counts
 
 def _compute_ncvs_within_radius(
     sdata: sd.SpatialData,
@@ -484,8 +354,7 @@ def _compute_ncvs_within_radius(
     expr_ncv = pd.DataFrame(ncv_arr, index=expr_cells.index, columns=genes)
     return expr_ncv
 
-
-def _assign_transcripts_to_center_or_border(
+def _get_center_border_counts(
     sdata,
     tables_key: str = "table",
     shapes_key: str = "cell_boundaries",
@@ -510,28 +379,30 @@ def _assign_transcripts_to_center_or_border(
     sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
     sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
 
-    expr_center = _group_points_by_regions(
+    _, expr_center = _join_points_regions(
         sdata=sdata,
-        tables_key=tables_key,
         region_key="cell_centers",
+        tables_key=tables_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id
+        points_background_id=points_background_id,
+        predicate = "within"
     )
 
-    expr_border = _group_points_by_regions(
+    _, expr_border = _join_points_regions(
         sdata=sdata,
-        tables_key=tables_key,
         region_key="cell_borders",
+        tables_key=tables_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id
+        points_background_id=points_background_id,
+        predicate = "within"
     )
 
     return expr_center, expr_border

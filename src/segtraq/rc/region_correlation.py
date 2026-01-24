@@ -9,12 +9,11 @@ from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
-    _assign_nuc_to_transcripts,
-    _assign_transcripts_to_center_or_border,
+    _join_points_regions,
+    _get_center_border_counts,
     _compute_ncvs_within_radius,
     _norm_log_df,
     _process_cell,
-    _shapes_by_feature_df,
 )
 
 
@@ -110,6 +109,8 @@ def compute_cell_nuc_correlation(
     shapes_key: str = "cell_boundaries",
     nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
@@ -139,6 +140,10 @@ def compute_cell_nuc_correlation(
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
     points_x_key : str, default="x"
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
@@ -210,16 +215,21 @@ def compute_cell_nuc_correlation(
         index=sdata.tables[tables_key].obs[tables_cell_id_key],
         columns=sdata.tables[
             tables_key
-        ].var_names,  # TODO - this might break, if var.index and points_gene_key do not match!
+        ].var_names, 
     )
 
-    expr_nucleus = _shapes_by_feature_df(
+    _, expr_nucleus = _join_points_regions(
         sdata=sdata,
         region_key=nucleus_shapes_key,
+        tables_key=tables_key,
         points_key=points_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_gene_key=points_gene_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        predicate="intersects",
+        require_points_region_ID_match=False 
     )
 
     common_genes = expr_nucleus.columns.intersection(expr_cells.columns)
@@ -385,23 +395,25 @@ def compute_correlation_between_parts(
 
     best_nuc_map = iou_df.set_index(id_key)["best_nuc_id"]
 
-    tx = _assign_nuc_to_transcripts(
+    tx, _ = _join_points_regions(
         sdata=sdata,
+        region_key=nucleus_shapes_key,
         tables_key=tables_key,
-        nucleus_shapes_key=nucleus_shapes_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
+        predicate="within",
+        require_points_region_ID_match=False
     )
-    nuc_id_name = sdata.shapes[nucleus_shapes_key].index.name
-    tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
-    tx["in_intersection"] = (tx[nuc_id_name].notna()) & (tx[nuc_id_name] == tx["best_nuc_id"])
 
-    all_cells = pd.Index(tx[points_cell_id_key].unique())
-    all_genes = pd.Index(tx[points_gene_key].unique())
+    tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
+    tx["in_intersection"] = (tx["region_id"].notna()) & (tx["region_id"] == tx["best_nuc_id"])
+
+    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)
 
     # intersection: cell ∩ best nucleus
     counts_intersection_raw = (
@@ -430,6 +442,8 @@ def compute_correlation_between_parts(
 
     rows = []
     for cid in all_cells:
+        if cid == 70082:
+            x=0
         nid = best_nuc_map.get(cid)
         if pd.isna(nid):  # if no overlapping nucleus
             r = np.nan
@@ -559,7 +573,7 @@ def compute_center_border_ncv_correlation(
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported")
 
-    expr_center_raw, expr_border_raw = _assign_transcripts_to_center_or_border(
+    expr_center_raw, expr_border_raw = _get_center_border_counts(
         sdata,
         tables_key=tables_key,
         shapes_key=shapes_key,

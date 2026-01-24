@@ -3,7 +3,7 @@ import pandas as pd
 import spatialdata as sd
 from shapely import LinearRing, Point, Polygon
 
-from ..rc.utils import _align_expression_dfs, _assign_transcripts_to_center_or_border
+from ..rc.utils import _align_expression_dfs, _get_center_border_counts
 from ..utils import filter_cells, merge_into_obs
 
 
@@ -337,20 +337,23 @@ def periphery_enrichment_score(
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
     erosion_fraction_of_radius: float = 0.3,
     inplace: bool = True,
 ) -> pd.DataFrame:
-    center_gdf, border_gdf, expr_center, expr_border = _assign_transcripts_to_center_or_border(
+    center_gdf, border_gdf, expr_center, expr_border = _get_center_border_counts(
         sdata,
+        tables_key=tables_key,
         shapes_key=shapes_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_gene_key=points_gene_key,
+        points_background_id=points_background_id,
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
