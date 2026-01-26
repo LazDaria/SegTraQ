@@ -446,7 +446,7 @@ def morphological_features(
         Key in `sdata.shapes` specifying the unique cell identifier column (default is "cell_id").
     features_to_compute : list of str, optional
         List of morphological features to compute. If None, all available features are computed.
-        Available features: "cell_area", "perimeter", "circularity", "bbox_width", "bbox_height",
+        Available features: "centroid", "cell_area", "perimeter", "circularity", "bbox_width", "bbox_height",
         "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "num_polygons".
     n_jobs : int, optional
         Number of parallel jobs to use for computation. -1 uses all available CPUs (default is -1).
@@ -473,6 +473,7 @@ def morphological_features(
     """
     # Define all possible features
     all_features = [
+        "centroid",
         "cell_area",
         "perimeter",
         "circularity",
@@ -492,7 +493,6 @@ def morphological_features(
         features_to_compute = all_features
     else:
         # Validate features requested
-        print(features_to_compute)
         invalid_feats = set(features_to_compute) - set(all_features)
         if invalid_feats:
             raise ValueError(f"Unknown features requested: {invalid_feats}")
@@ -513,6 +513,11 @@ def morphological_features(
         features[features_cell_id] = cells[shapes_cell_id_key].values
 
     geom = cells.geometry
+
+    if "centroid" in features_to_compute:
+        centroids = geom.centroid
+        features["centroid_x"] = centroids.x.values
+        features["centroid_y"] = centroids.y.values
 
     # Compute features conditionally
     if "cell_area" in features_to_compute or any(
