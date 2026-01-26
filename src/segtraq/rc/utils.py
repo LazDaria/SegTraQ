@@ -10,16 +10,21 @@ from shapely.geometry.base import BaseGeometry
 
 from ..utils import _is_background, _looks_like_counts
 
-
-def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
-    """Compute IoU between two shape polygons."""
-
-    if not (poly1.is_valid and poly2.is_valid):  
+def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
+    if not (poly1.is_valid and poly2.is_valid):
         return np.nan
-    inter_area = poly1.intersection(poly2).area
-    union_area = poly1.union(poly2).area
-    return inter_area / union_area if union_area > 0 else 0.0
+    return poly1.intersection(poly2).area
 
+def _compute_iou_from_areas(inter_area: float, area1: float, area2: float) -> float:
+    if np.isnan(inter_area) or area1 <= 0 or area2 <= 0:
+        return np.nan
+    union = area1 + area2 - inter_area
+    return inter_area / union if union > 0 else np.nan
+
+def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
+    if np.isnan(inter_area) or nuc_area <= 0:
+        return np.nan
+    return inter_area / nuc_area
 
 def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
     # row-wise library size normalization + log1p
@@ -32,32 +37,97 @@ def _process_cell(
     nucleus_shapes: GeoDataFrame,
     id_name: str,
     nuc_sindex: Index,
-) -> dict[str | int, str | int, int | None | float]:
-    """For one cell polygon compute the IoU with the best-matching nucleus."""
-    cell_geom = cell_row.geometry
+    select_by: str = "nucleus_fraction",                 # "iou" or "nucleus_fraction"
+    min_intersection_area: float = 0.0,     # optional filter to ignore tiny overlaps
+) -> dict:
+    """
+    For one cell polygon, find the best-matching nucleus using either IoU or
+    nucleus intersection fraction as the primary score.
 
+    Tie-breaker: larger nucleus area.
+    """
+    if select_by not in ("iou", "nucleus_fraction"):
+        raise ValueError(f"select_by must be 'iou' or 'nucleus_fraction', got {select_by!r}")
+
+    cell_geom = cell_row.geometry
     cell_id = cell_row.name
 
-    # Get candidate nuclei bounding boxes that overlap this cell's bbox
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
-
     if not candidate_idx:
-        return {id_name: cell_id, "best_nuc_id": np.nan, "IoU": np.nan}
+        return {
+            id_name: cell_id,
+            "best_nuc_id": np.nan,
+            "IoU": np.nan,
+            "nucleus_fraction": np.nan,
+        }
 
     candidates = nucleus_shapes.iloc[candidate_idx]
 
-    best_iou: float = 0.0
-    best_nuc_id = np.nan
-    for _, nuc in candidates.iterrows():
-        nuc_geom = nuc.geometry
-        iou = _compute_iou(cell_geom, nuc_geom)
-        if pd.notna(iou) and iou > best_iou:
-            best_iou = iou
-            best_nuc_id = nuc.name
-    if best_iou == 0.0:
-        best_iou = np.nan 
+    cell_area = cell_geom.area if cell_geom.is_valid else np.nan
 
-    return {id_name: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
+    best = {
+        "score": -np.inf,
+        "nuc_area": -np.inf,
+        "inter_area": -np.inf,
+        "nuc_id": np.nan,
+        "iou": np.nan,
+        "nuc_frac": np.nan,
+    }
+
+    for nuc_id, nuc in candidates.iterrows():
+        nuc_geom = nuc.geometry
+        if not (cell_geom.is_valid and nuc_geom.is_valid):
+            continue
+
+        nuc_area = nuc_geom.area
+        if nuc_area <= 0 or cell_area <= 0:
+            continue
+
+        inter_area = _safe_intersection_area(cell_geom, nuc_geom)
+        if np.isnan(inter_area) or inter_area <= min_intersection_area:
+            continue
+
+        iou = _compute_iou_from_areas(inter_area, cell_area, nuc_area)
+        nuc_frac = _compute_nucleus_fraction(inter_area, nuc_area)
+
+        score = iou if select_by == "iou" else nuc_frac
+
+        # Compare with tie-breaks: score, then nuc_area, then inter_area, then nuc_id
+        better = (
+            (score > best["score"])
+            or (np.isclose(score, best["score"]) and nuc_area > best["nuc_area"])
+            or (np.isclose(score, best["score"]) and np.isclose(nuc_area, best["nuc_area"]) and inter_area > best["inter_area"])
+            or (np.isclose(score, best["score"]) 
+                and np.isclose(nuc_area, best["nuc_area"]) 
+                and np.isclose(inter_area, best["inter_area"]) 
+                and nuc_id < best["nuc_id"])
+        )
+
+        if better:
+            best.update(
+                score=score,
+                nuc_area=nuc_area,
+                inter_area=inter_area,
+                nuc_id=nuc_id,
+                iou=iou,
+                nuc_frac=nuc_frac,
+            )
+
+    # If nothing survived filtering
+    if best["score"] == -np.inf:
+        return {
+            id_name: cell_id,
+            "best_nuc_id": np.nan,
+            "IoU": np.nan,
+            "nucleus_fraction": np.nan,
+        }
+
+    return {
+        id_name: cell_id,
+        "best_nuc_id": best["nuc_id"],
+        "IoU": best["iou"],
+        "nucleus_fraction": best["nuc_frac"],
+    }
 
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
@@ -227,13 +297,14 @@ def _join_points_regions(
     transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
     
     # ensure we have a clean, unique point index for deduplication after sjoin
-    transcripts = transcripts.reset_index(drop=True) 
+    transcripts = transcripts.reset_index(drop=False)  # keep old index as column, or create np.arange
+    transcripts = transcripts.rename(columns={"index": "point_id"})
 
     pts_gdf = gpd.GeoDataFrame(
         transcripts,
         geometry=gpd.points_from_xy(transcripts[points_x_key], transcripts[points_y_key]),
         crs=sdata.shapes[region_key].crs,  # assume same CRS
-    )[[points_cell_id_key, points_gene_key, "geometry"]]
+    )[["point_id", points_cell_id_key, points_gene_key, "geometry"]]
 
     # prepare shapes/regions
     region_gdf = sdata.shapes[region_key].copy()
