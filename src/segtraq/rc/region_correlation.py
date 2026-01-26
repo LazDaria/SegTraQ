@@ -17,12 +17,14 @@ from .utils import (
 )
 
 
-def compute_cell_nuc_ious(
+def compute_cell_nuc_match(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
     nucleus_shapes_key: str = "nucleus_boundaries",
+    select_by: str = "nucleus_fraction",
+    min_intersection_area: float = 0.0,
     n_jobs: int = -1,
     use_progress: bool = True,
     inplace: bool = True,
@@ -45,6 +47,15 @@ def compute_cell_nuc_ious(
         Key in `sdata.shapes` for cell boundary polygons.
     nucleus_shapes_key : str, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
+    select_by : str, default="nucleus_fraction"
+        Score used to select the best-matching nucleus per cell. Options:
+        - "iou": maximize Intersection-over-Union (cell vs nucleus).
+        - "nucleus_fraction": maximize area(cell ∩ nucleus) / area(nucleus).
+        If multiple nuclei have the same score (e.g. fully inside the cell), the
+        larger nucleus (by area) is selected.
+    min_intersection_area : float, default=0.0
+        Minimum area(cell ∩ nucleus) required to consider a nucleus as a candidate.
+        Overlaps <= this threshold are ignored.
     n_jobs : int, optional
         Number of parallel jobs. Default=-1 uses all CPUs.
     use_progress : bool, optional
@@ -75,7 +86,7 @@ def compute_cell_nuc_ious(
         iterator = tqdm(
             iterator,
             total=len(cell_boundaries),
-            desc="Processing IoU between cells and nuclei",
+            desc="Processing intersection between cells and nuclei",
         )
 
     # Parallel loop over cells
@@ -85,22 +96,24 @@ def compute_cell_nuc_ious(
             nucleus_shapes=nuc_boundaries,
             id_name=cell_boundaries.index.name,
             nuc_sindex=nuc_sindex,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area
         )
         for _, cell_row in iterator
     )
 
-    iou_df = pd.DataFrame(results)
+    match_df = pd.DataFrame(results)
 
     if inplace:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=iou_df,
+            df_to_merge=match_df,
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=cell_boundaries.index.name,
         )
 
-    return iou_df
+    return match_df
 
 def compute_cell_nuc_correlation(
     sdata: sd.SpatialData,
@@ -117,7 +130,9 @@ def compute_cell_nuc_correlation(
     min_transcripts: int = 10,
     min_genes: int = 5,
     metric: str = "cosine_sim",
-    n_jobs_iou: int = -1,
+    select_by: str = "nucleus_fraction",
+    min_intersection_area: float = 0.0,
+    n_jobs: int = -1,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -158,8 +173,17 @@ def compute_cell_nuc_correlation(
         If fewer genes are available, the correlation is set to NaN.
     metric : str, default="cosine_sim"
         Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
-    n_jobs_iou: int
-        Number of jobs for computing IoU, if not yet calculated.
+    n_jobs: int
+        Number of jobs for computing cell nucleus match, if not yet calculated.
+    select_by : str, default="nucleus_fraction"
+        Score used to select the best-matching nucleus per cell. Options:
+        - "iou": maximize Intersection-over-Union (cell vs nucleus).
+        - "nucleus_fraction": maximize area(cell ∩ nucleus) / area(nucleus).
+        If multiple nuclei have the same score (e.g. fully inside the cell), the
+        larger nucleus (by area) is selected.
+    min_intersection_area : float, default=0.0
+        Minimum area(cell ∩ nucleus) required to consider a nucleus as a candidate.
+        Overlaps <= this threshold are ignored.
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -168,7 +192,7 @@ def compute_cell_nuc_correlation(
     pandas.DataFrame
         DataFrame with columns:
             - cell_id_key : identifier of each cell,
-            - `best_nuc_id`: matching nucleus ID with highest IoU (or None),
+            - `best_nuc_id`: matching nucleus ID with highest nucleus fraction or IoU (or None),
             - `corr_nc_cell`: Pearson correlation between the cell and its matched nucleus gene counts
             (NaN if no match).
     """
@@ -185,38 +209,40 @@ def compute_cell_nuc_correlation(
     tbl = sdata.tables[tables_key]
 
     if "best_nuc_id" not in tbl.obs.columns:
-        iou_df = compute_cell_nuc_ious(
+        match_df = compute_cell_nuc_match(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             shapes_key=shapes_key,
             nucleus_shapes_key=nucleus_shapes_key,
-            n_jobs=n_jobs_iou,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
+            n_jobs=n_jobs,
             inplace=inplace,
         )
     else:
-        iou_df = tbl.obs[[id_key, "best_nuc_id", "IoU"]].copy()
+        match_df = tbl.obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
 
-    X = tbl.X
-    # Check if X looks like counts
-    if _looks_like_counts(X):
-        arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in tbl.layers:
-        raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
-            "and the main matrix does not look like counts."
+        X = tbl.X
+        # Check if X looks like counts
+        if _looks_like_counts(X):
+            arr = X.toarray() if hasattr(X, "toarray") else X
+        elif "raw" not in tbl.layers:
+            raise ValueError(
+                f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+                "and the main matrix does not look like counts."
+            )
+        else:
+            raw = tbl.layers["raw"]
+            arr = raw.toarray() if hasattr(raw, "toarray") else raw
+
+        expr_cells = pd.DataFrame(
+            arr,
+            index=sdata.tables[tables_key].obs[tables_cell_id_key],
+            columns=sdata.tables[
+                tables_key
+            ].var_names, 
         )
-    else:
-        raw = tbl.layers["raw"]
-        arr = raw.toarray() if hasattr(raw, "toarray") else raw
-
-    expr_cells = pd.DataFrame(
-        arr,
-        index=sdata.tables[tables_key].obs[tables_cell_id_key],
-        columns=sdata.tables[
-            tables_key
-        ].var_names, 
-    )
 
     _, expr_nucleus = _join_points_regions(
         sdata=sdata,
@@ -240,7 +266,7 @@ def compute_cell_nuc_correlation(
     expr_nucleus_norm = _norm_log_df(expr_nucleus)
 
     rows = []
-    for _, row in iou_df.iterrows():
+    for _, row in match_df.iterrows():
         cid, nid = row[id_key], row.best_nuc_id
         if pd.isna(nid):  # if no overlapping nucleus
             rows.append(
@@ -248,6 +274,7 @@ def compute_cell_nuc_correlation(
                     id_key: cid,
                     "best_nuc_id": nid,
                     "IoU": row.IoU,
+                    "nucleus_fraction": row.nucleus_fraction,
                     "corr_nc_cell": np.nan,
                 }
             )
@@ -280,6 +307,7 @@ def compute_cell_nuc_correlation(
                     id_key: cid,
                     "best_nuc_id": nid,
                     "IoU": row.IoU,
+                    "nucleus_fraction": row.nucleus_fraction,
                     "corr_nc_cell": corr,
                 }
             )
@@ -313,6 +341,8 @@ def compute_correlation_between_parts(
     min_genes: int = 5,
     metric: str = "cosine_sim",
     scale: float = 1e4,
+    select_by: str = "nucleus_fraction",
+    min_intersection_area: float = 0.0,
     n_jobs: int = 1,  # joblib not strictly needed; most win is from vectorization
     inplace: bool = True,
 ):
@@ -358,6 +388,15 @@ def compute_correlation_between_parts(
         Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
     scale: float, default=1e4,
         Scale for library size normalization.
+    select_by : str, default="nucleus_fraction"
+        Score used to select the best-matching nucleus per cell. Options:
+        - "iou": maximize Intersection-over-Union (cell vs nucleus).
+        - "nucleus_fraction": maximize area(cell ∩ nucleus) / area(nucleus).
+        If multiple nuclei have the same score (e.g. fully inside the cell), the
+        larger nucleus (by area) is selected.
+    min_intersection_area : float, default=0.0
+        Minimum area(cell ∩ nucleus) required to consider a nucleus as a candidate.
+        Overlaps <= this threshold are ignored.
     n_jobs : int
         Number of parallel jobs for correlation computation.
     inplace : bool, optional
@@ -381,21 +420,37 @@ def compute_correlation_between_parts(
     id_key = cells_gdf.index.name
 
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
-        iou_df = compute_cell_nuc_ious(
+        match_df = compute_cell_nuc_match(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             shapes_key=shapes_key,
             nucleus_shapes_key=nucleus_shapes_key,
+            min_intersection_area=min_intersection_area,
+            select_by=select_by,
             n_jobs=n_jobs,
             inplace=inplace,
         )
     else:
-        iou_df = sdata.tables[tables_key].obs[[id_key, "best_nuc_id", "IoU"]].copy()
+        match_df = sdata.tables[tables_key].obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
 
-    best_nuc_map = iou_df.set_index(id_key)["best_nuc_id"]
+    best_nuc_map = match_df.set_index(id_key)["best_nuc_id"]
 
-    tx, _ = _join_points_regions(
+    tx_cell, _ = _join_points_regions(
+        sdata=sdata,
+        region_key=shapes_key,         
+        tables_key=tables_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        predicate="within",
+        require_points_region_ID_match=True,   # <-- keeps only points within their labeled cell
+    )
+
+    tx_nuc, _ = _join_points_regions(
         sdata=sdata,
         region_key=nucleus_shapes_key,
         tables_key=tables_key,
@@ -406,11 +461,15 @@ def compute_correlation_between_parts(
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         predicate="within",
-        require_points_region_ID_match=False
+        require_points_region_ID_match=False,
     )
 
+    # keep only points that were inside their assigned cell
+    valid_point_ids = set(tx_cell["point_id"])
+    tx = tx_nuc[tx_nuc["point_id"].isin(valid_point_ids)].copy()
+
     tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
-    tx["in_intersection"] = (tx["region_id"].notna()) & (tx["region_id"] == tx["best_nuc_id"])
+    tx["in_intersection"] = tx["region_id"].eq(tx["best_nuc_id"])
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
     all_genes = pd.Index(sdata.tables[tables_key].var_names)
@@ -476,7 +535,7 @@ def compute_correlation_between_parts(
 
     corr_per_cell = pd.DataFrame(rows, columns=[points_cell_id_key, "correlation_parts"]).set_index(points_cell_id_key)
 
-    out = iou_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
+    out = match_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
 
     if inplace:
         merge_into_obs(
