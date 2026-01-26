@@ -3061,7 +3061,7 @@ requires-dist = [
     { name = "rasterio" },
     { name = "rtree" },
     { name = "ruff", marker = "extra == 'test'" },
-    { name = "scanpy" },
+    { name = "scanpy", specifier = "<=1.11.4" },
     { name = "spatialdata" },
     { name = "sphinx", marker = "extra == 'docs'" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
