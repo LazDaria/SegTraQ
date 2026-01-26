@@ -7,9 +7,9 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, ps, rc, sp, vl
+from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
-from .utils import validate_spatialdata
 
 
 class SegTraQ:
@@ -156,8 +156,9 @@ class SegTraQ:
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
         self.tables_area_volume_key = tables_area_volume_key
-        self.tables_centroid_x_key = tables_centroid_x_key
-        self.tables_centroid_y_key = tables_centroid_y_key
+        # if these are set to None, the validate_spatialdata automatically computes them
+        self.tables_centroid_x_key = tables_centroid_x_key if tables_centroid_x_key is not None else "centroid_x"
+        self.tables_centroid_y_key = tables_centroid_y_key if tables_centroid_y_key is not None else "centroid_y"
 
         self.points_key = points_key
         self.points_cell_id_key = points_cell_id_key
@@ -588,6 +589,48 @@ class SegTraQ:
         return sdata
 
     filter_cells.__doc__ = filter_cells.__doc__
+
+    def filter_control_and_poor_quality_transcripts(
+        self,
+        min_qv: float = 20.0,
+        control_genes: tuple | list = (),
+        recompute_expression: bool = False,
+        inplace: bool = True,
+    ):
+        """
+        Filter control and poor-quality transcripts from the SpatialData object.
+
+        Parameters
+        ----------
+        min_qv : float, default=20.0
+            Minimum quality value (QV) threshold for transcripts to be retained.
+        control_genes : tuple or list, optional
+            List of gene name prefixes indicating control genes to be filtered out.
+        recompute_expression : bool, default=False
+            If True, recomputes the per-cell expression matrix after filtering transcripts.
+        inplace : bool, default=True
+            If True, modifies `self.sdata` in place.
+            If False, returns a new SpatialData object with filtered transcripts.
+
+        Returns
+        -------
+        None or SpatialData
+            - If `inplace=True`: returns None after modifying `self.sdata`.
+            - If `inplace=False`: returns a new SpatialData object with filtered transcripts.
+        """
+        _filter_control_and_poor_quality_transcripts(
+            sdata=self.sdata,
+            min_qv=min_qv,
+            control_genes=control_genes,
+            points_key=self.points_key,
+            points_gene_key=self.points_gene_key,
+            points_cell_id_key=self.points_cell_id_key,
+            tables_key=self.tables_key,
+            recompute_expression=recompute_expression,
+            inplace=inplace,
+        )
+
+    filter_control_and_poor_quality_transcripts.__doc__ = _filter_control_and_poor_quality_transcripts.__doc__
 
 
 class _BLFacade:
@@ -1041,6 +1084,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_rmsd.__doc__ = cs.compute_rmsd.__doc__
+
     def compute_mean_cosine_distance(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
@@ -1057,6 +1102,8 @@ class _CSFacade:
             cell_type_key=cell_type_key,
             inplace=inplace,
         )
+
+    compute_mean_cosine_distance.__doc__ = cs.compute_mean_cosine_distance.__doc__
 
     def compute_silhouette_score(
         self,
@@ -1077,6 +1124,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_silhouette_score.__doc__ = cs.compute_silhouette_score.__doc__
+
     def compute_purity(
         self,
         resolution: float = 1.0,
@@ -1092,6 +1141,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_purity.__doc__ = cs.compute_purity.__doc__
+
     def compute_ari(
         self,
         resolution: float = 1.0,
@@ -1106,6 +1157,27 @@ class _CSFacade:
             key_prefix=key_prefix,
             inplace=inplace,
         )
+
+    compute_ari.__doc__ = cs.compute_ari.__doc__
+
+    def compute_cluster_connectedness(
+        self,
+        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        key_prefix: str = "leiden_subset",
+        random_state: int = 42,
+        cell_type_key: str | None = None,
+        inplace: bool = True,
+    ):
+        return cs.compute_cluster_connectedness(
+            sdata=self._p.sdata,
+            resolution=resolution,
+            key_prefix=key_prefix,
+            random_state=random_state,
+            cell_type_key=cell_type_key,
+            inplace=inplace,
+        )
+
+    compute_cluster_connectedness.__doc__ = cs.compute_cluster_connectedness.__doc__
 
 
 class _VLFacade:

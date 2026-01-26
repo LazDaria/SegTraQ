@@ -1028,6 +1028,14 @@ def validate_spatialdata(
                 f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
             )
 
+        if tables_centroid_x_key is None or tables_centroid_y_key is None:
+            warnings.warn(
+                "No centroids specified for tables. Centroids will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(sdata, features_to_compute=["centroid"], inplace=True)
+
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
     shapes_cell_ids = set()
@@ -1572,3 +1580,103 @@ def filter_cells(adata, col: str, func: Callable):
     )
     mask = func(adata.obs[col])
     return adata[mask]
+
+
+def _filter_control_and_poor_quality_transcripts(
+    sdata,
+    min_qv: float = 20.0,
+    control_genes: tuple | list = (),
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",  # might make use of this when recomputing expression
+    tables_key: str = "table",
+    recompute_expression: bool = False,
+    inplace: bool = True,
+) -> sd.SpatialData:
+    """
+    Filter control and poor-quality transcripts from the SpatialData object.
+    This is always done in place.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing transcript data.
+    min_qv : float, default=20.0
+        Minimum quality value (qv) threshold for transcripts to be considered valid.
+    control_genes : tuple | list, default=()
+        Additional keywords to identify control probes in gene names.
+        By default, only standard control prefixes are used.
+        These are: "NegControlProbe_", "antisense_", "NegControlCodeword", "BLANK_", "Blank-", "NegPrb",
+        "DeprecatedCodeword_", "UnassignedCodeword_".
+    points_key : str, default="transcripts"
+        The key in the SpatialData points attribute that contains transcript data.
+    points_gene_key : str, default="feature_name"
+        The column name in the points DataFrame that contains gene names.
+    points_cell_id_key : str, default="cell_id"
+        The column name in the points DataFrame that contains cell IDs.
+    tables_key : str, default="table"
+        The key in the SpatialData tables attribute that contains the expression table.
+    recompute_expression : bool, default=False
+        Whether to recompute the expression matrix after filtering.
+        Note that this can be computationally expensive for large datasets.
+    inplace : bool, default=True
+        Whether to modify the SpatialData object in place. Defaults to True.
+
+    Returns
+    -------
+    sd.SpatialData
+        The updated SpatialData object with invalid transcripts marked (in an extra column).
+    """
+    if not inplace:
+        sdata = copy.deepcopy(sdata)
+
+    pts = sdata.points[points_key]
+    adata = sdata.tables[tables_key]
+
+    prefixes = (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+    ) + tuple(control_genes)
+
+    # ---- transcripts ----
+    invalid_mask = pts[points_gene_key].str.startswith(prefixes) | (pts["qv"] < min_qv)
+
+    # getting all gene names that are being removed
+    removed_genes = pts.loc[invalid_mask, points_gene_key].unique().compute().tolist()
+
+    # removing points that are invalid
+    pts = pts[~invalid_mask]
+    sdata.points[points_key] = pts
+
+    # ---- tables ----
+    # on the anndata object, we remove genes that are control genes
+    # filtering by quality does not make sense here, as we do not have per-gene quality values
+    adata = adata[:, ~adata.var_names.str.startswith(prefixes)]
+    sdata.tables[tables_key] = adata
+
+    # check if any of the gene names of the removed transcripts appear in the anndata object
+    # if so, that means we might need to recompute the expression matrix
+    filtered_genes_in_adata = set(removed_genes) & set(adata.var_names)
+    if len(filtered_genes_in_adata) > 0:
+        if not recompute_expression:
+            warnings.warn(
+                f"Some of the filtered genes ({len(filtered_genes_in_adata)}) also appear in the tables. "
+                f"These genes are: {list(filtered_genes_in_adata)[:5]}... "
+                f"If you wish to recompute the expression matrix after filtering, set recompute_expression=True.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        else:
+            # aggregate the counts from the points to get a new expression matrix
+            # the aggregate function from spatialdata is not sufficient,
+            # because it removes all layers but the shapes and transcripts
+            # TODO: implement recomputation of expression matrix
+            raise NotImplementedError("Recomputing expression matrix is not yet implemented.")
+
+    return sdata
