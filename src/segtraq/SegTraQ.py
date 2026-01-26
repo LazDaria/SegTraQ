@@ -741,6 +741,8 @@ class _BLFacade:
         return bl.morphological_features(
             sdata=self._p.sdata,
             tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_centroid_x_key=self._p.tables_centroid_x_key,
+            tables_centroid_y_key=self._p.tables_centroid_y_key,
             shapes_key=self._p.shapes_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             features_to_compute=features_to_compute,
