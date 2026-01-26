@@ -19,14 +19,14 @@ classifiers = [
 license = {text = "MIT"}
 dependencies = [
   "typer",
-  "scanpy<=1.11.4", # for compatibility with squidpy
+  "scanpy<1.12", # for compatibility with squidpy
   "spatialdata",
   "joblib",
   "geopandas",
   "igraph",
   "rtree",
   "rasterio",
-  "squidpy>=1.6.2,<1.6.6",
+  "squidpy>=1.6.2",
   "tqdm",
   "anndata",
 ]

@@ -424,6 +424,8 @@ def transcript_density(
 def morphological_features(
     sdata: sd.SpatialData,
     tables_cell_id_key: str = "cell_id",
+    tables_centroid_x_key: str = "centroid_x",
+    tables_centroid_y_key: str = "centroid_y",
     shapes_key: str = "cell_boundaries",
     shapes_cell_id_key: str = "cell_id",
     features_to_compute: list | None = None,
@@ -440,6 +442,10 @@ def morphological_features(
         Spatial data object containing cell shape information. Must have a `.shapes` attribute with geometries.
     tables_cell_id_key : str
         Column in `sdata.tables[tables_key].obs containing cell IDs to match with `shapes_cell_id_key`.
+    tables_centroid_x_key : str, optional
+        Column in `sdata.tables[tables_key].obs` to store the x-coordinate of the centroid (default is "centroid_x").
+    tables_centroid_y_key : str, optional
+        Column in `sdata.tables[tables_key].obs` to store the y-coordinate of the centroid (default is "centroid_y").
     shapes_key : str, optional
         Key in `sdata.shapes` specifying the geometry column (default is "cell_boundaries").
     shapes_cell_id_key : str, optional
@@ -487,6 +493,9 @@ def morphological_features(
         "compactness",
         "num_polygons",
     ]
+    # if we already have centroids in the table, we do not compute them here
+    if features_to_compute is None and (tables_centroid_x_key is not None and tables_centroid_y_key is not None):
+        all_features.remove("centroid")
 
     # If no features specified, compute all
     if features_to_compute is None:
