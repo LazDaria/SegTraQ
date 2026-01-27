@@ -696,6 +696,7 @@ class _BLFacade:
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -709,6 +710,7 @@ class _BLFacade:
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -734,6 +736,7 @@ class _BLFacade:
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             tables_key=self._p.tables_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -767,9 +770,11 @@ class _BLFacade:
         return bl.transcript_density(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
-            points_key=self._p.points_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_area_volume_key=tavk,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
