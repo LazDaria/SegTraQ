@@ -1,0 +1,17 @@
+{
+  "encoding-type": "dataframe",
+  "encoding-version": "0.2.0",
+  "_index": "_index",
+  "column-order": [
+    "cell",
+    "original_cell_id",
+    "centroid_x",
+    "centroid_y",
+    "centroid_z",
+    "component",
+    "volume",
+    "surface_area",
+    "scale",
+    "region"
+  ]
+}

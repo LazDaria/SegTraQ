@@ -1,0 +1,18 @@
+{
+  "attributes": {
+    "column-order": [
+      "cell_id",
+      "centroid_x",
+      "centroid_y",
+      "cell_area",
+      "region",
+      "label_id"
+    ],
+    "_index": "_index",
+    "encoding-type": "dataframe",
+    "encoding-version": "0.2.0"
+  },
+  "zarr_format": 3,
+  "consolidated_metadata": null,
+  "node_type": "group"
+}
