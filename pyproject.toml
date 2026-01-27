@@ -20,7 +20,7 @@ license = {text = "MIT"}
 dependencies = [
   "typer",
   "scanpy<1.12", # for compatibility with squidpy
-  "spatialdata",
+  "spatialdata>=0.6.1",
   "joblib",
   "geopandas",
   "igraph",
@@ -28,7 +28,7 @@ dependencies = [
   "rasterio",
   "squidpy>=1.6.2",
   "tqdm",
-  "anndata",
+  "anndata>=0.12",  # to support zarr v3
 ]
 requires-python = ">= 3.11"
 
