@@ -10,10 +10,12 @@ from shapely.geometry.base import BaseGeometry
 
 from ..utils import _is_background, _looks_like_counts
 
+
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
     if not (poly1.is_valid and poly2.is_valid):
         return np.nan
     return poly1.intersection(poly2).area
+
 
 def _compute_iou_from_areas(inter_area: float, area1: float, area2: float) -> float:
     if np.isnan(inter_area) or area1 <= 0 or area2 <= 0:
@@ -21,10 +23,12 @@ def _compute_iou_from_areas(inter_area: float, area1: float, area2: float) -> fl
     union = area1 + area2 - inter_area
     return inter_area / union if union > 0 else np.nan
 
+
 def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
     if np.isnan(inter_area) or nuc_area <= 0:
         return np.nan
     return inter_area / nuc_area
+
 
 def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
     # row-wise library size normalization + log1p
@@ -32,13 +36,14 @@ def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
     df_norm = df.div(sums, axis=0) * scale
     return np.log1p(df_norm).fillna(0.0)
 
+
 def _process_cell(
     cell_row: Series,
     nucleus_shapes: GeoDataFrame,
     id_name: str,
     nuc_sindex: Index,
-    select_by: str = "nucleus_fraction",                 # "iou" or "nucleus_fraction"
-    min_intersection_area: float = 0.0,     # optional filter to ignore tiny overlaps
+    select_by: str = "nucleus_fraction",  # "iou" or "nucleus_fraction"
+    min_intersection_area: float = 0.0,  # optional filter to ignore tiny overlaps
 ) -> dict:
     """
     For one cell polygon, find the best-matching nucleus using either IoU or
@@ -96,11 +101,17 @@ def _process_cell(
         better = (
             (score > best["score"])
             or (np.isclose(score, best["score"]) and nuc_area > best["nuc_area"])
-            or (np.isclose(score, best["score"]) and np.isclose(nuc_area, best["nuc_area"]) and inter_area > best["inter_area"])
-            or (np.isclose(score, best["score"]) 
-                and np.isclose(nuc_area, best["nuc_area"]) 
-                and np.isclose(inter_area, best["inter_area"]) 
-                and nuc_id < best["nuc_id"])
+            or (
+                np.isclose(score, best["score"])
+                and np.isclose(nuc_area, best["nuc_area"])
+                and inter_area > best["inter_area"]
+            )
+            or (
+                np.isclose(score, best["score"])
+                and np.isclose(nuc_area, best["nuc_area"])
+                and np.isclose(inter_area, best["inter_area"])
+                and nuc_id < best["nuc_id"]
+            )
         )
 
         if better:
@@ -128,6 +139,7 @@ def _process_cell(
         "IoU": best["iou"],
         "nucleus_fraction": best["nuc_frac"],
     }
+
 
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
@@ -207,6 +219,7 @@ def _get_center_and_border_shapes(
 
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
+
 def _join_points_regions(
     sdata: sd.SpatialData,
     region_key: str,
@@ -218,7 +231,7 @@ def _join_points_regions(
     points_x_key: str = "x",
     points_y_key: str = "y",
     predicate: str = "intersects",
-    require_points_region_ID_match: bool = True
+    require_points_region_ID_match: bool = True,
 ) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
     """
     Spatially join transcript points to region polygons and return:
@@ -233,8 +246,8 @@ def _join_points_regions(
       - performs a spatial join against `sdata.shapes[region_key]`
       - deduplicates points that intersect multiple polygons by keeping the first match
       - optionally keeps only points whose assigned region id equals points_cell_id_key
-        (useful when region ids are cell ids, e.g. centers/borders; ensures compatibility 
-        with 3D-aware segmentation, where transcripts may share x/y coordinates but 
+        (useful when region ids are cell ids, e.g. centers/borders; ensures compatibility
+        with 3D-aware segmentation, where transcripts may share x/y coordinates but
         belong to different z-resolved cells)
 
     Parameters
@@ -243,7 +256,7 @@ def _join_points_regions(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. 
+        Key in `sdata.tables` for the cell-level metadata table.
     region_key : str
         Key in `sdata.shapes` specifying which regions to use (e.g., `"nucleus_boundaries"`,
         `"cell_centers"`, `"cell_borders"`). Must contain a `geometry` column with polygons.
@@ -288,14 +301,14 @@ def _join_points_regions(
     pts = pts[~is_background]
 
     # subset to genes present in the table
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)  
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)
     pts = pts.dropna(subset=[points_gene_key])
     pts = pts[pts[points_gene_key].isin(all_genes)]
 
     # compute after subsetting for efficiency
     transcripts = pts.compute()
     transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
-    
+
     # ensure we have a clean, unique point index for deduplication after sjoin
     transcripts = transcripts.reset_index(drop=False)  # keep old index as column, or create np.arange
     transcripts = transcripts.rename(columns={"index": "point_id"})
@@ -337,8 +350,9 @@ def _join_points_regions(
         .unstack(fill_value=0)
         .reindex(index=all_regions, columns=all_genes, fill_value=0)
     )
-    
+
     return pts_joined, counts
+
 
 def _compute_ncvs_within_radius(
     sdata: sd.SpatialData,
@@ -425,6 +439,7 @@ def _compute_ncvs_within_radius(
     expr_ncv = pd.DataFrame(ncv_arr, index=expr_cells.index, columns=genes)
     return expr_ncv
 
+
 def _get_center_border_counts(
     sdata,
     tables_key: str = "table",
@@ -460,7 +475,7 @@ def _get_center_border_counts(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
-        predicate = "within"
+        predicate="within",
     )
 
     _, expr_border = _join_points_regions(
@@ -473,10 +488,11 @@ def _get_center_border_counts(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
-        predicate = "within"
+        predicate="within",
     )
 
     return expr_center, expr_border
+
 
 def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
     """Align multiple expression dataframes to have the same genes and cells."""

@@ -9,9 +9,9 @@ from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
-    _join_points_regions,
-    _get_center_border_counts,
     _compute_ncvs_within_radius,
+    _get_center_border_counts,
+    _join_points_regions,
     _norm_log_df,
     _process_cell,
 )
@@ -97,7 +97,7 @@ def compute_cell_nuc_match(
             id_name=cell_boundaries.index.name,
             nuc_sindex=nuc_sindex,
             select_by=select_by,
-            min_intersection_area=min_intersection_area
+            min_intersection_area=min_intersection_area,
         )
         for _, cell_row in iterator
     )
@@ -114,6 +114,7 @@ def compute_cell_nuc_match(
         )
 
     return match_df
+
 
 def compute_cell_nuc_correlation(
     sdata: sd.SpatialData,
@@ -146,7 +147,7 @@ def compute_cell_nuc_correlation(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. 
+        Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -223,26 +224,24 @@ def compute_cell_nuc_correlation(
     else:
         match_df = tbl.obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
 
-        X = tbl.X
-        # Check if X looks like counts
-        if _looks_like_counts(X):
-            arr = X.toarray() if hasattr(X, "toarray") else X
-        elif "raw" not in tbl.layers:
-            raise ValueError(
-                f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
-                "and the main matrix does not look like counts."
-            )
-        else:
-            raw = tbl.layers["raw"]
-            arr = raw.toarray() if hasattr(raw, "toarray") else raw
-
-        expr_cells = pd.DataFrame(
-            arr,
-            index=sdata.tables[tables_key].obs[tables_cell_id_key],
-            columns=sdata.tables[
-                tables_key
-            ].var_names, 
+    X = tbl.X
+    # Check if X looks like counts
+    if _looks_like_counts(X):
+        arr = X.toarray() if hasattr(X, "toarray") else X
+    elif "raw" not in tbl.layers:
+        raise ValueError(
+            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            "and the main matrix does not look like counts."
         )
+    else:
+        raw = tbl.layers["raw"]
+        arr = raw.toarray() if hasattr(raw, "toarray") else raw
+
+    expr_cells = pd.DataFrame(
+        arr,
+        index=sdata.tables[tables_key].obs[tables_cell_id_key],
+        columns=sdata.tables[tables_key].var_names,
+    )
 
     _, expr_nucleus = _join_points_regions(
         sdata=sdata,
@@ -255,7 +254,7 @@ def compute_cell_nuc_correlation(
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
         predicate="intersects",
-        require_points_region_ID_match=False 
+        require_points_region_ID_match=False,
     )
 
     common_genes = expr_nucleus.columns.intersection(expr_cells.columns)
@@ -324,6 +323,7 @@ def compute_cell_nuc_correlation(
         )
 
     return corr_df
+
 
 def compute_correlation_between_parts(
     sdata,
@@ -438,7 +438,7 @@ def compute_correlation_between_parts(
 
     tx_cell, _ = _join_points_regions(
         sdata=sdata,
-        region_key=shapes_key,         
+        region_key=shapes_key,
         tables_key=tables_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
@@ -447,7 +447,7 @@ def compute_correlation_between_parts(
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         predicate="within",
-        require_points_region_ID_match=True,   # <-- keeps only points within their labeled cell
+        require_points_region_ID_match=True,  # <-- keeps only points within their labeled cell
     )
 
     tx_nuc, _ = _join_points_regions(
@@ -502,7 +502,7 @@ def compute_correlation_between_parts(
     rows = []
     for cid in all_cells:
         if cid == 70082:
-            x=0
+            x = 0
         nid = best_nuc_map.get(cid)
         if pd.isna(nid):  # if no overlapping nucleus
             r = np.nan
@@ -547,6 +547,7 @@ def compute_correlation_between_parts(
         )
 
     return out
+
 
 def compute_center_border_ncv_correlation(
     sdata: sd.SpatialData,
@@ -657,14 +658,14 @@ def compute_center_border_ncv_correlation(
     common_cells = expr_border_raw.index.intersection(expr_center_raw.index)
     expr_center_raw = expr_center_raw.loc[common_cells, expr_ncv_raw.columns]
     expr_border_raw = expr_border_raw.loc[common_cells, expr_ncv_raw.columns]
-    expr_ncv_raw = expr_ncv_raw.loc[common_cells,:]
+    expr_ncv_raw = expr_ncv_raw.loc[common_cells, :]
 
     # normalization and log1p
     expr_center = _norm_log_df(expr_center_raw)
     expr_border = _norm_log_df(expr_border_raw)
     expr_ncv = _norm_log_df(expr_ncv_raw)
 
-    id_key = expr_center.index.name
+    id_key = sdata.shapes[shapes_key].index.name
 
     rows = []
 
@@ -713,7 +714,7 @@ def compute_center_border_ncv_correlation(
         if (
             not np.isnan(corr_center_border)
             and not np.isnan(corr_border_ncv)
-            and not np.isclose(corr_center_border, 0.0) 
+            and not np.isclose(corr_center_border, 0.0)
         ):
             corr_ncv_vs_center = corr_border_ncv / corr_center_border
 

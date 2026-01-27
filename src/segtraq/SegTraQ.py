@@ -533,7 +533,7 @@ class SegTraQ:
                 f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
                 f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"],
                 f"periphery_enrichment_score_{feature}": pe_df[f"periphery_enrichment_score_{feature}"],
-                "pct_points_outside":  perc_ob_df["pct_points_outside"]
+                "pct_points_outside": perc_ob_df["pct_points_outside"],
             }
             return out
 
@@ -786,11 +786,13 @@ class _RCFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_cell_nuc_match(self,  
-                              select_by: str = "nucleus_fraction",
-                              min_intersection_area: float = 0.0,
-                              n_jobs: int = -1, 
-                              inplace: bool = True):
+    def compute_cell_nuc_match(
+        self,
+        select_by: str = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        inplace: bool = True,
+    ):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -810,15 +812,16 @@ class _RCFacade:
 
     compute_cell_nuc_match.__doc__ = rc.compute_cell_nuc_match.__doc__
 
-    def compute_cell_nuc_correlation(self, 
-                                     min_transcripts: int = 10,
-                                     min_genes: int = 5, 
-                                     metric: str = "cosine_sim", 
-                                     select_by: str = "nucleus_fraction",
-                                     min_intersection_area: float = 0.0,
-                                     n_jobs: int = -1, 
-                                     inplace: bool = True):
-        
+    def compute_cell_nuc_correlation(
+        self,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        metric: str = "cosine_sim",
+        select_by: str = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        inplace: bool = True,
+    ):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -836,7 +839,7 @@ class _RCFacade:
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             min_transcripts=min_transcripts,
-            min_genes = min_genes,
+            min_genes=min_genes,
             metric=metric,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
@@ -846,14 +849,16 @@ class _RCFacade:
 
     compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
 
-    def compute_correlation_between_parts(self, 
-                                          min_transcripts: int = 10,
-                                          min_genes: int = 5, 
-                                          metric: str = "cosine_sim", 
-                                          select_by: str = "nucleus_fraction",
-                                          min_intersection_area: float = 0.0,
-                                          n_jobs: int = -1, 
-                                          inplace: bool = True):
+    def compute_correlation_between_parts(
+        self,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        metric: str = "cosine_sim",
+        select_by: str = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        inplace: bool = True,
+    ):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -871,7 +876,7 @@ class _RCFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             min_transcripts=min_transcripts,
-            min_genes = min_genes,            
+            min_genes=min_genes,
             metric=metric,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
@@ -886,7 +891,7 @@ class _RCFacade:
         erosion_fraction_of_radius: float = 0.2,
         radius_factor: float = 2.0,
         min_transcripts: int = 10,
-        min_genes: int = 5, 
+        min_genes: int = 5,
         metric: str = "cosine_sim",
         inplace: bool = True,
     ):
@@ -903,7 +908,7 @@ class _RCFacade:
             points_gene_key=self._p.points_gene_key,
             erosion_fraction_of_radius=erosion_fraction_of_radius,
             min_transcripts=min_transcripts,
-            min_genes = min_genes,    
+            min_genes=min_genes,
             radius_factor=radius_factor,
             metric=metric,
             inplace=inplace,
@@ -1035,9 +1040,9 @@ class _PSFacade:
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
-            inplace=inplace
+            inplace=inplace,
         )
-    
+
     perc_points_outside_boundary.__doc__ = ps.perc_points_outside_boundary.__doc__
 
     def centroid_mean_coord_diff(self, genes: str | list[str] = None, inplace: bool = True):

@@ -17,5 +17,5 @@ def test_output_integrity(sdata_new):
     df = st.rc.compute_correlation_between_parts(sdata_new)
     assert isinstance(df, pd.DataFrame), "compute_correlation_between_parts should return a DataFrame, "
     "got {type(df)}"
-    expected_cols = {"cell_id", "best_nuc_id", "IoU", "correlation_parts"}
+    expected_cols = {"cell_id", "best_nuc_id", "IoU", "correlation_parts", "nucleus_fraction"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {set(df.columns)}"
