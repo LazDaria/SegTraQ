@@ -1138,7 +1138,6 @@ def validate_spatialdata(
                 tables_centroid_x_key=tables_centroid_x_key,
                 tables_centroid_y_key=tables_centroid_y_key,
                 shapes_key=shapes_key,
-                shapes_cell_id_key=shapes_cell_id_key,
                 features_to_compute=["centroid"],
                 tables_key=tables_key,
                 inplace=True,
