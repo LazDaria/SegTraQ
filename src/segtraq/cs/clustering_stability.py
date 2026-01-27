@@ -60,8 +60,11 @@ def compute_cluster_connectedness(
         labels = adata.obs[cell_type_key].values
         # remove NaN labels
         if len(np.unique(labels[~pd.isna(labels)])) > 1:
-            if "neighbors" not in adata.uns:
-                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
+            if "connectivities" not in adata.obsp:
+                raise ValueError(
+                    "Connectivities not found in adata.obsp['connectivities']. "
+                    "Please compute neighbors first by running sc.pp.neighbors(adata)."
+                )
             distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels)
             return float(distance_val)
         else:
