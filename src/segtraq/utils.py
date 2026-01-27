@@ -872,7 +872,8 @@ def _is_missing(x):
         return pd.isna(x) or (isinstance(x, float) and math.isnan(x))
     except Exception:
         return False
-    
+
+
 def _ensure_index(
     gdf,
     *,
@@ -906,7 +907,6 @@ def _ensure_index(
     )
     return gdf.set_index(id_key, drop=True)
 
-import warnings
 
 def _ensure_index(
     gdf,
@@ -964,6 +964,7 @@ def _ensure_index(
         stacklevel=2,
     )
     return gdf.set_index(id_key, drop=True)
+
 
 def validate_spatialdata(
     sdata: sd.SpatialData,
@@ -1124,8 +1125,6 @@ def validate_spatialdata(
                 f"Available columns: {table.obs.columns.tolist()}. "
                 f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
             )
-    else:
-        raise ValueError("SpatialData object must contain tables.")
 
         if tables_centroid_x_key is None or tables_centroid_y_key is None:
             warnings.warn(
@@ -1134,6 +1133,8 @@ def validate_spatialdata(
                 stacklevel=2,
             )
             bl.morphological_features(sdata, features_to_compute=["centroid"], inplace=True)
+    else:
+        raise ValueError("SpatialData object must contain tables.")
 
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
@@ -1150,10 +1151,9 @@ def validate_spatialdata(
             )
             shapes = sdata.shapes[shapes_key]
 
-            shapes = _ensure_index(shapes, 
-                        shapes_key=shapes_key, 
-                        id_key=shapes_cell_id_key, 
-                        id_key_name="shapes_cell_id_key")
+            shapes = _ensure_index(
+                shapes, shapes_key=shapes_key, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key"
+            )
             sdata.shapes[shapes_key] = shapes
             shapes_cell_ids = set(shapes.index.tolist())
         else:
@@ -1309,7 +1309,7 @@ def validate_spatialdata(
             nucleus_shapes,
             shapes_key=nucleus_shapes_key,
             id_key=nucleus_shapes_cell_id_key,
-            id_key_name="nucleus_shapes_cell_id_key"
+            id_key_name="nucleus_shapes_cell_id_key",
         )
         sdata.shapes[nucleus_shapes_key] = nucleus_shapes
 
