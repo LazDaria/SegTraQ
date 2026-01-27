@@ -1132,7 +1132,16 @@ def validate_spatialdata(
                 RuntimeWarning,
                 stacklevel=2,
             )
-            bl.morphological_features(sdata, features_to_compute=["centroid"], inplace=True)
+            bl.morphological_features(
+                sdata,
+                tables_cell_id_key=tables_cell_id_key,
+                tables_centroid_x_key=tables_centroid_x_key,
+                tables_centroid_y_key=tables_centroid_y_key,
+                shapes_key=shapes_key,
+                features_to_compute=["centroid"],
+                tables_key=tables_key,
+                inplace=True,
+            )
     else:
         raise ValueError("SpatialData object must contain tables.")
 
