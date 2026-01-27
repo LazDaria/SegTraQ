@@ -10,16 +10,21 @@ from shapely.geometry.base import BaseGeometry
 
 from ..utils import _is_background, _looks_like_counts
 
-
-def _compute_iou(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
-    """Compute IoU between two shape polygons."""
-
-    if not (poly1.is_valid and poly2.is_valid):  # TODO - make polygons valid later
+def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
+    if not (poly1.is_valid and poly2.is_valid):
         return np.nan
-    inter_area = poly1.intersection(poly2).area
-    union_area = poly1.union(poly2).area
-    return inter_area / union_area if union_area > 0 else 0.0
+    return poly1.intersection(poly2).area
 
+def _compute_iou_from_areas(inter_area: float, area1: float, area2: float) -> float:
+    if np.isnan(inter_area) or area1 <= 0 or area2 <= 0:
+        return np.nan
+    union = area1 + area2 - inter_area
+    return inter_area / union if union > 0 else np.nan
+
+def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
+    if np.isnan(inter_area) or nuc_area <= 0:
+        return np.nan
+    return inter_area / nuc_area
 
 def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
     # row-wise library size normalization + log1p
@@ -27,104 +32,106 @@ def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
     df_norm = df.div(sums, axis=0) * scale
     return np.log1p(df_norm).fillna(0.0)
 
-
 def _process_cell(
     cell_row: Series,
-    shapes_cell_id_key: str | None,
-    id_key: str | None,
     nucleus_shapes: GeoDataFrame,
-    nucleus_shapes_cell_id_key: str | None,
+    id_name: str,
     nuc_sindex: Index,
-) -> dict[str | int, str | int, int | None | float]:
-    """For one cell polygon compute the IoU with the best-matching nucleus."""
+    select_by: str = "nucleus_fraction",                 # "iou" or "nucleus_fraction"
+    min_intersection_area: float = 0.0,     # optional filter to ignore tiny overlaps
+) -> dict:
+    """
+    For one cell polygon, find the best-matching nucleus using either IoU or
+    nucleus intersection fraction as the primary score.
+
+    Tie-breaker: larger nucleus area.
+    """
+    if select_by not in ("iou", "nucleus_fraction"):
+        raise ValueError(f"select_by must be 'iou' or 'nucleus_fraction', got {select_by!r}")
+
     cell_geom = cell_row.geometry
+    cell_id = cell_row.name
 
-    cell_id = cell_row[shapes_cell_id_key] if shapes_cell_id_key is not None else cell_row.name
-
-    # Get candidate nuclei bounding boxes that overlap this cell's bbox
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
-
     if not candidate_idx:
-        return {id_key: cell_row.name, "best_nuc_id": np.nan, "IoU": 0.0}
+        return {
+            id_name: cell_id,
+            "best_nuc_id": np.nan,
+            "IoU": np.nan,
+            "nucleus_fraction": np.nan,
+        }
 
     candidates = nucleus_shapes.iloc[candidate_idx]
 
-    best_iou: float = 0.0
-    best_nuc_id = np.nan
-    for _, nuc in candidates.iterrows():
+    cell_area = cell_geom.area if cell_geom.is_valid else np.nan
+
+    best = {
+        "score": -np.inf,
+        "nuc_area": -np.inf,
+        "inter_area": -np.inf,
+        "nuc_id": np.nan,
+        "iou": np.nan,
+        "nuc_frac": np.nan,
+    }
+
+    for nuc_id, nuc in candidates.iterrows():
         nuc_geom = nuc.geometry
-        iou = _compute_iou(cell_geom, nuc_geom)
-        if pd.notna(iou) and iou > best_iou:
-            best_iou = iou
-            if nucleus_shapes_cell_id_key is None:
-                best_nuc_id = nuc.name
-            else:
-                best_nuc_id = nuc[nucleus_shapes_cell_id_key]
+        if not (cell_geom.is_valid and nuc_geom.is_valid):
+            continue
 
-    return {id_key: cell_id, "best_nuc_id": best_nuc_id, "IoU": best_iou}
+        nuc_area = nuc_geom.area
+        if nuc_area <= 0 or cell_area <= 0:
+            continue
 
+        inter_area = _safe_intersection_area(cell_geom, nuc_geom)
+        if np.isnan(inter_area) or inter_area <= min_intersection_area:
+            continue
 
-def _shapes_by_feature_df(
-    sdata: sd.SpatialData,
-    tables_cell_id_key: str = "cell_id",
-    region_key: str = "nucleus_boundaries",
-    region_cell_id_key: str = "cell_id",
-    points_key: str = "transcripts",
-    points_gene_key: str = "feature_name",
-) -> pd.DataFrame:
-    """
-    Aggregate feature counts per region (nucleus or other), converting transcripts to 2D if needed.
+        iou = _compute_iou_from_areas(inter_area, cell_area, nuc_area)
+        nuc_frac = _compute_nucleus_fraction(inter_area, nuc_area)
 
-    Parameters
-    ----------
-        sdata : SpatialData
-            A `SpatialData` object containing segmented and transcript-assigned spatial
-            transcriptomics data (images, tables, points, shapes and optional labels).
-        tables_cell_id_key : str, default="cell_id"
-            Column in the cell table uniquely identifying each cell.
-        region_key : str, default="nucleus_boundaries"
-            Key in `sdata.shapes` for defining the regions to aggregate by.
-        region_cell_id_key : str default="cell_id"
-            Column linking polygons to cell IDs. If `None` is provided, the shape index is used as the cell ID.
-        points_key : str, default="transcripts"
-            Key in `sdata.points` for spot/transcript-level data.
-        points_gene_key : str, default="feature_name"
-            Column specifying the gene/feature name for each transcript/spot.
+        score = iou if select_by == "iou" else nuc_frac
 
-    Returns
-    -------
-    pandas.DataFrame
-        DataFrame indexed by shapes ID, columns = features (genes/proteins), values = counts.
-    """
+        # Compare with tie-breaks: score, then nuc_area, then inter_area, then nuc_id
+        better = (
+            (score > best["score"])
+            or (np.isclose(score, best["score"]) and nuc_area > best["nuc_area"])
+            or (np.isclose(score, best["score"]) and np.isclose(nuc_area, best["nuc_area"]) and inter_area > best["inter_area"])
+            or (np.isclose(score, best["score"]) 
+                and np.isclose(nuc_area, best["nuc_area"]) 
+                and np.isclose(inter_area, best["inter_area"]) 
+                and nuc_id < best["nuc_id"])
+        )
 
-    # perform aggregation
-    sdata2 = sdata.aggregate(
-        values=points_key,
-        by=region_key,
-        value_key=points_gene_key,
-        agg_func="count",
-        deep_copy=False,
-    )
-    ad = sdata2.tables["table"]
+        if better:
+            best.update(
+                score=score,
+                nuc_area=nuc_area,
+                inter_area=inter_area,
+                nuc_id=nuc_id,
+                iou=iou,
+                nuc_frac=nuc_frac,
+            )
 
-    arr = ad.X.toarray() if hasattr(ad.X, "toarray") else ad.X
+    # If nothing survived filtering
+    if best["score"] == -np.inf:
+        return {
+            id_name: cell_id,
+            "best_nuc_id": np.nan,
+            "IoU": np.nan,
+            "nucleus_fraction": np.nan,
+        }
 
-    gdf = sdata.shapes[region_key].copy()
-
-    if region_cell_id_key is not None:
-        gdf = gdf.set_index(region_cell_id_key, drop=True)
-    elif gdf.index.name is None:
-        gdf.index.name = tables_cell_id_key
-
-    df_out = pd.DataFrame(arr, index=gdf.index, columns=ad.var_names)
-    return df_out
-
+    return {
+        id_name: cell_id,
+        "best_nuc_id": best["nuc_id"],
+        "IoU": best["iou"],
+        "nucleus_fraction": best["nuc_frac"],
+    }
 
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
-    tables_cell_id_key: str = "cell_id",
     erosion_fraction_of_radius: float = 0.3,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """
@@ -137,11 +144,6 @@ def _get_center_and_border_shapes(
         SpatialData object with cell boundary polygons in `sdata.shapes[shapes_key]`.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str, default="cell_id"
-        Column name linking shapes to cell IDs.
-        If `None`, the shape index is used as the cell ID.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
     erosion_fraction_of_radius : float, default=0.3
         Fraction of the equivalent radius to use as erosion
         Example: 0.3 means erode by 30% of the radius.
@@ -155,14 +157,7 @@ def _get_center_and_border_shapes(
     """
     cells_gdf = sdata.shapes[shapes_key].copy()
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        cells_gdf = cells_gdf.set_index(id_key, drop=True)
-    elif cells_gdf.index.name is not None:
-        id_key = cells_gdf.index.name
-    else:
-        id_key = tables_cell_id_key
-        cells_gdf.index.name = id_key
+    id_key = cells_gdf.index.name
 
     center_records = []
     border_records = []
@@ -207,27 +202,40 @@ def _get_center_and_border_shapes(
     center_gdf = gpd.GeoDataFrame(center_records, geometry="geometry", crs=cells_gdf.crs)
     border_gdf = gpd.GeoDataFrame(border_records, geometry="geometry", crs=cells_gdf.crs)
 
-    if shapes_cell_id_key is None:
-        center_gdf.set_index(id_key, drop=True, inplace=True)
-        border_gdf.set_index(id_key, drop=True, inplace=True)
+    center_gdf.set_index(id_key, drop=True, inplace=True)
+    border_gdf.set_index(id_key, drop=True, inplace=True)
 
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
-
-def _assign_nuc_to_transcripts(
-    sdata,
+def _join_points_regions(
+    sdata: sd.SpatialData,
+    region_key: str,
     tables_key: str = "table",
-    nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str | int = "UNASSIGNED",
     points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
-):
+    predicate: str = "intersects",
+    require_points_region_ID_match: bool = True
+) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
     """
-    Assigns nucleus IDs to transcripts by performing a spatial join
-    between transcript coordinates and nucleus polygons.
+    Spatially join transcript points to region polygons and return:
+      1) per-point region assignments, and
+      2) a region x gene count matrix.
+
+    This can be applied for nuclei, cell centers, cell borders, etc.
+
+    The function:
+      - filters background points and genes not present in `sdata.tables[tables_key].var_names`
+      - converts points to a GeoDataFrame
+      - performs a spatial join against `sdata.shapes[region_key]`
+      - deduplicates points that intersect multiple polygons by keeping the first match
+      - optionally keeps only points whose assigned region id equals points_cell_id_key
+        (useful when region ids are cell ids, e.g. centers/borders; ensures compatibility 
+        with 3D-aware segmentation, where transcripts may share x/y coordinates but 
+        belong to different z-resolved cells)
 
     Parameters
     ----------
@@ -235,11 +243,10 @@ def _assign_nuc_to_transcripts(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
-    nucleus_shapes_key : str, default="nucleus_boundaries"
-        Key in `sdata.shapes` for nucleus boundary polygons, if available.
+        Key in `sdata.tables` for the cell-level metadata table. 
+    region_key : str
+        Key in `sdata.shapes` specifying which regions to use (e.g., `"nucleus_boundaries"`,
+        `"cell_centers"`, `"cell_borders"`). Must contain a `geometry` column with polygons.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
@@ -252,161 +259,92 @@ def _assign_nuc_to_transcripts(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript/spot to a cell.
+    predicate: str, default="intersects"
+        Spatial predicate passed to `geopandas.sjoin`.
+        Common options: "intersects" (default), "within", "contains".
+        For points-in-polygons, "within" is often appropriate; "intersects" includes boundary hits.
+    require_points_region_ID_match: bool, default=True
+        If not None, keep only points where the joined region id equals the values in this
+        points column. Typical use: require_region_id_equals="cell_id" when `region_key`
+        contains per-cell regions indexed by cell id (centers/borders).
+        Set to None for nuclei (region ids are nucleus ids, not cell ids).
 
     Returns
     -------
-    tx : pandas.DataFrame
-        A subset transcripts dataframe with nuclear assignments in
-        column `nuc_id`.
+    pts_joined : geopandas.GeoDataFrame
+        Points with assigned region ids in column "region_id" (and geometry).
+        Points that do not intersect any region have NA in "region_id" (because join is left).
+    counts : pandas.DataFrame
+        Region x gene count matrix (rows = all regions from shapes index, columns = all genes).
     """
-    nucs_gdf = sdata.shapes[nucleus_shapes_key].copy()
-    nucs_gdf.index.name = "nuc_id"
 
-    # Subset transcripts
+    # prepare points
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
     pts = pts[cols]
     is_background = _is_background(pts[points_cell_id_key], points_background_id)
     pts = pts[~is_background]
 
-    valid_features = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  # TODO - this might break, if var.index and points_gene_key do not match!
-    # e.g. one is Ensemble key and one is gene_key
-
+    # subset to genes present in the table
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)  
     pts = pts.dropna(subset=[points_gene_key])
-    pts = pts[pts[points_gene_key].isin(valid_features)]
+    pts = pts[pts[points_gene_key].isin(all_genes)]
 
+    # compute after subsetting for efficiency
     transcripts = pts.compute()
-    transcripts = transcripts.reset_index(drop=True)
-    transcripts[points_gene_key] = transcripts[points_gene_key].astype("category")
+    transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
+    
+    # ensure we have a clean, unique point index for deduplication after sjoin
+    transcripts = transcripts.reset_index(drop=False)  # keep old index as column, or create np.arange
+    transcripts = transcripts.rename(columns={"index": "point_id"})
 
     pts_gdf = gpd.GeoDataFrame(
         transcripts,
         geometry=gpd.points_from_xy(transcripts[points_x_key], transcripts[points_y_key]),
-        crs=nucs_gdf.crs,  # assume same CRS
-    )
-
-    tx_in_nuc = gpd.sjoin(
-        pts_gdf[["geometry"]],
-        nucs_gdf[["geometry"]],
-        how="left",
-        predicate="within",
-    )[["nuc_id"]]
-
-    # remove duplicate assignments
-    tx_in_nuc = tx_in_nuc[["nuc_id"]].groupby(level=0, observed=True).first()
-
-    tx_in_cell = transcripts[[points_gene_key, points_cell_id_key]]
-    tx = tx_in_cell.join(tx_in_nuc, how="left")
-
-    return tx
-
-
-def _group_points_by_regions(
-    sdata: sd.SpatialData,
-    region_key: str,
-    tables_cell_id_key: str = "cell_id",
-    points_key: str = "transcripts",
-    points_gene_key: str = "feature_name",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_cell_id_key: str = "cell_id",
-    region_cell_id_key: str | None = "cell_id",
-) -> gpd.GeoDataFrame:
-    """
-    Aggregate transcript counts per region (e.g., cell centers or cell borders)
-    by annotating each transcript with the region polygon it falls into.
-
-    The function converts transcript coordinates into a GeoDataFrame, performs a
-    spatial join with the region polygons (e.g., centers, borders), and then
-    counts only those transcripts whose assigned region ID matches their cell ID.
-    This ensures compatibility with 3D-aware segmentation, where transcripts may
-    share x/y coordinates but belong to different z-resolved cells.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned spatial
-        transcriptomics data (images, tables, points, shapes and optional labels).
-    region_key : str
-        Key in `sdata.shapes` specifying which regions to use (e.g., `"cell_centers"`,
-        `"cell_borders"`). Must contain a `geometry` column with polygons.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for spot/transcript-level data.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript/spot to a cell.
-    region_cell_id_key : str or None, default="cell_id"
-        Column in `sdata.shapes[region_key]` mapping each region polygon to a cell ID.
-        If `None`, the shape index is used as the cell ID.
-
-    Returns
-    -------
-    df_region : pandas.DataFrame
-        A gene-by-region count matrix where:
-            - Rows (`index`) correspond to region IDs (cell IDs).
-            - Columns correspond to gene names.
-            - Values are transcript counts within each region.
-        Only transcripts whose region ID matches their own cell ID are counted.
-    """
-    pts = sdata.points[points_key].compute()
-
-    pts_gdf = gpd.GeoDataFrame(
-        pts,
-        geometry=gpd.points_from_xy(pts[points_x_key], pts[points_y_key]),
         crs=sdata.shapes[region_key].crs,  # assume same CRS
-    )
+    )[["point_id", points_cell_id_key, points_gene_key, "geometry"]]
 
+    # prepare shapes/regions
     region_gdf = sdata.shapes[region_key].copy()
+    all_regions = region_gdf.index
 
-    if region_cell_id_key is not None:
-        id_key = region_cell_id_key
-        region_gdf = region_gdf.rename(columns={region_cell_id_key: "region_id"})
-    elif region_gdf.index.name is not None:
-        id_key = region_gdf.index.name
-        region_gdf.index.name = "region_id"
-        region_gdf.reset_index(inplace=True)
-    else:
-        id_key = tables_cell_id_key
-        region_gdf.index.name = "region_id"
-        region_gdf.reset_index(inplace=True)
-
+    # normalize region id into a plain column for join output clarity
+    region_gdf.index.name = "region_id"
+    region_gdf.reset_index(inplace=True)
     region_gdf = region_gdf[["region_id", "geometry"]]
 
-    pts_gdf_region = gpd.sjoin(
+    pts_joined = gpd.sjoin(
         pts_gdf,
         region_gdf,
         how="left",
-        predicate="within",
+        predicate=predicate,
     ).drop(columns=["index_right"])
 
-    df_region = (
-        pts_gdf_region.loc[
-            pts_gdf_region["region_id"] == pts_gdf_region[points_cell_id_key], ["region_id", points_gene_key]
-        ]
+    # if a point intersects multiple polygons, keep the first match
+    pts_joined = pts_joined.groupby(level=0, observed=True).first()
+
+    # optionally restrict to points whose region id matches another point column
+    if require_points_region_ID_match:
+        pts_joined = pts_joined[pts_joined["region_id"] == pts_joined[points_cell_id_key]]
+
+    # aggregate into region x gene counts
+    counts = (
+        pts_joined[["region_id", points_gene_key]]
         .groupby(["region_id", points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
+        .reindex(index=all_regions, columns=all_genes, fill_value=0)
     )
-    df_region.index.name = id_key
-
-    return df_region
-
+    
+    return pts_joined, counts
 
 def _compute_ncvs_within_radius(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     radius_factor: float = 2.0,
 ) -> pd.DataFrame:
     """
@@ -423,9 +361,6 @@ def _compute_ncvs_within_radius(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    shapes_cell_id_key : str or None, default="cell_id"
-        Column in the shapes GeoDataFrame linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     radius_factor : float, default=2.0
         Neighborhood radius factor in the same coordinate units as the shapes.
 
@@ -437,14 +372,6 @@ def _compute_ncvs_within_radius(
     """
     # Get centroids for each cell shape
     cells_gdf = sdata.shapes[shapes_key].copy()
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        cells_gdf = cells_gdf.set_index(id_key, drop=True)
-    elif cells_gdf.index.name is not None:
-        id_key = cells_gdf.index.name
-    else:
-        id_key = tables_cell_id_key
-        cells_gdf.index.name = id_key
 
     ad = sdata.tables[tables_key]
     X = ad.X
@@ -464,7 +391,7 @@ def _compute_ncvs_within_radius(
     expr_cells = pd.DataFrame(
         arr[mask, :],
         index=ad.obs[tables_cell_id_key][mask],
-        columns=ad.var.index,
+        columns=ad.var_names,
     )
 
     # Align order between shapes and table: we assume one shape per cell
@@ -498,24 +425,21 @@ def _compute_ncvs_within_radius(
     expr_ncv = pd.DataFrame(ncv_arr, index=expr_cells.index, columns=genes)
     return expr_ncv
 
-
-def _assign_transcripts_to_center_or_border(
+def _get_center_border_counts(
     sdata,
+    tables_key: str = "table",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
-    tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     erosion_fraction_of_radius: float = 0.3,
 ):
     center_gdf, border_gdf = _get_center_and_border_shapes(
         sdata=sdata,
         shapes_key=shapes_key,
-        shapes_cell_id_key=shapes_cell_id_key,
-        tables_cell_id_key=tables_cell_id_key,
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
@@ -526,32 +450,33 @@ def _assign_transcripts_to_center_or_border(
     sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
     sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
 
-    expr_center = _group_points_by_regions(
+    _, expr_center = _join_points_regions(
         sdata=sdata,
         region_key="cell_centers",
-        tables_cell_id_key=tables_cell_id_key,
+        tables_key=tables_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
-        region_cell_id_key=shapes_cell_id_key,
+        points_background_id=points_background_id,
+        predicate = "within"
     )
 
-    expr_border = _group_points_by_regions(
+    _, expr_border = _join_points_regions(
         sdata=sdata,
         region_key="cell_borders",
-        tables_cell_id_key=tables_cell_id_key,
+        tables_key=tables_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
-        region_cell_id_key=shapes_cell_id_key,
+        points_background_id=points_background_id,
+        predicate = "within"
     )
 
-    return center_gdf, border_gdf, expr_center, expr_border
-
+    return expr_center, expr_border
 
 def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
     """Align multiple expression dataframes to have the same genes and cells."""
