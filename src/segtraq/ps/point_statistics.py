@@ -3,9 +3,105 @@ import pandas as pd
 import spatialdata as sd
 from shapely import LinearRing, Point, Polygon
 
-from ..rc.utils import _align_expression_dfs, _assign_transcripts_to_center_or_border
+from ..rc.utils import _align_expression_dfs, _get_center_border_counts, _join_points_regions
 from ..utils import filter_cells, merge_into_obs
 
+def perc_points_outside_boundary(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    For each cell, compute the percentage of transcripts assigned to that cell
+    that lie outside the cell boundary polygon.
+
+    Uses `_join_points_regions` to spatially join all points to cell polygons, then:
+      inside_assigned_cell = (region_id == points_cell_id_key)
+      outside = total - inside
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned spatial
+        transcriptomics data (images, tables, points, shapes and optional labels).
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table. 
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for spot/transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell (background).
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript/spot.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
+    inplace : bool, optional
+        Whether to add the results to `sdata.tables`. Default is True.
+
+    Returns DataFrame with:
+      [points_cell_id_key, n_points_total, n_points_inside, n_points_outside, pct_points_outside]
+    """
+
+    # Join points to cell polygons (do NOT require ID match; all points required for denominator)
+    pts_joined, _ = _join_points_regions(
+        sdata=sdata,
+        region_key=shapes_key,
+        tables_key=tables_key,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        predicate="intersects",
+        require_points_region_ID_match=False,
+    )
+
+    # point is within some cell polygon AND that polygon id equals its assigned cell_id
+    inside_assigned = pts_joined["region_id"].notna() & (pts_joined["region_id"] == pts_joined[points_cell_id_key])
+
+    # total points per assigned cell_id (denominator)
+    total = pts_joined.groupby(points_cell_id_key, observed=True).size().rename("n_points_total")
+
+    # inside points per assigned cell_id
+    inside = pts_joined.loc[inside_assigned].groupby(points_cell_id_key, observed=True).size().rename("n_points_inside")
+
+    out = pd.concat([total, inside], axis=1).fillna(0)
+    out["n_points_total"] = out["n_points_total"].astype(int)
+    out["n_points_inside"] = out["n_points_inside"].astype(int)
+    out["n_points_outside"] = out["n_points_total"] - out["n_points_inside"]
+
+    out["pct_points_outside"] = np.where(
+        out["n_points_total"] > 0,
+        100.0 * out["n_points_outside"] / out["n_points_total"],
+        np.nan,
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out[["pct_points_outside"]],
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=points_cell_id_key,
+        )
+
+    return out
 
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
@@ -19,7 +115,6 @@ def centroid_mean_coord_diff(
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
-    shapes_cell_id_key: str = "cell_id",
     points_x_key: str = "x",
     points_y_key: str = "y",
     shapes_key: str = "cell_boundaries",
@@ -50,9 +145,6 @@ def centroid_mean_coord_diff(
         Column in the points table linking each transcript/spot to a cell.
     points_background_id : str or int, default="UNASSIGNED"
         The cell ID value indicating background transcripts that should be ignored.
-    shapes_cell_id_key : str or None, optional, default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     points_x_key : str, default="x"
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
@@ -117,15 +209,6 @@ def centroid_mean_coord_diff(
 
     gdf = sdata[shapes_key].copy()
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        gdf.set_index(id_key, inplace=True)
-    elif sdata[shapes_key].index.name is not None:
-        id_key = sdata[shapes_key].index.name
-    else:
-        id_key = tables_cell_id_key
-        gdf.index.name = id_key
-
     # extract the centroids
     # it is important here that the centroid keys are not identical to the points_x_key and points_y_key
     centroid_key = [f"{points_x_key}_cell", f"{points_y_key}_cell"]
@@ -133,8 +216,8 @@ def centroid_mean_coord_diff(
     df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner merge on the cell ids - some cells have no transcripts
-    df_total_x = df_centroids_x.merge(x_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
-    df_total_y = df_centroids_y.merge(y_mean, left_on=id_key, right_on=points_cell_id_key, how="inner")
+    df_total_x = df_centroids_x.merge(x_mean, left_on=gdf.index.name, right_on=points_cell_id_key, how="inner")
+    df_total_y = df_centroids_y.merge(y_mean, left_on=gdf.index.name, right_on=points_cell_id_key, how="inner")
 
     df_total = pd.concat([df_total_x, df_total_y], axis=1)
 
@@ -147,8 +230,8 @@ def centroid_mean_coord_diff(
     )
 
     # extract the cell area
-    area_df = sdata[tables_key].obs[[id_key, "cell_area"]]
-    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=id_key, how="left")
+    area_df = sdata[tables_key].obs[[gdf.index.name, "cell_area"]]
+    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=gdf.index.name, how="left")
 
     # normalise the cell area
     if genes is None:
@@ -162,13 +245,13 @@ def centroid_mean_coord_diff(
 
     if inplace:
         # only keep new, relevant columns
-        df_total = df_total[[id_key, f"distance_{feature}"]]
+        df_total = df_total[[gdf.index.name, f"distance_{feature}"]]
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
             df_to_merge=df_total,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=gdf.index.name,
         )
 
     return df_total
@@ -188,7 +271,6 @@ def distance_to_membrane(
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
     tables_cell_id_key: str = "cell_id",
-    shapes_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
     inplace: bool = True,
 ):
@@ -218,9 +300,6 @@ def distance_to_membrane(
         Column in the cell table uniquely identifying each cell.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
-    shapes_cell_id_key : str or None, optional, default="cell_id"
-        Column in the cell-boundary shapes linking polygons to cell IDs.
-        If `None`, the shape index is used as the cell ID.
     shapes_key: str, optional
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
     inplace : bool, optional
@@ -273,16 +352,8 @@ def distance_to_membrane(
 
     gdf = sdata[shapes_key].copy()
 
-    if shapes_cell_id_key is not None:
-        id_key = shapes_cell_id_key
-        gdf.set_index(id_key, inplace=True)
-    elif sdata[shapes_key].index.name is not None:
-        id_key = sdata[shapes_key].index.name
-    else:
-        id_key = tables_cell_id_key
-        gdf.index.name = id_key
-
-    gdf = gdf.merge(transcript_df, how="inner", left_on=points_cell_id_key, right_on=id_key)
+    gdf = gdf.merge(transcript_df, how="inner", left_index=True, right_on=points_cell_id_key)
+    gdf = gdf.set_index(points_cell_id_key)
     gdf = gdf.explode()
 
     # compute the linear outline of the cell segmentation
@@ -312,12 +383,12 @@ def distance_to_membrane(
     )
 
     # calculate the mean transcript distance to the cell outline per cell
-    mean_distance_to_outline = gdf.groupby(id_key)[[f"distance_to_outline_{feature}"]].mean()
+    mean_distance_to_outline = gdf.groupby(gdf.index.name)[[f"distance_to_outline_{feature}"]].mean()
 
     # extract the cell area
     area_df = sdata[tables_key].obs[[tables_cell_id_key, "cell_area"]]
     mean_distance_to_outline = mean_distance_to_outline.merge(
-        area_df, left_on=shapes_cell_id_key, right_on=tables_cell_id_key, how="left"
+        area_df, left_on=gdf.index.name, right_on=tables_cell_id_key, how="left"
     )
 
     # normalise by area
@@ -336,7 +407,7 @@ def distance_to_membrane(
         # only keep new, relevant columns
         mean_distance_to_outline = mean_distance_to_outline[
             [
-                id_key,
+                gdf.index.name,
                 f"distance_to_outline_{feature}",
                 f"distance_to_outline_norm_{feature}",
                 f"distance_to_outline_inverse_{feature}",
@@ -347,7 +418,7 @@ def distance_to_membrane(
             tables_key=tables_key,
             df_to_merge=mean_distance_to_outline,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=gdf.index.name,
         )
 
     return mean_distance_to_outline
@@ -360,24 +431,25 @@ def periphery_enrichment_score(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
     erosion_fraction_of_radius: float = 0.3,
     inplace: bool = True,
 ) -> pd.DataFrame:
-    center_gdf, border_gdf, expr_center, expr_border = _assign_transcripts_to_center_or_border(
+    expr_center, expr_border = _get_center_border_counts(
         sdata,
+        tables_key=tables_key,
         shapes_key=shapes_key,
-        shapes_cell_id_key=shapes_cell_id_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         points_gene_key=points_gene_key,
+        points_background_id=points_background_id,
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
@@ -419,12 +491,15 @@ def periphery_enrichment_score(
         }
     )
 
+    center_gdf = sdata.shapes["cell_centers"]
+    border_gdf = sdata.shapes["cell_borders"]
+
     # merging areas into the df
     df = df.merge(
-        pd.DataFrame({"cell_id": center_gdf["cell_id"], f"center_area_{feature}": center_gdf.geometry.area.values}),
+        pd.DataFrame({"cell_id": center_gdf.index, f"center_area_{feature}": center_gdf.geometry.area.values}),
         on="cell_id",
     ).merge(
-        pd.DataFrame({"cell_id": border_gdf["cell_id"], f"border_area_{feature}": border_gdf.geometry.area.values}),
+        pd.DataFrame({"cell_id": border_gdf.index, f"border_area_{feature}": border_gdf.geometry.area.values}),
         on="cell_id",
     )
 
