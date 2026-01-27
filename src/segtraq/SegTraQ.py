@@ -288,7 +288,7 @@ class SegTraQ:
         )
 
         ious = self.rc.compute_cell_nuc_match(n_jobs=n_jobs, inplace=inplace)
-        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(metric=metric, n_jobs_iou=n_jobs, inplace=inplace)
+        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(metric=metric, n_jobs=n_jobs, inplace=inplace)
         parts_corr = self.rc.compute_correlation_between_parts(metric=metric, n_jobs=n_jobs, inplace=inplace)
         center_border_ncv_corr = self.rc.compute_center_border_ncv_correlation(metric=metric, inplace=inplace)
 
