@@ -1069,44 +1069,6 @@ class _CSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_rmsd(
-        self,
-        resolution: float | list[float] = (0.6, 0.8, 1.0),
-        key_prefix: str = "leiden_subset",
-        random_state: int = 42,
-        cell_type_key: str | None = None,
-        inplace: bool = True,
-    ) -> float:
-        return cs.compute_rmsd(
-            self._p.sdata,
-            resolution=resolution,
-            key_prefix=key_prefix,
-            random_state=random_state,
-            cell_type_key=cell_type_key,
-            inplace=inplace,
-        )
-
-    compute_rmsd.__doc__ = cs.compute_rmsd.__doc__
-
-    def compute_mean_cosine_distance(
-        self,
-        resolution: float | list[float] = (0.6, 0.8, 1.0),
-        key_prefix: str = "leiden_subset",
-        random_state: int = 42,
-        cell_type_key: str | None = None,
-        inplace: bool = True,
-    ) -> float:
-        return cs.compute_mean_cosine_distance(
-            self._p.sdata,
-            resolution=resolution,
-            key_prefix=key_prefix,
-            random_state=random_state,
-            cell_type_key=cell_type_key,
-            inplace=inplace,
-        )
-
-    compute_mean_cosine_distance.__doc__ = cs.compute_mean_cosine_distance.__doc__
-
     def compute_silhouette_score(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
