@@ -137,7 +137,9 @@ def perc_unassigned_transcripts(
 
     if inplace:
         sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
-    return perc_unassigned_transcripts
+
+    # converting from np.float to float
+    return float(perc_unassigned_transcripts)
 
 
 def perc_unassigned_transcripts_per_gene(
@@ -209,11 +211,12 @@ def transcripts_per_cell(
     tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
+    points_background_id: int = -1,
     tables_key: str = "table",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Counts the number of transcripts assigned to each cell.
+    Counts the number of transcripts assigned to each cell (excluding unassigned transcripts).
 
     Parameters
     ----------
@@ -225,6 +228,8 @@ def transcripts_per_cell(
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
     points_cell_id_key : str, optional
         The column name in the transcript data that contains cell assignment information. Default is "cell_id".
+    points_background_id: int = -1,
+        The value indicating an unassigned transcript. Default is -1.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
@@ -236,7 +241,8 @@ def transcripts_per_cell(
         A DataFrame with two columns: the cell identifier (`cell_key`) and the
         corresponding transcript count ("transcript_count").
     """
-    counts = sdata.points[points_key][points_cell_id_key].compute().value_counts().astype("int64")
+    counts = sdata.points[points_key][points_cell_id_key].compute()
+    counts = counts[counts != points_background_id].value_counts().astype("int64")
     counts_df = counts.reset_index()
     counts_df.columns = [points_cell_id_key, "transcript_count"]
 
@@ -254,11 +260,12 @@ def genes_per_cell(
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
+    points_background_id: int = -1,
     tables_key: str = "table",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Calculates the number of unique genes detected per cell.
+    Calculates the number of unique genes detected per cell (excluding unassigned transcripts).
 
     Parameters
     ----------
@@ -272,6 +279,8 @@ def genes_per_cell(
         The column name in the transcript data representing cell identifiers (default is "cell_id").
     points_gene_key : str, optional
         The column name in the transcript data representing gene names (default is "feature_name").
+    points_background_id: int = -1,
+        The value indicating an unassigned transcript. Default is -1.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
@@ -284,6 +293,9 @@ def genes_per_cell(
         the count of unique genes detected in that cell.
     """
     df = sdata.points[points_key].compute()
+    # Exclude unassigned transcripts
+    df = df[df[points_cell_id_key] != points_background_id]
+
     # Group by cell and count unique genes
     gene_counts = df.groupby(points_cell_id_key)[points_gene_key].nunique().reset_index()
     gene_counts.columns = [points_cell_id_key, "gene_count"]
@@ -301,11 +313,12 @@ def mean_transcripts_per_gene_per_cell(
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
+    points_background_id: int = -1,
     tables_key: str = "table",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Computes the mean number of transcripts per gene per cell.
+    Computes the mean number of transcripts per gene per cell (excluding unassigned transcripts).
 
     Transcripts are first counted per (cell, gene). Then, for each cell,
     we compute the mean of these per-gene transcript counts across genes
@@ -328,6 +341,8 @@ def mean_transcripts_per_gene_per_cell(
         The column name in the transcript data representing cell identifiers (default is "cell_id").
     points_gene_key : str, optional
         The column name in the transcript data representing gene names (default is "feature_name").
+    points_background_id: int = -1,
+        The value indicating an unassigned transcript. Default is -1.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
@@ -340,6 +355,8 @@ def mean_transcripts_per_gene_per_cell(
         columns are `[points_cell_id_key, "mean_transcripts_per_gene"]`.
     """
     df = sdata.points[points_key].compute()
+    # Exclude unassigned transcripts
+    df = df[df[points_cell_id_key] != points_background_id]
 
     # Count transcripts per (cell, gene)
     per_gene_counts = (
@@ -369,9 +386,11 @@ def mean_transcripts_per_gene_per_cell(
 def transcript_density(
     sdata: sd.SpatialData,
     tables_key: str = "table",
-    points_key: str = "transcripts",
     tables_cell_id_key: str = "cell_id",
     tables_area_volume_key: str = "cell_area",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: int = -1,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -384,12 +403,16 @@ def transcript_density(
         The SpatialData object containing spatial transcriptomics data.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
-    points_key : str, optional
-        The key in the transcript table indicating transcript identifiers. Default is "transcripts".
     tables_cell_id_key : str, optional
         The key in the table indicating cell identifiers. Default is "cell_id".
     tables_area_volume_key: str, optional
         The key in the table indicating the cell area/volume. Default is "cell_area".
+    points_key : str, optional
+        The key to access the transcript data within `sdata.points` (default is "transcripts").
+    points_cell_id_key : str, optional
+        The column name in the transcript data representing cell identifiers (default is "cell_id").
+    points_background_id: int = -1,
+        The value indicating an unassigned transcript. Default is -1.
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
 
@@ -402,7 +425,14 @@ def transcript_density(
     """
     adata = sdata.tables[tables_key]
     # this will also add the transcript counts inplace
-    counts_df = transcripts_per_cell(sdata, points_key=points_key, tables_cell_id_key=tables_cell_id_key)
+    counts_df = transcripts_per_cell(
+        sdata,
+        points_key=points_key,
+        tables_cell_id_key=tables_cell_id_key,
+        points_background_id=points_background_id,
+        points_cell_id_key=points_cell_id_key,
+        tables_key=tables_key,
+    )
     area_df = adata.obs[[tables_cell_id_key, tables_area_volume_key]]
 
     merged = counts_df.merge(area_df, on=tables_cell_id_key, how="left")
