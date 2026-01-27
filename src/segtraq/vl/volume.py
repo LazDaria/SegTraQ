@@ -5,7 +5,7 @@ import spatialdata as sd
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
-from ..utils import _is_background, merge_into_obs, _ensure_index
+from ..utils import _ensure_index, _is_background, merge_into_obs
 from .utils import _correct_z_drift
 
 
@@ -371,7 +371,7 @@ def compute_heterotypic_overlap_fraction(
         Keys in `sdata.shapes` for per-z-layer cell boundary polygons
         (e.g. ["cell_boundaries_z0", ..., "cell_boundaries_z3"]).
     shapes_cell_id_key : str, optional, default="cell_id"
-        Index name of shapes GeoDataFrame linking polygons to cell IDs. 
+        Index name of shapes GeoDataFrame linking polygons to cell IDs.
     unknown_label : str, default="Unknown"
         Label name to use when treating NA as a separate category (unknown_policy="treat_as_label").
     unknown_policy : str, default="exclude"
@@ -403,10 +403,7 @@ def compute_heterotypic_overlap_fraction(
 
         shapes = sdata.shapes[skey].copy()
 
-        gdf = _ensure_index(shapes, 
-                            shapes_key=skey, 
-                            id_key=shapes_cell_id_key,
-                            id_key_name="shapes_cell_id_key")
+        gdf = _ensure_index(shapes, shapes_key=skey, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key")
 
         gdf["_cell_id"] = gdf.index
         gdf["_z_layer"] = k

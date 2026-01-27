@@ -6,6 +6,7 @@ from shapely import LinearRing, Point, Polygon
 from ..rc.utils import _align_expression_dfs, _get_center_border_counts, _join_points_regions
 from ..utils import filter_cells, merge_into_obs
 
+
 def perc_points_outside_boundary(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -33,7 +34,7 @@ def perc_points_outside_boundary(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. 
+        Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -102,6 +103,7 @@ def perc_points_outside_boundary(
         )
 
     return out
+
 
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
