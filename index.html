@@ -176,6 +176,7 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
@@ -349,16 +350,91 @@ document.write(`
 <div class="toctree-wrapper compound">
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html">Technology Focus - 10x Genomics Xenium (Simplified)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html">Technology Focus - 10x Genomics Xenium (Simplified)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Read-SpatialData-object">Read SpatialData object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Initialize-SegTraQ-objects">Initialize SegTraQ objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Baseline-module">Baseline module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Clustering-stability-module">Clustering stability module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Region-correlation-module">Region correlation module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Supervised-module">Supervised module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#3D-Volume-Module">3D Volume Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html#Point-statistic-metrics">Point statistic metrics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus.html#Description-of-prior-dataset-acquisition-and-segmentation">Description of prior dataset acquisition and segmentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus.html#Read-and-crop-SpatialData-objects">Read and crop SpatialData objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus.html#Initialize-SegTraQ-objects">Initialize SegTraQ objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus.html#Load-reference-scRNA-seq-data-and-transfer-labels">Load reference scRNA-seq data and transfer labels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/10x_xenium_focus.html#Running-SegTraQ-QC-metrics">Running SegTraQ QC metrics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html#Read-data-into-SpatialData-format">Read data into SpatialData format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html#Baseline-metrics">Baseline metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html#Clustering-stability-metrics">Clustering stability metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html#Supervised-metrics">Supervised metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/vizgen_merscope_focus.html#Region-correlation-metrics">Region correlation metrics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/cosmx_focus.html#Data-Reading">Data Reading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/cosmx_focus.html#Baseline-Metrics">Baseline Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/cosmx_focus.html#Clustering-Stability">Clustering Stability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/cosmx_focus.html#Region-Correlation">Region Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/cosmx_focus.html#Supervised-module">Supervised module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/io.html#Xenium">Xenium</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/io.html#BIDCell">BIDCell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/io.html#Proseg-2">Proseg 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/io.html#Proseg-3">Proseg 3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/io.html#Segger">Segger</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#The-problem">The problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Important:-Normalization-and-Log-Transform">Important: Normalization and Log-Transform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Cluster-Connectedness">Cluster Connectedness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Silhouette-Score">Silhouette Score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Purity">Purity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Visualization">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Supervised-cluster-stability">Supervised cluster stability</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Expression-correlation-between-cell-and-nucleus">Expression correlation between cell and nucleus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Correlation-between-Intersection-and-Remainder-Parts-of-the-Cell">Correlation between Intersection and Remainder Parts of the Cell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Correlation-cell-border-with-its-center-and-its-neigbhorhood">Correlation cell border with its center and its neigbhorhood</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/volume.html#Load-data-into-SegTraQ-and-run-label-transfer">Load data into SegTraQ and run label transfer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/volume.html#Inspect-z-distribution-of-transcripts">Inspect z distribution of transcripts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/volume.html#Top–bottom-z-consistency-(cosine-similarity)">Top–bottom z consistency (cosine similarity)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/volume.html#Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">Heterotypic overlap area/fraction (detecting 3D overlaps)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/volume.html#Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)">Mean VSI per cell (ovrlpy-based vertical signal integrity)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/supervised.html#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">Transfer labels from scRNA-seq to spatial transcriptomics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/supervised.html#Computing-cell-type-specific-markers">Computing cell type-specific markers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/supervised.html#Compute-marker-purity">Compute marker purity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/supervised.html#Neighborhood-contamination">Neighborhood contamination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/supervised.html#Compute-mutually-exclusive-co-expression-rate-(MECR)">Compute mutually exclusive co-expression rate (MECR)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/point_statistics.html#Centroid-mean-coordinate-difference">Centroid mean coordinate difference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/point_statistics.html#Distance-to-membrane">Distance to membrane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/point_statistics.html#Periphery-Enrichment-Score">Periphery Enrichment Score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/point_statistics.html#Comparing-the-three-metrics">Comparing the three metrics</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </section>
