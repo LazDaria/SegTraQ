@@ -371,7 +371,7 @@ def transcript_density(
     tables_key: str = "table",
     points_key: str = "transcripts",
     tables_cell_id_key: str = "cell_id",
-    tables_area_volume_key: str = "cell_area",
+    tables_area_key: str = "cell_area",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -388,8 +388,8 @@ def transcript_density(
         The key in the transcript table indicating transcript identifiers. Default is "transcripts".
     tables_cell_id_key : str, optional
         The key in the table indicating cell identifiers. Default is "cell_id".
-    tables_area_volume_key: str, optional
-        The key in the table indicating the cell area/volume. Default is "cell_area".
+    tables_area_key: str, optional
+        The key in the table indicating the cell area. Default is "cell_area".
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
 
@@ -403,10 +403,10 @@ def transcript_density(
     adata = sdata.tables[tables_key]
     # this will also add the transcript counts inplace
     counts_df = transcripts_per_cell(sdata, points_key=points_key, tables_cell_id_key=tables_cell_id_key)
-    area_df = adata.obs[[tables_cell_id_key, tables_area_volume_key]]
+    area_df = adata.obs[[tables_cell_id_key, tables_area_key]]
 
     merged = counts_df.merge(area_df, on=tables_cell_id_key, how="left")
-    merged["transcript_density"] = merged["transcript_count"] / merged[tables_area_volume_key]
+    merged["transcript_density"] = merged["transcript_count"] / merged[tables_area_key]
 
     if inplace:
         merge_into_obs(
