@@ -22,7 +22,7 @@ SegTraQ documentation
    modules/utils
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Tutorials:
    
    notebooks/10x_xenium_focus_simplified
