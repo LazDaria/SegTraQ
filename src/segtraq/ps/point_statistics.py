@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
+import geopandas as gpd
 from shapely import LinearRing, Point, Polygon
 
 from ..rc.utils import _align_expression_dfs, _get_center_border_counts, _join_points_regions
-from ..utils import filter_cells, merge_into_obs
+from ..utils import filter_cells, merge_into_obs, _is_background
 
 
 def perc_points_outside_boundary(
@@ -108,11 +109,11 @@ def perc_points_outside_boundary(
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
-    aggregate: bool = True,
-    cell_type_key: str = "transferred_celltype_plot",
-    cell_type_query: str = None,
+    cell_type_key: str = "transferred_celltype",
+    cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_area_key: str = "cell_area",
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -120,6 +121,7 @@ def centroid_mean_coord_diff(
     points_x_key: str = "x",
     points_y_key: str = "y",
     shapes_key: str = "cell_boundaries",
+    restrict_to_within_boundary: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -133,12 +135,17 @@ def centroid_mean_coord_diff(
     genes: Optional[Union[str, List[str]]] = None,
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
         If None, all genes are used.
-    aggregate: bool,
-        Whether or not to aggregate the
+    cell_type_key : str
+        Column in the AnnData `.obs` with cell-type labels.
+    cell_type_query: str | list[str] | None, optional
+        If provided, compute the metric only for cells whose `cell_type_key` matches
+        the given label(s) (`cell_type_query`). 
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_area_key : str or None, optional, default=tables_area_key
+        Column in the cell table with cell area (2D).
     points_gene_key : str, optional
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, optional
@@ -153,107 +160,122 @@ def centroid_mean_coord_diff(
         Column for the y-coordinate of each transcript/spot.
     shapes_key: str, optional
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
+    restrict_to_within_boundary: bool, optional, default=False
+        Whether to restrict transcripts to those located within the cell boundary. 
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame with columns `["centroid_x, "centroid_y", "x", "y", "distance"]`,
+        A DataFrame with columns `["centroid_x, "centroid_y", "x", "y", `tables_area_key`, "distance"]`,
         where "distance" is the euclidean distance between the coordinates `["centroid_x, "centroid_y"] and
         ["x", "y"].
-
-    Notes
-    -----
-    Requires that the input AnnData table contains a "cell_area" column in `.obs`.
     """
-    assert "cell_area" in sdata[tables_key].obs.columns, (
-        f"'cell_area' column not found in sdata.tables['{tables_key}'].obs. "
-        "Please compute cell areas before using this function, e. g. by using st.bl.morphological_features()."
-    )
-
     # filter cells that are in query
     if cell_type_query is not None:
-        adata = filter_cells(adata=sdata.tables[tables_key], col=cell_type_key, func=lambda x: x.isin(cell_type_query))
+        query_vals = [cell_type_query] if isinstance(cell_type_query, str) else list(cell_type_query)
+        adata = filter_cells(adata=sdata.tables[tables_key], col=cell_type_key, func=lambda x: x.isin(query_vals))
     else:
         adata = sdata.tables[tables_key]
 
-    # extract the transcript information
-    transcript_df = sdata.points[points_key].compute()
+    # get points
+    pts = sdata.points[points_key]
 
-    # filter to those cells which are in the anndata object
-    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(adata.obs[points_cell_id_key])]
+    # filter to those points whose cells are in the anndata object
+    pts = pts[pts[points_cell_id_key].isin(adata.obs[tables_cell_id_key])]
 
     # subset transcript dataframe to the feature
     if genes is not None:
         if isinstance(genes, str):
-            transcript_df = transcript_df[transcript_df[points_gene_key] == genes]
+            pts = pts[pts[points_gene_key] == genes]
         else:
-            transcript_df = transcript_df[transcript_df[points_gene_key].isin(genes)]
+            pts = pts[pts[points_gene_key].isin(genes)]
 
         # check if the dataframe is empty after filtering
-        if transcript_df.empty:
+        try:
+            pts.head(1)
+        except ValueError:
             raise ValueError(f"No transcripts found for the specified gene(s): {genes}.")
-
-    if aggregate:
-        transcript_df[points_gene_key] = "aggregate"
+    
+    # compute after subsetting for efficiency
+    transcript_df = pts.compute() if hasattr(pts, "compute") else pts
 
     # drop the background transcripts
-    transcript_df = transcript_df[transcript_df[points_cell_id_key] != points_background_id]
-    # group by cell id
-    transcript_df = transcript_df.groupby(points_cell_id_key)
+    is_background = _is_background(transcript_df[points_cell_id_key], points_background_id)
+    transcript_df = transcript_df[~is_background]
 
-    # compute the mean x, y coordinates of the transcripts per cell
-    x_mean = transcript_df[points_x_key].mean()
-    y_mean = transcript_df[points_y_key].mean()
-    x_mean = pd.DataFrame(x_mean)
-    y_mean = pd.DataFrame(y_mean)
+    # copy cell shapes
+    gdf = sdata.shapes[shapes_key].copy()
 
-    gdf = sdata[shapes_key].copy()
+    if restrict_to_within_boundary:
+        # merge geometry onto transcripts by cell_id
+        tmp = transcript_df.merge(
+            gdf[["geometry"]],
+            left_on=points_cell_id_key,
+            right_index=True,
+            how="inner",
+        )
+        # create points and filter (covers includes boundary)
+        pts_geom = gpd.points_from_xy(tmp[points_x_key], tmp[points_y_key])
+        poly = gpd.GeoSeries(tmp["geometry"], index=tmp.index)
+        pt = gpd.GeoSeries(pts_geom, index=tmp.index)
+        within = poly.covers(pt)
+        transcript_df = tmp.loc[within, transcript_df.columns] 
 
-    # extract the centroids
+    # group by cell id and compute the mean x, y coordinates of the transcripts per cell
+    cell_centers = (
+        transcript_df
+        .groupby(points_cell_id_key)[[points_x_key, points_y_key]]
+        .mean()
+    ).reset_index(drop=False)
+
+    # set centroid names
     # it is important here that the centroid keys are not identical to the points_x_key and points_y_key
     centroid_key = [f"{points_x_key}_cell", f"{points_y_key}_cell"]
-    df_centroids_x = pd.DataFrame(gdf.centroid.x, columns=[centroid_key[0]])
-    df_centroids_y = pd.DataFrame(gdf.centroid.y, columns=[centroid_key[1]])
 
     # do an inner merge on the cell ids - some cells have no transcripts
-    df_total_x = df_centroids_x.merge(x_mean, left_on=gdf.index.name, right_on=points_cell_id_key, how="inner")
-    df_total_y = df_centroids_y.merge(y_mean, left_on=gdf.index.name, right_on=points_cell_id_key, how="inner")
+    df_centroids = pd.DataFrame(
+        {centroid_key[0]: gdf.centroid.x, centroid_key[1]: gdf.centroid.y},
+        index=gdf.index,
+    )
 
-    df_total = pd.concat([df_total_x, df_total_y], axis=1)
+    df_total = df_centroids.merge(cell_centers, left_index=True, right_on=points_cell_id_key, how="inner")
 
     # calculate the euclidean distance
     df_total["distance"] = np.linalg.norm(
         df_total.loc[:, [centroid_key[0], centroid_key[1]]].values
-        - df_total.loc[:, [points_y_key, points_x_key]].values,
+        - df_total.loc[:, [points_x_key, points_y_key]].values,
         ord=2,
         axis=1,
     )
 
     # extract the cell area
-    area_df = sdata[tables_key].obs[[gdf.index.name, "cell_area"]]
-    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=gdf.index.name, how="left")
+    area_df = sdata.tables[tables_key].obs[[tables_cell_id_key, tables_area_key]]
+    df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
 
-    # normalise the cell area
     if genes is None:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
+    elif len(genes) == 1:
+        feature = genes[0]
     else:
         feature = f"{len(genes)}_genes"
-    df_total[f"distance_{feature}"] = df_total["distance"] / df_total["cell_area"]
+
+    # normalise by cell area
+    df_total[f"distance_{feature}"] = df_total["distance"] / np.sqrt(df_total[tables_area_key]) #length scale
     df_total = df_total.reset_index(drop=True)
 
     if inplace:
         # only keep new, relevant columns
-        df_total = df_total[[gdf.index.name, f"distance_{feature}"]]
+        df_total = df_total[[tables_cell_id_key, f"distance_{feature}"]]
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
             df_to_merge=df_total,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=gdf.index.name,
+            df_cell_id_key=tables_cell_id_key,
         )
 
     return df_total
@@ -262,10 +284,10 @@ def centroid_mean_coord_diff(
 def distance_to_membrane(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
-    aggregate: bool = True,
-    cell_type_key: str = "transferred_celltype_plot",
-    cell_type_query: str = None,
+    cell_type_key: str = "transferred_celltype",
+    cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
+    tables_area_key: str = "cell_area",
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
     points_x_key: str = "x",
@@ -274,10 +296,11 @@ def distance_to_membrane(
     points_background_id: str | int = "UNASSIGNED",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
+    restrict_to_within_boundary: bool = False,
     inplace: bool = True,
 ):
     """
-    Calculates the mean distance of the transcript of a feature of interest to the outline of the cell segmentation
+    Calculates the mean distance of the transcript of a feature of interest to the outline of the cell segmentation.
 
     Parameters
     ----------
@@ -286,8 +309,15 @@ def distance_to_membrane(
     genes: str | list[str] | None = None,
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
         If None, all genes are used.
+    cell_type_key : str
+        Column in the AnnData `.obs` with cell-type labels.
+    cell_type_query: str | list[str] | None, optional
+        If provided, compute the metric only for cells whose `cell_type_key` matches
+        the given label(s) (`cell_type_query`). 
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
+    tables_area_key : str or None, optional, default=tables_area_key
+        Column in the cell table with cell area (2D).
     points_gene_key : str, optional
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, optional
@@ -304,47 +334,48 @@ def distance_to_membrane(
         Column in the points table linking each transcript/spot to a cell.
     shapes_key: str, optional
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
+    restrict_to_within_boundary: bool, optional, default=False
+        Whether to restrict transcripts to those located within the cell boundary. 
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame with columns `["distance_to_outline_inverse", f"distance_to_outline_{feature}" and "cell_area"]`
-
-    Notes
-    -----
-    Requires that the input AnnData table contains a "cell_area" column in `.obs`.
-
+        A DataFrame with columns `["distance_to_outline_inverse", f"distance_to_outline_{feature}" and `tables_area_key`]`
     """
-    assert "cell_area" in sdata[tables_key].obs.columns, (
-        f"'cell_area' column not found in sdata.tables['{tables_key}'].obs. "
-        "Please compute cell areas before using this function, e. g. by using st.bl.morphological_features()."
-    )
-
     # filter cells that are in query
     if cell_type_query is not None:
-        adata = filter_cells(adata=sdata.tables[tables_key], col=cell_type_key, func=lambda x: x.isin(cell_type_query))
+        query_vals = [cell_type_query] if isinstance(cell_type_query, str) else list(cell_type_query)
+        adata = filter_cells(adata=sdata.tables[tables_key], col=cell_type_key, func=lambda x: x.isin(query_vals))
     else:
         adata = sdata.tables[tables_key]
 
-    # extract the transcript information
-    transcript_df = sdata.points[points_key].compute()
+    # get points
+    pts = sdata.points[points_key]
 
-    # filter to those cells which are in the anndata object
-    transcript_df = transcript_df[transcript_df[points_cell_id_key].isin(adata.obs[tables_cell_id_key])]
+    # filter to those points whose cells are in the anndata object
+    pts = pts[pts[points_cell_id_key].isin(adata.obs[tables_cell_id_key])]
 
     # subset transcript dataframe to the feature
     if genes is not None:
         if isinstance(genes, str):
-            genes = [genes]
-        transcript_df = transcript_df[transcript_df[points_gene_key].isin(genes)]
+            pts = pts[pts[points_gene_key] == genes]
+        else:
+            pts = pts[pts[points_gene_key].isin(genes)]
 
-    if aggregate:
-        transcript_df[points_gene_key] = "aggregate"
+        # check if the dataframe is empty after filtering
+        try:
+            pts.head(1)
+        except ValueError:
+            raise ValueError(f"No transcripts found for the specified gene(s): {genes}.")
+
+    # compute after subsetting for efficiency
+    transcript_df = pts.compute() if hasattr(pts, "compute") else pts
 
     # drop the background transcripts
-    transcript_df = transcript_df[transcript_df[points_cell_id_key] != points_background_id]
+    is_background = _is_background(transcript_df[points_cell_id_key], points_background_id)
+    transcript_df = transcript_df[~is_background]
 
     # zip the coordinates to a common column as tuple
     transcript_df["coordinates"] = list(zip(transcript_df[points_x_key], transcript_df[points_y_key], strict=False))
@@ -352,11 +383,19 @@ def distance_to_membrane(
     # make the coordinates into a Point object
     transcript_df["coordinate_points"] = transcript_df["coordinates"].map(lambda x: Point(x))
 
-    gdf = sdata[shapes_key].copy()
+    # copy cell shapes
+    gdf = sdata.shapes[shapes_key].copy()
+
+    # explode BEFORE merging (handles MultiPolygon cleanly without duplicating transcripts unpredictably)
+    # (GeoPandas explode keeps geometry scalar; index may repeat)
+    try:
+        gdf = gdf.explode(index_parts=False)
+    except TypeError:
+        # older geopandas versions
+        gdf = gdf.explode()
 
     gdf = gdf.merge(transcript_df, how="inner", left_index=True, right_on=points_cell_id_key)
     gdf = gdf.set_index(points_cell_id_key)
-    gdf = gdf.explode()
 
     # compute the linear outline of the cell segmentation
     gdf["linear_geometry"] = gdf.apply(lambda x: LinearRing(x["geometry"].exterior.coords), axis=1)
@@ -367,40 +406,56 @@ def distance_to_membrane(
     # calculate the distance of the transcript points to the linear segment
     if genes is None:
         feature = "all_genes"
+    elif isinstance(genes, str):
+        feature = genes
     elif len(genes) == 1:
         feature = genes[0]
     else:
-        if aggregate:
-            feature = "aggregated_genes"
-        else:
-            feature = f"{len(genes)}_genes"
+        feature = f"{len(genes)}_genes"
 
-    # check whether the coordinate points are within the linear geometry
-    # potentially overkill if transcript id is checked
-    gdf["is_within"] = gdf.apply(lambda x: Polygon(x["linear_geometry"]).contains(x["coordinate_points"]), axis=1)
+    # check whether the coordinate points are inside or on the polygon
+    # covers() includes boundary points; use contains() if you want strictly inside
+    gdf["is_within"] = gdf.apply(
+        lambda row: row["geometry"].covers(row["coordinate_points"]),
+        axis=1,
+    )
 
-    # Then calculate distance only for inside points
+    # optionally restrict to transcripts within boundary
+    if restrict_to_within_boundary:
+        gdf = gdf[gdf["is_within"]].copy()
+
+    # compute signed distance to the polygon boundary
     gdf[f"distance_to_outline_{feature}"] = gdf.apply(
-        lambda x: x["coordinate_points"].distance(x["linear_geometry"]) if x["is_within"] else None, axis=1
+        lambda row: (
+            row["coordinate_points"].distance(row["geometry"].boundary)
+            if row["is_within"]
+            else -row["coordinate_points"].distance(row["geometry"].boundary)
+        ),
+        axis=1,
     )
 
     # calculate the mean transcript distance to the cell outline per cell
-    mean_distance_to_outline = gdf.groupby(gdf.index.name)[[f"distance_to_outline_{feature}"]].mean()
+    mean_distance_to_outline = (gdf.groupby(gdf.index.name)[[f"distance_to_outline_{feature}"]]
+                                .mean()
+                                .reset_index())
+
 
     # extract the cell area
-    area_df = sdata[tables_key].obs[[tables_cell_id_key, "cell_area"]]
+    area_df = sdata.tables[tables_key].obs[[tables_cell_id_key, tables_area_key]]
     mean_distance_to_outline = mean_distance_to_outline.merge(
         area_df, left_on=gdf.index.name, right_on=tables_cell_id_key, how="left"
     )
 
     # normalise by area
     mean_distance_to_outline[f"distance_to_outline_norm_{feature}"] = (
-        mean_distance_to_outline[f"distance_to_outline_{feature}"] / mean_distance_to_outline["cell_area"]
+        mean_distance_to_outline[f"distance_to_outline_{feature}"] / np.sqrt(mean_distance_to_outline[tables_area_key])
     )
 
     # take the inverse - score is high when distance is small. sqrt transformed to handle right skewed distribution
-    mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = 1 / np.sqrt(
-        mean_distance_to_outline[f"distance_to_outline_{feature}"]
+    # do we really need the inverse?
+    eps = 1e-6
+    mean_distance_to_outline[f"distance_to_outline_inverse_{feature}"] = (
+        1 / np.sqrt(np.abs(mean_distance_to_outline[f"distance_to_outline_{feature}"]) + eps)
     )
 
     mean_distance_to_outline = mean_distance_to_outline.reset_index(drop=True)

@@ -501,8 +501,6 @@ def compute_correlation_between_parts(
 
     rows = []
     for cid in all_cells:
-        if cid == 70082:
-            x = 0
         nid = best_nuc_map.get(cid)
         if pd.isna(nid):  # if no overlapping nucleus
             r = np.nan

@@ -19,7 +19,7 @@ class SegTraQ:
         images_key: str | None = "morphology_focus",
         tables_key: str = "table",
         tables_cell_id_key: str = "cell_id",
-        tables_area_volume_key: str | None = "cell_area",
+        tables_area_key: str | None = "cell_area",
         tables_centroid_x_key: str | None = "x_centroid",
         tables_centroid_y_key: str | None = "y_centroid",
         points_key: str = "transcripts",
@@ -58,8 +58,8 @@ class SegTraQ:
         tables_cell_id_key : str, default="cell_id"
             Column in the cell table uniquely identifying each cell.
 
-        tables_area_volume_key : str or None, optional, default="cell_area"
-            Column in the cell table with cell area (2D) or volume (3D/quasi-3D).
+        tables_area_key : str or None, optional, default="cell_area"
+            Column in the cell table with cell area (2D).
             If `None`, area/volume-based metrics will be computed via
             `segtraq.bl.morphological_features`.
 
@@ -133,7 +133,7 @@ class SegTraQ:
             images_key=images_key,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
-            tables_area_volume_key=tables_area_volume_key,
+            tables_area_key=tables_area_key,
             tables_centroid_x_key=tables_centroid_x_key,
             tables_centroid_y_key=tables_centroid_y_key,
             points_key=points_key,
@@ -155,8 +155,10 @@ class SegTraQ:
 
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
-        self.tables_area_volume_key = tables_area_volume_key
+        self.tables_area_key = tables_area_key
+
         # if these are set to None, the validate_spatialdata automatically computes them
+        self.tables_area_key = tables_area_key if tables_area_key is not None else "cell_area"
         self.tables_centroid_x_key = tables_centroid_x_key if tables_centroid_x_key is not None else "centroid_x"
         self.tables_centroid_y_key = tables_centroid_y_key if tables_centroid_y_key is not None else "centroid_y"
 
@@ -200,7 +202,7 @@ class SegTraQ:
         - genes_per_cell
         - transcripts_per_cell
         - mean_transcripts_per_gene_per_cell
-        - transcript_density (only if `tables_area_volume_key` is set)
+        - transcript_density 
         - morphological features per cell
         - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
 
@@ -755,21 +757,12 @@ class _BLFacade:
     morphological_features.__doc__ = bl.morphological_features.__doc__
 
     def transcript_density(self, inplace: bool = False):
-        tavk = self._p.tables_area_volume_key
-        if tavk is None:
-            warnings.warn(
-                "Transcript density cannot be computed because 'tables_area_volume_key' is None. "
-                "Provide a cell area/volume column when initializing SegTraQ.",
-                UserWarning,
-                stacklevel=2,
-            )
-            return None
         return bl.transcript_density(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             points_key=self._p.points_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            tables_area_volume_key=tavk,
+            tables_area_key=self._p.tables_area_key,
             inplace=inplace,
         )
 
@@ -1045,10 +1038,18 @@ class _PSFacade:
 
     perc_points_outside_boundary.__doc__ = ps.perc_points_outside_boundary.__doc__
 
-    def centroid_mean_coord_diff(self, genes: str | list[str] = None, inplace: bool = True):
+    def centroid_mean_coord_diff(
+            self, 
+            genes: str | list[str] = None, 
+            cell_type_key: str | None = "transferred_celltype",
+            cell_type_query: str | list[str] | None = None,
+            restrict_to_within_boundary: bool = False,
+            inplace: bool = True):
         return ps.centroid_mean_coord_diff(
             sdata=self._p.sdata,
             genes=genes,
+            cell_type_key=cell_type_key,
+            cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
@@ -1057,6 +1058,7 @@ class _PSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             shapes_key=self._p.shapes_key,
+            restrict_to_within_boundary=restrict_to_within_boundary,
             inplace=inplace,
         )
 
@@ -1065,8 +1067,9 @@ class _PSFacade:
     def distance_to_membrane(
         self,
         genes: str | list[str] | None = None,
-        cell_type_key: str | None = None,
-        cell_type_query: str | None = None,
+        cell_type_key: str | None = "transferred_celltype",
+        cell_type_query: str | list[str] | None = None,
+        restrict_to_within_boundary: bool = False,
         inplace: bool = True,
     ):
         return ps.distance_to_membrane(
@@ -1081,6 +1084,7 @@ class _PSFacade:
             points_y_key=self._p.points_y_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             points_cell_id_key=self._p.points_cell_id_key,
+            restrict_to_within_boundary=restrict_to_within_boundary,
             inplace=inplace,
         )
 
