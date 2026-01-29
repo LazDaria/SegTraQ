@@ -206,7 +206,7 @@ def compute_cell_nuc_correlation(
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
-    id_key = sdata[shapes_key].index.name
+    shapes_index_name = sdata[shapes_key].index.name
     tbl = sdata.tables[tables_key]
 
     if "best_nuc_id" not in tbl.obs.columns:
@@ -221,8 +221,10 @@ def compute_cell_nuc_correlation(
             n_jobs=n_jobs,
             inplace=inplace,
         )
+        id_key = shapes_index_name
     else:
-        match_df = tbl.obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+        match_df = tbl.obs[[tables_cell_id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+        id_key = tables_cell_id_key
 
     X = tbl.X
     # Check if X looks like counts
@@ -417,7 +419,7 @@ def compute_correlation_between_parts(
     )
 
     cells_gdf = sdata.shapes[shapes_key]
-    id_key = cells_gdf.index.name
+    shapes_index_name = cells_gdf.index.name
 
     if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
         match_df = compute_cell_nuc_match(
@@ -431,8 +433,10 @@ def compute_correlation_between_parts(
             n_jobs=n_jobs,
             inplace=inplace,
         )
+        id_key = shapes_index_name
     else:
-        match_df = sdata.tables[tables_key].obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+        match_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+        id_key = tables_cell_id_key
 
     best_nuc_map = match_df.set_index(id_key)["best_nuc_id"]
 

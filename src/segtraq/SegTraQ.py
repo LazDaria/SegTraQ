@@ -5,6 +5,7 @@ from collections.abc import Callable
 import numpy as np
 import spatialdata as sd
 from anndata import AnnData
+from typing import Literal
 
 from . import bl, cs, ps, rc, sp, vl
 from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
@@ -500,7 +501,7 @@ class SegTraQ:
                 - ps_cmd_dist__{feature}    : distance from centroid_mean_coord_diff
                 - ps_dtm_dist__{feature}    : distance_to_outline from distance_to_membrane
                 - ps_dtm_inv__{feature}     : distance_to_outline_inverse from distance_to_membrane
-                - pct_points_outside        : pct_points_outside from perc_points_outside_boundary
+                - pct_points_compartments   : pct_points_compartments from percentage_points_compartments
             If False, returns a dictionary with raw DataFrames for each metric and feature.
 
         Returns
@@ -514,12 +515,10 @@ class SegTraQ:
                 }
         """
 
-        perc_ob_df = self.ps.perc_points_outside_boundary(inplace=inplace)
+        perc_cp_df = self.ps.percentage_points_compartments(inplace=inplace)
         cmd_df = self.ps.centroid_mean_coord_diff(genes=genes, inplace=inplace)
         dtm_df = self.ps.distance_to_membrane(genes=genes, inplace=inplace)
-        pe_df = self.ps.periphery_enrichment_score(
-            genes=genes, erosion_fraction_of_radius=erosion_fraction_of_radius, inplace=inplace
-        )
+        mb_skw = self.ps.membrane_distance_skewness(genes=genes, inplace=inplace)
 
         if inplace:
             return None
@@ -534,8 +533,8 @@ class SegTraQ:
                 f"centroid_mean_coord_diff_{feature}": cmd_df[f"distance_{feature}"],
                 f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
                 f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"],
-                f"periphery_enrichment_score_{feature}": pe_df[f"periphery_enrichment_score_{feature}"],
-                "pct_points_outside": perc_ob_df["pct_points_outside"],
+                f"skew_dist_to_membrane_{feature}": mb_skw[f"skew_dist_to_membrane_{feature}"],
+                "pct_points_compartments": perc_cp_df["pct_points_compartments"],
             }
             return out
 
@@ -1021,29 +1020,45 @@ class _PSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def perc_points_outside_boundary(self, inplace: bool = True):
-        return ps.perc_points_outside_boundary(
+    def percentage_points_compartments(
+            self, 
+            select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
+            min_intersection_area: float = 0.0,
+            n_jobs: int = -1,
+            use_progress: bool = True,
+            predicate: str = "intersects",
+            inplace: bool = True):
+        return ps.percentage_points_compartments(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_background_id=self._p.points_background_id,
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
+            n_jobs=n_jobs,
+            predicate=predicate,
             inplace=inplace,
         )
 
-    perc_points_outside_boundary.__doc__ = ps.perc_points_outside_boundary.__doc__
+    percentage_points_compartments.__doc__ = ps.percentage_points_compartments.__doc__
 
     def centroid_mean_coord_diff(
             self, 
             genes: str | list[str] = None, 
             cell_type_key: str | None = "transferred_celltype",
             cell_type_query: str | list[str] | None = None,
+            centroid_region: Literal["cell", "nucleus"] = "cell",
             restrict_to_within_boundary: bool = False,
+            select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
+            min_intersection_area: float = 0.0,
+            n_jobs: int = -1,
             inplace: bool = True):
         return ps.centroid_mean_coord_diff(
             sdata=self._p.sdata,
@@ -1051,14 +1066,21 @@ class _PSFacade:
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_area_key=self._p.tables_area_key,
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
             points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            centroid_region=centroid_region,
             restrict_to_within_boundary=restrict_to_within_boundary,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
+            n_jobs=n_jobs,
             inplace=inplace,
         )
 
@@ -1070,6 +1092,13 @@ class _PSFacade:
         cell_type_key: str | None = "transferred_celltype",
         cell_type_query: str | list[str] | None = None,
         restrict_to_within_boundary: bool = False,
+        membrane_region: Literal["cell", "nucleus"] = "cell",
+        select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        signed: bool = True,
+        inverse_score: bool = True,
+        eps: float = 1e-6,
         inplace: bool = True,
     ):
         return ps.distance_to_membrane(
@@ -1078,42 +1107,56 @@ class _PSFacade:
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_area_key=self._p.tables_area_key,
             points_gene_key=self._p.points_gene_key,
-            points_key=self._p.points_key,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            points_cell_id_key=self._p.points_cell_id_key,
-            restrict_to_within_boundary=restrict_to_within_boundary,
-            inplace=inplace,
-        )
-
-    distance_to_membrane.__doc__ = ps.distance_to_membrane.__doc__
-
-    def periphery_enrichment_score(
-        self,
-        genes: str | list[str] | None = None,
-        erosion_fraction_of_radius: float = 0.3,
-        inplace: bool = True,
-    ):
-        return ps.periphery_enrichment_score(
-            sdata=self._p.sdata,
-            genes=genes,
-            tables_key=self._p.tables_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_key=self._p.shapes_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_background_id=self._p.points_background_id,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
-            points_gene_key=self._p.points_gene_key,
-            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            membrane_region=membrane_region,
+            restrict_to_within_boundary=restrict_to_within_boundary,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
+            n_jobs=n_jobs,
+            signed=signed,
+            inverse_score=inverse_score,
+            eps=eps,
             inplace=inplace,
         )
 
-    periphery_enrichment_score.__doc__ = ps.periphery_enrichment_score.__doc__
+    distance_to_membrane.__doc__ = ps.distance_to_membrane.__doc__
 
+    def membrane_distance_skewness(
+        self,
+        genes: str | list[str] | None = None,
+        cell_type_key: str = "transferred_celltype",
+        cell_type_query: str | list[str] | None = None,
+        min_transcripts: int = 20,
+        inplace: bool = True,
+    ):
+        return ps.membrane_distance_skewness(
+            sdata=self._p.sdata,
+            genes=genes,
+            cell_type_key=cell_type_key,
+            cell_type_query=cell_type_query,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            points_gene_key=self._p.points_gene_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            shapes_key=self._p.shapes_key,
+            min_transcripts=min_transcripts,
+            inplace=inplace
+        )
+
+    membrane_distance_skewness.__doc__ = ps.membrane_distance_skewness.__doc__
 
 class _CSFacade:
     """

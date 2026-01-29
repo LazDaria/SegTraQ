@@ -353,7 +353,6 @@ def _join_points_regions(
 
     return pts_joined, counts
 
-
 def _compute_ncvs_within_radius(
     sdata: sd.SpatialData,
     tables_key: str = "table",
