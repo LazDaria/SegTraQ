@@ -96,6 +96,14 @@ def compute_cell_nuc_match(
 
     match_df = pd.DataFrame(results)
 
+    # if a nucleus is assigned to multiple cells, we keep only the one with the highest fraction / IoU
+    cols = (
+        ["best_nuc_id", "nucleus_fraction", "IoU"]
+        if select_by == "nucleus_fraction"
+        else ["best_nuc_id", "IoU", "nucleus_fraction"]
+    )
+    match_df.loc[match_df.sort_values(cols, ascending=[True, False, False]).duplicated("best_nuc_id"), cols] = np.nan
+
     if inplace:
         merge_into_obs(
             sdata=sdata,
