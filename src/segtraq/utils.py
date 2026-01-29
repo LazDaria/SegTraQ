@@ -1765,3 +1765,86 @@ def _filter_control_and_poor_quality_transcripts(
             raise NotImplementedError("Recomputing expression matrix is not yet implemented.")
 
     return sdata
+
+## code written by claude.ai
+def estimate_theta_simple(x):
+    """
+    Rough theta estimate from variance-to-mean relationship
+    assuming var = mean + mean²/theta of a negative binomial distribution
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        The matrix containing the counts
+        
+    Returns
+    -------
+    float
+        An estimate of the overdispersion parameter
+    """
+    
+    gene_means = x.mean(axis=0)
+    gene_vars = x.var(axis=0)
+    
+    # Only use genes with sufficient expression
+    mask = (gene_means > 0.05) & (gene_vars > gene_means)
+    
+    # Solve: var = mean + mean²/theta for theta
+    theta_estimates = gene_means[mask]**2 / (gene_vars[mask] - gene_means[mask])
+    
+    # Take median to be robust
+    theta = np.median(theta_estimates[theta_estimates > 0])
+    return theta
+
+## adapted from https://github.com/scverse/scanpy licensed under BSD-3 to scverse
+## implementing the method from Lause et al. (2021) https://link.springer.com/article/10.1186/s13059-021-02451-7
+def pearson_residuals(
+    x: np.ndarray, 
+    theta, 
+    clip: None
+):
+    """
+    Computes the Analytic pearson residuals from a negative binomial distribution to
+    normalise the data
+
+    Args:
+        x (np.ndarray): The raw counts
+        theta (float): The estimated overdispersion parameter
+        clip: Whether or not to clip the variance, if None np.sqrt(n) is the max variance
+        .
+
+    Returns:
+        pd.Series (bool): A boolean Series (True if background, False otherwise).
+    """
+    x = x.copy() if copy else x
+
+    # check theta
+    if theta <= 0:
+        # TODO: would "underdispersion" with negative theta make sense?
+        # then only theta=0 were undefined..
+        msg = "Pearson residuals require theta > 0"
+        raise ValueError(msg)
+    # prepare clipping
+    if clip is None:
+        n = x.shape[0]
+        clip = np.sqrt(n)
+    if clip < 0:
+        msg = "Pearson residuals require `clip>=0` or `clip=None`."
+        raise ValueError(msg)
+
+   
+    sums_genes = np.sum(x, axis=0, keepdims=True)
+    sums_cells = np.sum(x, axis=1, keepdims=True)
+    sum_total = np.sum(sums_genes)
+    
+    mu = np.array(sums_cells @ sums_genes / sum_total)
+    diff = np.array(x - mu)
+    residuals = diff / np.sqrt(mu + mu**2 / theta)
+
+    # clip
+    residuals = np.clip(residuals, a_min=-clip, a_max=clip)
+    
+    # fill NA
+    residuals = np.nan_to_num(residuals, nan=0.0)
+
+    return residuals

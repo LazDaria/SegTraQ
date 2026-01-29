@@ -1215,8 +1215,6 @@ class _VLFacade:
         self,
         correct_z_drift: bool = True,
         max_points: int = 1_000_000,
-        q0: float = 0.01,
-        q1: float = 0.99,
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
@@ -1236,8 +1234,6 @@ class _VLFacade:
             points_y_key=self._p.points_y_key,
             points_z_key=self._p.points_z_key,
             correct_z_drift=correct_z_drift,
-            q0=q0,
-            q1=q1,
             seed=seed,
             q=q,
             scale=scale,
@@ -1274,7 +1270,6 @@ class _VLFacade:
     def compute_mean_vsi_per_cell(
         self,
         vsi_map: np.ndarray,
-        shift_to_origin: bool = True,
         inplace: bool = True,
     ):
         return vl.compute_mean_vsi_per_cell(
@@ -1288,6 +1283,5 @@ class _VLFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             vsi_map=vsi_map,
-            shift_to_origin=shift_to_origin,
             inplace=inplace,
         )
