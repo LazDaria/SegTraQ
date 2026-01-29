@@ -5,7 +5,6 @@ from joblib import Parallel, delayed
 from pandas import DataFrame
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
@@ -26,7 +25,6 @@ def compute_cell_nuc_match(
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
-    use_progress: bool = True,
     inplace: bool = True,
 ) -> DataFrame:
     """
@@ -58,8 +56,6 @@ def compute_cell_nuc_match(
         Overlaps <= this threshold are ignored.
     n_jobs : int, optional
         Number of parallel jobs. Default=-1 uses all CPUs.
-    use_progress : bool, optional
-        Whether to display a progress bar with tqdm.
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -67,6 +63,11 @@ def compute_cell_nuc_match(
     -------
     pandas.DataFrame
     """
+    assert nucleus_shapes_key is not None, (
+        "Cannot compute IoUs: `nucleus_shapes_key` is None. "
+        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `nc` metrics."
+    )
+
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
     assert T_cells == T_nuclei, (
@@ -80,15 +81,6 @@ def compute_cell_nuc_match(
     # Build spatial index once
     nuc_sindex = nuc_boundaries.sindex
 
-    # Iterator for cells
-    iterator = cell_boundaries.iterrows()
-    if use_progress:
-        iterator = tqdm(
-            iterator,
-            total=len(cell_boundaries),
-            desc="Processing intersection between cells and nuclei",
-        )
-
     # Parallel loop over cells
     results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
         delayed(_process_cell)(
@@ -99,7 +91,7 @@ def compute_cell_nuc_match(
             select_by=select_by,
             min_intersection_area=min_intersection_area,
         )
-        for _, cell_row in iterator
+        for _, cell_row in cell_boundaries.iterrows()
     )
 
     match_df = pd.DataFrame(results)
