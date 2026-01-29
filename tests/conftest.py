@@ -8,6 +8,8 @@ import scanpy as sc
 import tifffile
 from spatialdata import SpatialData
 
+import segtraq as st
+
 
 @pytest.fixture(scope="session", name="sdata_new")
 def test_sdata_new():
@@ -40,6 +42,11 @@ def test_sdata_new():
     # computing a PCA and neighbors
     sc.pp.pca(adata)
     sc.pp.neighbors(adata)
+
+    # this is important, because the test object initially contains some duplicate nucleus_ids
+    # by calling validate_spatialdata,
+    # we ensure that these get resolved before continuting with the tests
+    st.validate_spatialdata(sdata_new, images_key="image", tables_centroid_x_key=None, tables_centroid_y_key=None)
 
     return sdata_new
 

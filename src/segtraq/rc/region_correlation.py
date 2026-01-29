@@ -16,7 +16,7 @@ from .utils import (
 )
 
 
-def compute_cell_nuc_match(
+def cell_nucleus_match(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -28,7 +28,8 @@ def compute_cell_nuc_match(
     inplace: bool = True,
 ) -> DataFrame:
     """
-    Compute per-cell IoU between cell and nucleus boundaries in a SpatialData object.
+    Computes the best-matching nucleus for each cell based on Intersection-over-Union (IoU) or
+    nucleus fraction (area(cell ∩ nucleus) / area(nucleus)).
 
     Parameters
     ----------
@@ -98,12 +99,11 @@ def compute_cell_nuc_match(
 
     # if a nucleus is assigned to multiple cells, we keep only the one with the highest fraction / IoU
     cols = (
-        ["best_nuc_id", "nucleus_fraction", "IoU"]
+        ["nucleus_id", "nucleus_fraction", "IoU"]
         if select_by == "nucleus_fraction"
-        else ["best_nuc_id", "IoU", "nucleus_fraction"]
+        else ["nucleus_id", "IoU", "nucleus_fraction"]
     )
-    match_df.loc[match_df.sort_values(cols, ascending=[True, False, False]).duplicated("best_nuc_id"), cols] = np.nan
-
+    match_df.loc[match_df.sort_values(cols, ascending=[True, False, False]).duplicated("nucleus_id"), cols] = np.nan
     if inplace:
         merge_into_obs(
             sdata=sdata,
@@ -116,7 +116,7 @@ def compute_cell_nuc_match(
     return match_df
 
 
-def compute_cell_nuc_correlation(
+def nucleus_cell_similarity(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -138,8 +138,8 @@ def compute_cell_nuc_correlation(
 ) -> pd.DataFrame:
     """
     For each cell in the SpatialData table, identifies the nucleus with highest IoU
-    and computes a correlation (e.g. Pearson) between the gene expression profiles
-    of the cell and that nucleus.
+    and computes the similarity (cosine similarity, Pearson correlation, Spearman correlation)
+    between the gene expression profiles of the whole cell (including the nucleus) and that nucleus.
 
     Parameters
     ----------
@@ -193,12 +193,19 @@ def compute_cell_nuc_correlation(
     pandas.DataFrame
         DataFrame with columns:
             - cell_id_key : identifier of each cell,
-            - `best_nuc_id`: matching nucleus ID with highest nucleus fraction or IoU (or None),
-            - `corr_nc_cell`: Pearson correlation between the cell and its matched nucleus gene counts
+            - `nucleus_id`: matching nucleus ID with highest nucleus fraction or IoU (or None),
+            - `nucleus_cell_similarity`:
+                similarity (cosine similarity, Pearson correlation, Spearman correlation)
+                between the cell and its matched nucleus gene counts
             (NaN if no match).
     """
+    assert nucleus_shapes_key is not None, (
+        "Cannot compute IoUs: `nucleus_shapes_key` is None. "
+        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `nc` metrics."
+    )
+
     if metric not in ["pearson", "spearman", "cosine_sim"]:
-        raise ValueError(f"Metric {metric} not supported")
+        raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
 
     T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
     T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
@@ -209,8 +216,8 @@ def compute_cell_nuc_correlation(
     id_key = sdata[shapes_key].index.name
     tbl = sdata.tables[tables_key]
 
-    if "best_nuc_id" not in tbl.obs.columns:
-        match_df = compute_cell_nuc_match(
+    if "nucleus_id" not in tbl.obs.columns:
+        match_df = cell_nucleus_match(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
@@ -222,7 +229,7 @@ def compute_cell_nuc_correlation(
             inplace=inplace,
         )
     else:
-        match_df = tbl.obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+        match_df = tbl.obs[[id_key, "nucleus_id", "IoU", "nucleus_fraction"]].copy()
 
     X = tbl.X
     # Check if X looks like counts
@@ -266,18 +273,20 @@ def compute_cell_nuc_correlation(
 
     rows = []
     for _, row in match_df.iterrows():
-        cid, nid = row[id_key], row.best_nuc_id
+        # cell ID and nucleus ID
+        cid, nid = row[id_key], row["nucleus_id"]
         if pd.isna(nid):  # if no overlapping nucleus
             rows.append(
                 {
                     id_key: cid,
-                    "best_nuc_id": nid,
+                    "nucleus_id": nid,
                     "IoU": row.IoU,
                     "nucleus_fraction": row.nucleus_fraction,
-                    "corr_nc_cell": np.nan,
+                    "nucleus_cell_similarity": np.nan,
                 }
             )
         else:
+            # x is the expression from the whole cell, y from the nucleus
             x_raw = expr_cells.loc[cid, :].to_numpy()
             y_raw = expr_nucleus.loc[nid, :].to_numpy()
 
@@ -304,10 +313,10 @@ def compute_cell_nuc_correlation(
             rows.append(
                 {
                     id_key: cid,
-                    "best_nuc_id": nid,
+                    "nucleus_id": nid,
                     "IoU": row.IoU,
                     "nucleus_fraction": row.nucleus_fraction,
-                    "corr_nc_cell": corr,
+                    "nucleus_cell_similarity": corr,
                 }
             )
 
@@ -349,7 +358,7 @@ def compute_correlation_between_parts(
     """
     Vectorized version: computes Cosine similarity between the cell ∩ best_nucleus
     ("intersection") and the rest of the cell ("remainder") using spatial joins.
-    Returns DataFrame with columns ["cell_id", "best_nuc_id", "IoU", "correlation_parts"].
+    Returns DataFrame with columns ["cell_id", "nucleus_id", "IoU", "correlation_parts"].
 
     Parameters
     ----------
@@ -405,7 +414,7 @@ def compute_correlation_between_parts(
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [cell_id_key, "best_nuc_id", "correlation_parts"]
+        DataFrame with columns [cell_id_key, "nucleus_id", "correlation_parts"]
     """
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported")
@@ -419,8 +428,8 @@ def compute_correlation_between_parts(
     cells_gdf = sdata.shapes[shapes_key]
     id_key = cells_gdf.index.name
 
-    if "best_nuc_id" not in sdata.tables[tables_key].obs.columns:
-        match_df = compute_cell_nuc_match(
+    if "nucleus_id" not in sdata.tables[tables_key].obs.columns:
+        match_df = cell_nucleus_match(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
@@ -432,9 +441,9 @@ def compute_correlation_between_parts(
             inplace=inplace,
         )
     else:
-        match_df = sdata.tables[tables_key].obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+        match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "IoU", "nucleus_fraction"]].copy()
 
-    best_nuc_map = match_df.set_index(id_key)["best_nuc_id"]
+    best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
 
     tx_cell, _ = _join_points_regions(
         sdata=sdata,
@@ -468,8 +477,8 @@ def compute_correlation_between_parts(
     valid_point_ids = set(tx_cell["point_id"])
     tx = tx_nuc[tx_nuc["point_id"].isin(valid_point_ids)].copy()
 
-    tx["best_nuc_id"] = tx[points_cell_id_key].map(best_nuc_map)
-    tx["in_intersection"] = tx["region_id"].eq(tx["best_nuc_id"])
+    tx["nucleus_id"] = tx[points_cell_id_key].map(best_nuc_map)
+    tx["in_intersection"] = tx["region_id"].eq(tx["nucleus_id"])
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
     all_genes = pd.Index(sdata.tables[tables_key].var_names)

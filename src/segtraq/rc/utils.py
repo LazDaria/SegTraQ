@@ -63,7 +63,7 @@ def _process_cell(
     if not candidate_idx:
         return {
             id_name: cell_id,
-            "best_nuc_id": np.nan,
+            "nucleus_id": np.nan,
             "IoU": np.nan,
             "nucleus_fraction": np.nan,
         }
@@ -74,72 +74,72 @@ def _process_cell(
 
     best = {
         "score": -np.inf,
-        "nuc_area": -np.inf,
-        "inter_area": -np.inf,
-        "nuc_id": np.nan,
+        "nucleus_area": -np.inf,
+        "intersection_area": -np.inf,
+        "nucleus_id": np.nan,
         "iou": np.nan,
-        "nuc_frac": np.nan,
+        "nucleus_fraction": np.nan,
     }
 
-    for nuc_id, nuc in candidates.iterrows():
-        nuc_geom = nuc.geometry
-        if not (cell_geom.is_valid and nuc_geom.is_valid):
+    for nucleus_id, nucleus in candidates.iterrows():
+        nucleus_geom = nucleus.geometry
+        if not (cell_geom.is_valid and nucleus_geom.is_valid):
             continue
 
-        nuc_area = nuc_geom.area
-        if nuc_area <= 0 or cell_area <= 0:
+        nucleus_area = nucleus_geom.area
+        if nucleus_area <= 0 or cell_area <= 0:
             continue
 
-        inter_area = _safe_intersection_area(cell_geom, nuc_geom)
-        if np.isnan(inter_area) or inter_area <= min_intersection_area:
+        intersection_area = _safe_intersection_area(cell_geom, nucleus_geom)
+        if np.isnan(intersection_area) or intersection_area <= min_intersection_area:
             continue
 
-        iou = _compute_iou_from_areas(inter_area, cell_area, nuc_area)
-        nuc_frac = _compute_nucleus_fraction(inter_area, nuc_area)
+        iou = _compute_iou_from_areas(intersection_area, cell_area, nucleus_area)
+        nucleus_fraction = _compute_nucleus_fraction(intersection_area, nucleus_area)
 
-        score = iou if select_by == "iou" else nuc_frac
+        score = iou if select_by == "iou" else nucleus_fraction
 
-        # Compare with tie-breaks: score, then nuc_area, then inter_area, then nuc_id
+        # Compare with tie-breaks: score, then nucleus_area, then intersection_area, then nucleus_id
         better = (
             (score > best["score"])
-            or (np.isclose(score, best["score"]) and nuc_area > best["nuc_area"])
+            or (np.isclose(score, best["score"]) and nucleus_area > best["nucleus_area"])
             or (
                 np.isclose(score, best["score"])
-                and np.isclose(nuc_area, best["nuc_area"])
-                and inter_area > best["inter_area"]
+                and np.isclose(nucleus_area, best["nucleus_area"])
+                and intersection_area > best["intersection_area"]
             )
             or (
                 np.isclose(score, best["score"])
-                and np.isclose(nuc_area, best["nuc_area"])
-                and np.isclose(inter_area, best["inter_area"])
-                and nuc_id < best["nuc_id"]
+                and np.isclose(nucleus_area, best["nucleus_area"])
+                and np.isclose(intersection_area, best["intersection_area"])
+                and nucleus_id < best["nucleus_id"]
             )
         )
 
         if better:
             best.update(
                 score=score,
-                nuc_area=nuc_area,
-                inter_area=inter_area,
-                nuc_id=nuc_id,
+                nucleus_area=nucleus_area,
+                intersection_area=intersection_area,
+                nucleus_id=nucleus_id,
                 iou=iou,
-                nuc_frac=nuc_frac,
+                nucleus_fraction=nucleus_fraction,
             )
 
     # If nothing survived filtering
     if best["score"] == -np.inf:
         return {
             id_name: cell_id,
-            "best_nuc_id": np.nan,
+            "nucleus_id": np.nan,
             "IoU": np.nan,
             "nucleus_fraction": np.nan,
         }
 
     return {
         id_name: cell_id,
-        "best_nuc_id": best["nuc_id"],
+        "nucleus_id": best["nucleus_id"],
         "IoU": best["iou"],
-        "nucleus_fraction": best["nuc_frac"],
+        "nucleus_fraction": best["nucleus_fraction"],
     }
 
 
@@ -294,7 +294,6 @@ def _join_points_regions(
     counts : pandas.DataFrame
         Region x gene count matrix (rows = all regions from shapes index, columns = all genes).
     """
-
     # prepare points
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]

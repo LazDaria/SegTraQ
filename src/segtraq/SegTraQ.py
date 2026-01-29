@@ -273,9 +273,10 @@ class SegTraQ:
         None or dict
         - If `inplace=True`: returns None after writing to `sdata`.
         - If `inplace=False`: returns a dict with keys:
-        * "ious"                  : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU]
-        * "cell_nuc_correlation". : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_nc_cell]
-        * "parts_correlation"     : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_cell_parts]
+        * "ious"                  : DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]
+        * "cell_nuc_correlation". : DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
+                                    nucleus_cell_similarity]
+        * "parts_correlation"     : DataFrame with columns [tables_cell_id_key, nucleus_id, IoU, corr_cell_parts]
         * "center_border_ncv_corr": DataFrame with columns
                                     [tables_cell_id_key, corr_center_border, corr_border_ncv, corr_ncv_vs_center]
 
@@ -288,8 +289,8 @@ class SegTraQ:
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        ious = self.rc.compute_cell_nuc_match(n_jobs=n_jobs, inplace=inplace)
-        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(metric=metric, n_jobs=n_jobs, inplace=inplace)
+        ious = self.rc.cell_nucleus_match(n_jobs=n_jobs, inplace=inplace)
+        nuc_cell_sim = self.rc.nucleus_cell_similarity(metric=metric, n_jobs=n_jobs, inplace=inplace)
         parts_corr = self.rc.compute_correlation_between_parts(metric=metric, n_jobs=n_jobs, inplace=inplace)
         center_border_ncv_corr = self.rc.compute_center_border_ncv_correlation(metric=metric, inplace=inplace)
 
@@ -299,7 +300,7 @@ class SegTraQ:
         else:
             return {
                 "ious": ious,
-                "cell_nuc_correlation": cell_nuc_corr,
+                "nucleus_cell_similarity": nuc_cell_sim,
                 "parts_correlation": parts_corr,
                 "center_border_ncv_corr": center_border_ncv_corr,
             }
@@ -791,14 +792,14 @@ class _RCFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_cell_nuc_match(
+    def cell_nucleus_match(
         self,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        return rc.compute_cell_nuc_match(
+        return rc.cell_nucleus_match(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -810,9 +811,9 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    compute_cell_nuc_match.__doc__ = rc.compute_cell_nuc_match.__doc__
+    cell_nucleus_match.__doc__ = rc.cell_nucleus_match.__doc__
 
-    def compute_cell_nuc_correlation(
+    def nucleus_cell_similarity(
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
@@ -822,11 +823,7 @@ class _RCFacade:
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        assert self._p.nucleus_shapes_key is not None, (
-            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
-        )
-        return rc.compute_cell_nuc_correlation(
+        return rc.nucleus_cell_similarity(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -847,7 +844,7 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
+    nucleus_cell_similarity.__doc__ = rc.nucleus_cell_similarity.__doc__
 
     def compute_correlation_between_parts(
         self,

@@ -1,13 +1,13 @@
 from .region_correlation import (
-    compute_cell_nuc_correlation,
-    compute_cell_nuc_match,
+    cell_nucleus_match,
     compute_center_border_ncv_correlation,
     compute_correlation_between_parts,
+    nucleus_cell_similarity,
 )
 
 __all__ = [
-    "compute_cell_nuc_match",
-    "compute_cell_nuc_correlation",
+    "cell_nucleus_match",
+    "nucleus_cell_similarity",
     "compute_correlation_between_parts",
     "compute_center_border_ncv_correlation",
 ]
