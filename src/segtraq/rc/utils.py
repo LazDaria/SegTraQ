@@ -58,6 +58,8 @@ def _process_cell(
     cell_id = cell_row.name
 
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
+
+    # if there are no nuclei intersecting with our cell
     if not candidate_idx:
         return {
             id_name: cell_id,

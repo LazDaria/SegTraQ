@@ -798,10 +798,6 @@ class _RCFacade:
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        assert self._p.nucleus_shapes_key is not None, (
-            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
-        )
         return rc.compute_cell_nuc_match(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
@@ -811,7 +807,6 @@ class _RCFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
-            use_progress=True,
             inplace=inplace,
         )
 
