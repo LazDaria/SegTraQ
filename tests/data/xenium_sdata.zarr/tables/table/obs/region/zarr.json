@@ -1,0 +1,10 @@
+{
+  "attributes": {
+    "ordered": false,
+    "encoding-type": "categorical",
+    "encoding-version": "0.2.0"
+  },
+  "zarr_format": 3,
+  "consolidated_metadata": null,
+  "node_type": "group"
+}

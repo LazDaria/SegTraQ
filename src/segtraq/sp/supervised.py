@@ -22,36 +22,31 @@ def compute_MECR(
     tables_key: str = "table",
     pseudocount: float = 0.5,
     inplace: bool = True,
-) -> tuple[dict[tuple[str, str], float], dict[tuple[str, str], float]]:
+) -> pd.DataFrame:
     """
     Compute mutual exclusivity between marker genes using Fisher's exact test.
-
-    Mutually exclusive pairs are constructed as unique, unordered (pos, neg)
-    marker pairs across cell types. A pair is discarded if both genes appear
-    as positive markers in the same cell type.
-
-    Fisher's exact test (alternative="less") is run globally across all cells.
-    Odds ratios are reported with a pseudocount correction to avoid infinities.
+    Returns a DataFrame with one row per unordered gene pair.
 
     Parameters
     ----------
-    sdata
-        SpatialData-like object containing an AnnData table.
-    markers
-        {cell_type: {"positive": [...], "negative": [...]}}.
-    tables_key
+    sdata : SpatialData-like
+        Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
+    markers : dict
+        {cell_type: {"positive": list[str], "negative": list[str]}}.
+    tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
-    pseudocount
-        Pseudocount used only for odds ratio computation.
-    inplace
-        If True, stores results in `tbl.uns["Fisher_OR"]` and `tbl.uns["Fisher_pval"]`.
+    pseudocount : float, optional, default=0.5
+        Pseudocount added to all cells of the contingency table to avoid
+        division by zero when computing odds ratios.
+    inplace : bool, optional, default=True
+        If True, store the resulting DataFrame in `sdata.tables[tables_key].uns["MECR"]`.
 
     Returns
     -------
-    or_dict
-        {(gene1, gene2): odds_ratio}, unordered gene pairs.
-    pval_dict
-        {(gene1, gene2): p_value}, Fisher exact test (alternative="less").
+    pd.DataFrame
+        Columns:
+            ['gene1', 'gene2', 'odds_ratio', 'pvalue', 'a', 'b', 'c', 'd']
+        where (a, b, c, d) are the counts in the contingency table.
     """
     tbl = sdata.tables[tables_key]
 
@@ -78,16 +73,11 @@ def compute_MECR(
                     candidate_pairs.add((a, b))
 
     # --- drop pairs co-positive in any cell type ---
-    kept_pairs = []
-    for g1, g2 in candidate_pairs:
-        if any(g1 in ps and g2 in ps for ps in pos_sets.values()):
-            continue
-        kept_pairs.append((g1, g2))
+    kept_pairs = [(g1, g2) for g1, g2 in candidate_pairs if not any(g1 in ps and g2 in ps for ps in pos_sets.values())]
 
     det = arr > 0
 
-    or_dict: dict[tuple[str, str], float] = {}
-    pval_dict: dict[tuple[str, str], float] = {}
+    rows = []
 
     for g1, g2 in kept_pairs:
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
@@ -107,14 +97,25 @@ def compute_MECR(
         # odds ratio is computed with a pseudocount (Haldane–Anscombe correction)
         or_pc = ((a + pc) * (d + pc)) / ((b + pc) * (c + pc))
 
-        or_dict[(g1, g2)] = float(or_pc)
-        pval_dict[(g1, g2)] = float(pval) if np.isfinite(pval) else np.nan
+        rows.append(
+            {
+                "gene1": g1,
+                "gene2": g2,
+                "odds_ratio": float(or_pc),
+                "pvalue": float(pval) if np.isfinite(pval) else np.nan,
+                "a": a,
+                "b": b,
+                "c": c,
+                "d": d,
+            }
+        )
+
+    df = pd.DataFrame(rows)
 
     if inplace:
-        tbl.uns["Fisher_OR"] = dict(or_dict)
-        tbl.uns["Fisher_pval"] = dict(pval_dict)
+        tbl.uns["MECR"] = df
 
-    return or_dict, pval_dict
+    return df
 
 
 def calculate_neighbor_contamination(

@@ -2,89 +2,9 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
-
-
-def compute_rmsd_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
-    """
-    Compute RMSD (root mean squared deviation) of clusters from their centroids.
-
-    Parameters
-    ----------
-    embeddings : np.ndarray
-        Data matrix (e.g., PCA coordinates), shape (n_samples, n_features).
-    labels : np.ndarray
-        Cluster labels for each sample.
-
-    Returns
-    -------
-    float
-        RMSD value (lower means tighter clusters).
-    """
-    unique_labels = np.unique(labels[~pd.isna(labels)])
-    total_rmsd = 0.0
-    total_points = 0
-
-    for label in unique_labels:
-        mask = labels == label
-        cluster_points = embeddings[mask]
-        if len(cluster_points) < 2:
-            continue  # skip singletons, no spread
-        centroid = np.mean(cluster_points, axis=0)
-        rmsd = np.sqrt(np.mean(np.sum((cluster_points - centroid) ** 2, axis=1)))
-        total_rmsd += rmsd * len(cluster_points)
-        total_points += len(cluster_points)
-
-    return total_rmsd / total_points if total_points > 0 else np.nan
-
-
-def compute_mean_cosine_distance_for_clustering(embeddings: np.ndarray, labels: np.ndarray) -> float:
-    """
-    Compute mean cosine distance of clusters from their centroids.
-
-    Parameters
-    ----------
-    embeddings : np.ndarray
-        Data matrix (e.g., PCA coordinates), shape (n_samples, n_features).
-    labels : np.ndarray
-        Cluster labels for each sample.
-
-    Returns
-    -------
-    float
-        Mean cosine distance (lower means tighter clusters).
-    """
-    unique_labels = np.unique(labels[~pd.isna(labels)])
-    total_distance = 0.0
-    total_points = 0
-
-    for label in unique_labels:
-        mask = labels == label
-        cluster_points = embeddings[mask]
-        if len(cluster_points) < 2:
-            continue  # skip singletons
-        centroid = np.mean(cluster_points, axis=0)
-
-        # Normalize points and centroid
-        cluster_norms = np.linalg.norm(cluster_points, axis=1)
-        centroid_norm = np.linalg.norm(centroid)
-
-        # Avoid division by zero
-        if centroid_norm == 0 or np.any(cluster_norms == 0):
-            continue
-
-        # Cosine similarity
-        cosine_sim = (cluster_points @ centroid) / (cluster_norms * centroid_norm)
-
-        # Cosine distance = 1 - cosine similarity
-        cosine_distances = 1 - cosine_sim
-
-        # Accumulate
-        total_distance += np.sum(cosine_distances)
-        total_points += len(cosine_distances)
-
-    return total_distance / total_points if total_points > 0 else np.nan
 
 
 def run_leiden_clustering_on_adata(
@@ -313,3 +233,49 @@ def compute_mean_purity(purity_matrix: np.ndarray) -> float:
     """
     n = purity_matrix.shape[0]
     return np.mean(purity_matrix[np.triu_indices(n, k=1)])
+
+
+def _compute_cluster_connectedness(
+    connectivities: sp.spmatrix,
+    labels: np.ndarray,
+) -> float:
+    """
+    Compute how well connected a clustering is in a kNN graph.
+
+    Parameters
+    ----------
+    connectivities : scipy.sparse.spmatrix
+        Sparse connectivity matrix (n_cells × n_cells), e.g. from Scanpy.
+        Nonzero entries indicate graph neighbors.
+    labels : np.ndarray
+        Cluster labels of shape (n_cells,).
+
+    Returns
+    -------
+    float
+        Mean cluster connectedness in [0, 1].
+    """
+
+    if not sp.issparse(connectivities):
+        raise ValueError("connectivities must be a scipy sparse matrix")
+
+    if connectivities.shape[0] != len(labels):
+        raise ValueError("connectivities and labels must have compatible shapes")
+
+    G = connectivities.tocsr()
+    labels = np.asarray(labels)
+
+    n = G.shape[0]
+    per_cell = np.empty(n)
+    per_cell.fill(np.nan)
+
+    for i in range(n):
+        start, end = G.indptr[i], G.indptr[i + 1]
+        neighbors = G.indices[start:end]
+
+        if len(neighbors) == 0:
+            continue
+
+        per_cell[i] = np.mean(labels[neighbors] == labels[i])
+
+    return np.nanmean(per_cell)

@@ -7,9 +7,9 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, ps, rc, sp, vl
+from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
-from .utils import validate_spatialdata
 
 
 class SegTraQ:
@@ -30,9 +30,9 @@ class SegTraQ:
         points_z_key: str | None = "z",
         points_gene_key: str = "feature_name",
         shapes_key: str = "cell_boundaries",
-        shapes_cell_id_key: str | None = "cell_id",
+        shapes_cell_id_key: str = "cell_id",
         nucleus_shapes_key: str | None = "nucleus_boundaries",
-        nucleus_shapes_cell_id_key: str | None = None,
+        nucleus_shapes_cell_id_key: str = "cell_id",
     ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
@@ -93,17 +93,17 @@ class SegTraQ:
         shapes_key : str, default="cell_boundaries"
             Key in `sdata.shapes` for cell boundary polygons.
 
-        shapes_cell_id_key : str or None, optional, default="cell_id"
-            Column in the cell-boundary shapes linking polygons to cell IDs.
-            If `None`, the shape index is used as the cell ID.
+        shapes_cell_id_key : str, optional, default="cell_id"
+            Cell ID key for `sdata.shapes[shapes_key]`. Must match either the shapes index name
+            or a column name (which will be set as the index if needed).
 
         nucleus_shapes_key : str or None, optional, default="nucleus_boundaries"
             Key in `sdata.shapes` for nucleus boundary polygons, if available.
             If None, a nucleus mask can be obtained via `segtraq.run_cellpose`.
 
-        nucleus_shapes_cell_id_key : str or None, optional, default=None
-            Column linking nucleus polygons to cell IDs. If `None` but
-            `nucleus_shapes_key` is provided, the shape index is used as the cell ID.
+        nucleus_shapes_cell_id_key : str, optional, default="cell_id"
+            Cell ID key for `sdata.shapes[nucleus_shapes_key]`. Must match either the shapes
+            index name or a column name (which will be set as the index if needed).
 
         Notes
         -----
@@ -156,8 +156,9 @@ class SegTraQ:
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
         self.tables_area_volume_key = tables_area_volume_key
-        self.tables_centroid_x_key = tables_centroid_x_key
-        self.tables_centroid_y_key = tables_centroid_y_key
+        # if these are set to None, the validate_spatialdata automatically computes them
+        self.tables_centroid_x_key = tables_centroid_x_key if tables_centroid_x_key is not None else "centroid_x"
+        self.tables_centroid_y_key = tables_centroid_y_key if tables_centroid_y_key is not None else "centroid_y"
 
         self.points_key = points_key
         self.points_cell_id_key = points_cell_id_key
@@ -170,7 +171,6 @@ class SegTraQ:
         self.shapes_key = shapes_key
         self.shapes_cell_id_key = shapes_cell_id_key
         self.nucleus_shapes_key = nucleus_shapes_key
-        self.nucleus_shapes_cell_id_key = nucleus_shapes_cell_id_key
 
         self.bl = _BLFacade(self)
         self.rc = _RCFacade(self)
@@ -288,8 +288,8 @@ class SegTraQ:
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        ious = self.rc.compute_cell_nuc_ious(n_jobs=n_jobs, inplace=inplace)
-        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(metric=metric, n_jobs_iou=n_jobs, inplace=inplace)
+        ious = self.rc.compute_cell_nuc_match(n_jobs=n_jobs, inplace=inplace)
+        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(metric=metric, n_jobs=n_jobs, inplace=inplace)
         parts_corr = self.rc.compute_correlation_between_parts(metric=metric, n_jobs=n_jobs, inplace=inplace)
         center_border_ncv_corr = self.rc.compute_center_border_ncv_correlation(metric=metric, inplace=inplace)
 
@@ -498,6 +498,7 @@ class SegTraQ:
                 - ps_cmd_dist__{feature}    : distance from centroid_mean_coord_diff
                 - ps_dtm_dist__{feature}    : distance_to_outline from distance_to_membrane
                 - ps_dtm_inv__{feature}     : distance_to_outline_inverse from distance_to_membrane
+                - pct_points_outside        : pct_points_outside from perc_points_outside_boundary
             If False, returns a dictionary with raw DataFrames for each metric and feature.
 
         Returns
@@ -511,6 +512,7 @@ class SegTraQ:
                 }
         """
 
+        perc_ob_df = self.ps.perc_points_outside_boundary(inplace=inplace)
         cmd_df = self.ps.centroid_mean_coord_diff(genes=genes, inplace=inplace)
         dtm_df = self.ps.distance_to_membrane(genes=genes, inplace=inplace)
         pe_df = self.ps.periphery_enrichment_score(
@@ -531,6 +533,7 @@ class SegTraQ:
                 f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
                 f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"],
                 f"periphery_enrichment_score_{feature}": pe_df[f"periphery_enrichment_score_{feature}"],
+                "pct_points_outside": perc_ob_df["pct_points_outside"],
             }
             return out
 
@@ -588,6 +591,48 @@ class SegTraQ:
         return sdata
 
     filter_cells.__doc__ = filter_cells.__doc__
+
+    def filter_control_and_poor_quality_transcripts(
+        self,
+        min_qv: float = 20.0,
+        control_genes: tuple | list = (),
+        recompute_expression: bool = False,
+        inplace: bool = True,
+    ):
+        """
+        Filter control and poor-quality transcripts from the SpatialData object.
+
+        Parameters
+        ----------
+        min_qv : float, default=20.0
+            Minimum quality value (QV) threshold for transcripts to be retained.
+        control_genes : tuple or list, optional
+            List of gene name prefixes indicating control genes to be filtered out.
+        recompute_expression : bool, default=False
+            If True, recomputes the per-cell expression matrix after filtering transcripts.
+        inplace : bool, default=True
+            If True, modifies `self.sdata` in place.
+            If False, returns a new SpatialData object with filtered transcripts.
+
+        Returns
+        -------
+        None or SpatialData
+            - If `inplace=True`: returns None after modifying `self.sdata`.
+            - If `inplace=False`: returns a new SpatialData object with filtered transcripts.
+        """
+        _filter_control_and_poor_quality_transcripts(
+            sdata=self.sdata,
+            min_qv=min_qv,
+            control_genes=control_genes,
+            points_key=self.points_key,
+            points_gene_key=self.points_gene_key,
+            points_cell_id_key=self.points_cell_id_key,
+            tables_key=self.tables_key,
+            recompute_expression=recompute_expression,
+            inplace=inplace,
+        )
+
+    filter_control_and_poor_quality_transcripts.__doc__ = _filter_control_and_poor_quality_transcripts.__doc__
 
 
 class _BLFacade:
@@ -651,6 +696,7 @@ class _BLFacade:
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -664,6 +710,7 @@ class _BLFacade:
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
             tables_key=self._p.tables_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -689,6 +736,7 @@ class _BLFacade:
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             tables_key=self._p.tables_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -698,8 +746,9 @@ class _BLFacade:
         return bl.morphological_features(
             sdata=self._p.sdata,
             tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_centroid_x_key=self._p.tables_centroid_x_key,
+            tables_centroid_y_key=self._p.tables_centroid_y_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             features_to_compute=features_to_compute,
             n_jobs=n_jobs,
             tables_key=self._p.tables_key,
@@ -721,9 +770,11 @@ class _BLFacade:
         return bl.transcript_density(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
-            points_key=self._p.points_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_area_volume_key=tavk,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             inplace=inplace,
         )
 
@@ -740,27 +791,42 @@ class _RCFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_cell_nuc_ious(self, n_jobs: int = -1, inplace: bool = True):
+    def compute_cell_nuc_match(
+        self,
+        select_by: str = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        inplace: bool = True,
+    ):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
         )
-        return rc.compute_cell_nuc_ious(
+        return rc.compute_cell_nuc_match(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
             use_progress=True,
             inplace=inplace,
         )
 
-    compute_cell_nuc_ious.__doc__ = rc.compute_cell_nuc_ious.__doc__
+    compute_cell_nuc_match.__doc__ = rc.compute_cell_nuc_match.__doc__
 
-    def compute_cell_nuc_correlation(self, metric: str = "cosine_sim", n_jobs_iou: int = -1, inplace: bool = True):
+    def compute_cell_nuc_correlation(
+        self,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        metric: str = "cosine_sim",
+        select_by: str = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        inplace: bool = True,
+    ):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -770,19 +836,34 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
             metric=metric,
-            n_jobs_iou=n_jobs_iou,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
+            n_jobs=n_jobs,
             inplace=inplace,
         )
 
     compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
 
-    def compute_correlation_between_parts(self, metric: str = "cosine_sim", n_jobs: int = -1, inplace: bool = True):
+    def compute_correlation_between_parts(
+        self,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        metric: str = "cosine_sim",
+        select_by: str = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = -1,
+        inplace: bool = True,
+    ):
         assert self._p.nucleus_shapes_key is not None, (
             "Cannot compute IoUs: `nucleus_shapes_key` is None. "
             "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
@@ -792,16 +873,18 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
-            nucleus_shapes_cell_id_key=self._p.nucleus_shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_background_id=self._p.points_background_id,
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
             metric=metric,
+            select_by=select_by,
+            min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
             inplace=inplace,
         )
@@ -812,6 +895,8 @@ class _RCFacade:
         self,
         erosion_fraction_of_radius: float = 0.2,
         radius_factor: float = 2.0,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
         metric: str = "cosine_sim",
         inplace: bool = True,
     ):
@@ -820,13 +905,15 @@ class _RCFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             erosion_fraction_of_radius=erosion_fraction_of_radius,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
             radius_factor=radius_factor,
             metric=metric,
             inplace=inplace,
@@ -925,8 +1012,8 @@ class _SPFacade:
             ct1,
             ct2,
             cell_type_key=cell_type_key,
-            tables_x_key=self._p.tables_x_key,
-            tables_y_key=self._p.tables_y_key,
+            tables_x_key=self._p.tables_centroid_x_key,
+            tables_y_key=self._p.tables_centroid_y_key,
             grid_shape=grid_shape,
             n_permutations=n_permutations,
             seed=seed,
@@ -946,6 +1033,23 @@ class _PSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
+    def perc_points_outside_boundary(self, inplace: bool = True):
+        return ps.perc_points_outside_boundary(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            inplace=inplace,
+        )
+
+    perc_points_outside_boundary.__doc__ = ps.perc_points_outside_boundary.__doc__
+
     def centroid_mean_coord_diff(self, genes: str | list[str] = None, inplace: bool = True):
         return ps.centroid_mean_coord_diff(
             sdata=self._p.sdata,
@@ -954,7 +1058,6 @@ class _PSFacade:
             points_gene_key=self._p.points_gene_key,
             points_key=self._p.points_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
@@ -982,7 +1085,6 @@ class _PSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_cell_id_key=self._p.points_cell_id_key,
             inplace=inplace,
         )
@@ -1001,9 +1103,9 @@ class _PSFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
@@ -1024,40 +1126,6 @@ class _CSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_rmsd(
-        self,
-        resolution: float | list[float] = (0.6, 0.8, 1.0),
-        key_prefix: str = "leiden_subset",
-        random_state: int = 42,
-        cell_type_key: str | None = None,
-        inplace: bool = True,
-    ) -> float:
-        return cs.compute_rmsd(
-            self._p.sdata,
-            resolution=resolution,
-            key_prefix=key_prefix,
-            random_state=random_state,
-            cell_type_key=cell_type_key,
-            inplace=inplace,
-        )
-
-    def compute_mean_cosine_distance(
-        self,
-        resolution: float | list[float] = (0.6, 0.8, 1.0),
-        key_prefix: str = "leiden_subset",
-        random_state: int = 42,
-        cell_type_key: str | None = None,
-        inplace: bool = True,
-    ) -> float:
-        return cs.compute_mean_cosine_distance(
-            self._p.sdata,
-            resolution=resolution,
-            key_prefix=key_prefix,
-            random_state=random_state,
-            cell_type_key=cell_type_key,
-            inplace=inplace,
-        )
-
     def compute_silhouette_score(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
@@ -1077,6 +1145,8 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_silhouette_score.__doc__ = cs.compute_silhouette_score.__doc__
+
     def compute_purity(
         self,
         resolution: float = 1.0,
@@ -1091,6 +1161,8 @@ class _CSFacade:
             key_prefix=key_prefix,
             inplace=inplace,
         )
+
+    compute_purity.__doc__ = cs.compute_purity.__doc__
 
     def compute_ari(
         self,
@@ -1107,6 +1179,27 @@ class _CSFacade:
             inplace=inplace,
         )
 
+    compute_ari.__doc__ = cs.compute_ari.__doc__
+
+    def compute_cluster_connectedness(
+        self,
+        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        key_prefix: str = "leiden_subset",
+        random_state: int = 42,
+        cell_type_key: str | None = None,
+        inplace: bool = True,
+    ):
+        return cs.compute_cluster_connectedness(
+            sdata=self._p.sdata,
+            resolution=resolution,
+            key_prefix=key_prefix,
+            random_state=random_state,
+            cell_type_key=cell_type_key,
+            inplace=inplace,
+        )
+
+    compute_cluster_connectedness.__doc__ = cs.compute_cluster_connectedness.__doc__
+
 
 class _VLFacade:
     """
@@ -1120,6 +1213,11 @@ class _VLFacade:
 
     def compute_sim_top_bottom_z(
         self,
+        correct_z_drift: bool = True,
+        max_points: int = 1_000_000,
+        q0: float = 0.01,
+        q1: float = 0.99,
+        seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
         min_genes: int = 5,
@@ -1134,7 +1232,13 @@ class _VLFacade:
             points_background_id=self._p.points_background_id,
             points_cell_id_key=self._p.points_cell_id_key,
             points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
             points_z_key=self._p.points_z_key,
+            correct_z_drift=correct_z_drift,
+            q0=q0,
+            q1=q1,
+            seed=seed,
             q=q,
             scale=scale,
             min_genes=min_genes,

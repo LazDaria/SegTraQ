@@ -4,17 +4,16 @@ import spatialdata as sd
 from sklearn.metrics import silhouette_score
 
 from .utils import (
+    _compute_cluster_connectedness,
     compute_mean_ari,
-    compute_mean_cosine_distance_for_clustering,
     compute_mean_purity,
     compute_pairwise_ari,
     compute_pairwise_purity,
-    compute_rmsd_for_clustering,
     run_leiden_clustering_on_random_subset,
 )
 
 
-def compute_rmsd(
+def compute_cluster_connectedness(
     sdata: sd.SpatialData,
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     key_prefix: str = "leiden_subset",
@@ -23,90 +22,9 @@ def compute_rmsd(
     inplace: bool = True,
 ) -> float:
     """
-    Compute RMSD for different Leiden clustering resolutions and report the best (lowest) RMSD.
-    If a cell_type_key is provided, compute the RMSD for that clustering only.
-
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing clustering information.
-    resolution : float or list of float, optional
-        The resolution parameter(s) for Leiden clustering, by default (0.6, 0.8, 1.0).
-    key_prefix : str, optional
-        Prefix for clustering keys in .obs, by default "leiden_subset".
-    random_state : int, optional
-        Seed for reproducibility, by default 42.
-    cell_type_key : str, optional
-        If provided, compute the RMSD for this clustering only.
-    inplace : bool, optional
-        Whether to store the computed RMSD in sdata.uns, by default True.
-
-    Returns
-    -------
-    float
-        The best (lowest) RMSD across resolutions.
-    """
-    adata = sdata.tables["table"]
-
-    if isinstance(resolution, float):
-        resolution = [resolution]
-
-    if cell_type_key is not None:
-        if cell_type_key not in adata.obs:
-            raise ValueError(
-                f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
-            )
-        labels = adata.obs[cell_type_key].values
-        # remove NaN labels
-        if len(np.unique(labels[~pd.isna(labels)])) > 1:
-            if "X_pca" not in adata.obsm:
-                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
-            rmsd_val = compute_rmsd_for_clustering(adata.obsm["X_pca"], labels)
-            return float(rmsd_val)
-        else:
-            raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
-
-    if "neighbors" not in adata.uns:
-        raise ValueError(
-            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
-        )
-
-    best_rmsd = np.inf
-    for res in resolution:
-        key_added, pca = run_leiden_clustering_on_random_subset(
-            sdata,
-            resolution=res,
-            frac_cells_subset=1.0,  # Use all cells
-            key_prefix=key_prefix,
-            random_state=random_state,
-            recompute_neighbors=False,
-        )
-        labels = adata.obs[key_added].values
-        if len(np.unique(labels)) > 1:
-            rmsd_val = compute_rmsd_for_clustering(pca, labels)
-            if rmsd_val < best_rmsd:
-                best_rmsd = float(rmsd_val)
-
-    best_rmsd = best_rmsd if best_rmsd != np.inf else np.nan
-
-    if inplace:
-        sdata.tables["table"].uns["rmsd"] = best_rmsd
-
-    return best_rmsd
-
-
-def compute_mean_cosine_distance(
-    sdata: sd.SpatialData,
-    resolution: float | list[float] = (0.6, 0.8, 1.0),
-    key_prefix: str = "leiden_subset",
-    random_state: int = 42,
-    cell_type_key: str | None = None,
-    inplace: bool = True,
-) -> float:
-    """
-    Compute mean cosine distance for different Leiden clustering resolutions
-    and report the best (lowest) mean cosine distance.
-    If a cell_type_key is provided, compute the mean cosine distance for that clustering only.
+    Compute cluster connectedness for different Leiden clustering resolutions
+    and report the best (highest) one.
+    If a cell_type_key is provided, compute the connectedness for that clustering only.
 
     Parameters
     ----------
@@ -126,14 +44,14 @@ def compute_mean_cosine_distance(
     Returns
     -------
     float
-        The best (lowest) mean cosine distance across resolutions.
+        The best (highest) cluster connectedness across resolutions.
     """
     adata = sdata.tables["table"]
 
     if isinstance(resolution, float):
         resolution = [resolution]
 
-    best_distance = np.inf
+    best_distance = 0.0
     if cell_type_key is not None:
         if cell_type_key not in adata.obs:
             raise ValueError(
@@ -142,9 +60,12 @@ def compute_mean_cosine_distance(
         labels = adata.obs[cell_type_key].values
         # remove NaN labels
         if len(np.unique(labels[~pd.isna(labels)])) > 1:
-            if "X_pca" not in adata.obsm:
-                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
-            distance_val = compute_mean_cosine_distance_for_clustering(adata.obsm["X_pca"], labels)
+            if "connectivities" not in adata.obsp:
+                raise ValueError(
+                    "Connectivities not found in adata.obsp['connectivities']. "
+                    "Please compute neighbors first by running sc.pp.neighbors(adata)."
+                )
+            distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels)
             return float(distance_val)
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
@@ -155,7 +76,7 @@ def compute_mean_cosine_distance(
         )
 
     for res in resolution:
-        key_added, pca = run_leiden_clustering_on_random_subset(
+        key_added, _ = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=res,
             frac_cells_subset=1.0,  # Use all cells
@@ -165,14 +86,12 @@ def compute_mean_cosine_distance(
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
-            distance_val = compute_mean_cosine_distance_for_clustering(pca, labels)
-            if distance_val < best_distance:
+            distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels)
+            if distance_val > best_distance:
                 best_distance = float(distance_val)
 
-    best_distance = best_distance if best_distance != np.inf else np.nan
-
     if inplace:
-        sdata.tables["table"].uns["mean_cosine_distance"] = best_distance
+        sdata.tables["table"].uns["cluster_connectedness"] = best_distance
 
     return best_distance
 

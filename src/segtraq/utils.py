@@ -874,6 +874,98 @@ def _is_missing(x):
         return False
 
 
+def _ensure_index(
+    gdf,
+    *,
+    shapes_key: str,
+    id_key_name: str,
+    id_key: str,
+):
+    """
+    Ensure `gdf` is indexed by `id_key`. Returns (gdf, used_id_key).
+
+    If `id_key` matches the current index name, the GeoDataFrame is returned unchanged.
+    Otherwise, `id_key` must be a column name and will be set as the index.
+    """
+    # Already indexed correctly
+    if gdf.index.name == id_key:
+        return gdf
+
+    # Otherwise require column to exist and set it as index
+    if id_key not in gdf.columns:
+        raise KeyError(
+            f"'{id_key}' not found in shapes '{shapes_key}'. "
+            f"Available columns: {gdf.columns.tolist()}. "
+            f"Provide a valid {id_key_name}, or set it to the current index name if IDs are in the index."
+        )
+
+    warnings.warn(
+        f"Setting column '{id_key}' as the index for shapes '{shapes_key}', "
+        "as this is required to link the table to shapes in SpatialData.",
+        UserWarning,
+        stacklevel=2,
+    )
+    return gdf.set_index(id_key, drop=True)
+
+
+def _ensure_index(
+    gdf,
+    *,
+    shapes_key: str,
+    id_key_name: str,
+    id_key: str,
+):
+    """
+    Ensure `gdf` is indexed by `id_key`.
+
+    If `id_key` matches the current index name, the GeoDataFrame is returned unchanged.
+    Otherwise, `id_key` must be a column name and will be set as the index.
+
+    If the chosen IDs contain duplicates, the index is reset to a unique RangeIndex.
+    """
+    if gdf.index.name == id_key:
+        if gdf.index.has_duplicates:
+            warnings.warn(
+                f"Duplicate IDs detected in index '{id_key}' for shapes '{shapes_key}'. "
+                "Resetting and renaming index to `segtraq_id` to ensure uniqueness.",
+                UserWarning,
+                stacklevel=2,
+            )
+            if gdf.index.name in gdf.columns:
+                gdf = gdf.drop(columns=[gdf.index.name])
+            gdf = gdf.reset_index(drop=False)
+            gdf.index.name = "segtraq_id"
+        return gdf
+
+    if id_key not in gdf.columns:
+        raise KeyError(
+            f"'{id_key}' not found in shapes '{shapes_key}'. "
+            f"Available columns: {gdf.columns.tolist()}. "
+            f"Provide a valid {id_key_name}, or set it to the current index name if IDs are in the index."
+        )
+
+    if gdf[id_key].duplicated().any():
+        warnings.warn(
+            f"Duplicate IDs detected in column '{id_key}' for shapes '{shapes_key}'. "
+            f"Instead of using {id_key} as index, resetting the current index and renaming it to `segtraq_id`.",
+            UserWarning,
+            stacklevel=2,
+        )
+        if gdf.index.name in gdf.columns:
+            gdf = gdf.drop(columns=[gdf.index.name])
+        gdf = gdf.reset_index(drop=False)
+        gdf.index.name = "segtraq_id"
+        return gdf
+
+    warnings.warn(
+        f"Setting column '{id_key}' as the index for shapes '{shapes_key}', "
+        "as this is required to link the table to shapes in SpatialData.",
+        UserWarning,
+        stacklevel=2,
+    )
+    return gdf.set_index(id_key, drop=True)
+
+
 def validate_spatialdata(
     sdata: sd.SpatialData,
     images_key: str | None = "morphology_focus",
@@ -890,9 +982,9 @@ def validate_spatialdata(
     points_z_key: str | None = "z",
     points_gene_key: str = "feature_name",
     shapes_key: str | list[str] = "cell_boundaries",
-    shapes_cell_id_key: str | None = "cell_id",
+    shapes_cell_id_key: str = "cell_id",
     nucleus_shapes_key: str | None = "nucleus_boundaries",
-    nucleus_shapes_cell_id_key: str | None = "cell_id",
+    nucleus_shapes_cell_id_key: str = "cell_id",
 ) -> bool:
     """
     Validates the integrity of a SpatialData object by checking the consistency of cell IDs
@@ -925,9 +1017,15 @@ def validate_spatialdata(
     shapes_key : str or list of str, optional
         Key(s) for accessing shapes (e.g., cell boundaries) in the SpatialData. Default is "cell_boundaries".
         Can be a list if multiple shape layers are present.
-    shapes_cell_id_key : str, optional
-        Column name in the shapes DataFrame indicating cell IDs. Default is "cell_id".
-        If None, the function assumes cell IDs are stored in the index.
+    shapes_cell_id_key : str, optional, default="cell_id"
+        Cell ID key for `sdata.shapes[shapes_key]`. Must match either the shapes index name
+        or a column name (which will be set as the index if needed).
+    nucleus_shapes_key : str or None, optional, default="nucleus_boundaries"
+        Key in `sdata.shapes` for nucleus boundary polygons, if available.
+        If None, a nucleus mask can be obtained via `segtraq.run_cellpose`.
+    nucleus_shapes_cell_id_key : str, optional, default="cell_id"
+        Cell ID key for `sdata.shapes[nucleus_shapes_key]`. Must match either the shapes
+        index name or a column name (which will be set as the index if needed).
 
     Raises
     ------
@@ -1028,6 +1126,25 @@ def validate_spatialdata(
                 f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
             )
 
+        if tables_centroid_x_key is None or tables_centroid_y_key is None:
+            warnings.warn(
+                "No centroids specified for tables. Centroids will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(
+                sdata,
+                tables_cell_id_key=tables_cell_id_key,
+                tables_centroid_x_key=tables_centroid_x_key,
+                tables_centroid_y_key=tables_centroid_y_key,
+                shapes_key=shapes_key,
+                features_to_compute=["centroid"],
+                tables_key=tables_key,
+                inplace=True,
+            )
+    else:
+        raise ValueError("SpatialData object must contain tables.")
+
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
     shapes_cell_ids = set()
@@ -1042,24 +1159,14 @@ def validate_spatialdata(
                 f"If you want to use a different key, set the shapes_key parameter."
             )
             shapes = sdata.shapes[shapes_key]
-        elif isinstance(shapes_key, list):
-            # if multiple shape keys are provided, we need to check each one
-            shapes = pd.concat([sdata.shapes[key] for key in shapes_key], ignore_index=True)
-        else:
-            raise ValueError("shapes_key must be a string or a list of strings")
 
-        # this part handles the case where cell IDs are stored in the index (as is the case in Xenium)
-        shapes_cell_ids = set()
-        if shapes_cell_id_key is None:
+            shapes = _ensure_index(
+                shapes, shapes_key=shapes_key, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key"
+            )
+            sdata.shapes[shapes_key] = shapes
             shapes_cell_ids = set(shapes.index.tolist())
         else:
-            assert shapes_cell_id_key in shapes.columns, (
-                f"Shapes DataFrame must contain column: {shapes_cell_id_key}. "
-                f"Available columns: {shapes.columns.tolist()}. "
-                f"If you want to use a different column, set the shapes_cell_id_key parameter. "
-                f"If you want to use the index as cell IDs, set shapes_cell_id_key=None."
-            )
-            shapes_cell_ids = set(shapes[shapes_cell_id_key])
+            raise ValueError("shapes_key must be a string or a list of strings")
 
         # ensuring that all cell IDs have the same dtype (either str or numeric)
         # taking a random ID from each set and comparing dtypes
@@ -1184,22 +1291,6 @@ def validate_spatialdata(
                     stacklevel=2,
                 )
 
-            # the checks above check the cell columns
-            # however, spatialdata performs all joins on the indices, making it important that they match between
-            # tables and shapes
-            # we check if there is at least some overlap between the indices of the shapes and the tables
-            # if not, we raise a warning
-            shapes_index_ids = set(shapes.index.tolist())
-            table_index_ids = set(table.obs.index.tolist())
-            common_index_ids = shapes_index_ids & table_index_ids
-            if len(common_index_ids) == 0:
-                warnings.warn(
-                    "The shapes and tables indices do not match. This will lead to errors when using spatialdata_plot. "
-                    f"IDs in shapes index: {list(shapes_index_ids)[:5]}..., "
-                    f"IDs in tables index: {list(table_index_ids)[:5]}...",
-                    stacklevel=2,
-                )
-
             # check that gene names in the table are compatible with those in the points
             genes_in_points = set(points[points_gene_key].unique())
             genes_in_table = set(table.var_names)
@@ -1211,23 +1302,25 @@ def validate_spatialdata(
                     f"Genes in points: {list(genes_in_points)[:5]}..., "
                     f"Genes in tables: {list(genes_in_table)[:5]}..."
                 )
+    else:
+        raise ValueError("SpatialData object must contain shapes.")
 
-    # check for nucleus shapes
+    # Check nucleus shapes
     if nucleus_shapes_key is not None:
-        assert nucleus_shapes_key in sdata.shapes.keys(), (
-            f"Nucleus shapes key '{nucleus_shapes_key}' not found in shapes. "
-            f"Available keys: {list(sdata.shapes.keys())}. "
-            f"You can set this with the 'nucleus_shapes_key' argument (set to None if you do not have this)."
-        )
-
-        if nucleus_shapes_cell_id_key is not None:
-            nucleus_shapes = sdata.shapes[nucleus_shapes_key]
-            assert nucleus_shapes_cell_id_key in nucleus_shapes.columns, (
-                f"Nucleus shapes DataFrame must contain cell ID column '{nucleus_shapes_cell_id_key}'. "
-                f"Available columns: {nucleus_shapes.columns.tolist()}. "
-                "You can set this with the 'nucleus_shapes_cell_id_key' argument "
-                "If you want to use the index as cell IDs, set nucleus_shapes_cell_id_key=None."
+        if nucleus_shapes_key not in sdata.shapes:
+            raise KeyError(
+                f"Nucleus shapes key '{nucleus_shapes_key}' not found in sdata.shapes. "
+                f"Available keys: {list(sdata.shapes.keys())}."
             )
+
+        nucleus_shapes = sdata.shapes[nucleus_shapes_key]
+        nucleus_shapes = _ensure_index(
+            nucleus_shapes,
+            shapes_key=nucleus_shapes_key,
+            id_key=nucleus_shapes_cell_id_key,
+            id_key_name="nucleus_shapes_cell_id_key",
+        )
+        sdata.shapes[nucleus_shapes_key] = nucleus_shapes
 
     return True
 
@@ -1572,3 +1665,103 @@ def filter_cells(adata, col: str, func: Callable):
     )
     mask = func(adata.obs[col])
     return adata[mask]
+
+
+def _filter_control_and_poor_quality_transcripts(
+    sdata,
+    min_qv: float = 20.0,
+    control_genes: tuple | list = (),
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",  # might make use of this when recomputing expression
+    tables_key: str = "table",
+    recompute_expression: bool = False,
+    inplace: bool = True,
+) -> sd.SpatialData:
+    """
+    Filter control and poor-quality transcripts from the SpatialData object.
+    This is always done in place.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing transcript data.
+    min_qv : float, default=20.0
+        Minimum quality value (qv) threshold for transcripts to be considered valid.
+    control_genes : tuple | list, default=()
+        Additional keywords to identify control probes in gene names.
+        By default, only standard control prefixes are used.
+        These are: "NegControlProbe_", "antisense_", "NegControlCodeword", "BLANK_", "Blank-", "NegPrb",
+        "DeprecatedCodeword_", "UnassignedCodeword_".
+    points_key : str, default="transcripts"
+        The key in the SpatialData points attribute that contains transcript data.
+    points_gene_key : str, default="feature_name"
+        The column name in the points DataFrame that contains gene names.
+    points_cell_id_key : str, default="cell_id"
+        The column name in the points DataFrame that contains cell IDs.
+    tables_key : str, default="table"
+        The key in the SpatialData tables attribute that contains the expression table.
+    recompute_expression : bool, default=False
+        Whether to recompute the expression matrix after filtering.
+        Note that this can be computationally expensive for large datasets.
+    inplace : bool, default=True
+        Whether to modify the SpatialData object in place. Defaults to True.
+
+    Returns
+    -------
+    sd.SpatialData
+        The updated SpatialData object with invalid transcripts marked (in an extra column).
+    """
+    if not inplace:
+        sdata = copy.deepcopy(sdata)
+
+    pts = sdata.points[points_key]
+    adata = sdata.tables[tables_key]
+
+    prefixes = (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+    ) + tuple(control_genes)
+
+    # ---- transcripts ----
+    invalid_mask = pts[points_gene_key].str.startswith(prefixes) | (pts["qv"] < min_qv)
+
+    # getting all gene names that are being removed
+    removed_genes = pts.loc[invalid_mask, points_gene_key].unique().compute().tolist()
+
+    # removing points that are invalid
+    pts = pts[~invalid_mask]
+    sdata.points[points_key] = pts
+
+    # ---- tables ----
+    # on the anndata object, we remove genes that are control genes
+    # filtering by quality does not make sense here, as we do not have per-gene quality values
+    adata = adata[:, ~adata.var_names.str.startswith(prefixes)]
+    sdata.tables[tables_key] = adata
+
+    # check if any of the gene names of the removed transcripts appear in the anndata object
+    # if so, that means we might need to recompute the expression matrix
+    filtered_genes_in_adata = set(removed_genes) & set(adata.var_names)
+    if len(filtered_genes_in_adata) > 0:
+        if not recompute_expression:
+            warnings.warn(
+                f"Some of the filtered genes ({len(filtered_genes_in_adata)}) also appear in the tables. "
+                f"These genes are: {list(filtered_genes_in_adata)[:5]}... "
+                f"If you wish to recompute the expression matrix after filtering, set recompute_expression=True.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        else:
+            # aggregate the counts from the points to get a new expression matrix
+            # the aggregate function from spatialdata is not sufficient,
+            # because it removes all layers but the shapes and transcripts
+            # TODO: implement recomputation of expression matrix
+            raise NotImplementedError("Recomputing expression matrix is not yet implemented.")
+
+    return sdata

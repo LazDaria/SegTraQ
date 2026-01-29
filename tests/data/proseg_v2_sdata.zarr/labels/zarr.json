@@ -1,0 +1,16 @@
+{
+  "attributes": {
+    "ome": {
+      "labels": [
+        "cell_labels_z0",
+        "cell_labels_z1",
+        "cell_labels_z2",
+        "cell_labels_z3",
+        "nucleus_labels"
+      ]
+    }
+  },
+  "zarr_format": 3,
+  "consolidated_metadata": null,
+  "node_type": "group"
+}
