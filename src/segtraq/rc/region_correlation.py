@@ -563,7 +563,7 @@ def similarity_nucleus_cytoplasm(
     return out
 
 
-def compute_center_border_ncv_correlation(
+def similarity_border_neighborhood(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -582,10 +582,9 @@ def compute_center_border_ncv_correlation(
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    For each cell, compute a border similarity contamination score by (1) comparing
-    gene expression in an eroded interior ("center") and a thin outer shell
-    ("border"), and (2) comparing the border with the neighborhood
-    composition vector (NCV).
+    Computes the similarity between gene expression profiles in the border region of each cell
+    and two references: (1) the center region of the same cell, and (2) the neighborhood composition vector (NCV)
+    computed within a specified radius around the cell.
 
     Specifically, the function:
     1. Erodes each cell polygon to obtain a center region.
@@ -640,12 +639,14 @@ def compute_center_border_ncv_correlation(
     pandas.DataFrame
         DataFrame with columns:
             - `tables_cell_id_key`: identifier of each cell,
-            - `corr_center_border`: correlation between center and border expression,
-            - `corr_border_ncv`: correlation between border and NCV expression
-            - `corr_ncv_vs_center`: ratio of the two correlations
+            - `similarity_center_border`: similarity between center and border expression,
+            - `similarity_border_neighborhood`: similarity between border and neighborhood expression
+            - `ratio_border_neighborhood_to_center`: ratio of the two similarities. A value > 1 indicates
+              that the border is more similar to the neighborhood than to the center, while a value < 1 indicates
+              the opposite.
     """
     if metric not in ["pearson", "spearman", "cosine_sim"]:
-        raise ValueError(f"Metric {metric} not supported")
+        raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
 
     expr_center_raw, expr_border_raw = _get_center_border_counts(
         sdata,
@@ -660,8 +661,8 @@ def compute_center_border_ncv_correlation(
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
-    # NCV: neighborhood composition vector
-    expr_ncv_raw = _compute_ncvs_within_radius(
+    # expression in neighborhood
+    expr_neighborhood_raw = _compute_ncvs_within_radius(
         sdata=sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
@@ -670,14 +671,14 @@ def compute_center_border_ncv_correlation(
     )
 
     common_cells = expr_border_raw.index.intersection(expr_center_raw.index)
-    expr_center_raw = expr_center_raw.loc[common_cells, expr_ncv_raw.columns]
-    expr_border_raw = expr_border_raw.loc[common_cells, expr_ncv_raw.columns]
-    expr_ncv_raw = expr_ncv_raw.loc[common_cells, :]
+    expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
 
     # normalization and log1p
     expr_center = _norm_log_df(expr_center_raw)
     expr_border = _norm_log_df(expr_border_raw)
-    expr_ncv = _norm_log_df(expr_ncv_raw)
+    expr_neighborhood = _norm_log_df(expr_neighborhood_raw)
 
     id_key = sdata.shapes[shapes_key].index.name
 
@@ -686,58 +687,76 @@ def compute_center_border_ncv_correlation(
     for cid in expr_center.index:
         x_center = expr_center.loc[cid].to_numpy()
         x_border = expr_border.loc[cid].to_numpy()
-        x_ncv = expr_ncv.loc[cid].to_numpy()
+        x_neighborhood = expr_neighborhood.loc[cid].to_numpy()
 
         x_center_raw = expr_center_raw.loc[cid].to_numpy()
         x_border_raw = expr_border_raw.loc[cid].to_numpy()
-        x_ncv_raw = expr_ncv_raw.loc[cid].to_numpy()
+        x_neighborhood_raw = expr_neighborhood_raw.loc[cid].to_numpy()
 
-        # Filter out genes that are zero in all three regions
-        mask = (x_center_raw != 0) | (x_border_raw != 0) | (x_ncv_raw != 0)
-        x_center = x_center[mask]
-        x_border = x_border[mask]
-        x_ncv = x_ncv[mask]
+        # for the filtering, we need to do it independently for the two comparisons
+        # the reason is that some genes may be 0 in center and border, but expressed in neighborhood
+        # this will lead to higher correlations, because we have more 0s in common
+
+        # TODO: FIXME
+        # === comparing center and border ===
+        mask = (x_center_raw != 0) | (x_border_raw != 0)
+        x_center_filtered = x_center[mask]
+        x_border_filtered = x_border[mask]
 
         corr_center_border = np.nan
-        corr_border_ncv = np.nan
-        corr_ncv_vs_center = np.nan
+        corr_border_neighborhood = np.nan
 
         x_center_counts = x_center_raw[mask].sum()
         x_border_counts = x_border_raw[mask].sum()
-        x_ncv_counts = x_ncv_raw[mask].sum()
 
         # center–border similarity
         if (mask.sum() >= min_genes) and (x_center_counts >= min_transcripts) and (x_border_counts >= min_transcripts):
             if metric == "pearson":
-                corr_center_border, _ = pearsonr(x_center, x_border)
+                corr_center_border, _ = pearsonr(x_center_filtered, x_border_filtered)
             elif metric == "spearman":
-                corr_center_border, _ = spearmanr(x_center, x_border)
+                corr_center_border, _ = spearmanr(x_center_filtered, x_border_filtered)
             elif metric == "cosine_sim":
-                corr_center_border = cosine_similarity(x_center.reshape(1, -1), x_border.reshape(1, -1))[0, 0]
+                corr_center_border = cosine_similarity(
+                    x_center_filtered.reshape(1, -1), x_border_filtered.reshape(1, -1)
+                )[0, 0]
 
-        # border–NCV similarity
-        if (mask.sum() >= min_genes) and (x_ncv_counts >= min_transcripts) and (x_border_counts >= min_transcripts):
+        # === comparing border and neighborhood ===
+        mask = (x_border_raw != 0) | (x_neighborhood_raw != 0)
+        x_border_filtered = x_border[mask]
+        x_neighborhood_filtered = x_neighborhood[mask]
+
+        x_border_counts = x_border_raw[mask].sum()
+        x_neighborhood_counts = x_neighborhood_raw[mask].sum()
+
+        if (
+            (mask.sum() >= min_genes)
+            and (x_neighborhood_counts >= min_transcripts)
+            and (x_border_counts >= min_transcripts)
+        ):
             if metric == "pearson":
-                corr_border_ncv, _ = pearsonr(x_border, x_ncv)
+                corr_border_neighborhood, _ = pearsonr(x_border_filtered, x_neighborhood_filtered)
             elif metric == "spearman":
-                corr_border_ncv, _ = spearmanr(x_border, x_ncv)
+                corr_border_neighborhood, _ = spearmanr(x_border_filtered, x_neighborhood_filtered)
             elif metric == "cosine_sim":
-                corr_border_ncv = cosine_similarity(x_border.reshape(1, -1), x_ncv.reshape(1, -1))[0, 0]
+                corr_border_neighborhood = cosine_similarity(
+                    x_border_filtered.reshape(1, -1), x_neighborhood_filtered.reshape(1, -1)
+                )[0, 0]
 
-        # ratio: border–NCV vs center–border
+        # ratio: border–neighborhood vs center–border
+        ratio_border_neighborhood_to_center = np.nan
         if (
             not np.isnan(corr_center_border)
-            and not np.isnan(corr_border_ncv)
+            and not np.isnan(corr_border_neighborhood)
             and not np.isclose(corr_center_border, 0.0)
         ):
-            corr_ncv_vs_center = corr_border_ncv / corr_center_border
+            ratio_border_neighborhood_to_center = corr_border_neighborhood / corr_center_border
 
             rows.append(
                 {
                     id_key: cid,
-                    "corr_center_border": corr_center_border,
-                    "corr_border_ncv": corr_border_ncv,
-                    "corr_ncv_vs_center": corr_ncv_vs_center,
+                    "similarity_center_border": corr_center_border,
+                    "similarity_border_neighborhood": corr_border_neighborhood,
+                    "ratio_border_neighborhood_to_center": ratio_border_neighborhood_to_center,
                 }
             )
 

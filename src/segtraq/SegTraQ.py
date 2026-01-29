@@ -881,7 +881,7 @@ class _RCFacade:
 
     similarity_nucleus_cytoplasm.__doc__ = rc.similarity_nucleus_cytoplasm.__doc__
 
-    def compute_center_border_ncv_correlation(
+    def similarity_border_neighborhood(
         self,
         erosion_fraction_of_radius: float = 0.2,
         radius_factor: float = 2.0,
@@ -890,7 +890,7 @@ class _RCFacade:
         metric: str = "cosine_sim",
         inplace: bool = True,
     ):
-        return rc.compute_center_border_ncv_correlation(
+        return rc.similarity_border_neighborhood(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -909,7 +909,7 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    compute_center_border_ncv_correlation.__doc__ = rc.compute_center_border_ncv_correlation.__doc__
+    similarity_border_neighborhood.__doc__ = rc.similarity_border_neighborhood.__doc__
 
 
 class _SPFacade:
