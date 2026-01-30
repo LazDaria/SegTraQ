@@ -9,7 +9,7 @@ from ..utils import _ensure_index, _is_background, estimate_theta_simple, merge_
 from .utils import _correct_z_drift
 
 
-def compute_mean_vsi_per_cell(
+def vertical_signal_integrity_per_cell(
     sdata,
     vsi_map: np.ndarray,
     tables_key: str = "table",
@@ -108,12 +108,12 @@ def compute_mean_vsi_per_cell(
     df = pd.DataFrame(
         {
             tables_cell_id_key: tx[points_cell_id_key].to_numpy(),
-            "mean_vsi": vsi_vals,
+            "vertical_signal_integrity": vsi_vals,
         }
     )
 
     # compute the cell wise mean of the vsi
-    out = df.groupby(tables_cell_id_key, observed=True)["mean_vsi"].mean().reset_index()
+    out = df.groupby(tables_cell_id_key, observed=True)["vertical_signal_integrity"].mean().reset_index()
 
     if inplace:
         merge_into_obs(
@@ -127,7 +127,7 @@ def compute_mean_vsi_per_cell(
     return out
 
 
-def compute_sim_top_bottom_z(
+def similarity_top_bottom(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -338,7 +338,7 @@ def compute_sim_top_bottom_z(
     return out
 
 
-def compute_heterotypic_overlap_fraction(
+def fraction_heterotypic_overlap(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
