@@ -109,13 +109,10 @@ def _get_cell_geometry_lookup(
             use_progress=use_progress,
             inplace=inplace,
         )
-        id_key = shapes_index_name
-    else:
-        # use obs cell id column
-        match_df = tbl.obs[[tables_cell_id_key, "best_nuc_id"]].copy()
-        id_key = tables_cell_id_key
 
-    match_df = match_df[[id_key, "best_nuc_id"]].dropna(subset=["best_nuc_id"]).copy()
+    match_df = tbl.obs[[tables_cell_id_key, "best_nuc_id"]].copy()
+
+    match_df = match_df[[tables_cell_id_key, "best_nuc_id"]].dropna(subset=["best_nuc_id"]).copy()
     match_df["best_nuc_id"] = match_df["best_nuc_id"].astype(gdf_nuc.index.dtype, copy=False)
 
     nuc_centroids = pd.DataFrame(
@@ -126,11 +123,11 @@ def _get_cell_geometry_lookup(
         }
     )
 
-    centroids_df = match_df.merge(nuc_centroids, on="best_nuc_id", how="left").set_index(id_key)
+    centroids_df = match_df.merge(nuc_centroids, on="best_nuc_id", how="left").set_index(tables_cell_id_key)
 
     boundary_gdf = (
         match_df.merge(gdf_nuc, left_on="best_nuc_id", right_index=True, how="left")
-        .set_index(id_key)[["geometry"]]
+        .set_index(tables_cell_id_key)[["geometry"]]
     )
 
     return centroids_df, boundary_gdf

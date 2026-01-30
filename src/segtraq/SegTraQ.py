@@ -1052,7 +1052,7 @@ class _PSFacade:
     def centroid_mean_coord_diff(
             self, 
             genes: str | list[str] = None, 
-            cell_type_key: str | None = "transferred_celltype",
+            cell_type_key: str | None = "transferred_cell_type",
             cell_type_query: str | list[str] | None = None,
             centroid_region: Literal["cell", "nucleus"] = "cell",
             restrict_to_within_boundary: bool = False,
@@ -1089,7 +1089,7 @@ class _PSFacade:
     def distance_to_membrane(
         self,
         genes: str | list[str] | None = None,
-        cell_type_key: str | None = "transferred_celltype",
+        cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         restrict_to_within_boundary: bool = False,
         membrane_region: Literal["cell", "nucleus"] = "cell",
@@ -1133,7 +1133,7 @@ class _PSFacade:
     def membrane_distance_skewness(
         self,
         genes: str | list[str] | None = None,
-        cell_type_key: str = "transferred_celltype",
+        cell_type_key: str = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         min_transcripts: int = 20,
         inplace: bool = True,
