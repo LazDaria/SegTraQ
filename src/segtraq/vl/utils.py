@@ -39,8 +39,8 @@ def _correct_z_drift(
 
     n = len(z)
     n_fit = min(n, int(max_points))
-    
-    # fit lstsq only to a subset of the points for comp reasons. 
+
+    # fit lstsq only to a subset of the points for comp reasons.
     rng = np.random.default_rng(seed)
     idx = rng.choice(n, size=n_fit, replace=False)
 
