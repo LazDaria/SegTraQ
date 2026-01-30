@@ -167,7 +167,7 @@ def percentage_points_compartments(
 def centroid_mean_coord_diff(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
-    cell_type_key: str = "transferred_celltype",
+    cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -195,7 +195,7 @@ def centroid_mean_coord_diff(
     If `centroid_region="cell"`, distances are measured to the centroid of `sdata.shapes[shapes_key]`.
     If `centroid_region="nucleus"`, each cell is first matched to a nucleus (see `select_by`,
     `min_intersection_area`) and distances are measured to that nucleus centroid. Optionally,
-    transcripts can be restricted to lie within the chosen boundary (`restrict_to_within_boundary=True`).
+    transcripts can be restricted to lie within the cell boundary (`restrict_to_within_boundary=True`).
 
     Parameters
     ----------
@@ -233,7 +233,7 @@ def centroid_mean_coord_diff(
     centroid_region : {"cell","nucleus"}, default="cell"
         Which shape centroid to use as the reference for distances.
     restrict_to_within_boundary : bool, default=False
-        If True, keep only transcripts that fall within the selected boundary (cell or matched nucleus).
+        If True, keep only transcripts that fall within the cell boundary.
         Uses `covers`, so points on the boundary are included.
     select_by : {"iou","nucleus_fraction"}, default="nucleus_fraction"
         Criterion to choose the best nucleus for each cell when `centroid_region="nucleus"`.
@@ -264,12 +264,11 @@ def centroid_mean_coord_diff(
     # transformations alignment check (only for the shapes actually used)
     T_transcripts = sd.transformations.get_transformation(sdata.points[points_key])
 
-    if centroid_region == "cell":
-        T_shapes = sd.transformations.get_transformation(sdata.shapes[shapes_key])
-        assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
-            "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
-        )
-    else:
+    T_shapes = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
+        "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
+    )
+    if centroid_region == "nucleus":
         T_shapes = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
         assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
@@ -288,7 +287,7 @@ def centroid_mean_coord_diff(
         points_background_id=points_background_id
     )
 
-    centroids, boundary_gdf = _get_cell_geometry_lookup(
+    centroids, _ = _get_cell_geometry_lookup(
         sdata=sdata,
         region=centroid_region,
         shapes_key=shapes_key, 
@@ -304,11 +303,12 @@ def centroid_mean_coord_diff(
         inplace=inplace
     )
 
-    # optionally restrict transcripts to be inside the chosen boundary
+    # optionally restrict transcripts to be inside cell
     if restrict_to_within_boundary:
-        # join boundary geometry onto each transcript by cell id
+        cell_boundary = sdata.shapes[shapes_key][["geometry"]]
+        # join cell geometry onto each transcript by cell id
         tmp = transcript_df.merge(
-            boundary_gdf,
+            cell_boundary,
             left_on=points_cell_id_key,
             right_index=True,
             how="inner",
@@ -351,17 +351,17 @@ def centroid_mean_coord_diff(
     dxy = df_total[[f"{points_x_key}_centroid", f"{points_y_key}_centroid"]].to_numpy() - df_total[
         [points_x_key, points_y_key]
     ].to_numpy()
-    df_total[f"distance_{feature}"] = np.sqrt((dxy * dxy).sum(axis=1))
+    df_total[f"distance_to_{centroid_region}_centroid_{feature}"] = np.sqrt((dxy * dxy).sum(axis=1))
 
     # add cell area + normalize
     area_df = tbl.obs[[tables_cell_id_key, tables_area_key]]
     df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
 
-    df_total[f"distance_norm_{feature}"] = df_total[f"distance_{feature}"] / np.sqrt(df_total[tables_area_key])  # length scale
+    df_total[f"distance_to_{centroid_region}_centroid_norm_{feature}"] = df_total[f"distance_to_{centroid_region}_centroid_{feature}"] / np.sqrt(df_total[tables_area_key])  # length scale
     df_total = df_total.reset_index(drop=True)
 
     if inplace:
-        out = df_total[[tables_cell_id_key, f"distance_norm_{feature}"]].copy()
+        out = df_total[[tables_cell_id_key, f"distance_to_{centroid_region}_centroid_norm_{feature}"]].copy()
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
@@ -376,7 +376,7 @@ def centroid_mean_coord_diff(
 def distance_to_membrane(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
-    cell_type_key: str = "transferred_celltype",
+    cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -421,7 +421,7 @@ def distance_to_membrane(
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
         If None, all genes are used.
-    cell_type_key : str, default="transferred_celltype"
+    cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
         If provided, compute the metric only for cells whose `cell_type_key` matches these label(s).
@@ -450,7 +450,7 @@ def distance_to_membrane(
     membrane_region : {"cell","nucleus"}, default="cell"
         Which boundary to use when computing distances.
     restrict_to_within_boundary : bool, default=False
-        If True, keep only transcripts that fall within the selected boundary (uses `covers`,
+        If True, keep only transcripts that fall within the cell boundary (uses `covers`,
         so boundary points are included).
     select_by : {"iou","nucleus_fraction"}, default="nucleus_fraction"
         Criterion to choose the best nucleus for each cell when `membrane_region="nucleus"`.
@@ -475,16 +475,31 @@ def distance_to_membrane(
     -------
     pd.DataFrame
         If `inplace=False`, returns a DataFrame with per-cell mean distance columns:
-        - `distance_to_membrane_norm_<feature>`
-        - optionally `distance_to_membrane_inverse_<feature>`
+        - `distance_to_{membrane_region}_membrane_norm_<feature>`
+        - optionally `distance_to_{membrane_region}_membrane_inverse_<feature>`
         If `inplace=True`, returns the DataFrame that was merged into `.obs`.
     """
-    # validate inputs
+   # validate inputs
     if membrane_region not in ("cell", "nucleus"):
         raise ValueError(f"membrane_region={membrane_region!r} not supported. Use 'cell' or 'nucleus'.")
     if membrane_region == "nucleus" and not nucleus_shapes_key:
         raise ValueError("membrane_region='nucleus' requires `nucleus_shapes_key` to be not None.")
+    
+    # transformations alignment check (only for the shapes actually used)
+    T_transcripts = sd.transformations.get_transformation(sdata.points[points_key])
 
+
+    T_shapes = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
+        "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
+    )
+    if membrane_region == "nucleus":
+        T_shapes = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+        assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
+            "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
+    )
+
+     # filter transcripts
     transcript_df, tbl = _get_filtered_transcripts_df(
         sdata=sdata,
         genes=genes,
@@ -495,13 +510,14 @@ def distance_to_membrane(
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_gene_key=points_gene_key,
-        points_background_id=points_background_id
+        points_background_id=points_background_id,
     )
 
+    # get selected boundary geometry per cell (cell polygons or matched nucleus polygons)
     _, boundary_gdf = _get_cell_geometry_lookup(
         sdata=sdata,
         region=membrane_region,
-        shapes_key=shapes_key, 
+        shapes_key=shapes_key,
         nucleus_shapes_key=nucleus_shapes_key,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
@@ -511,47 +527,65 @@ def distance_to_membrane(
         min_intersection_area=min_intersection_area,
         n_jobs=n_jobs,
         use_progress=use_progress,
-        inplace=inplace
+        inplace=inplace,
     )
-    
-    # merge boundary geometry onto transcripts (one row per transcript)
-    tmp = transcript_df.merge(
-        boundary_gdf,
-        left_on=points_cell_id_key,
-        right_index=True,
-        how="inner",
-    )
-    if tmp.empty:
-        raise ValueError(
-            "No transcripts remained after joining transcripts to boundaries. "
-            "Check that points_cell_id_key matches the boundary index."
+
+    boundary_gdf = boundary_gdf[["geometry"]].copy()
+
+    # optionally restrict transcripts to be inside the CELL boundary (independent of membrane_region)
+    if restrict_to_within_boundary:
+        cell_boundary = sdata.shapes[shapes_key][["geometry"]].copy()
+        cell_boundary = gpd.GeoDataFrame(cell_boundary, geometry="geometry").rename(
+            columns={"geometry": "cell_geometry"}
         )
 
-    # build GeoSeries of transcript points (vectorized)
-    pt = gpd.GeoSeries(gpd.points_from_xy(tmp[points_x_key], tmp[points_y_key]), index=tmp.index)
-    poly = gpd.GeoSeries(tmp["geometry"], index=tmp.index)
+        tmp_cell = transcript_df.merge(
+            cell_boundary,
+            left_on=points_cell_id_key,
+            right_index=True,
+            how="inner",
+        )
+        if tmp_cell.empty:
+            raise ValueError(
+                "No transcripts remained after joining transcripts to cell boundaries. "
+                "Check that points_cell_id_key matches the cell boundary index."
+            )
 
-    # covers() includes boundary points
-    is_within = poly.covers(pt)
+        pt_cell = gpd.GeoSeries(gpd.points_from_xy(tmp_cell[points_x_key], tmp_cell[points_y_key]), index=tmp_cell.index)
+        poly_cell = gpd.GeoSeries(tmp_cell["cell_geometry"], index=tmp_cell.index)
+        within_cell = poly_cell.covers(pt_cell)
 
-    if restrict_to_within_boundary:
-        tmp = tmp.loc[is_within].copy()
-        pt = pt.loc[is_within]
-        poly = poly.loc[is_within]
-        is_within = is_within.loc[is_within]
+        tmp_cell = tmp_cell.loc[within_cell].copy()
+        transcript_df = tmp_cell.loc[:, transcript_df.columns]
+        pt_cell = pt_cell.loc[within_cell]  # keep aligned points
 
-        if tmp.empty:
+        if transcript_df.empty:
             raise ValueError(
                 "No transcripts remain after restrict_to_within_boundary=True. "
                 "Consider disabling it or verifying boundaries/transforms."
             )
 
-    # compute distance to boundary (vectorized; Shapely distance is elementwise)
-    boundary = poly.boundary
-    dist = pt.distance(boundary)  # unsigned
+    # Attach geometry to compute distances to membranes
+    if membrane_region == "cell" and restrict_to_within_boundary:
+        # reuse the already merged cell geometry (avoid extra merge)
+        tmp = tmp_cell.rename(columns={"cell_geometry": "geometry"}).copy()
+        pt = pt_cell  # reuse points, no recompute
+    else:
+        tmp = transcript_df.merge(boundary_gdf, left_on=points_cell_id_key, right_index=True, how="inner")
+        pt = gpd.GeoSeries(gpd.points_from_xy(tmp[points_x_key], tmp[points_y_key]), index=tmp.index)
 
+        if tmp.empty:
+            raise ValueError(
+                "No transcripts remained after joining transcripts to selected boundaries. "
+                "Check that points_cell_id_key matches the boundary index."
+            )
+
+    poly = gpd.GeoSeries(tmp["geometry"], index=tmp.index)
+    dist = pt.distance(poly.boundary)
+
+    # signed distance if requested
     if signed:
-        # inside/on polygon -> +dist, outside -> -dist
+        is_within = poly.covers(pt)  # includes boundary points
         dist = dist.where(is_within, -dist)
 
     # decide feature label
@@ -562,34 +596,34 @@ def distance_to_membrane(
     else:
         feature = genes[0] if len(genes) == 1 else f"{len(genes)}_genes"
 
-    tmp[f"distance_to_membrane_{feature}"] = np.asarray(dist)
+    tmp[f"distance_to_{membrane_region}_membrane_{feature}"] = np.asarray(dist)
 
     # aggregate per cell (mean)
     mean_df = (
-        tmp.groupby(points_cell_id_key, sort=False)[[f"distance_to_membrane_{feature}"]]
+        tmp.groupby(points_cell_id_key, sort=False)[[f"distance_to_{membrane_region}_membrane_{feature}"]]
         .mean()
         .reset_index()
     )
 
-    # add area and normalize
+    # add cell area and normalize by cell length scale sqrt(cell_area), independent of membrane_region
     area_df = tbl.obs[[tables_cell_id_key, tables_area_key]]
     mean_df = mean_df.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
 
-    mean_df[f"distance_to_membrane_norm_{feature}"] = (
-        mean_df[f"distance_to_membrane_{feature}"] / np.sqrt(mean_df[tables_area_key])
+    mean_df[f"distance_to_{membrane_region}_membrane_norm_{feature}"] = (
+        mean_df[f"distance_to_{membrane_region}_membrane_{feature}"] / np.sqrt(mean_df[tables_area_key])
     )
 
     if inverse_score:
-        mean_df[f"distance_to_membrane_inverse_{feature}"] = (
-            1.0 / np.sqrt(np.abs(mean_df[f"distance_to_membrane_{feature}"]) + eps)
+        mean_df[f"distance_to_{membrane_region}_membrane_inverse_{feature}"] = (
+            1.0 / np.sqrt(np.abs(mean_df[f"distance_to_{membrane_region}_membrane_{feature}"]) + eps)
         )
 
     mean_df = mean_df.reset_index(drop=True)
 
     if inplace:
-        cols = [tables_cell_id_key, f"distance_to_membrane_norm_{feature}"]
+        cols = [tables_cell_id_key, f"distance_to_{membrane_region}_membrane_norm_{feature}"]
         if inverse_score:
-            cols.append(f"distance_to_membrane_inverse_{feature}")
+            cols.append(f"distance_to_{membrane_region}_membrane_inverse_{feature}")
 
         out = mean_df[cols].copy()
 
@@ -607,7 +641,7 @@ def distance_to_membrane(
 def membrane_distance_skewness(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
-    cell_type_key: str = "transferred_celltype",
+    cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -627,8 +661,8 @@ def membrane_distance_skewness(
 
     The function optionally filters by `cell_type_query`, selects non-background transcripts 
     assigned to those cells (optionally by `genes`), keeps transcripts inside or on the cell polygon, 
-    computes their distance o the polygon boundary, and aggregates these distances per cell to obtain 
-    the mean, skewness, returning NaN for mean and skewness when fewer than min_transcripts are available.
+    computes their distance to the polygon boundary, and aggregates these distances per cell to obtain 
+    skewness, returning NaN for mean and skewness when fewer than min_transcripts are available.
 
     Parameters
     ----------
@@ -637,7 +671,7 @@ def membrane_distance_skewness(
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
         If None, all genes are used.
-    cell_type_key : str, default="transferred_celltype"
+    cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
         If provided, compute the metric only for cells whose `cell_type_key` matches these label(s).
@@ -670,10 +704,8 @@ def membrane_distance_skewness(
     -------
     pd.DataFrame
         Per-cell results with columns:
-        - `cell_id`
-        - `mean_dist_to_membrane_<feature>`
-        - `skew_dist_to_membrane_<feature>`
-        - `n_transcripts_used_<feature>`
+        - points_cell_id_key
+        - `skew_dist_to_{membrane_region}_membrane_<feature>`
 
         where `<feature>` is:
         - `"all_genes"` if `genes is None`
@@ -745,16 +777,15 @@ def membrane_distance_skewness(
 
     # Distance to cell boundary (unsigned)
     dist = points.distance(polys.boundary)
-    tmp[f"dist_to_membrane_{feature}"] = dist.to_numpy()
+    tmp[f"dist_to_cell_membrane_{feature}"] = dist.to_numpy()
 
     # Aggregate per cell
-    grouped = tmp.groupby(points_cell_id_key, sort=False)[f"dist_to_membrane_{feature}"]
+    grouped = tmp.groupby(points_cell_id_key, sort=False)[f"dist_to_cell_membrane_{feature}"]
 
     out = pd.DataFrame(
         {
             points_cell_id_key: grouped.mean().index,
-            f"mean_dist_to_membrane_{feature}": grouped.mean().values,
-            f"skew_dist_to_membrane_{feature}": grouped.apply(
+            f"skew_dist_to_cell_membrane_{feature}": grouped.apply(
                 lambda s: _fisher_pearson_sample_skew(s.to_numpy())
             ).values,
             f"n_transcripts_used_{feature}": grouped.size().values,
@@ -763,14 +794,15 @@ def membrane_distance_skewness(
 
     # Mask low-count cells
     low = out[f"n_transcripts_used_{feature}"] < min_transcripts
-    out.loc[low, [f"mean_dist_to_membrane_{feature}", f"skew_dist_to_membrane_{feature}"]] = np.nan
+    out.loc[low, [f"skew_dist_to_cell_membrane_{feature}"]] = np.nan
+    out = out[[points_cell_id_key, f"skew_dist_to_cell_membrane_{feature}"]]
 
     # Merge into obs if requested
     if inplace:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=out[[points_cell_id_key, f"skew_dist_to_membrane_{feature}"]],
+            df_to_merge=out,
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=points_cell_id_key,
         )
