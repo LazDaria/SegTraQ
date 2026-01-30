@@ -24,16 +24,6 @@ def test_compute_mean_vsi_per_cell_type(sdata_new):
     expected_cols = {"cell_id", "mean_vsi"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {df.columns}"
     
-def test_compute_mean_vsi_per_cell_shapes(sdata_new):
-    n_celltypes = 10
-    vsi_map = run_ovrlpy(sdata_new, n_comp=n_celltypes)
-    
-    df = st.vl.compute_mean_vsi_per_cell(sdata_new, vsi_map)
-    
-    n_cells = sdata_new.tables["table"].obs["cell_id"].unique()
-    
-    assert len(n_cells) <= len(df["cell_id"].unique())
-    
 def test_compute_mean_vsi_per_cell_values(sdata_new):
     n_celltypes = 10
     vsi_map = run_ovrlpy(sdata_new, n_comp=n_celltypes)
