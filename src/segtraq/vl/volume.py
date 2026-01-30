@@ -4,10 +4,8 @@ import pandas as pd
 import spatialdata as sd
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
-import scanpy as sc
-from scipy import sparse
 
-from ..utils import _ensure_index, _is_background, merge_into_obs, pearson_residuals, estimate_theta_simple
+from ..utils import _ensure_index, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
 from .utils import _correct_z_drift
 
 
@@ -68,30 +66,30 @@ def compute_mean_vsi_per_cell(
     """
     if vsi_map.ndim != 2:
         raise ValueError(f"`vsi_map` must be a 2D array. Got shape {vsi_map.shape}.")
-    
+
     # subset points and drop rows with missing cell identifiers, genes or coordinates
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
 
     tx = pts[cols]
     tx = tx.dropna(subset=cols)
-    
+
     # remove background transcripts
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
-    
+
     # subset transcripts to genes present in the anndata object
     valid_features = pd.Index(sdata.tables[tables_key].var_names)
     tx = tx[tx[points_gene_key].isin(valid_features)]
-    
+
     # convert to Pandas dataframe if Dask Array
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
-    
+
     # extract coordinates
     xs = tx[points_x_key].to_numpy(dtype=float)
     ys = tx[points_y_key].to_numpy(dtype=float)
-    
+
     # shift coordinates to origin of coordinate system (0,0)
     # for ovrlpy to index correctly - requires positive indices
     x0 = float(np.min(xs))
@@ -102,10 +100,10 @@ def compute_mean_vsi_per_cell(
     # int floor for indexing
     xi = np.floor(xs).astype(int)
     yi = np.floor(ys).astype(int)
-    
+
     # extract vsi values at coordinates
     vsi_vals = vsi_map[yi, xi].astype(float, copy=False)
-    
+
     # cast into a dataframe
     df = pd.DataFrame(
         {
@@ -215,14 +213,14 @@ def compute_sim_top_bottom_z(
     """
     if not (0.0 < q < 0.5):
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
-    
+
     # subset points and drop rows with missing cell identifiers, genes or coordinates
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key, points_z_key]
 
     tx = pts[cols]
     tx = tx.dropna(subset=cols)
-    
+
     # remove background transcripts
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
@@ -230,7 +228,7 @@ def compute_sim_top_bottom_z(
     # ensure genes match table var_names from the anndata object
     valid_features = pd.Index(sdata.tables[tables_key].var_names)
     tx = tx[tx[points_gene_key].isin(valid_features)]
-    
+
     # cast into pandas Dataframe if Dask Array
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
@@ -269,35 +267,34 @@ def compute_sim_top_bottom_z(
     # align top and bottom cells/genes
     common_cells = counts_bottom.index.intersection(counts_top.index)
     common_genes = counts_bottom.columns.intersection(counts_top.columns)
-    
+
     # counts of the common cells per bottom/top
     counts_bottom_raw = counts_bottom.loc[common_cells, common_genes]
     counts_top_raw = counts_top.loc[common_cells, common_genes]
-    
+
     # total number of transcripts per bottom/top
     n_tx_bottom = counts_bottom_raw.sum(axis=1)
     n_tx_top = counts_top_raw.sum(axis=1)
-    
+
     # aggregate the counts to total counts
-    X = np.vstack([counts_bottom_raw.to_numpy(),
-               counts_top_raw.to_numpy()])  
-    # estimate the overdispersion parameter from the counts per region according to the 
+    X = np.vstack([counts_bottom_raw.to_numpy(), counts_top_raw.to_numpy()])
+    # estimate the overdispersion parameter from the counts per region according to the
     # variance of a negative binomial; var = mu + mu^2 / theta - solve for theta
-    theta = estimate_theta_simple(X)      
+    theta = estimate_theta_simple(X)
     # normalise the total counts data with analytical pearson residuals
     R = pearson_residuals(X, theta=theta, clip=None)
     # take them apart again
     n = counts_bottom_raw.shape[0]
     bottom_norm = R[:n, :]
-    top_norm    = R[n:, :]
-    
-    #cast into dataframe
+    top_norm = R[n:, :]
+
+    # cast into dataframe
     bottom_norm = pd.DataFrame(bottom_norm, columns=counts_bottom_raw.columns, index=counts_bottom_raw.index)
     top_norm = pd.DataFrame(top_norm, columns=counts_top_raw.columns, index=counts_top_raw.index)
-    
+
     rows = []
     for cid in common_cells:
-        #get the raw counts for the common cell ID
+        # get the raw counts for the common cell ID
         x_raw = counts_bottom_raw.loc[cid].to_numpy(dtype=float)
         y_raw = counts_top_raw.loc[cid].to_numpy(dtype=float)
 
@@ -313,7 +310,7 @@ def compute_sim_top_bottom_z(
             # non zero count genes
             x = bottom_norm.loc[cid].to_numpy(dtype=float)[mask]
             y = top_norm.loc[cid].to_numpy(dtype=float)[mask]
-            
+
             if np.all(x == 0) or np.all(y == 0):
                 sim = np.nan
             else:
@@ -354,7 +351,7 @@ def compute_heterotypic_overlap_fraction(
     ),
     shapes_cell_id_key: str = "cell_id",
     unknown_label: str = "Unknown",
-    unknown_policy: str = "treat_as_label", 
+    unknown_policy: str = "treat_as_label",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -407,14 +404,14 @@ def compute_heterotypic_overlap_fraction(
     """
     if unknown_policy not in {"exclude", "treat_as_label"}:
         raise ValueError(f"unknown_policy must be one of {{'exclude','treat_as_label'}}. Got: {unknown_policy}")
-    
-    # extract meta data of cell observations 
+
+    # extract meta data of cell observations
     obs = sdata.tables[tables_key].obs
     if cell_type_key not in obs.columns:
         raise KeyError(f"{cell_type_key!r} not found in sdata.tables[{tables_key!r}].obs")
 
     cell_type_map = obs.set_index(tables_cell_id_key)[cell_type_key].copy()
-    
+
     gdfs = []
     # loop over the $z$-stacks
     for k, skey in enumerate(shapes_key_list):
@@ -441,7 +438,7 @@ def compute_heterotypic_overlap_fraction(
     gdf_all = pd.concat(gdfs, ignore_index=True)
     # making sure the concatenated table is a proper GeoPandas GeoDataFrame
     gdf_all = gpd.GeoDataFrame(gdf_all, geometry="geometry", crs=gdfs[0].crs if len(gdfs) else None)
-    
+
     if unknown_policy == "exclude":
         gdf_all["_is_unknown"] = gdf_all["_cell_type"].isna() | (
             gdf_all["_cell_type"].astype("object") == unknown_label

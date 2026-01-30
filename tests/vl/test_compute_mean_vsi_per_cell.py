@@ -1,6 +1,8 @@
-import pandas as pd
 import ovrlpy
+import pandas as pd
+
 import segtraq as st
+
 
 def run_ovrlpy(sdata, n_comp, points_gene_key="feature_name", n_workers=8):
     coordinate_df = sdata["transcripts"].compute()
@@ -14,20 +16,22 @@ def run_ovrlpy(sdata, n_comp, points_gene_key="feature_name", n_workers=8):
 
     return vsi_map
 
+
 def test_compute_mean_vsi_per_cell_type(sdata_new):
     n_celltypes = 10
     vsi_map = run_ovrlpy(sdata_new, n_comp=n_celltypes)
-    
+
     df = st.vl.compute_mean_vsi_per_cell(sdata_new, vsi_map)
 
     assert isinstance(df, pd.DataFrame), f"compute_sim_top_bottom_z should return a DataFrame, got {type(df)}"
     expected_cols = {"cell_id", "mean_vsi"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {df.columns}"
-    
+
+
 def test_compute_mean_vsi_per_cell_values(sdata_new):
     n_celltypes = 10
     vsi_map = run_ovrlpy(sdata_new, n_comp=n_celltypes)
-    
+
     df = st.vl.compute_mean_vsi_per_cell(sdata_new, vsi_map)
-    
-    assert df['mean_vsi'].dropna().between(-1, 1).all()
+
+    assert df["mean_vsi"].dropna().between(-1, 1).all()
