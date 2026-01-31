@@ -28,10 +28,12 @@ from spatialdata.transformations import (
 
 from .bl import baseline as bl
 
-def xy_scale(T): #TODO - extract Translation, Scale, Sequence
+
+def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
     if hasattr(T, "scale"):
         return np.asarray(T.scale)[:2]
     return np.array([1.0, 1.0])
+
 
 def _to_ndarray(x) -> np.ndarray:
     return x.toarray() if hasattr(x, "toarray") else np.asarray(x)
