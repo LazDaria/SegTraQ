@@ -507,6 +507,7 @@ def _compute_ncvs_within_radius(
 def _get_center_border_counts(
     sdata,
     tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
@@ -533,6 +534,7 @@ def _get_center_border_counts(
         sdata=sdata,
         region_key="cell_centers",
         tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
@@ -546,6 +548,7 @@ def _get_center_border_counts(
         sdata=sdata,
         region_key="cell_borders",
         tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
