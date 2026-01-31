@@ -1,11 +1,10 @@
 import copy
-import warnings
 from collections.abc import Callable
+from typing import Literal
 
 import numpy as np
 import spatialdata as sd
 from anndata import AnnData
-from typing import Literal
 
 from . import bl, cs, ps, rc, sp, vl
 from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
@@ -203,7 +202,7 @@ class SegTraQ:
         - genes_per_cell
         - transcripts_per_cell
         - mean_transcripts_per_gene_per_cell
-        - transcript_density 
+        - transcript_density
         - morphological features per cell
         - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
 
@@ -481,62 +480,66 @@ class SegTraQ:
 
     def run_point_statistics(
         self,
-        genes: str | list[str] = None,
-        erosion_fraction_of_radius: float = 0.3,
+        genes: str | list[str] | None = None,
+        cell_type_key: str = "transferred_cell_type",
+        cell_type_query: str | list[str] | None = None,
         inplace: bool = True,
+        *,
+        # per-metric parameters (optional)
+        centroid_kwargs: dict | None = None,
+        membrane_kwargs: dict | None = None,
+        skew_kwargs: dict | None = None,
+        compartments_kwargs: dict | None = None,
     ):
         """
-        Compute point-statistics metrics per feature and optionally merge into the cell table.
-
-        This runs:
-        1) `centroid_mean_coord_diff`  → per-cell distance between mean transcript coords and cell centroid
-        2) `distance_to_membrane`      → per-cell mean distance of transcripts to the cell boundary
-
-        Parameters
-        ----------
-        feature : str
-            Feature (gene) name to evaluate.
-        inplace : bool, default=True
-            If True, merges a compact set of columns into `sdata.tables[tables_key].obs`:
-                - ps_cmd_dist__{feature}    : distance from centroid_mean_coord_diff
-                - ps_dtm_dist__{feature}    : distance_to_outline from distance_to_membrane
-                - ps_dtm_inv__{feature}     : distance_to_outline_inverse from distance_to_membrane
-                - pct_points_compartments   : pct_points_compartments from percentage_points_compartments
-            If False, returns a dictionary with raw DataFrames for each metric and feature.
-
-        Returns
-        -------
-        None or dict
-            - If `inplace=True`: returns None (results written to `.obs`).
-            - If `inplace=False`: returns
-                {
-                "centroid_mean_coord_diff": {genes: DataFrame, ...},
-                "distance_to_membrane":    {genes: DataFrame, ...},
-                }
+        Run all point-statistics metrics (ps) with shared filtering (genes + cell-type)
+        and return a dict when inplace=False.
         """
+        common = dict(
+            genes=genes,
+            cell_type_key=cell_type_key,
+            cell_type_query=cell_type_query,
+            inplace=inplace,
+        )
 
-        perc_cp_df = self.ps.percentage_points_compartments(inplace=inplace)
-        cmd_df = self.ps.centroid_mean_coord_diff(genes=genes, inplace=inplace)
-        dtm_df = self.ps.distance_to_membrane(genes=genes, inplace=inplace)
-        mb_skw = self.ps.membrane_distance_skewness(genes=genes, inplace=inplace)
+        centroid_kwargs = {} if centroid_kwargs is None else dict(centroid_kwargs)
+        membrane_kwargs = {} if membrane_kwargs is None else dict(membrane_kwargs)
+        skew_kwargs = {} if skew_kwargs is None else dict(skew_kwargs)
+        compartments_kwargs = {} if compartments_kwargs is None else dict(compartments_kwargs)
+
+        # 1) % compartments
+        perc_cp_df = self.ps.percentage_points_compartments(
+            **common,
+            **compartments_kwargs,
+        )
+
+        # 2) mean-to-centroid distance
+        cmd_df = self.ps.centroid_mean_coord_diff(
+            **common,
+            **centroid_kwargs,
+        )
+
+        # 3) mean distance to membrane
+        dtm_df = self.ps.distance_to_membrane(
+            **common,
+            **membrane_kwargs,
+        )
+
+        # 4) skewness of distances-to-membrane
+        mb_skw = self.ps.membrane_distance_skewness(
+            **common,
+            **skew_kwargs,
+        )
 
         if inplace:
             return None
-        else:
-            if genes is None:
-                feature = "all_genes"
-            elif isinstance(genes, str):
-                feature = genes
-            else:
-                feature = f"{len(genes)}_genes"
-            out = {
-                f"centroid_mean_coord_diff_{feature}": cmd_df[f"distance_{feature}"],
-                f"distance_to_membrane_{feature}": dtm_df[f"distance_to_outline_{feature}"],
-                f"distance_to_outline_inverse_{feature}": dtm_df[f"distance_to_outline_inverse_{feature}"],
-                f"skew_dist_to_membrane_{feature}": mb_skw[f"skew_dist_to_membrane_{feature}"],
-                "pct_points_compartments": perc_cp_df["pct_points_compartments"],
-            }
-            return out
+
+        return {
+            "percentage_points_compartments": perc_cp_df,
+            "centroid_mean_coord_diff": cmd_df,
+            "distance_to_membrane": dtm_df,
+            "membrane_distance_skewness": mb_skw,
+        }
 
     def filter_cells(
         self,
@@ -1021,15 +1024,21 @@ class _PSFacade:
         self._p = parent
 
     def percentage_points_compartments(
-            self, 
-            select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
-            min_intersection_area: float = 0.0,
-            n_jobs: int = -1,
-            use_progress: bool = True,
-            predicate: str = "intersects",
-            inplace: bool = True):
+        self,
+        genes: str | list[str] = None,
+        cell_type_key: str | None = "transferred_cell_type",
+        cell_type_query: str | list[str] | None = None,
+        select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = 1,
+        predicate: str = "intersects",
+        inplace: bool = True,
+    ):
         return ps.percentage_points_compartments(
             sdata=self._p.sdata,
+            genes=genes,
+            cell_type_key=cell_type_key,
+            cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
@@ -1050,16 +1059,17 @@ class _PSFacade:
     percentage_points_compartments.__doc__ = ps.percentage_points_compartments.__doc__
 
     def centroid_mean_coord_diff(
-            self, 
-            genes: str | list[str] = None, 
-            cell_type_key: str | None = "transferred_cell_type",
-            cell_type_query: str | list[str] | None = None,
-            centroid_region: Literal["cell", "nucleus"] = "cell",
-            restrict_to_within_boundary: bool = False,
-            select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
-            min_intersection_area: float = 0.0,
-            n_jobs: int = -1,
-            inplace: bool = True):
+        self,
+        genes: str | list[str] = None,
+        cell_type_key: str | None = "transferred_cell_type",
+        cell_type_query: str | list[str] | None = None,
+        centroid_region: Literal["cell", "nucleus"] = "cell",
+        restrict_to_within_boundary: bool = False,
+        select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
+        min_intersection_area: float = 0.0,
+        n_jobs: int = 1,
+        inplace: bool = True,
+    ):
         return ps.centroid_mean_coord_diff(
             sdata=self._p.sdata,
             genes=genes,
@@ -1095,7 +1105,7 @@ class _PSFacade:
         membrane_region: Literal["cell", "nucleus"] = "cell",
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int = 1,
         signed: bool = True,
         inverse_score: bool = True,
         eps: float = 1e-6,
@@ -1135,7 +1145,7 @@ class _PSFacade:
         genes: str | list[str] | None = None,
         cell_type_key: str = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
-        min_transcripts: int = 20,
+        min_transcripts: int = 5,
         inplace: bool = True,
     ):
         return ps.membrane_distance_skewness(
@@ -1153,10 +1163,11 @@ class _PSFacade:
             points_y_key=self._p.points_y_key,
             shapes_key=self._p.shapes_key,
             min_transcripts=min_transcripts,
-            inplace=inplace
+            inplace=inplace,
         )
 
     membrane_distance_skewness.__doc__ = ps.membrane_distance_skewness.__doc__
+
 
 class _CSFacade:
     """
