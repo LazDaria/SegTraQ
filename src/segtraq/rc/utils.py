@@ -8,7 +8,7 @@ from rtree.index import Index
 from scipy.spatial import cKDTree
 from shapely.geometry.base import BaseGeometry
 
-from ..utils import _is_background, _looks_like_counts
+from ..utils import _is_background, _looks_like_counts, filter_cells
 
 
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
@@ -220,16 +220,71 @@ def _get_center_and_border_shapes(
     return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
 
 
+def _get_filtered_points_df(
+    sdata: sd.SpatialData,
+    genes: str | list[str] | None,
+    cell_type_key: str,
+    cell_type_query: str | list[str] | None,
+    tables_key: str,
+    tables_cell_id_key: str,
+    points_key: str,
+    points_cell_id_key: str,
+    points_gene_key: str,
+    points_background_id: str,
+) -> pd.DataFrame:
+    tbl = sdata.tables[tables_key]
+    pts = sdata.points[points_key]
+
+    # subset to genes present in the table
+    all_genes = pd.Index(tbl.var_names)
+    pts = pts.dropna(subset=[points_gene_key])
+    pts = pts[pts[points_gene_key].isin(all_genes)]
+
+    # optionally subset to cell type of interest
+    if cell_type_query is not None:
+        query_vals = [cell_type_query] if isinstance(cell_type_query, str) else list(cell_type_query)
+        adata = filter_cells(adata=tbl, col=cell_type_key, func=lambda x: x.isin(query_vals))
+    else:
+        adata = tbl
+    cell_ids = adata.obs[tables_cell_id_key]
+
+    # subset points to cells in tbl
+    pts = sdata.points[points_key]
+    pts = pts[pts[points_cell_id_key].isin(cell_ids)]
+
+    # optionally subset to gene selection
+    if genes is not None:
+        if isinstance(genes, str):
+            pts = pts[pts[points_gene_key] == genes]
+        else:
+            pts = pts[pts[points_gene_key].isin(list(genes))]
+
+    # remove background
+    is_bg = _is_background(pts[points_cell_id_key], points_background_id)
+    pts = pts.loc[~is_bg]
+
+    # compute
+    df = pts.compute() if hasattr(pts, "compute") else pts
+    if df.empty:
+        raise ValueError("No transcripts found after filtering.")
+
+    return df
+
+
 def _join_points_regions(
     sdata: sd.SpatialData,
     region_key: str,
     tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
+    genes: str | list[str] | None = None,
+    cell_type_key: str = "transferred_cell_type",
+    cell_type_query: str | list[str] | None = None,
     predicate: str = "intersects",
     require_points_region_ID_match: bool = True,
 ) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
@@ -272,8 +327,13 @@ def _join_points_regions(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript/spot to a cell.
+    genes : str | list[str] | None, optional
+        String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
+        If None, all genes are used.
+    cell_type_key : str
+        Column in `sdata.tables[tables_key].obs` with cell-type labels.
+    cell_type_query : str | list[str] | None, optional
+        If provided, compute the metric only for cells whose `cell_type_key` matches these label(s).
     predicate: str, default="intersects"
         Spatial predicate passed to `geopandas.sjoin`.
         Common options: "intersects" (default), "within", "contains".
@@ -293,20 +353,22 @@ def _join_points_regions(
         Region x gene count matrix (rows = all regions from shapes index, columns = all genes).
     """
 
-    # prepare points
-    pts = sdata.points[points_key]
+    transcripts = _get_filtered_points_df(
+        sdata=sdata,
+        genes=genes,
+        cell_type_key=cell_type_key,
+        cell_type_query=cell_type_query,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_gene_key=points_gene_key,
+        points_background_id=points_background_id,
+    )
+
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
-    pts = pts[cols]
-    is_background = _is_background(pts[points_cell_id_key], points_background_id)
-    pts = pts[~is_background]
+    transcripts = transcripts[cols]
 
-    # subset to genes present in the table
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
-    pts = pts.dropna(subset=[points_gene_key])
-    pts = pts[pts[points_gene_key].isin(all_genes)]
-
-    # compute after subsetting for efficiency
-    transcripts = pts.compute()
     transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
 
     # ensure we have a clean, unique point index for deduplication after sjoin
@@ -336,13 +398,15 @@ def _join_points_regions(
     ).drop(columns=["index_right"])
 
     # if a point intersects multiple polygons, keep the first match
-    pts_joined = pts_joined.groupby(level=0, observed=True).first()
+    pts_joined = pts_joined.sort_values("point_id").groupby("point_id", observed=True, as_index=False).first()
 
     # optionally restrict to points whose region id matches another point column
     if require_points_region_ID_match:
         pts_joined = pts_joined[pts_joined["region_id"] == pts_joined[points_cell_id_key]]
 
     # aggregate into region x gene counts
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+
     counts = (
         pts_joined[["region_id", points_gene_key]]
         .groupby(["region_id", points_gene_key], observed=True)
