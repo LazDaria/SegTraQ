@@ -377,9 +377,9 @@ class SegTraQ:
         """
         Run volume metrics for SegTraQ.
         """
-        sim_top_bottom = self.vl.compute_sim_top_bottom_z(inplace=inplace)
-        heterotypic_overlap = self.vl.compute_heterotypic_overlap_fraction(inplace=inplace)
-        mean_vsi = self.vl.compute_mean_vsi_per_cell(inplace=inplace)
+        sim_top_bottom = self.vl.similarity_top_bottom(inplace=inplace)
+        heterotypic_overlap = self.vl.fraction_heterotypic_overlap(inplace=inplace)
+        mean_vsi = self.vl.vertical_signal_integrity_per_cell(inplace=inplace)
         if inplace:
             return None
         else:
@@ -1211,12 +1211,10 @@ class _VLFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_sim_top_bottom_z(
+    def similarity_top_bottom(
         self,
         correct_z_drift: bool = True,
         max_points: int = 1_000_000,
-        q0: float = 0.01,
-        q1: float = 0.99,
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
@@ -1224,7 +1222,7 @@ class _VLFacade:
         min_transcripts: int = 10,
         inplace: bool = True,
     ):
-        return vl.compute_sim_top_bottom_z(
+        return vl.similarity_top_bottom(
             self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1236,8 +1234,6 @@ class _VLFacade:
             points_y_key=self._p.points_y_key,
             points_z_key=self._p.points_z_key,
             correct_z_drift=correct_z_drift,
-            q0=q0,
-            q1=q1,
             seed=seed,
             q=q,
             scale=scale,
@@ -1246,7 +1242,7 @@ class _VLFacade:
             inplace=inplace,
         )
 
-    def compute_heterotypic_overlap_fraction(
+    def fraction_heterotypic_overlap(
         self,
         cell_type_key: str = "transferred_cell_type",
         shapes_key_list: list[str] = (
@@ -1259,7 +1255,7 @@ class _VLFacade:
         unknown_policy: str = "treat_as_label",
         inplace: bool = True,
     ):
-        return vl.compute_heterotypic_overlap_fraction(
+        return vl.fraction_heterotypic_overlap(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1271,13 +1267,12 @@ class _VLFacade:
             inplace=inplace,
         )
 
-    def compute_mean_vsi_per_cell(
+    def vertical_signal_integrity_per_cell(
         self,
         vsi_map: np.ndarray,
-        shift_to_origin: bool = True,
         inplace: bool = True,
     ):
-        return vl.compute_mean_vsi_per_cell(
+        return vl.vertical_signal_integrity_per_cell(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1288,6 +1283,5 @@ class _VLFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             vsi_map=vsi_map,
-            shift_to_origin=shift_to_origin,
             inplace=inplace,
         )

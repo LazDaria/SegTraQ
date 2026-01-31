@@ -1334,9 +1334,9 @@ def _process_image(
     return_values: bool = True,
 ):
     if key_added is not None:
-        assert key_added not in sdata.labels.keys(), (
-            f"Key {key_added} already exists in spatial data object. Please choose another key."
-        )
+        assert (
+            key_added not in sdata.labels.keys()
+        ), f"Key {key_added} already exists in spatial data object. Please choose another key."
 
     image = sdata.images[images_key]
 
@@ -1346,9 +1346,9 @@ def _process_image(
             f"Please provide a data_key to access the image data. "
             f"Available keys are: {list(image.keys())}."
         )
-        assert images_data_key.split("/")[0] in image.keys(), (
-            f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
-        )
+        assert (
+            images_data_key.split("/")[0] in image.keys()
+        ), f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
 
         image = image[images_data_key]
 
@@ -1602,7 +1602,9 @@ def add_nuc_shapes_via_cellpose(
     )  # get scaling factors
     T = get_transformation_between_coordinate_systems(
         sdata, sdata.images[images_key], sdata.shapes[shapes_key]
-    ).to_affine_matrix(("x", "y"), ("x", "y"))  # get affine transformation between image and shapes
+    ).to_affine_matrix(
+        ("x", "y"), ("x", "y")
+    )  # get affine transformation between image and shapes
     A = T @ S
     t_params = [A[0, 0], A[0, 1], A[1, 0], A[1, 1], A[0, 2], A[1, 2]]
 
@@ -1660,9 +1662,9 @@ def filter_cells(adata, col: str, func: Callable):
     AnnData
         A new AnnData object containing only the cells that satisfy the condition.
     """
-    assert col in adata.obs.columns, (
-        f"Column '{col}' not found in adata.obs. Available columns: {adata.obs.columns.tolist()}"
-    )
+    assert (
+        col in adata.obs.columns
+    ), f"Column '{col}' not found in adata.obs. Available columns: {adata.obs.columns.tolist()}"
     mask = func(adata.obs[col])
     return adata[mask]
 
@@ -1765,3 +1767,83 @@ def _filter_control_and_poor_quality_transcripts(
             raise NotImplementedError("Recomputing expression matrix is not yet implemented.")
 
     return sdata
+
+
+## code written by claude.ai
+def estimate_theta_simple(x):
+    """
+    Rough theta estimate from variance-to-mean relationship
+    assuming var = mean + mean²/theta of a negative binomial distribution
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        The matrix containing the counts
+
+    Returns
+    -------
+    float
+        An estimate of the overdispersion parameter
+    """
+
+    gene_means = x.mean(axis=0)
+    gene_vars = x.var(axis=0)
+
+    # Only use genes with sufficient expression
+    mask = (gene_means > 0.05) & (gene_vars > gene_means)
+
+    # Solve: var = mean + mean²/theta for theta
+    theta_estimates = gene_means[mask] ** 2 / (gene_vars[mask] - gene_means[mask])
+
+    # Take median to be robust
+    theta = np.median(theta_estimates[theta_estimates > 0])
+    return theta
+
+
+## adapted from https://github.com/scverse/scanpy licensed under BSD-3 to scverse
+## implementing the method from Lause et al. (2021) https://link.springer.com/article/10.1186/s13059-021-02451-7
+def pearson_residuals(x: np.ndarray, theta, clip: None):
+    """
+    Computes the Analytic pearson residuals from a negative binomial distribution to
+    normalise the data
+
+    Args:
+        x (np.ndarray): The raw counts
+        theta (float): The estimated overdispersion parameter
+        clip: Whether or not to clip the variance, if None np.sqrt(n) is the max variance
+        .
+
+    Returns:
+        pd.Series (bool): A boolean Series (True if background, False otherwise).
+    """
+    x = x.copy() if copy else x
+
+    # check theta
+    if theta <= 0:
+        # TODO: would "underdispersion" with negative theta make sense?
+        # then only theta=0 were undefined..
+        msg = "Pearson residuals require theta > 0"
+        raise ValueError(msg)
+    # prepare clipping
+    if clip is None:
+        n = x.shape[0]
+        clip = np.sqrt(n)
+    if clip < 0:
+        msg = "Pearson residuals require `clip>=0` or `clip=None`."
+        raise ValueError(msg)
+
+    sums_genes = np.sum(x, axis=0, keepdims=True)
+    sums_cells = np.sum(x, axis=1, keepdims=True)
+    sum_total = np.sum(sums_genes)
+
+    mu = np.array(sums_cells @ sums_genes / sum_total)
+    diff = np.array(x - mu)
+    residuals = diff / np.sqrt(mu + mu**2 / theta)
+
+    # clip
+    residuals = np.clip(residuals, a_min=-clip, a_max=clip)
+
+    # fill NA
+    residuals = np.nan_to_num(residuals, nan=0.0)
+
+    return residuals
