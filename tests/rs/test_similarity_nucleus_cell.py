@@ -5,7 +5,7 @@ import segtraq as st
 
 
 def test_similarity_nucleus_cell(sdata_new):
-    corr_df = st.rc.similarity_nucleus_cell(sdata_new, n_jobs=8)
+    corr_df = st.rs.similarity_nucleus_cell(sdata_new, n_jobs=8)
     assert isinstance(corr_df, pd.DataFrame), f"Expected DataFrame, got {type(corr_df)}"
     exp = {"cell_id", "nucleus_id", "IoU", "nucleus_fraction", "similarity_nucleus_cell"}
     assert set(corr_df.columns) == exp, f"Columns mismatch: expected {exp}, got {set(corr_df.columns)}"
@@ -16,4 +16,4 @@ def test_similarity_nucleus_cell(sdata_new):
 
 def test_similarity_nucleus_cell_invalid_metric(sdata_new):
     with pytest.raises(ValueError, match="Metric dummy_metric not supported"):
-        st.rc.similarity_nucleus_cell(sdata_new, metric="dummy_metric", n_jobs=8)
+        st.rs.similarity_nucleus_cell(sdata_new, metric="dummy_metric", n_jobs=8)

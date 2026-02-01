@@ -3,7 +3,7 @@
 __author__ = """Daria Lazic, Matthias Meyer-Bender, Martin Emons"""
 __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh.ch"
 
-from . import bl, cs, pl, ps, rc, sp, vl
+from . import bl, cs, pl, ps, rs, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
     add_nuc_shapes_via_cellpose,
@@ -26,7 +26,7 @@ for _f in (
 __all__ = [
     "bl",
     "cs",
-    "rc",
+    "rs",
     "sp",
     "pl",
     "vl",
