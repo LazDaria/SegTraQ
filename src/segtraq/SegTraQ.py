@@ -250,49 +250,75 @@ class SegTraQ:
                 out["transcript_density"] = dens
             return out
 
-    def run_region_correlation(self, metric: str = "cosine_sim", n_jobs: int = -1, inplace: bool = True):
+    def run_region_similarity(
+        self,
+        metric: str = "cosine_sim",
+        n_jobs: int = -1,
+        inplace: bool = True,
+        iou_kwargs: dict = None,
+        similarity_nucleus_cell_kwargs: dict = None,
+        similarity_nucleus_cytoplasm_kwargs: dict = None,
+        similarity_center_border_neighborhood_kwargs: dict = None,
+    ):
         """
-        Compute region-correlation metrics and optionally merge them into the cell table.
+        Compute region similarity metrics and optionally merge them into the cell table.
 
         This runs, in order:
         1) IoU between each cell and its best-matching nucleus
-        2) Correlation between per-cell expression and its matched nucleus (Pearson)
-        3) Correlation between the cell's nucleus-overlap part vs. remainder (vectorized)
-        4) Compute correlation of gene expression in an eroded interior ("center") and
-           a thin outer shell ("border"), and (2) comparing the border with the neighborhood
-           composition vector (NCV).
+        2) Similarity between per-cell expression and its matched nucleus
+        3) Similarity between the cell's nucleus vs. cytoplasm expression
+        4) Similarity of gene expression in an eroded interior ("center") and
+           a thin outer shell ("border"), and (2) comparing the border with the neighborhood.
 
         Parameters
         ----------
+        metric : str, default="cosine_sim"
+        n_jobs : int, default=-1
         inplace : bool, default=True
             If True, writes results into `sdata.tables[tables_key].obs` and returns None.
             If False, returns a dictionary of DataFrames without writing.
+        iou_kwargs : dict, optional
+            Additional keyword arguments to pass to `match_nuclei_to_cells`.
+        similarity_nucleus_cell_kwargs : dict, optional
+            Additional keyword arguments to pass to `similarity_nucleus_cell`.
+        similarity_nucleus_cytoplasm_kwargs : dict, optional
+            Additional keyword arguments to pass to `similarity_nucleus_cytoplasm`.
+        similarity_center_border_neighborhood_kwargs : dict, optional
+            Additional keyword arguments to pass to `compute_center_border_ncv_correlation`.
 
         Returns
         -------
         None or dict
         - If `inplace=True`: returns None after writing to `sdata`.
         - If `inplace=False`: returns a dict with keys:
-        * "ious"                  : DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]
-        * "cell_nuc_correlation". : DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
+        * "ious": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]
+        * "similarity_nucleus_cell": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
                                     similarity_nucleus_cell, nucleus_fraction]
-        * "parts_correlation"     : DataFrame with columns [tables_cell_id_key, nucleus_id, IoU, corr_cell_parts]
-        * "center_border_ncv_corr": DataFrame with columns
-                                    [tables_cell_id_key, corr_center_border, corr_border_ncv, corr_ncv_vs_center]
+        * "similarity_nucleus_cytoplasm": DataFrame with columns [tables_cell_id_key,
+          nucleus_id, IoU, similarity_nucleus_cytoplasm]
+        * "similarity_center_border_neighborhood": DataFrame with columns
+                                    [tables_cell_id_key, similarity_center_border,
+                                    similarity_border_neighborhood, ratio_border_neighborhood_to_center]
 
         Notes
         -----
         - Requires `self.nucleus_shapes_key` (nucleus boundaries).
         """
         assert self.nucleus_shapes_key is not None, (
-            "Cannot run region correlation: `nucleus_shapes_key` is None. "
+            "Cannot run region similarity: `nucleus_shapes_key` is None. "
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        ious = self.rc.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace)
-        nuc_cell_sim = self.rc.similarity_nucleus_cell(metric=metric, n_jobs=n_jobs, inplace=inplace)
-        parts_corr = self.rc.similarity_nucleus_cytoplasm(metric=metric, n_jobs=n_jobs, inplace=inplace)
-        center_border_ncv_corr = self.rc.compute_center_border_ncv_correlation(metric=metric, inplace=inplace)
+        ious = self.rc.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
+        similarity_nucleus_cell = self.rc.similarity_nucleus_cell(
+            metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cell_kwargs or {})
+        )
+        similarity_nucleus_cytoplasm = self.rc.similarity_nucleus_cytoplasm(
+            metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cytoplasm_kwargs or {})
+        )
+        similarity_center_border_neighborhood = self.rc.compute_center_border_ncv_correlation(
+            metric=metric, inplace=inplace, **(similarity_center_border_neighborhood_kwargs or {})
+        )
 
         if inplace:
             return None
@@ -300,9 +326,9 @@ class SegTraQ:
         else:
             return {
                 "ious": ious,
-                "similarity_nucleus_cell": nuc_cell_sim,
-                "similarity_nucleus_cytoplasm": parts_corr,
-                "center_border_ncv_corr": center_border_ncv_corr,
+                "similarity_nucleus_cell": similarity_nucleus_cell,
+                "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
+                "similarity_center_border_neighborhood": similarity_center_border_neighborhood,
             }
 
     def run_label_transfer(
