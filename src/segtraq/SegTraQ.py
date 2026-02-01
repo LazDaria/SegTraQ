@@ -6,7 +6,7 @@ import numpy as np
 import spatialdata as sd
 from anndata import AnnData
 
-from . import bl, cs, ps, rc, sp, vl
+from . import bl, cs, ps, rs, sp, vl
 from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
@@ -173,7 +173,7 @@ class SegTraQ:
         self.nucleus_shapes_key = nucleus_shapes_key
 
         self.bl = _BLFacade(self)
-        self.rc = _RCFacade(self)
+        self.rs = _RSFacade(self)
         self.cs = _CSFacade(self)
         self.vl = _VLFacade(self)
         self.sp = _SPFacade(self)
@@ -782,9 +782,9 @@ class _BLFacade:
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
 
-class _RCFacade:
+class _RSFacade:
     """
-    Bound region-correlation (rc) metrics interface for a SegTraQ instance.
+    Bound region-similarity (rs) metrics interface for a SegTraQ instance.
     Methods use the parent's `sdata` and configured keys.
     No per-call overrides are allowed.
     """
@@ -799,7 +799,7 @@ class _RCFacade:
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        return rc.match_nuclei_to_cells(
+        return rs.match_nuclei_to_cells(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -811,7 +811,7 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    match_nuclei_to_cells.__doc__ = rc.match_nuclei_to_cells.__doc__
+    match_nuclei_to_cells.__doc__ = rs.match_nuclei_to_cells.__doc__
 
     def similarity_nucleus_cell(
         self,
@@ -823,7 +823,7 @@ class _RCFacade:
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        return rc.similarity_nucleus_cell(
+        return rs.similarity_nucleus_cell(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -844,7 +844,7 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    similarity_nucleus_cell.__doc__ = rc.similarity_nucleus_cell.__doc__
+    similarity_nucleus_cell.__doc__ = rs.similarity_nucleus_cell.__doc__
 
     def similarity_nucleus_cytoplasm(
         self,
@@ -857,7 +857,7 @@ class _RCFacade:
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        return rc.similarity_nucleus_cytoplasm(
+        return rs.similarity_nucleus_cytoplasm(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -879,18 +879,18 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    similarity_nucleus_cytoplasm.__doc__ = rc.similarity_nucleus_cytoplasm.__doc__
+    similarity_nucleus_cytoplasm.__doc__ = rs.similarity_nucleus_cytoplasm.__doc__
 
     def similarity_border_neighborhood(
         self,
         erosion_fraction_of_radius: float = 0.2,
-        radius_factor: float = 2.0,
+        neighborhood_radius_factor: float = 2.0,
         min_transcripts: int = 10,
         min_genes: int = 5,
         metric: str = "cosine_sim",
         inplace: bool = True,
     ):
-        return rc.similarity_border_neighborhood(
+        return rs.similarity_border_neighborhood(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -904,12 +904,41 @@ class _RCFacade:
             erosion_fraction_of_radius=erosion_fraction_of_radius,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            radius_factor=radius_factor,
+            neighborhood_radius_factor=neighborhood_radius_factor,
             metric=metric,
             inplace=inplace,
         )
 
-    similarity_border_neighborhood.__doc__ = rc.similarity_border_neighborhood.__doc__
+    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
+
+    # function for debugging / exploration
+    # this function will not be highlighted in the main docs
+    def get_genes_in_compartment(
+        self,
+        cell,
+        compartment,
+        scale: float = 1e4,
+        erosion_fraction_of_radius: float = 0.2,
+        neighborhood_radius_factor: float = 2.0,
+    ):
+        return rs.get_genes_in_compartment(
+            cell=cell,
+            compartment=compartment,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            scale=scale,
+            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            neighborhood_radius_factor=neighborhood_radius_factor,
+        )
 
 
 class _SPFacade:

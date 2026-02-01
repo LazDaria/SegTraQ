@@ -5,7 +5,7 @@ import segtraq as st
 
 
 def test_similarity_nucleus_cytoplasm(sdata_new):
-    df = st.rc.similarity_nucleus_cytoplasm(sdata_new)
+    df = st.rs.similarity_nucleus_cytoplasm(sdata_new)
     # identify cells with missing nucleus_id
     mask = df["nucleus_id"].isna()
 

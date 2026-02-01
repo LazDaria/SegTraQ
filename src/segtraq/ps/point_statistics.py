@@ -3,7 +3,7 @@ import pandas as pd
 import spatialdata as sd
 from shapely import LinearRing, Point, Polygon
 
-from ..rc.utils import _align_expression_dfs, _get_center_border_counts, _join_points_regions
+from ..rs.utils import _align_expression_dfs, _get_center_border_counts, _join_points_regions
 from ..utils import filter_cells, merge_into_obs
 
 

@@ -1,3 +1,5 @@
+import warnings
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -360,7 +362,7 @@ def _compute_ncvs_within_radius(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    radius_factor: float = 2.0,
+    neighborhood_radius_factor: float = 2.0,
 ) -> pd.DataFrame:
     """
     Compute neighborhood composition vectors (NCVs) as the average gene expression
@@ -376,8 +378,8 @@ def _compute_ncvs_within_radius(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    radius_factor : float, default=2.0
-        Neighborhood radius factor in the same coordinate units as the shapes.
+    neighborhood_radius_factor : float, default=2.0
+        This is multiplied by each cell's radius to define the neighborhood distance for that cell.
 
     Returns
     -------
@@ -428,7 +430,7 @@ def _compute_ncvs_within_radius(
 
     for i in range(n_cells):
         # Query neighbors within radius (including itself)
-        idxs = tree.query_ball_point(coords[i], r=radii[i] * radius_factor)
+        idxs = tree.query_ball_point(coords[i], r=radii[i] * neighborhood_radius_factor)
         # Remove self
         idxs = [j for j in idxs if j != i]
         if len(idxs) == 0:
@@ -466,7 +468,7 @@ def _get_center_border_counts(
     sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
     sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
 
-    _, expr_center = _join_points_regions(
+    tx_assigned_to_center, expr_center = _join_points_regions(
         sdata=sdata,
         region_key="cell_centers",
         tables_key=tables_key,
@@ -479,7 +481,7 @@ def _get_center_border_counts(
         predicate="within",
     )
 
-    _, expr_border = _join_points_regions(
+    tx_assigned_to_border, expr_border = _join_points_regions(
         sdata=sdata,
         region_key="cell_borders",
         tables_key=tables_key,
@@ -491,6 +493,19 @@ def _get_center_border_counts(
         points_background_id=points_background_id,
         predicate="within",
     )
+
+    # checking if there are any transcripts that were counted in both center and border
+    # this should never be the case, hence we issue a warning if it happens
+    center_transcripts = tx_assigned_to_center["point_id"].values
+    border_transcripts = tx_assigned_to_border["point_id"].values
+    intersecting_transcripts = set(center_transcripts).intersection(set(border_transcripts))
+    if len(intersecting_transcripts) > 0:
+        warnings.warn(
+            f"{len(intersecting_transcripts)} transcripts were counted in both center and border regions. "
+            f"Please report this issue to the SegTraQ developers.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     return expr_center, expr_border
 
