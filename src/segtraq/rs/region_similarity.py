@@ -99,10 +99,11 @@ def match_nuclei_to_cells(
 
     # if a nucleus is assigned to multiple cells, we keep only the one with the highest fraction / IoU
     cols = (
-        ["nucleus_id", "nucleus_fraction", "IoU"]
+        ["nucleus_id", "nucleus_fraction", "iou"]
         if select_by == "nucleus_fraction"
-        else ["nucleus_id", "IoU", "nucleus_fraction"]
+        else ["nucleus_id", "iou", "nucleus_fraction"]
     )
+
     match_df.loc[match_df.sort_values(cols, ascending=[True, False, False]).duplicated("nucleus_id"), cols] = np.nan
     if inplace:
         merge_into_obs(
@@ -193,7 +194,7 @@ def similarity_nucleus_cell(
     pandas.DataFrame
         DataFrame with columns:
             - cell_id_key : identifier of each cell,
-            - `nucleus_id`: matching nucleus ID with highest nucleus fraction or IoU (or None),
+            - `nucleus_id`: matching nucleus ID with highest nucleus fraction or Intersection over Union (or None),
             - `similarity_nucleus_cell`:
                 similarity (cosine similarity, Pearson correlation, Spearman correlation)
                 between the cell and its matched nucleus gene counts
@@ -229,7 +230,7 @@ def similarity_nucleus_cell(
             inplace=inplace,
         )
     else:
-        match_df = tbl.obs[[id_key, "nucleus_id", "IoU", "nucleus_fraction"]].copy()
+        match_df = tbl.obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
 
     X = tbl.X
     # Check if X looks like counts
@@ -280,7 +281,7 @@ def similarity_nucleus_cell(
                 {
                     id_key: cid,
                     "nucleus_id": nid,
-                    "IoU": row.IoU,
+                    "iou": row.iou,
                     "nucleus_fraction": row.nucleus_fraction,
                     "similarity_nucleus_cell": np.nan,
                 }
@@ -314,7 +315,7 @@ def similarity_nucleus_cell(
                 {
                     id_key: cid,
                     "nucleus_id": nid,
-                    "IoU": row.IoU,
+                    "iou": row.iou,
                     "nucleus_fraction": row.nucleus_fraction,
                     "similarity_nucleus_cell": corr,
                 }
@@ -357,7 +358,7 @@ def similarity_nucleus_cytoplasm(
     debug_cell_id: str | None = None,
 ):
     """
-    For each cell in the SpatialData table, identifies the nucleus with highest IoU
+    For each cell in the SpatialData table, identifies the nucleus with highest intersection over union (IoU)
     and computes the similarity (cosine similarity, Pearson correlation, Spearman correlation)
     between the gene expression profiles of the cytoplasm (cell - nucleus) and that nucleus.
 
@@ -447,7 +448,7 @@ def similarity_nucleus_cytoplasm(
             inplace=inplace,
         )
     else:
-        match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "IoU", "nucleus_fraction"]].copy()
+        match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
 
     best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
 
@@ -816,7 +817,7 @@ def get_genes_in_compartment(
         if "nucleus_id" not in sdata.tables[tables_key].obs.columns:
             raise ValueError("Nucleus-cell matching has not been performed yet.")
         else:
-            match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "IoU", "nucleus_fraction"]].copy()
+            match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
         best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
 
         tx_cell, _ = _join_points_regions(
