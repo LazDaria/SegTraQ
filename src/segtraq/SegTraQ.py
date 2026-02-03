@@ -120,7 +120,7 @@ class SegTraQ:
 
             st.nc.compute_cell_nuc_ious()
 
-            st.ps.centroid_mean_coord_diff("ERBB2")
+            st.ps.distance_to_centroid("ERBB2")
 
             st.sp.calculate_contamination(markers=...)
 
@@ -506,13 +506,13 @@ class SegTraQ:
         compartments_kwargs = {} if compartments_kwargs is None else dict(compartments_kwargs)
 
         # % compartments
-        perc_cp_df = self.ps.percentage_points_compartments(
+        perc_cp_df = self.ps.percentage_transcripts_in_compartments(
             **common,
             **compartments_kwargs,
         )
 
         # mean-to-centroid distance
-        cmd_df = self.ps.centroid_mean_coord_diff(
+        cmd_df = self.ps.distance_to_centroid(
             **common,
             **centroid_kwargs,
         )
@@ -533,8 +533,8 @@ class SegTraQ:
             return None
 
         return {
-            "percentage_points_compartments": perc_cp_df,
-            "centroid_mean_coord_diff": cmd_df,
+            "percentage_transcripts_in_compartments": perc_cp_df,
+            "distance_to_centroid": cmd_df,
             "distance_to_membrane": dtm_df,
             "membrane_distance_skewness": mb_skw,
         }
@@ -1026,7 +1026,7 @@ class _PSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def percentage_points_compartments(
+    def percentage_transcripts_in_compartments(
         self,
         genes: str | list[str] = None,
         cell_type_key: str | None = "transferred_cell_type",
@@ -1037,7 +1037,7 @@ class _PSFacade:
         predicate: str = "intersects",
         inplace: bool = True,
     ):
-        return ps.percentage_points_compartments(
+        return ps.percentage_transcripts_in_compartments(
             sdata=self._p.sdata,
             genes=genes,
             cell_type_key=cell_type_key,
@@ -1059,9 +1059,9 @@ class _PSFacade:
             inplace=inplace,
         )
 
-    percentage_points_compartments.__doc__ = ps.percentage_points_compartments.__doc__
+    percentage_transcripts_in_compartments.__doc__ = ps.percentage_transcripts_in_compartments.__doc__
 
-    def centroid_mean_coord_diff(
+    def distance_to_centroid(
         self,
         genes: str | list[str] = None,
         cell_type_key: str | None = "transferred_cell_type",
@@ -1073,7 +1073,7 @@ class _PSFacade:
         n_jobs: int = 1,
         inplace: bool = True,
     ):
-        return ps.centroid_mean_coord_diff(
+        return ps.distance_to_centroid(
             sdata=self._p.sdata,
             genes=genes,
             cell_type_key=cell_type_key,
@@ -1097,7 +1097,7 @@ class _PSFacade:
             inplace=inplace,
         )
 
-    centroid_mean_coord_diff.__doc__ = ps.centroid_mean_coord_diff.__doc__
+    distance_to_centroid.__doc__ = ps.distance_to_centroid.__doc__
 
     def distance_to_membrane(
         self,
