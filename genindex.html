@@ -163,6 +163,7 @@
 <li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/utils.html">Utility functions</a></li>
 </ul>
@@ -179,6 +180,8 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/plotting.html">Plotting</a></li>
+
 </ul>
 
     </div>
@@ -286,6 +289,7 @@ document.write(`
 
 <div class="genindex-jumpbox">
  <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#F"><strong>F</strong></a>
@@ -296,6 +300,7 @@ document.write(`
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
  
 </div>
@@ -307,12 +312,26 @@ document.write(`
   </ul></td>
 </tr></table>
 
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/plotting.html#segtraq.pl.plotting.boxplot">boxplot() (in module segtraq.pl.plotting)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/plotting.html#segtraq.pl.plotting.boxplot_combined">boxplot_combined() (in module segtraq.pl.plotting)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_marker_purity">calculate_marker_purity() (in module segtraq.sp.supervised)</a>
 </li>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.calculate_neighbor_contamination">calculate_neighbor_contamination() (in module segtraq.sp.supervised)</a>
+</li>
+      <li><a href="modules/plotting.html#segtraq.pl.plotting.celltype_proportions">celltype_proportions() (in module segtraq.pl.plotting)</a>
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
@@ -389,6 +408,8 @@ document.write(`
         <li><a href="modules/baseline.html#module-segtraq.bl.baseline">segtraq.bl.baseline</a>
 </li>
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">segtraq.cs.clustering_stability</a>
+</li>
+        <li><a href="modules/plotting.html#module-segtraq.pl.plotting">segtraq.pl.plotting</a>
 </li>
         <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">segtraq.ps.point_statistics</a>
 </li>
@@ -482,14 +503,21 @@ document.write(`
 </li>
       </ul></li>
       <li>
+    segtraq.pl.plotting
+
+      <ul>
+        <li><a href="modules/plotting.html#module-segtraq.pl.plotting">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
     segtraq.ps.point_statistics
 
       <ul>
         <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     segtraq.rc.region_correlation
 
@@ -524,6 +552,14 @@ document.write(`
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.transcripts_per_cell">transcripts_per_cell() (in module segtraq.bl.baseline)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/plotting.html#segtraq.pl.plotting.umap">umap() (in module segtraq.pl.plotting)</a>
 </li>
   </ul></td>
 </tr></table>
