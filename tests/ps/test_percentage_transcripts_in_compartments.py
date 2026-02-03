@@ -32,10 +32,10 @@ def _pick_cell_type(sdata, tables_key="table", cell_type_key="transferred_cell_t
     return vals.iloc[0]
 
 
-def test_percentage_points_compartments_invariants(sdata_new):
+def test_percentage_transcripts_in_compartments_invariants(sdata_new):
     gene = _pick_present_gene(sdata_new)
 
-    out = st.ps.percentage_points_compartments(
+    out = st.ps.percentage_transcripts_in_compartments(
         sdata_new,
         genes=gene,
         predicate="intersects",
@@ -82,10 +82,10 @@ def test_percentage_points_compartments_invariants(sdata_new):
     assert np.allclose(pct_sum.to_numpy(), 100.0, rtol=0, atol=1e-6)
 
 
-def test_percentage_points_compartments_gene_filter_reduces_totals(sdata_new):
-    out_all = st.ps.percentage_points_compartments(sdata_new, genes=None, inplace=False)
+def test_percentage_transcripts_in_compartments_gene_filter_reduces_totals(sdata_new):
+    out_all = st.ps.percentage_transcripts_in_compartments(sdata_new, genes=None, inplace=False)
     gene = _pick_present_gene(sdata_new)
-    out_gene = st.ps.percentage_points_compartments(sdata_new, genes=gene, inplace=False)
+    out_gene = st.ps.percentage_transcripts_in_compartments(sdata_new, genes=gene, inplace=False)
 
     # total counts for a specific gene should be <= total counts for all genes (per cell)
     # (not every cell will have that gene; align by index)
@@ -98,11 +98,11 @@ def test_percentage_points_compartments_gene_filter_reduces_totals(sdata_new):
     )
 
 
-def test_percentage_points_compartments_cell_type_filter_runs(sdata_labeled):
+def test_percentage_transcripts_in_compartments_cell_type_filter_runs(sdata_labeled):
     ct = _pick_cell_type(sdata_labeled)
     gene = _pick_present_gene(sdata_labeled)
 
-    out = st.ps.percentage_points_compartments(
+    out = st.ps.percentage_transcripts_in_compartments(
         sdata_labeled,
         genes=gene,
         cell_type_key="transferred_cell_type",

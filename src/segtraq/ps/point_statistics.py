@@ -11,7 +11,7 @@ from ..utils import merge_into_obs, xy_scale
 from .utils import _fisher_pearson_sample_skew, _get_cell_geometry_lookup
 
 
-def percentage_points_compartments(
+def percentage_transcripts_in_compartments(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
     cell_type_key: str = "transferred_cell_type",
@@ -261,7 +261,7 @@ def percentage_points_compartments(
     return out
 
 
-def centroid_mean_coord_diff(
+def distance_to_centroid(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
     cell_type_key: str = "transferred_cell_type",

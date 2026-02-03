@@ -18,10 +18,10 @@ def _pick_present_gene(sdata, points_key="transcripts", points_gene_key="feature
     return gene
 
 
-def test_centroid_mean_coord_diff_columns_and_nonnegative(sdata_new):
+def test_distance_to_centroid_columns_and_nonnegative(sdata_new):
     gene = _pick_present_gene(sdata_new)
 
-    out = st.ps.centroid_mean_coord_diff(
+    out = st.ps.distance_to_centroid(
         sdata_new,
         genes=gene,
         centroid_region="cell",
@@ -35,21 +35,21 @@ def test_centroid_mean_coord_diff_columns_and_nonnegative(sdata_new):
     assert np.all(out[f"distance_to_cell_centroid_norm_{gene}"].to_numpy() >= 0)
 
 
-def test_centroid_mean_coord_diff_restrict_within_boundary_smaller_or_equal(sdata_new):
+def test_distance_to_centroid_restrict_within_boundary_smaller_or_equal(sdata_new):
     """
     When, restricting to within cell, distance to centroid should be equal or smaller.
     We check a weak, robust condition: median shouldn't increase substantially.
     """
     gene = _pick_present_gene(sdata_new)
 
-    out_all = st.ps.centroid_mean_coord_diff(
+    out_all = st.ps.distance_to_centroid(
         sdata_new,
         genes=gene,
         centroid_region="cell",
         restrict_to_within_boundary=False,
         inplace=False,
     )
-    out_in = st.ps.centroid_mean_coord_diff(
+    out_in = st.ps.distance_to_centroid(
         sdata_new,
         genes=gene,
         centroid_region="cell",
@@ -65,6 +65,6 @@ def test_centroid_mean_coord_diff_restrict_within_boundary_smaller_or_equal(sdat
     assert med_in <= med_all
 
 
-def test_centroid_mean_coord_diff_invalid_region_raises(sdata_new):
+def test_distance_to_centroid_invalid_region_raises(sdata_new):
     with pytest.raises(ValueError):
-        st.ps.centroid_mean_coord_diff(sdata_new, centroid_region="bad_region", inplace=False)
+        st.ps.distance_to_centroid(sdata_new, centroid_region="bad_region", inplace=False)
