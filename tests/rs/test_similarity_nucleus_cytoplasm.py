@@ -16,5 +16,5 @@ def test_similarity_nucleus_cytoplasm(sdata_new):
 
     # test that there is a valid correlation for cells with nucleus
     assert isinstance(df, pd.DataFrame), f"similarity_nucleus_cytoplasm should return a DataFrame, got {type(df)}"
-    expected_cols = {"cell_id", "nucleus_id", "IoU", "similarity_nucleus_cytoplasm", "nucleus_fraction"}
+    expected_cols = {"cell_id", "nucleus_id", "iou", "similarity_nucleus_cytoplasm", "nucleus_fraction"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {set(df.columns)}"

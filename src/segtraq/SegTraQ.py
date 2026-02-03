@@ -258,7 +258,7 @@ class SegTraQ:
         iou_kwargs: dict = None,
         similarity_nucleus_cell_kwargs: dict = None,
         similarity_nucleus_cytoplasm_kwargs: dict = None,
-        similarity_center_border_neighborhood_kwargs: dict = None,
+        similarity_border_neighborhood_kwargs: dict = None,
     ):
         """
         Compute region similarity metrics and optionally merge them into the cell table.
@@ -283,8 +283,8 @@ class SegTraQ:
             Additional keyword arguments to pass to `similarity_nucleus_cell`.
         similarity_nucleus_cytoplasm_kwargs : dict, optional
             Additional keyword arguments to pass to `similarity_nucleus_cytoplasm`.
-        similarity_center_border_neighborhood_kwargs : dict, optional
-            Additional keyword arguments to pass to `compute_center_border_ncv_correlation`.
+        similarity_border_neighborhood_kwargs : dict, optional
+            Additional keyword arguments to pass to `similarity_border_neighborhood`.
 
         Returns
         -------
@@ -295,10 +295,10 @@ class SegTraQ:
         * "similarity_nucleus_cell": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
                                     similarity_nucleus_cell, nucleus_fraction]
         * "similarity_nucleus_cytoplasm": DataFrame with columns [tables_cell_id_key,
-          nucleus_id, IoU, similarity_nucleus_cytoplasm]
-        * "similarity_center_border_neighborhood": DataFrame with columns
+          nucleus_id, iou, similarity_nucleus_cytoplasm]
+        * "similarity_border_neighborhood": DataFrame with columns
                                     [tables_cell_id_key, similarity_center_border,
-                                    similarity_border_neighborhood, ratio_border_neighborhood_to_center]
+                                    similarity_border_neighborhood, similarity_border_neighborhood]
 
         Notes
         -----
@@ -309,15 +309,15 @@ class SegTraQ:
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        ious = self.rc.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
-        similarity_nucleus_cell = self.rc.similarity_nucleus_cell(
+        ious = self.rs.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
+        similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
             metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cell_kwargs or {})
         )
-        similarity_nucleus_cytoplasm = self.rc.similarity_nucleus_cytoplasm(
+        similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
             metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cytoplasm_kwargs or {})
         )
-        similarity_center_border_neighborhood = self.rc.compute_center_border_ncv_correlation(
-            metric=metric, inplace=inplace, **(similarity_center_border_neighborhood_kwargs or {})
+        similarity_border_neighborhood = self.rs.similarity_border_neighborhood(
+            metric=metric, inplace=inplace, **(similarity_border_neighborhood_kwargs or {})
         )
 
         if inplace:
@@ -328,7 +328,7 @@ class SegTraQ:
                 "ious": ious,
                 "similarity_nucleus_cell": similarity_nucleus_cell,
                 "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
-                "similarity_center_border_neighborhood": similarity_center_border_neighborhood,
+                "similarity_border_neighborhood": similarity_border_neighborhood,
             }
 
     def run_label_transfer(

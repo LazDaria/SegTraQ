@@ -66,7 +66,7 @@ def _process_cell(
         return {
             id_name: cell_id,
             "nucleus_id": np.nan,
-            "IoU": np.nan,
+            "iou": np.nan,
             "nucleus_fraction": np.nan,
         }
 
@@ -133,14 +133,14 @@ def _process_cell(
         return {
             id_name: cell_id,
             "nucleus_id": np.nan,
-            "IoU": np.nan,
+            "iou": np.nan,
             "nucleus_fraction": np.nan,
         }
 
     return {
         id_name: cell_id,
         "nucleus_id": best["nucleus_id"],
-        "IoU": best["iou"],
+        "iou": best["iou"],
         "nucleus_fraction": best["nucleus_fraction"],
     }
 
