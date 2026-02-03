@@ -206,7 +206,6 @@ def compute_cell_nuc_correlation(
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
-    id_key = sdata[shapes_key].index.name
     tbl = sdata.tables[tables_key]
 
     if "best_nuc_id" not in tbl.obs.columns:
@@ -221,8 +220,9 @@ def compute_cell_nuc_correlation(
             n_jobs=n_jobs,
             inplace=inplace,
         )
-    else:
-        match_df = tbl.obs[[id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+
+    match_df = tbl.obs[[tables_cell_id_key, "best_nuc_id", "IoU", "nucleus_fraction"]].copy()
+    id_key = tables_cell_id_key
 
     X = tbl.X
     # Check if X looks like counts
@@ -247,6 +247,7 @@ def compute_cell_nuc_correlation(
         sdata=sdata,
         region_key=nucleus_shapes_key,
         tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
@@ -440,6 +441,7 @@ def compute_correlation_between_parts(
         sdata=sdata,
         region_key=shapes_key,
         tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
@@ -454,6 +456,7 @@ def compute_correlation_between_parts(
         sdata=sdata,
         region_key=nucleus_shapes_key,
         tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
@@ -501,8 +504,6 @@ def compute_correlation_between_parts(
 
     rows = []
     for cid in all_cells:
-        if cid == 70082:
-            x = 0
         nid = best_nuc_map.get(cid)
         if pd.isna(nid):  # if no overlapping nucleus
             r = np.nan
@@ -636,6 +637,7 @@ def compute_center_border_ncv_correlation(
     expr_center_raw, expr_border_raw = _get_center_border_counts(
         sdata,
         tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
         shapes_key=shapes_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
