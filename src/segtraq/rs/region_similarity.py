@@ -140,7 +140,7 @@ def similarity_nucleus_cell(
     """
     For each cell in the SpatialData table, identifies the nucleus with highest IoU
     and computes the similarity (cosine similarity, Pearson correlation, Spearman correlation)
-    between the gene expression profiles of the whole cell (including the nucleus) and that nucleus.
+    between the gene expression profiles of the whole cell and its nucleus.
 
     Parameters
     ----------
@@ -360,7 +360,7 @@ def similarity_nucleus_cytoplasm(
     """
     For each cell in the SpatialData table, identifies the nucleus with highest intersection over union (IoU)
     and computes the similarity (cosine similarity, Pearson correlation, Spearman correlation)
-    between the gene expression profiles of the cytoplasm (cell - nucleus) and that nucleus.
+    between the gene expression profiles of the cytoplasm (cell - nucleus) and the cell region overlapping the nucleus.
 
     Parameters
     ----------
@@ -808,7 +808,6 @@ def get_genes_in_compartment(
     points_y_key: str = "y",
     scale: float = 1e4,
     erosion_fraction_of_radius: float = 0.2,
-    neighborhood_radius_factor: float = 2.0,
 ):
     if compartment == "nuc_cyto":
         cells_gdf = sdata.shapes[shapes_key]
