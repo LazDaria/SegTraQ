@@ -29,6 +29,12 @@ from spatialdata.transformations import (
 from .bl import baseline as bl
 
 
+def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
+    if hasattr(T, "scale"):
+        return np.asarray(T.scale)[:2]
+    return np.array([1.0, 1.0])
+
+
 def _to_ndarray(x) -> np.ndarray:
     return x.toarray() if hasattr(x, "toarray") else np.asarray(x)
 
@@ -971,7 +977,7 @@ def validate_spatialdata(
     images_key: str | None = "morphology_focus",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
-    tables_area_volume_key: str | None = "cell_area",
+    tables_area_key: str | None = "cell_area",
     tables_centroid_x_key: str | None = "x_centroid",
     tables_centroid_y_key: str | None = "y_centroid",
     points_key: str = "transcripts",
@@ -1004,6 +1010,9 @@ def validate_spatialdata(
         Key for accessing tables in the SpatialData. Default is "table".
     tables_cell_id_key : str, optional
         Column name in the tables DataFrame (AnnData.obs) that contains cell IDs. Default is "cell_id".
+    tables_area_key : str or None, optional, default="cell_area"
+        Column in the cell table with cell area (2D).
+        If `None`, area/volume-based metrics will be computed via `segtraq.bl.morphological_features`.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
         Column in the cell table with the x-coordinate of the cell centroid.
     tables_centroid_y_key : str or None, optional, default="y_centroid"
@@ -1105,12 +1114,19 @@ def validate_spatialdata(
             f"If you want to use a different key, set the tables_key parameter."
         )
         table = sdata.tables[tables_key]
-        if tables_area_volume_key is not None:
-            assert tables_area_volume_key in table.obs.columns, (
-                f"Tables DataFrame must contain area/volume column '{tables_area_volume_key}'. "
+        if tables_area_key is not None:
+            assert tables_area_key in table.obs.columns, (
+                f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
                 f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
+                f"You can set this with the 'tables_area_key' argument (set to None if you do not have this)."
             )
+        if tables_area_key is None:
+            warnings.warn(
+                "No area column specified for tables. Area will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(sdata, features_to_compute=["cell_area"], inplace=True)
 
         if tables_centroid_x_key is not None:
             assert tables_centroid_x_key in table.obs.columns, (
@@ -1334,9 +1350,9 @@ def _process_image(
     return_values: bool = True,
 ):
     if key_added is not None:
-        assert (
-            key_added not in sdata.labels.keys()
-        ), f"Key {key_added} already exists in spatial data object. Please choose another key."
+        assert key_added not in sdata.labels.keys(), (
+            f"Key {key_added} already exists in spatial data object. Please choose another key."
+        )
 
     image = sdata.images[images_key]
 
@@ -1346,9 +1362,9 @@ def _process_image(
             f"Please provide a data_key to access the image data. "
             f"Available keys are: {list(image.keys())}."
         )
-        assert (
-            images_data_key.split("/")[0] in image.keys()
-        ), f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+        assert images_data_key.split("/")[0] in image.keys(), (
+            f"Data key {images_data_key} not found in the image data. Available keys: {list(image.keys())}"
+        )
 
         image = image[images_data_key]
 
@@ -1602,9 +1618,7 @@ def add_nuc_shapes_via_cellpose(
     )  # get scaling factors
     T = get_transformation_between_coordinate_systems(
         sdata, sdata.images[images_key], sdata.shapes[shapes_key]
-    ).to_affine_matrix(
-        ("x", "y"), ("x", "y")
-    )  # get affine transformation between image and shapes
+    ).to_affine_matrix(("x", "y"), ("x", "y"))  # get affine transformation between image and shapes
     A = T @ S
     t_params = [A[0, 0], A[0, 1], A[1, 0], A[1, 1], A[0, 2], A[1, 2]]
 
@@ -1662,9 +1676,9 @@ def filter_cells(adata, col: str, func: Callable):
     AnnData
         A new AnnData object containing only the cells that satisfy the condition.
     """
-    assert (
-        col in adata.obs.columns
-    ), f"Column '{col}' not found in adata.obs. Available columns: {adata.obs.columns.tolist()}"
+    assert col in adata.obs.columns, (
+        f"Column '{col}' not found in adata.obs. Available columns: {adata.obs.columns.tolist()}"
+    )
     mask = func(adata.obs[col])
     return adata[mask]
 
