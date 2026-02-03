@@ -18,6 +18,7 @@ SegTraQ documentation
    modules/supervised
    modules/point_statistics
    modules/volume
+   modules/plotting
    modules/segtraq_class
    modules/utils
 
@@ -36,3 +37,4 @@ SegTraQ documentation
    notebooks/volume
    notebooks/supervised
    notebooks/point_statistics
+   notebooks/plotting
