@@ -29,6 +29,12 @@ from spatialdata.transformations import (
 from .bl import baseline as bl
 
 
+def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
+    if hasattr(T, "scale"):
+        return np.asarray(T.scale)[:2]
+    return np.array([1.0, 1.0])
+
+
 def _to_ndarray(x) -> np.ndarray:
     return x.toarray() if hasattr(x, "toarray") else np.asarray(x)
 
@@ -971,7 +977,7 @@ def validate_spatialdata(
     images_key: str | None = "morphology_focus",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
-    tables_area_volume_key: str | None = "cell_area",
+    tables_area_key: str | None = "cell_area",
     tables_centroid_x_key: str | None = "x_centroid",
     tables_centroid_y_key: str | None = "y_centroid",
     points_key: str = "transcripts",
@@ -1004,6 +1010,9 @@ def validate_spatialdata(
         Key for accessing tables in the SpatialData. Default is "table".
     tables_cell_id_key : str, optional
         Column name in the tables DataFrame (AnnData.obs) that contains cell IDs. Default is "cell_id".
+    tables_area_key : str or None, optional, default="cell_area"
+        Column in the cell table with cell area (2D).
+        If `None`, area/volume-based metrics will be computed via `segtraq.bl.morphological_features`.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
         Column in the cell table with the x-coordinate of the cell centroid.
     tables_centroid_y_key : str or None, optional, default="y_centroid"
@@ -1105,12 +1114,19 @@ def validate_spatialdata(
             f"If you want to use a different key, set the tables_key parameter."
         )
         table = sdata.tables[tables_key]
-        if tables_area_volume_key is not None:
-            assert tables_area_volume_key in table.obs.columns, (
-                f"Tables DataFrame must contain area/volume column '{tables_area_volume_key}'. "
+        if tables_area_key is not None:
+            assert tables_area_key in table.obs.columns, (
+                f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
                 f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_area_volume_key' argument (set to None if you do not have this)."
+                f"You can set this with the 'tables_area_key' argument (set to None if you do not have this)."
             )
+        if tables_area_key is None:
+            warnings.warn(
+                "No area column specified for tables. Area will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(sdata, features_to_compute=["cell_area"], inplace=True)
 
         if tables_centroid_x_key is not None:
             assert tables_centroid_x_key in table.obs.columns, (
@@ -1765,3 +1781,83 @@ def _filter_control_and_poor_quality_transcripts(
             raise NotImplementedError("Recomputing expression matrix is not yet implemented.")
 
     return sdata
+
+
+## code written by claude.ai
+def estimate_theta_simple(x):
+    """
+    Rough theta estimate from variance-to-mean relationship
+    assuming var = mean + mean²/theta of a negative binomial distribution
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        The matrix containing the counts
+
+    Returns
+    -------
+    float
+        An estimate of the overdispersion parameter
+    """
+
+    gene_means = x.mean(axis=0)
+    gene_vars = x.var(axis=0)
+
+    # Only use genes with sufficient expression
+    mask = (gene_means > 0.05) & (gene_vars > gene_means)
+
+    # Solve: var = mean + mean²/theta for theta
+    theta_estimates = gene_means[mask] ** 2 / (gene_vars[mask] - gene_means[mask])
+
+    # Take median to be robust
+    theta = np.median(theta_estimates[theta_estimates > 0])
+    return theta
+
+
+## adapted from https://github.com/scverse/scanpy licensed under BSD-3 to scverse
+## implementing the method from Lause et al. (2021) https://link.springer.com/article/10.1186/s13059-021-02451-7
+def pearson_residuals(x: np.ndarray, theta, clip: None):
+    """
+    Computes the Analytic pearson residuals from a negative binomial distribution to
+    normalise the data
+
+    Args:
+        x (np.ndarray): The raw counts
+        theta (float): The estimated overdispersion parameter
+        clip: Whether or not to clip the variance, if None np.sqrt(n) is the max variance
+        .
+
+    Returns:
+        pd.Series (bool): A boolean Series (True if background, False otherwise).
+    """
+    x = x.copy() if copy else x
+
+    # check theta
+    if theta <= 0:
+        # TODO: would "underdispersion" with negative theta make sense?
+        # then only theta=0 were undefined..
+        msg = "Pearson residuals require theta > 0"
+        raise ValueError(msg)
+    # prepare clipping
+    if clip is None:
+        n = x.shape[0]
+        clip = np.sqrt(n)
+    if clip < 0:
+        msg = "Pearson residuals require `clip>=0` or `clip=None`."
+        raise ValueError(msg)
+
+    sums_genes = np.sum(x, axis=0, keepdims=True)
+    sums_cells = np.sum(x, axis=1, keepdims=True)
+    sum_total = np.sum(sums_genes)
+
+    mu = np.array(sums_cells @ sums_genes / sum_total)
+    diff = np.array(x - mu)
+    residuals = diff / np.sqrt(mu + mu**2 / theta)
+
+    # clip
+    residuals = np.clip(residuals, a_min=-clip, a_max=clip)
+
+    # fill NA
+    residuals = np.nan_to_num(residuals, nan=0.0)
+
+    return residuals

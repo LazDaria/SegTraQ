@@ -8,8 +8,6 @@ def _correct_z_drift(
     points_y_key: str = "y",
     points_z_key: str = "z",
     max_points: int = 1_000_000,
-    q0: float = 0.01,
-    q1: float = 0.99,
     seed: int | None = 0,
 ) -> np.ndarray:
     """
@@ -27,8 +25,6 @@ def _correct_z_drift(
         Column names for x/y/z.
     max_points : int, default=1_000_000
         Maximum number of points used to fit the regression (random subsampling).
-    q0, q1 : float, default=0.01, 0.99
-        Quantiles for clipping residual z values.
     seed : int or None, default=0
         Random seed used for subsampling. If None, sampling is not reproducible.
 
@@ -44,6 +40,7 @@ def _correct_z_drift(
     n = len(z)
     n_fit = min(n, int(max_points))
 
+    # fit lstsq only to a subset of the points for comp reasons.
     rng = np.random.default_rng(seed)
     idx = rng.choice(n, size=n_fit, replace=False)
 
@@ -55,16 +52,4 @@ def _correct_z_drift(
     # Residualize full z
     z_resid = z - (b + wx * x + wy * y)
 
-    # Quantile clipping
-    zmin = float(np.quantile(z_resid, q0))
-    zmax = float(np.quantile(z_resid, q1))
-    zspan = zmax - zmin
-    if zspan == 0:
-        zspan = 1.0
-
-    z_clip = np.clip(z_resid, zmin, zmax)
-
-    # Scale to [0,1]
-    z_corr = (z_clip - zmin) / zspan
-
-    return z_corr
+    return z_resid

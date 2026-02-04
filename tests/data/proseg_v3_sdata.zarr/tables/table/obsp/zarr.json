@@ -1,9 +1,0 @@
-{
-  "attributes": {
-    "encoding-type": "dict",
-    "encoding-version": "0.1.0"
-  },
-  "zarr_format": 3,
-  "consolidated_metadata": null,
-  "node_type": "group"
-}

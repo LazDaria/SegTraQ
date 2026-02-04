@@ -1,3 +1,3 @@
-from .volume import compute_heterotypic_overlap_fraction, compute_mean_vsi_per_cell, compute_sim_top_bottom_z
+from .volume import fraction_heterotypic_overlap, similarity_top_bottom, vertical_signal_integrity_per_cell
 
-__all__ = ["compute_sim_top_bottom_z", "compute_heterotypic_overlap_fraction", "compute_mean_vsi_per_cell"]
+__all__ = ["similarity_top_bottom", "fraction_heterotypic_overlap", "vertical_signal_integrity_per_cell"]

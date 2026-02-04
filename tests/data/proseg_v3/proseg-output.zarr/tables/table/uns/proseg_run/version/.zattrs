@@ -1,9 +1,0 @@
-{
-  "encoding-type": "string",
-  "encoding-version": "0.2.0",
-  "_zarrs": {
-    "description": "This array was created with zarrs",
-    "repository": "https://github.com/zarrs/zarrs",
-    "version": "0.22.10"
-  }
-}
