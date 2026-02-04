@@ -1,5 +1,7 @@
+import numpy as np
 import ovrlpy
 import pandas as pd
+import pytest
 
 import segtraq as st
 
@@ -35,3 +37,22 @@ def test_vertical_signal_integrity_per_cell_values(sdata_new):
     df = st.vl.vertical_signal_integrity_per_cell(sdata_new, vsi_map)
 
     assert df["vertical_signal_integrity"].dropna().between(-1, 1).all()
+
+
+def test_vertical_signal_integrity_vsi_map_must_be_2d(sdata_new):
+    vsi_map = np.zeros((10, 10, 2))
+    with pytest.raises(ValueError, match="must be a 2D array"):
+        st.vl.vertical_signal_integrity_per_cell(sdata_new, vsi_map)
+
+
+def test_vertical_signal_integrity_inplace_writes_to_obs(sdata_new):
+    n_celltypes = 5
+    vsi_map = run_ovrlpy(sdata_new, n_comp=n_celltypes)
+
+    key = "vertical_signal_integrity"
+    obs = sdata_new.tables["table"].obs
+    if key in obs.columns:
+        sdata_new.tables["table"].obs = obs.drop(columns=[key])
+
+    st.vl.vertical_signal_integrity_per_cell(sdata_new, vsi_map, inplace=True)
+    assert key in sdata_new.tables["table"].obs.columns
