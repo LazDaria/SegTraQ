@@ -16,6 +16,7 @@ from .utils import (
 def compute_cluster_connectedness(
     sdata: sd.SpatialData,
     resolution: float | list[float] = (0.6, 0.8, 1.0),
+    use_weights: bool = False,
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
@@ -32,6 +33,9 @@ def compute_cluster_connectedness(
         The SpatialData object containing clustering information.
     resolution : float or list of float, optional
         The resolution parameter(s) for Leiden clustering, by default (0.6, 0.8, 1.0).
+    use_weights: bool
+        Use edge weights to evaluate connectedness. If false, fraction of
+        equal neighbors is used.
     key_prefix : str, optional
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
@@ -86,7 +90,7 @@ def compute_cluster_connectedness(
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
-            distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels)
+            distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels, use_weights=use_weights)
             if distance_val > best_distance:
                 best_distance = float(distance_val)
 
@@ -142,8 +146,9 @@ def compute_silhouette_score(
             raise ValueError(
                 f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
-        labels = adata.obs[cell_type_key]
-        if len(set(labels)) > 1:  # Ensure more than one cluster exists
+
+        labels_nn = adata.obs[cell_type_key].dropna()
+        if labels_nn.nunique() > 1:  # Ensure more than one cluster exists
             if "X_pca" not in adata.obsm:
                 raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
             # remove NaN labels
@@ -177,7 +182,8 @@ def compute_silhouette_score(
 
             # Compute silhouette score
             labels = adata.obs[key_added]
-            if len(set(labels)) > 1:  # Ensure more than one cluster exists
+            labels_nn = labels[~pd.isna(labels)]
+            if len(pd.unique(labels_nn)) > 1:  # Ensure more than one cluster exists
                 silhouette_avg = silhouette_score(pca, labels, metric=metric)
                 if silhouette_avg > best_silhouette_score:
                     best_silhouette_score = silhouette_avg
@@ -219,7 +225,7 @@ def compute_purity(
     cluster_keys = []
 
     for random_state in range(5):
-        key_added, pca = run_leiden_clustering_on_random_subset(
+        key_added, _pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
@@ -245,7 +251,7 @@ def compute_ari(
     inplace: bool = True,
 ) -> float:
     """
-    Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subsets of genes.
+    Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subset of cells.
 
     Parameters
     ----------
@@ -253,8 +259,8 @@ def compute_ari(
         The SpatialData object containing clustering information.
     resolution : float, optional
         The resolution parameter for Leiden clustering, by default 1.0.
-    n_genes_subset : int, optional
-        The number of genes to subset for clustering, by default 100.
+    frac_cells_subset : float, optional
+        The fraction of cells to subset for clustering, by default 0.63.
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     inplace : bool, optional
@@ -269,7 +275,7 @@ def compute_ari(
     cluster_keys = []
     # Run clustering on random subsets of genes
     for random_state in range(5):
-        key_added, pca = run_leiden_clustering_on_random_subset(
+        key_added, _pca = run_leiden_clustering_on_random_subset(
             sdata,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,

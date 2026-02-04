@@ -7,9 +7,7 @@ import pytest
 import segtraq as st
 
 
-def _pick_two_cells_with_different_types(
-    obs: pd.DataFrame, cell_key="cell", cell_type_key="transferred_cell_type"
-):
+def _pick_two_cells_with_different_types(obs: pd.DataFrame, cell_key="cell", cell_type_key="transferred_cell_type"):
     """Return two cells with different non-null types."""
     sub = obs[[cell_key, cell_type_key]].dropna()
     if sub.empty:
@@ -48,10 +46,7 @@ def test_fraction_heterotypic_overlap_inplace_writes_to_obs(sdata_3D_labeled):
             obs = obs.drop(columns=[col])
     sdata.tables["table"].obs = obs
 
-    st.vl.fraction_heterotypic_overlap(sdata, 
-                                       tables_cell_id_key="cell",
-                                       shapes_cell_id_key="cell",
-                                       inplace=True)
+    st.vl.fraction_heterotypic_overlap(sdata, tables_cell_id_key="cell", shapes_cell_id_key="cell", inplace=True)
 
     obs2 = sdata.tables["table"].obs
     assert "heterotypic_overlap_area" in obs2.columns
