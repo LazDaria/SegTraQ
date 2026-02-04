@@ -190,65 +190,84 @@ class SegTraQ:
             raise TypeError("Must be a SpatialData object")
         self._sdata = value
 
-    def run_baseline(self, inplace: bool = True):
+    def run_baseline(
+        self,
+        inplace: bool = True,
+        *,
+        morphological_kwargs: dict | None = None,
+    ):
         """
-        Compute baseline SegTraQ metrics (via the bound BL facade) and optionally
-        merge them into the cell table.
+        Run baseline (bl) metrics.
 
-        Metrics
-        -------
-        - genes_per_cell
-        - transcripts_per_cell
-        - mean_transcripts_per_gene_per_cell
-        - transcript_density
-        - morphological features per cell
-        - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
+        Convenience wrapper around global and per-cell summary metrics. Runs, in order:
+
+        1) number of cells
+        2) number of transcripts
+        3) number of genes
+        4) % unassigned transcripts
+        5) % unassigned transcripts per gene
+        6) transcripts per cell
+        7) genes per cell
+        8) mean transcripts per detected gene per cell
+        9) morphological features
+        10) transcript density
 
         Parameters
         ----------
         inplace : bool, default=True
-            If True, metrics are merged into `sdata.tables[tables_key].obs` and
-            `sdata.tables[tables_key].uns.
-            If False, returns the computed objects.
+            If True, results are merged into `.uns`, `.obs`, and/or `.var` as implemented
+            by each metric, and None is returned.
+            If False, per-metric results are returned in a dict.
+        morphological_kwargs : dict or None, optional
+            Extra arguments forwarded to :meth:`bl.morphological_features`.
 
         Returns
         -------
         None or dict
-            - If `inplace=True`: returns None after writing to `sdata`.
-            - If `inplace=False`: returns a dict with keys:
-            `summary`, `genes_per_cell`, `transcripts_per_cell`,
-                `mean_transcripts_per_gene_per_cell`and optionally `transcript_density`.
+            If ``inplace=True``, returns None.
+            If ``inplace=False``, returns a dict with keys:
+            - ``"num_cells"``
+            - ``"num_transcripts"``
+            - ``"num_genes"``
+            - ``"perc_unassigned_transcripts"``
+            - ``"perc_unassigned_transcripts_per_gene"``
+            - ``"transcripts_per_cell"``
+            - ``"genes_per_cell"``
+            - ``"mean_transcripts_per_gene_per_cell"``
+            - ``"morphological_features"``
+            - ``"transcript_density"``
         """
+        morphological_kwargs = {} if morphological_kwargs is None else dict(morphological_kwargs)
 
-        gpc = self.bl.genes_per_cell(inplace=inplace)
+        nc = self.bl.num_cells(inplace=inplace)
+        nt = self.bl.num_transcripts(inplace=inplace)
+        ng = self.bl.num_genes(inplace=inplace)
+        pu = self.bl.perc_unassigned_transcripts(inplace=inplace)
+
+        pu_pg = self.bl.perc_unassigned_transcripts_per_gene(inplace=inplace)
+
         tpc = self.bl.transcripts_per_cell(inplace=inplace)
-        tgc = self.bl.mean_transcripts_per_gene_per_cell(inplace=inplace)
-        mrp = self.bl.morphological_features(inplace=inplace)
+        gpc = self.bl.genes_per_cell(inplace=inplace)
+        mtg = self.bl.mean_transcripts_per_gene_per_cell(inplace=inplace)
+        dens = self.bl.transcript_density(inplace=inplace)
 
-        dens_raw = self.bl.transcript_density(inplace=inplace)
-        dens = None if dens_raw is None else dens_raw
-
-        summary = dict(
-            num_cells=self.bl.num_cells(inplace=inplace),
-            num_genes=self.bl.num_genes(inplace=inplace),
-            num_transcripts=self.bl.num_transcripts(inplace=inplace),
-            perc_unassigned_transcripts=self.bl.perc_unassigned_transcripts(inplace=inplace),
-            perc_unassigned_transcripts_per_gene=self.bl.perc_unassigned_transcripts_per_gene(inplace=inplace),
-        )
+        morph = self.bl.morphological_features(inplace=inplace, **(morphological_kwargs))
 
         if inplace:
             return None
-        else:
-            out = {
-                "summary": summary,
-                "genes_per_cell": gpc,
-                "transcripts_per_cell": tpc,
-                "mean_transcripts_per_gene_per_cell": tgc,
-                "morphological_feautres": mrp,
-            }
-            if dens is not None:
-                out["transcript_density"] = dens
-            return out
+
+        return {
+            "num_cells": nc,
+            "num_transcripts": nt,
+            "num_genes": ng,
+            "perc_unassigned_transcripts": pu,
+            "perc_unassigned_transcripts_per_gene": pu_pg,
+            "transcripts_per_cell": tpc,
+            "genes_per_cell": gpc,
+            "mean_transcripts_per_gene_per_cell": mtg,
+            "morphological_features": morph,
+            "transcript_density": dens,
+        }
 
     def run_region_similarity(
         self,
@@ -291,14 +310,10 @@ class SegTraQ:
         None or dict
         - If `inplace=True`: returns None after writing to `sdata`.
         - If `inplace=False`: returns a dict with keys:
-        * "ious": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]
-        * "similarity_nucleus_cell": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
-                                    similarity_nucleus_cell, nucleus_fraction]
-        * "similarity_nucleus_cytoplasm": DataFrame with columns [tables_cell_id_key,
-          nucleus_id, iou, similarity_nucleus_cytoplasm]
-        * "similarity_border_neighborhood": DataFrame with columns
-                                    [tables_cell_id_key, similarity_center_border,
-                                    similarity_border_neighborhood, similarity_border_neighborhood]
+        * "ious": pd.DataFrame
+        * "similarity_nucleus_cell": pd.DataFrame
+        * "similarity_nucleus_cytoplasm": pd.DataFrame
+        * "similarity_border_neighborhood": pd.DataFrame
 
         Notes
         -----
@@ -973,7 +988,7 @@ class _BLFacade:
 
     morphological_features.__doc__ = bl.morphological_features.__doc__
 
-    def transcript_density(self, inplace: bool = False):
+    def transcript_density(self, inplace: bool = True):
         return bl.transcript_density(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,

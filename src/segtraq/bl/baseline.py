@@ -56,7 +56,9 @@ def num_transcripts(
     int
         The total number of transcripts in the specified SpatialData object.
     """
-    num_transcripts = sdata.points[points_key].shape[0].compute()
+    points = sdata.points[points_key]
+    points = points.compute() if hasattr(points, "compute") else points
+    num_transcripts = len(points)
     if inplace:
         sdata.tables[tables_key].uns["num_transcripts"] = num_transcripts
 
@@ -92,7 +94,9 @@ def num_genes(
         The number of unique genes found in the specified SpatialData object.
     """
     # converting from np.int64 to int for consistency
-    num_genes = int(sdata.points[points_key][points_gene_key].nunique().compute())
+    points = sdata.points[points_key]
+    points = points.compute() if hasattr(points, "compute") else points
+    num_genes = int(points[points_gene_key].nunique())
     if inplace:
         sdata.tables[tables_key].uns["num_genes"] = num_genes
     return num_genes
@@ -133,7 +137,8 @@ def perc_unassigned_transcripts(
     """
     points = sdata.points[points_key][points_cell_id_key]
     is_background = _is_background(points, points_background_id)
-    perc_unassigned_transcripts = is_background.mean().compute() * 100
+    is_background = is_background.compute() if hasattr(is_background, "compute") else is_background
+    perc_unassigned_transcripts = is_background.mean() * 100
 
     if inplace:
         sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
@@ -241,8 +246,9 @@ def transcripts_per_cell(
         A DataFrame with two columns: the cell identifier (`cell_key`) and the
         corresponding transcript count ("transcript_count").
     """
-    counts = sdata.points[points_key][points_cell_id_key].compute()
-    counts = counts[counts != points_background_id].value_counts().astype("int64")
+    counts = sdata.points[points_key][points_cell_id_key]
+    counts = counts.compute() if hasattr(counts, "compute") else counts
+    counts = counts[~_is_background(counts, points_background_id)].value_counts().astype("int64")
     counts_df = counts.reset_index()
     counts_df.columns = [points_cell_id_key, "transcript_count"]
 
@@ -294,7 +300,7 @@ def genes_per_cell(
     """
     df = sdata.points[points_key].compute()
     # Exclude unassigned transcripts
-    df = df[df[points_cell_id_key] != points_background_id]
+    df = df[~_is_background(df[points_cell_id_key], points_background_id)]
 
     # Group by cell and count unique genes
     gene_counts = df.groupby(points_cell_id_key)[points_gene_key].nunique().reset_index()
@@ -356,7 +362,7 @@ def mean_transcripts_per_gene_per_cell(
     """
     df = sdata.points[points_key].compute()
     # Exclude unassigned transcripts
-    df = df[df[points_cell_id_key] != points_background_id]
+    df = df[~_is_background(df[points_cell_id_key], points_background_id)]
 
     # Count transcripts per (cell, gene)
     per_gene_counts = (
