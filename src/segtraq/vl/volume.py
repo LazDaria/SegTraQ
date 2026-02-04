@@ -5,11 +5,11 @@ import spatialdata as sd
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
-from ..utils import _ensure_index, _is_background, merge_into_obs
+from ..utils import _ensure_index, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
 from .utils import _correct_z_drift
 
 
-def compute_mean_vsi_per_cell(
+def vertical_signal_integrity_per_cell(
     sdata,
     vsi_map: np.ndarray,
     tables_key: str = "table",
@@ -20,7 +20,6 @@ def compute_mean_vsi_per_cell(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
-    shift_to_origin: bool = True,
     inplace: bool = True,
 ):
     """
@@ -57,10 +56,6 @@ def compute_mean_vsi_per_cell(
         Column for the x-coordinate of each transcript.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript.
-    shift_to_origin : bool, default=True
-        If True, shift transcript coordinates by subtracting global min(x) and min(y)
-        (computed from the filtered transcripts) before sampling `vsi_map`.
-        If False, transcript coordinates are used directly as indices.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables[tables_key].obs`.
 
@@ -72,43 +67,53 @@ def compute_mean_vsi_per_cell(
     if vsi_map.ndim != 2:
         raise ValueError(f"`vsi_map` must be a 2D array. Got shape {vsi_map.shape}.")
 
+    # subset points and drop rows with missing cell identifiers, genes or coordinates
     pts = sdata.points[points_key]
-    needed = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
+    cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
 
-    tx = pts[needed].dropna(subset=[points_cell_id_key, points_x_key, points_y_key])
+    tx = pts[cols]
+    tx = tx.dropna(subset=cols)
 
+    # remove background transcripts
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
 
+    # subset transcripts to genes present in the anndata object
     valid_features = pd.Index(sdata.tables[tables_key].var_names)
     tx = tx[tx[points_gene_key].isin(valid_features)]
 
+    # convert to Pandas dataframe if Dask Array
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
 
+    # extract coordinates
     xs = tx[points_x_key].to_numpy(dtype=float)
     ys = tx[points_y_key].to_numpy(dtype=float)
 
-    if shift_to_origin:
-        x0 = float(np.min(xs))
-        y0 = float(np.min(ys))
-        xs = xs - x0
-        ys = ys - y0
+    # shift coordinates to origin of coordinate system (0,0)
+    # for ovrlpy to index correctly - requires positive indices
+    x0 = float(np.min(xs))
+    y0 = float(np.min(ys))
+    xs = xs - x0
+    ys = ys - y0
 
     # int floor for indexing
     xi = np.floor(xs).astype(int)
     yi = np.floor(ys).astype(int)
 
+    # extract vsi values at coordinates
     vsi_vals = vsi_map[yi, xi].astype(float, copy=False)
 
+    # cast into a dataframe
     df = pd.DataFrame(
         {
             tables_cell_id_key: tx[points_cell_id_key].to_numpy(),
-            "mean_vsi": vsi_vals,
+            "vertical_signal_integrity": vsi_vals,
         }
     )
 
-    out = df.groupby(tables_cell_id_key, observed=True)["mean_vsi"].mean().reset_index()
+    # compute the cell wise mean of the vsi
+    out = df.groupby(tables_cell_id_key, observed=True)["vertical_signal_integrity"].mean().reset_index()
 
     if inplace:
         merge_into_obs(
@@ -122,7 +127,7 @@ def compute_mean_vsi_per_cell(
     return out
 
 
-def compute_sim_top_bottom_z(
+def similarity_top_bottom(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -135,8 +140,6 @@ def compute_sim_top_bottom_z(
     points_z_key: str = "z",
     correct_z_drift: bool = True,
     max_points: int = 1_000_000,
-    q0: float = 0.01,
-    q1: float = 0.99,
     seed: int | None = 0,
     q: float = 0.30,
     scale: float = 1e4,
@@ -156,9 +159,8 @@ def compute_sim_top_bottom_z(
       - bottom part: z <= q-quantile within that cell
       - top part:    z >= (1-q)-quantile within that cell
 
-    Gene counts are aggregated separately for bottom and top, then normalized using
-    within-cell library size normalization (bottom+top total), scaled by `scale`,
-    log1p-transformed, and compared using cosine similarity.
+    Gene counts normalised Analytic Pearson residuals (Lause et al. (2021)) for all
+    counts together and work with the normalised residuals which are later taken apart
 
     Cells are filtered / set to NaN if either part is too sparse:
       - at least `min_transcripts` transcripts in BOTH bottom and top parts
@@ -191,8 +193,6 @@ def compute_sim_top_bottom_z(
         The corrected values are used only for defining top/bottom subsets.
     max_points : int, default=1_000_000
         Max. number of points used to fit the regression (random subsampling) in z drift correction.
-    q0, q1 : float, default=0.01, 0.99
-        Quantiles for clipping residual z values in z drift correction.
     seed : int or None, default=0
         Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.
     q : float, default=0.30
@@ -214,19 +214,22 @@ def compute_sim_top_bottom_z(
     if not (0.0 < q < 0.5):
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
 
+    # subset points and drop rows with missing cell identifiers, genes or coordinates
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key, points_z_key]
 
     tx = pts[cols]
     tx = tx.dropna(subset=cols)
 
+    # remove background transcripts
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
 
-    # ensure genes match table var_names
+    # ensure genes match table var_names from the anndata object
     valid_features = pd.Index(sdata.tables[tables_key].var_names)
     tx = tx[tx[points_gene_key].isin(valid_features)]
 
+    # cast into pandas Dataframe if Dask Array
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
 
@@ -238,8 +241,6 @@ def compute_sim_top_bottom_z(
             points_y_key=points_y_key,
             points_z_key=points_z_key,
             max_points=max_points,
-            q0=q0,
-            q1=q1,
             seed=seed,
         )
     else:
@@ -263,25 +264,37 @@ def compute_sim_top_bottom_z(
         tx[tx["_is_top"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
     )
 
-    # align
+    # align top and bottom cells/genes
     common_cells = counts_bottom.index.intersection(counts_top.index)
     common_genes = counts_bottom.columns.intersection(counts_top.columns)
 
+    # counts of the common cells per bottom/top
     counts_bottom_raw = counts_bottom.loc[common_cells, common_genes]
     counts_top_raw = counts_top.loc[common_cells, common_genes]
 
+    # total number of transcripts per bottom/top
     n_tx_bottom = counts_bottom_raw.sum(axis=1)
     n_tx_top = counts_top_raw.sum(axis=1)
 
-    # within-cell normalization using (bottom + top)
-    total_counts = (counts_bottom_raw + counts_top_raw).sum(axis=1).replace(0, np.nan)
-    bottom_norm = counts_bottom_raw.div(total_counts, axis=0) * scale
-    top_norm = counts_top_raw.div(total_counts, axis=0) * scale
-    bottom_norm = np.log1p(bottom_norm).fillna(0.0)
-    top_norm = np.log1p(top_norm).fillna(0.0)
+    # aggregate the counts to total counts
+    X = np.vstack([counts_bottom_raw.to_numpy(), counts_top_raw.to_numpy()])
+    # estimate the overdispersion parameter from the counts per region according to the
+    # variance of a negative binomial; var = mu + mu^2 / theta - solve for theta
+    theta = estimate_theta_simple(X)
+    # normalise the total counts data with analytical pearson residuals
+    R = pearson_residuals(X, theta=theta, clip=None)
+    # take them apart again
+    n = counts_bottom_raw.shape[0]
+    bottom_norm = R[:n, :]
+    top_norm = R[n:, :]
+
+    # cast into dataframe
+    bottom_norm = pd.DataFrame(bottom_norm, columns=counts_bottom_raw.columns, index=counts_bottom_raw.index)
+    top_norm = pd.DataFrame(top_norm, columns=counts_top_raw.columns, index=counts_top_raw.index)
 
     rows = []
     for cid in common_cells:
+        # get the raw counts for the common cell ID
         x_raw = counts_bottom_raw.loc[cid].to_numpy(dtype=float)
         y_raw = counts_top_raw.loc[cid].to_numpy(dtype=float)
 
@@ -293,6 +306,8 @@ def compute_sim_top_bottom_z(
         if n_tx_bottom.loc[cid] < min_transcripts or n_tx_top.loc[cid] < min_transcripts or n_genes_kept < min_genes:
             sim = np.nan
         else:
+            # extract only normalised expression per matching cells for
+            # non zero count genes
             x = bottom_norm.loc[cid].to_numpy(dtype=float)[mask]
             y = top_norm.loc[cid].to_numpy(dtype=float)[mask]
 
@@ -323,7 +338,7 @@ def compute_sim_top_bottom_z(
     return out
 
 
-def compute_heterotypic_overlap_fraction(
+def fraction_heterotypic_overlap(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -336,7 +351,7 @@ def compute_heterotypic_overlap_fraction(
     ),
     shapes_cell_id_key: str = "cell_id",
     unknown_label: str = "Unknown",
-    unknown_policy: str = "treat_as_label",  # {"exclude", "treat_as_label"}
+    unknown_policy: str = "treat_as_label",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -390,6 +405,7 @@ def compute_heterotypic_overlap_fraction(
     if unknown_policy not in {"exclude", "treat_as_label"}:
         raise ValueError(f"unknown_policy must be one of {{'exclude','treat_as_label'}}. Got: {unknown_policy}")
 
+    # extract meta data of cell observations
     obs = sdata.tables[tables_key].obs
     if cell_type_key not in obs.columns:
         raise KeyError(f"{cell_type_key!r} not found in sdata.tables[{tables_key!r}].obs")
@@ -397,21 +413,23 @@ def compute_heterotypic_overlap_fraction(
     cell_type_map = obs.set_index(tables_cell_id_key)[cell_type_key].copy()
 
     gdfs = []
+    # loop over the $z$-stacks
     for k, skey in enumerate(shapes_key_list):
         if skey not in sdata.shapes:
             raise KeyError(f"shapes key {skey!r} not found in sdata.shapes")
-
+        # extract geopandas dataframe
         shapes = sdata.shapes[skey].copy()
 
         gdf = _ensure_index(shapes, shapes_key=skey, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key")
 
         gdf["_cell_id"] = gdf.index
+        # assign $z$-layer
         gdf["_z_layer"] = k
         gdf["_cell_type"] = gdf["_cell_id"].map(cell_type_map)
 
         if unknown_policy == "treat_as_label":
             gdf["_cell_type"] = gdf["_cell_type"].astype("object").where(gdf["_cell_type"].notna(), other=unknown_label)
-
+        # subset geometry to be not NA and not empty
         gdf = gdf[gdf.geometry.notna()].copy()
         gdf = gdf[~gdf.geometry.is_empty].copy()
 
@@ -433,7 +451,7 @@ def compute_heterotypic_overlap_fraction(
     # pick representative polygon per cell: max area across layers
     rep_idx = gdf_all.groupby("_cell_id")["_area"].idxmax()
     reps = gdf_all.loc[rep_idx].copy()
-
+    # get spatial index for cells in bbox around gdf polygons
     sindex = gdf_all.sindex
 
     # compute overlap fraction only for representative polygons
@@ -444,7 +462,7 @@ def compute_heterotypic_overlap_fraction(
         t_i = row["_cell_type"]
         geom_i = row.geometry
         area_i = row["_area"]
-
+        # store invalid cell areas
         if area_i is None or np.isnan(area_i) or area_i <= 0:
             out_rows.append((cid, np.nan))
             continue
@@ -453,28 +471,32 @@ def compute_heterotypic_overlap_fraction(
             if bool(row["_is_unknown"]) or pd.isna(t_i):
                 out_rows.append((cid, np.nan))
                 continue
-
+        # get indices of the intersections of the spatial index with the
+        # target cell
         cand_idx = list(sindex.intersection(geom_i.bounds))
+        # exclude itself
         cand_idx = [j for j in cand_idx if j != i]
-
+        # if empty add 0.0 - do here to avoid empty indexing
         if not cand_idx:
             out_rows.append((cid, 0.0))
             continue
 
         cands = gdf_all.iloc[cand_idx]
-
+        # only consider candidates that are not in the same $z$-layer
         cands = cands[cands["_z_layer"] != z_i]
+        # only consider cells that are not the same cell_id (across $z$)
         cands = cands[cands["_cell_id"] != cid]
 
         if unknown_policy == "exclude":
             cands = cands[~cands["_is_unknown"]]
-
+        # only consider cell types that are not of the same cell type
         cands = cands[cands["_cell_type"] != t_i]
-
+        # if empty add 0.0
         if cands.empty:
             out_rows.append((cid, 0.0))
             continue
-
+        # compute area intersections between candidate cells and
+        # target cell
         inter_geoms = []
         for geom_j in cands.geometry:
             inter = geom_i.intersection(geom_j)
