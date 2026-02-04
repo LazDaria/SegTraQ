@@ -126,9 +126,7 @@ def umap(
 
     # validate color column
     if color not in umap_df.columns:
-        raise ValueError(
-            f"Column '{color}' not found in UMAP dataframe. " f"Available columns: {list(umap_df.columns)}"
-        )
+        raise ValueError(f"Column '{color}' not found in UMAP dataframe. Available columns: {list(umap_df.columns)}")
 
     methods = umap_df["Segmentation Method"].unique().tolist()
     n = len(methods)
@@ -150,10 +148,10 @@ def umap(
         else:
             # ensure all categories are covered
             palette = {v: palette.get(v, "#aaaaaa") for v in values}
-    else:
-        # continuous: define a shared normalization
-        vmin, vmax = umap_df[color].min(), umap_df[color].max()
-        norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    # else:
+    #     # continuous: define a shared normalization
+    #     vmin, vmax = umap_df[color].min(), umap_df[color].max()
+    #     norm = plt.Normalize(vmin=vmin, vmax=vmax) # assigned but never used
 
     # plot each method
     for i, method in enumerate(methods):
@@ -172,16 +170,16 @@ def umap(
                 ax=ax,
                 legend=False,  # suppress per-axis legend
             )
-        else:
-            sc = ax.scatter(
-                df_m["x"],
-                df_m["y"],
-                c=df_m[color],
-                cmap=cmap,
-                s=point_size,
-                linewidth=0,
-                norm=norm,
-            )
+        # else:
+        #     sc = ax.scatter( # assigned but never used
+        #         df_m["x"],
+        #         df_m["y"],
+        #         c=df_m[color],
+        #         cmap=cmap,
+        #         s=point_size,
+        #         linewidth=0,
+        #         norm=norm,
+        #     )
 
         ax.set_title(method)
         ax.set_xlabel("UMAP 1")
@@ -202,8 +200,8 @@ def umap(
                 loc="upper left",
                 frameon=False,
             )
-        else:
-            cbar = fig.colorbar(sc, ax=axes, label=color, shrink=0.8)
+        # else:
+        #     cbar = fig.colorbar(sc, ax=axes, label=color, shrink=0.8) # assigned but never used
 
     fig.suptitle(f"UMAP colored by {color}", y=0.995, fontsize=14)
     # we do not use tight_layout here to avoid messing with the position of the legend/colorbar

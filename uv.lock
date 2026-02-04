@@ -3187,7 +3187,7 @@ requires-dist = [
     { name = "rtree" },
     { name = "ruff", marker = "extra == 'test'" },
     { name = "scanpy", specifier = "<1.12" },
-    { name = "spatialdata", specifier = ">=0.6.1" },
+    { name = "spatialdata", specifier = "==0.6.1" },
     { name = "sphinx", marker = "extra == 'docs'" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'" },
