@@ -1,3 +1,5 @@
+import warnings
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -58,11 +60,13 @@ def _process_cell(
     cell_id = cell_row.name
 
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
+
+    # if there are no nuclei intersecting with our cell
     if not candidate_idx:
         return {
             id_name: cell_id,
-            "best_nuc_id": np.nan,
-            "IoU": np.nan,
+            "nucleus_id": np.nan,
+            "iou": np.nan,
             "nucleus_fraction": np.nan,
         }
 
@@ -72,72 +76,72 @@ def _process_cell(
 
     best = {
         "score": -np.inf,
-        "nuc_area": -np.inf,
-        "inter_area": -np.inf,
-        "nuc_id": np.nan,
+        "nucleus_area": -np.inf,
+        "intersection_area": -np.inf,
+        "nucleus_id": np.nan,
         "iou": np.nan,
-        "nuc_frac": np.nan,
+        "nucleus_fraction": np.nan,
     }
 
-    for nuc_id, nuc in candidates.iterrows():
-        nuc_geom = nuc.geometry
-        if not (cell_geom.is_valid and nuc_geom.is_valid):
+    for nucleus_id, nucleus in candidates.iterrows():
+        nucleus_geom = nucleus.geometry
+        if not (cell_geom.is_valid and nucleus_geom.is_valid):
             continue
 
-        nuc_area = nuc_geom.area
-        if nuc_area <= 0 or cell_area <= 0:
+        nucleus_area = nucleus_geom.area
+        if nucleus_area <= 0 or cell_area <= 0:
             continue
 
-        inter_area = _safe_intersection_area(cell_geom, nuc_geom)
-        if np.isnan(inter_area) or inter_area <= min_intersection_area:
+        intersection_area = _safe_intersection_area(cell_geom, nucleus_geom)
+        if np.isnan(intersection_area) or intersection_area <= min_intersection_area:
             continue
 
-        iou = _compute_iou_from_areas(inter_area, cell_area, nuc_area)
-        nuc_frac = _compute_nucleus_fraction(inter_area, nuc_area)
+        iou = _compute_iou_from_areas(intersection_area, cell_area, nucleus_area)
+        nucleus_fraction = _compute_nucleus_fraction(intersection_area, nucleus_area)
 
-        score = iou if select_by == "iou" else nuc_frac
+        score = iou if select_by == "iou" else nucleus_fraction
 
-        # Compare with tie-breaks: score, then nuc_area, then inter_area, then nuc_id
+        # Compare with tie-breaks: score, then nucleus_area, then intersection_area, then nucleus_id
         better = (
             (score > best["score"])
-            or (np.isclose(score, best["score"]) and nuc_area > best["nuc_area"])
+            or (np.isclose(score, best["score"]) and nucleus_area > best["nucleus_area"])
             or (
                 np.isclose(score, best["score"])
-                and np.isclose(nuc_area, best["nuc_area"])
-                and inter_area > best["inter_area"]
+                and np.isclose(nucleus_area, best["nucleus_area"])
+                and intersection_area > best["intersection_area"]
             )
             or (
                 np.isclose(score, best["score"])
-                and np.isclose(nuc_area, best["nuc_area"])
-                and np.isclose(inter_area, best["inter_area"])
-                and nuc_id < best["nuc_id"]
+                and np.isclose(nucleus_area, best["nucleus_area"])
+                and np.isclose(intersection_area, best["intersection_area"])
+                and nucleus_id < best["nucleus_id"]
             )
         )
 
         if better:
             best.update(
                 score=score,
-                nuc_area=nuc_area,
-                inter_area=inter_area,
-                nuc_id=nuc_id,
+                nucleus_area=nucleus_area,
+                intersection_area=intersection_area,
+                nucleus_id=nucleus_id,
                 iou=iou,
-                nuc_frac=nuc_frac,
+                nucleus_fraction=nucleus_fraction,
             )
 
     # If nothing survived filtering
     if best["score"] == -np.inf:
         return {
             id_name: cell_id,
-            "best_nuc_id": np.nan,
-            "IoU": np.nan,
+            "nucleus_id": np.nan,
+            "iou": np.nan,
             "nucleus_fraction": np.nan,
         }
 
     return {
         id_name: cell_id,
-        "best_nuc_id": best["nuc_id"],
-        "IoU": best["iou"],
-        "nucleus_fraction": best["nuc_frac"],
+        "nucleus_id": best["nucleus_id"],
+        "iou": best["iou"],
+        "nucleus_fraction": best["nucleus_fraction"],
     }
 
 
@@ -423,7 +427,7 @@ def _compute_ncvs_within_radius(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    radius_factor: float = 2.0,
+    neighborhood_radius_factor: float = 2.0,
 ) -> pd.DataFrame:
     """
     Compute neighborhood composition vectors (NCVs) as the average gene expression
@@ -439,8 +443,8 @@ def _compute_ncvs_within_radius(
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    radius_factor : float, default=2.0
-        Neighborhood radius factor in the same coordinate units as the shapes.
+    neighborhood_radius_factor : float, default=2.0
+        This is multiplied by each cell's radius to define the neighborhood distance for that cell.
 
     Returns
     -------
@@ -491,7 +495,7 @@ def _compute_ncvs_within_radius(
 
     for i in range(n_cells):
         # Query neighbors within radius (including itself)
-        idxs = tree.query_ball_point(coords[i], r=radii[i] * radius_factor)
+        idxs = tree.query_ball_point(coords[i], r=radii[i] * neighborhood_radius_factor)
         # Remove self
         idxs = [j for j in idxs if j != i]
         if len(idxs) == 0:
@@ -530,7 +534,7 @@ def _get_center_border_counts(
     sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
     sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
 
-    _, expr_center = _join_points_regions(
+    tx_assigned_to_center, expr_center = _join_points_regions(
         sdata=sdata,
         region_key="cell_centers",
         tables_key=tables_key,
@@ -544,7 +548,7 @@ def _get_center_border_counts(
         predicate="within",
     )
 
-    _, expr_border = _join_points_regions(
+    tx_assigned_to_border, expr_border = _join_points_regions(
         sdata=sdata,
         region_key="cell_borders",
         tables_key=tables_key,
@@ -557,6 +561,19 @@ def _get_center_border_counts(
         points_background_id=points_background_id,
         predicate="within",
     )
+
+    # checking if there are any transcripts that were counted in both center and border
+    # this should never be the case, hence we issue a warning if it happens
+    center_transcripts = tx_assigned_to_center["point_id"].values
+    border_transcripts = tx_assigned_to_border["point_id"].values
+    intersecting_transcripts = set(center_transcripts).intersection(set(border_transcripts))
+    if len(intersecting_transcripts) > 0:
+        warnings.warn(
+            f"{len(intersecting_transcripts)} transcripts were counted in both center and border regions. "
+            f"Please report this issue to the SegTraQ developers.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     return expr_center, expr_border
 
