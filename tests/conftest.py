@@ -68,6 +68,8 @@ def test_sdata_3D():
     )
 
     return sdata_3D
+
+
 @pytest.fixture(scope="session", name="segtraq_obj")
 def test_segtraq_obj():
     """Load the SpatialData test sample once per test session."""

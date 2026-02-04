@@ -151,7 +151,7 @@ def umap(
     else:
         # continuous: define a shared normalization
         vmin, vmax = umap_df[color].min(), umap_df[color].max()
-        norm = plt.Normalize(vmin=vmin, vmax=vmax) 
+        norm = plt.Normalize(vmin=vmin, vmax=vmax)
 
     # plot each method
     for i, method in enumerate(methods):
@@ -171,7 +171,7 @@ def umap(
                 legend=False,  # suppress per-axis legend
             )
         else:
-            sc = ax.scatter( 
+            sc = ax.scatter(
                 df_m["x"],
                 df_m["y"],
                 c=df_m[color],
