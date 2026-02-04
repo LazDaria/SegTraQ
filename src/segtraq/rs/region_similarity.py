@@ -228,7 +228,7 @@ def similarity_nucleus_cell(
             n_jobs=n_jobs,
             inplace=inplace,
         )
-    
+
     match_df = tbl.obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
     id_key = tables_cell_id_key
 
