@@ -160,7 +160,7 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="region_correlation.html">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
@@ -177,7 +177,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Similarity between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
@@ -338,7 +338,7 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_correlation"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_correlation()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised_metrics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.sdata"><code class="docutils literal notranslate"><span class="pre">SegTraQ.sdata</span></code></a></li>
@@ -573,32 +573,40 @@ and return a dict when inplace=False.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="segtraq.SegTraQ.run_region_correlation">
-<span class="sig-name descname"><span class="pre">run_region_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cosine_sim'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_region_correlation" title="Link to this definition">#</a></dt>
-<dd><p>Compute region-correlation metrics and optionally merge them into the cell table.</p>
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_region_similarity">
+<span class="sig-name descname"><span class="pre">run_region_similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cosine_sim'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iou_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cell_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cytoplasm_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_border_neighborhood_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_region_similarity" title="Link to this definition">#</a></dt>
+<dd><p>Compute region similarity metrics and optionally merge them into the cell table.</p>
 <p>This runs, in order:
 1) IoU between each cell and its best-matching nucleus
-2) Correlation between per-cell expression and its matched nucleus (Pearson)
-3) Correlation between the cell’s nucleus-overlap part vs. remainder (vectorized)
-4) Compute correlation of gene expression in an eroded interior (“center”) and</p>
+2) Similarity between per-cell expression and its matched nucleus
+3) Similarity between the cell’s nucleus vs. cytoplasm expression
+4) Similarity of gene expression in an eroded interior (“center”) and</p>
 <blockquote>
-<div><p>a thin outer shell (“border”), and (2) comparing the border with the neighborhood
-composition vector (NCV).</p>
+<div><p>a thin outer shell (“border”), and (2) comparing the border with the neighborhood.</p>
 </div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, writes results into <cite>sdata.tables[tables_key].obs</cite> and returns None.
-If False, returns a dictionary of DataFrames without writing.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>metric</strong> (<em>str</em><em>, </em><em>default=&quot;cosine_sim&quot;</em>)</p></li>
+<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>default=-1</em>)</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, writes results into <cite>sdata.tables[tables_key].obs</cite> and returns None.
+If False, returns a dictionary of DataFrames without writing.</p></li>
+<li><p><strong>iou_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>match_nuclei_to_cells</cite>.</p></li>
+<li><p><strong>similarity_nucleus_cell_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>similarity_nucleus_cell</cite>.</p></li>
+<li><p><strong>similarity_nucleus_cytoplasm_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>similarity_nucleus_cytoplasm</cite>.</p></li>
+<li><p><strong>similarity_border_neighborhood_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>similarity_border_neighborhood</cite>.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
 <li><p><em>None or dict</em></p></li>
 <li><p><strong>- If `inplace=True`</strong> (returns None after writing to <cite>sdata</cite>.)</p></li>
 <li><p><strong>- If `inplace=False`</strong> (<em>returns a dict with keys:</em>)</p></li>
-<li><p><strong>* “ious”</strong> (<em>DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU]</em>)</p></li>
-<li><p><strong>* “cell_nuc_correlation”.</strong> (<em>DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_nc_cell]</em>)</p></li>
-<li><p><strong>* “parts_correlation”</strong> (<em>DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_cell_parts]</em>)</p></li>
-<li><p><strong>* “center_border_ncv_corr”</strong> (<em>DataFrame with columns</em>) – [tables_cell_id_key, corr_center_border, corr_border_ncv, corr_ncv_vs_center]</p></li>
+<li><p><strong>* “ious”</strong> (<em>DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]</em>)</p></li>
+<li><p><strong>* “similarity_nucleus_cell”</strong> (<em>DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,</em>) – similarity_nucleus_cell, nucleus_fraction]</p></li>
+<li><p><strong>* “similarity_nucleus_cytoplasm”</strong> (<em>DataFrame with columns [tables_cell_id_key,</em>) – nucleus_id, iou, similarity_nucleus_cytoplasm]</p></li>
+<li><p><strong>* “similarity_border_neighborhood”</strong> (<em>DataFrame with columns</em>) – [tables_cell_id_key, similarity_center_border,
+similarity_border_neighborhood, similarity_border_neighborhood]</p></li>
 </ul>
 </p>
 </dd>
@@ -726,7 +734,7 @@ If False: return a dictionary of all computed results.</p></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_correlation"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_correlation()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised_metrics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.sdata"><code class="docutils literal notranslate"><span class="pre">SegTraQ.sdata</span></code></a></li>

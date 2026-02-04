@@ -14,7 +14,7 @@ SegTraQ documentation
 
    modules/baseline
    modules/clustering_stability
-   modules/region_correlation
+   modules/region_similarity
    modules/supervised
    modules/point_statistics
    modules/volume
@@ -33,7 +33,7 @@ SegTraQ documentation
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
-   notebooks/region_correlation
+   notebooks/region_similarity
    notebooks/volume
    notebooks/supervised
    notebooks/point_statistics

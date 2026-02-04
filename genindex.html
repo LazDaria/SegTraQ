@@ -159,7 +159,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/region_correlation.html">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
@@ -176,7 +176,7 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/region_similarity.html">Similarity between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
@@ -335,17 +335,9 @@ document.write(`
 </li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
 </li>
-      <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_correlation">compute_cell_nuc_correlation() (in module segtraq.rc.region_correlation)</a>
-</li>
-      <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_cell_nuc_match">compute_cell_nuc_match() (in module segtraq.rc.region_correlation)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_center_border_ncv_correlation">compute_center_border_ncv_correlation() (in module segtraq.rc.region_correlation)</a>
-</li>
       <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_cluster_connectedness">compute_cluster_connectedness() (in module segtraq.cs.clustering_stability)</a>
-</li>
-      <li><a href="modules/region_correlation.html#segtraq.rc.region_correlation.compute_correlation_between_parts">compute_correlation_between_parts() (in module segtraq.rc.region_correlation)</a>
 </li>
       <li><a href="modules/supervised.html#segtraq.sp.supervised.compute_MECR">compute_MECR() (in module segtraq.sp.supervised)</a>
 </li>
@@ -389,6 +381,8 @@ document.write(`
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.get_genes_in_compartment">get_genes_in_compartment() (in module segtraq.rs.region_similarity)</a>
+</li>
       <li><a href="modules/utils.html#segtraq.get_ref_markers">get_ref_markers() (in module segtraq)</a>
 </li>
   </ul></td>
@@ -397,6 +391,8 @@ document.write(`
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.match_nuclei_to_cells">match_nuclei_to_cells() (in module segtraq.rs.region_similarity)</a>
+</li>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.mean_transcripts_per_gene_per_cell">mean_transcripts_per_gene_per_cell() (in module segtraq.bl.baseline)</a>
 </li>
       <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.membrane_distance_skewness">membrane_distance_skewness() (in module segtraq.ps.point_statistics)</a>
@@ -413,7 +409,7 @@ document.write(`
 </li>
         <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">segtraq.ps.point_statistics</a>
 </li>
-        <li><a href="modules/region_correlation.html#module-segtraq.rc.region_correlation">segtraq.rc.region_correlation</a>
+        <li><a href="modules/region_similarity.html#module-segtraq.rs.region_similarity">segtraq.rs.region_similarity</a>
 </li>
         <li><a href="modules/supervised.html#module-segtraq.sp.supervised">segtraq.sp.supervised</a>
 </li>
@@ -472,7 +468,7 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_point_statistics">run_point_statistics() (segtraq.SegTraQ method)</a>
 </li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_region_correlation">run_region_correlation() (segtraq.SegTraQ method)</a>
+      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_region_similarity">run_region_similarity() (segtraq.SegTraQ method)</a>
 </li>
       <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_supervised_metrics">run_supervised_metrics() (segtraq.SegTraQ method)</a>
 </li>
@@ -509,8 +505,6 @@ document.write(`
         <li><a href="modules/plotting.html#module-segtraq.pl.plotting">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     segtraq.ps.point_statistics
 
@@ -518,11 +512,13 @@ document.write(`
         <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
-    segtraq.rc.region_correlation
+    segtraq.rs.region_similarity
 
       <ul>
-        <li><a href="modules/region_correlation.html#module-segtraq.rc.region_correlation">module</a>
+        <li><a href="modules/region_similarity.html#module-segtraq.rs.region_similarity">module</a>
 </li>
       </ul></li>
       <li>
@@ -539,6 +535,12 @@ document.write(`
         <li><a href="modules/volume.html#module-segtraq.vl.volume">module</a>
 </li>
       </ul></li>
+      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_border_neighborhood">similarity_border_neighborhood() (in module segtraq.rs.region_similarity)</a>
+</li>
+      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_nucleus_cell">similarity_nucleus_cell() (in module segtraq.rs.region_similarity)</a>
+</li>
+      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_nucleus_cytoplasm">similarity_nucleus_cytoplasm() (in module segtraq.rs.region_similarity)</a>
+</li>
       <li><a href="modules/volume.html#segtraq.vl.volume.similarity_top_bottom">similarity_top_bottom() (in module segtraq.vl.volume)</a>
 </li>
   </ul></td>

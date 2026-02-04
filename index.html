@@ -161,7 +161,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/region_correlation.html">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
@@ -178,7 +178,7 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Getting data into the right format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Baseline metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Clustering stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/region_similarity.html">Similarity between subcellular regions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Supervised metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Point statistics</a></li>
@@ -342,7 +342,7 @@ document.write(`
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/region_correlation.html">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
@@ -409,11 +409,11 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="notebooks/clustering_stability.html#Supervised-cluster-stability">Supervised cluster stability</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/region_correlation.html">Correlation between subcellular regions</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Expression-correlation-between-cell-and-nucleus">Expression correlation between cell and nucleus</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Correlation-between-Intersection-and-Remainder-Parts-of-the-Cell">Correlation between Intersection and Remainder Parts of the Cell</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/region_correlation.html#Correlation-cell-border-with-its-center-and-its-neigbhorhood">Correlation cell border with its center and its neigbhorhood</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/region_similarity.html">Similarity between subcellular regions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_similarity.html#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_similarity.html#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_similarity.html#Similarity-between-Nucleus-and-Cytoplasm">Similarity between Nucleus and Cytoplasm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/region_similarity.html#Similarity-between-the-cell-border-with-its-neigbhorhood">Similarity between the cell border with its neigbhorhood</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">3D Metrics</a><ul>
