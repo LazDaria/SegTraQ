@@ -5,9 +5,6 @@ import segtraq as st
 
 
 def test_match_nuclei_to_cells(sdata_new):
-    assert "nucleus_id" not in sdata_new.tables["table"].obs.columns, (
-        "nucleus_id should not be in table.obs before computation"
-    )
     df = st.rs.match_nuclei_to_cells(sdata_new, n_jobs=8)
     assert isinstance(df, pd.DataFrame), f"cell_nucleus_match should return a DataFrame, got {type(df)}"
     expected_cols = {"cell_id", "nucleus_id", "iou", "nucleus_fraction"}

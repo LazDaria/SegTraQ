@@ -53,7 +53,7 @@ def test_sdata_new():
 def test_segtraq_obj():
     """Load the SpatialData test sample once per test session."""
 
-    test_data_path = Path(__file__).parent / "data" / "xenium_sdata.zarr"
+    test_data_path = Path(__file__).parent / "data" / "xenium.zarr"
     sdata_new = SpatialData.read(test_data_path)
 
     # subsetting for faster tests

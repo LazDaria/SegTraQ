@@ -4,13 +4,11 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from shapely import LinearRing, Point, Polygon
 
-from ..rs.region_correlation import compute_cell_nuc_match
-from ..rs.utils import  _align_expression_dfs, _get_center_border_counts, _get_filtered_points_df, _join_points_regions
+from ..rs.region_similarity import match_nuclei_to_cells
+from ..rs.utils import _get_filtered_points_df, _join_points_regions
 from ..utils import merge_into_obs, xy_scale
 from .utils import _fisher_pearson_sample_skew, _get_cell_geometry_lookup
-from ..utils import filter_cells, merge_into_obs
 
 
 def percentage_transcripts_in_compartments(
@@ -31,7 +29,6 @@ def percentage_transcripts_in_compartments(
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = 1,
-    use_progress: bool = True,
     predicate: str = "intersects",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -43,7 +40,7 @@ def percentage_transcripts_in_compartments(
 
     Notes
     -----
-    - Nuclei are matched to cells using `compute_cell_nuc_match` (best_nuc_id per cell).
+    - Nuclei are matched to cells using `match_nuclei_to_cells` (one nucleus_id per cell).
     - A transcript is counted as "inside cell" only if it spatially joins to some cell polygon
       AND the joined polygon id equals its assigned `points_cell_id_key`.
     - Nuclear transcripts are those that join to the matched nucleus polygon for their cell.
@@ -86,8 +83,6 @@ def percentage_transcripts_in_compartments(
         Minimum overlap area required to consider a nucleus a candidate for a cell.
     n_jobs : int, default=1
         Number of parallel jobs for cell-nucleus matching (if needed). `-1` uses all CPUs.
-    use_progress : bool, default=True
-        Whether to show a progress bar when computing cell-nucleus matching.
     predicate : str, default="intersects"
         Geometric predicate used to assign transcripts to cell or nucleus polygons during
         spatial joins (e.g. "covers" includes boundary points, "intersects" is more permissive).
@@ -138,8 +133,8 @@ def percentage_transcripts_in_compartments(
     n_in_cell = pts_cells.loc[inside_cell].groupby(points_cell_id_key, observed=True).size().rename("n_in_cell")
 
     # ensure we have cell -> best nucleus id mapping
-    if "best_nuc_id" not in tbl.obs.columns:
-        _ = compute_cell_nuc_match(
+    if "nucleus_id" not in tbl.obs.columns:
+        _ = match_nuclei_to_cells(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
@@ -148,13 +143,12 @@ def percentage_transcripts_in_compartments(
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
-            use_progress=use_progress,
             inplace=True,
         )
 
     # map each cell_id to its best nucleus id
-    cell_to_nuc = tbl.obs[[tables_cell_id_key, "best_nuc_id"]].copy()
-    cell_to_nuc = cell_to_nuc.dropna(subset=["best_nuc_id"])
+    cell_to_nuc = tbl.obs[[tables_cell_id_key, "nucleus_id"]].copy()
+    cell_to_nuc = cell_to_nuc.dropna(subset=["nucleus_id"])
 
     # spatial join points -> nuclei (we need per-point nucleus id)
     pts_nuc, _ = _join_points_regions(
@@ -197,7 +191,7 @@ def percentage_transcripts_in_compartments(
     )
 
     # nuclear overlap: point must be inside its assigned cell AND inside the matched nucleus
-    in_nucleus_overlap = inside_cell & pts["nuc_region_id"].notna() & (pts["nuc_region_id"] == pts["best_nuc_id"])
+    in_nucleus_overlap = inside_cell & pts["nuc_region_id"].notna() & (pts["nuc_region_id"] == pts["nucleus_id"])
 
     n_in_nucleus = (
         pts.loc[in_nucleus_overlap].groupby(points_cell_id_key, observed=True).size().rename("n_in_nucleus_overlap")
@@ -284,7 +278,6 @@ def distance_to_centroid(
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = 1,
-    use_progress: bool = True,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -340,8 +333,6 @@ def distance_to_centroid(
         Minimum overlap area required to consider a nucleus a candidate for a cell.
     n_jobs : int, default=1
         Number of parallel jobs for cell-nucleus matching (if needed). `-1` uses all CPUs.
-    use_progress : bool, default=True
-        Whether to show a progress bar when computing cell-nucleus matching.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -398,7 +389,6 @@ def distance_to_centroid(
         select_by=select_by,
         min_intersection_area=min_intersection_area,
         n_jobs=n_jobs,
-        use_progress=use_progress,
         inplace=inplace,
     )
 
@@ -497,7 +487,6 @@ def distance_to_membrane(
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = 1,
-    use_progress: bool = True,
     signed: bool = True,
     inverse_score: bool = True,
     eps: float = 1e-6,
@@ -561,8 +550,6 @@ def distance_to_membrane(
         Minimum overlap area required to consider a nucleus a candidate for a cell.
     n_jobs : int, default=1
         Number of parallel jobs for cell-nucleus matching (if needed). `-1` uses all CPUs.
-    use_progress : bool, default=True
-        Whether to show a progress bar when computing cell-nucleus matching.
     signed : bool, default=True
         If True, returns signed distances (positive if transcript is inside/on the polygon,
         negative if outside). If False, returns unsigned distances to the boundary.
@@ -630,7 +617,6 @@ def distance_to_membrane(
         select_by=select_by,
         min_intersection_area=min_intersection_area,
         n_jobs=n_jobs,
-        use_progress=use_progress,
         inplace=inplace,
     )
 
