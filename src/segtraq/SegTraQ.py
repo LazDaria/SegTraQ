@@ -6,7 +6,7 @@ import numpy as np
 import spatialdata as sd
 from anndata import AnnData
 
-from . import bl, cs, ps, rc, sp, vl
+from . import bl, cs, ps, rs, sp, vl
 from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
@@ -173,7 +173,7 @@ class SegTraQ:
         self.nucleus_shapes_key = nucleus_shapes_key
 
         self.bl = _BLFacade(self)
-        self.rc = _RCFacade(self)
+        self.rs = _RSFacade(self)
         self.cs = _CSFacade(self)
         self.vl = _VLFacade(self)
         self.sp = _SPFacade(self)
@@ -250,48 +250,75 @@ class SegTraQ:
                 out["transcript_density"] = dens
             return out
 
-    def run_region_correlation(self, metric: str = "cosine_sim", n_jobs: int = -1, inplace: bool = True):
+    def run_region_similarity(
+        self,
+        metric: str = "cosine_sim",
+        n_jobs: int = -1,
+        inplace: bool = True,
+        iou_kwargs: dict = None,
+        similarity_nucleus_cell_kwargs: dict = None,
+        similarity_nucleus_cytoplasm_kwargs: dict = None,
+        similarity_border_neighborhood_kwargs: dict = None,
+    ):
         """
-        Compute region-correlation metrics and optionally merge them into the cell table.
+        Compute region similarity metrics and optionally merge them into the cell table.
 
         This runs, in order:
         1) IoU between each cell and its best-matching nucleus
-        2) Correlation between per-cell expression and its matched nucleus (Pearson)
-        3) Correlation between the cell's nucleus-overlap part vs. remainder (vectorized)
-        4) Compute correlation of gene expression in an eroded interior ("center") and
-           a thin outer shell ("border"), and (2) comparing the border with the neighborhood
-           composition vector (NCV).
+        2) Similarity between per-cell expression and its matched nucleus
+        3) Similarity between the cell's nucleus vs. cytoplasm expression
+        4) Similarity of gene expression in an eroded interior ("center") and
+           a thin outer shell ("border"), and (2) comparing the border with the neighborhood.
 
         Parameters
         ----------
+        metric : str, default="cosine_sim"
+        n_jobs : int, default=-1
         inplace : bool, default=True
             If True, writes results into `sdata.tables[tables_key].obs` and returns None.
             If False, returns a dictionary of DataFrames without writing.
+        iou_kwargs : dict, optional
+            Additional keyword arguments to pass to `match_nuclei_to_cells`.
+        similarity_nucleus_cell_kwargs : dict, optional
+            Additional keyword arguments to pass to `similarity_nucleus_cell`.
+        similarity_nucleus_cytoplasm_kwargs : dict, optional
+            Additional keyword arguments to pass to `similarity_nucleus_cytoplasm`.
+        similarity_border_neighborhood_kwargs : dict, optional
+            Additional keyword arguments to pass to `similarity_border_neighborhood`.
 
         Returns
         -------
         None or dict
         - If `inplace=True`: returns None after writing to `sdata`.
         - If `inplace=False`: returns a dict with keys:
-        * "ious"                  : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU]
-        * "cell_nuc_correlation". : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_nc_cell]
-        * "parts_correlation"     : DataFrame with columns [tables_cell_id_key, best_nuc_id, IoU, corr_cell_parts]
-        * "center_border_ncv_corr": DataFrame with columns
-                                    [tables_cell_id_key, corr_center_border, corr_border_ncv, corr_ncv_vs_center]
+        * "ious": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]
+        * "similarity_nucleus_cell": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
+                                    similarity_nucleus_cell, nucleus_fraction]
+        * "similarity_nucleus_cytoplasm": DataFrame with columns [tables_cell_id_key,
+          nucleus_id, iou, similarity_nucleus_cytoplasm]
+        * "similarity_border_neighborhood": DataFrame with columns
+                                    [tables_cell_id_key, similarity_center_border,
+                                    similarity_border_neighborhood, similarity_border_neighborhood]
 
         Notes
         -----
         - Requires `self.nucleus_shapes_key` (nucleus boundaries).
         """
         assert self.nucleus_shapes_key is not None, (
-            "Cannot run region correlation: `nucleus_shapes_key` is None. "
+            "Cannot run region similarity: `nucleus_shapes_key` is None. "
             "Define the nucleus shape layer when initializing SegTraQ."
         )
 
-        ious = self.rc.compute_cell_nuc_match(n_jobs=n_jobs, inplace=inplace)
-        cell_nuc_corr = self.rc.compute_cell_nuc_correlation(metric=metric, n_jobs=n_jobs, inplace=inplace)
-        parts_corr = self.rc.compute_correlation_between_parts(metric=metric, n_jobs=n_jobs, inplace=inplace)
-        center_border_ncv_corr = self.rc.compute_center_border_ncv_correlation(metric=metric, inplace=inplace)
+        ious = self.rs.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
+        similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
+            metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cell_kwargs or {})
+        )
+        similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
+            metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cytoplasm_kwargs or {})
+        )
+        similarity_border_neighborhood = self.rs.similarity_border_neighborhood(
+            metric=metric, inplace=inplace, **(similarity_border_neighborhood_kwargs or {})
+        )
 
         if inplace:
             return None
@@ -299,9 +326,9 @@ class SegTraQ:
         else:
             return {
                 "ious": ious,
-                "cell_nuc_correlation": cell_nuc_corr,
-                "parts_correlation": parts_corr,
-                "center_border_ncv_corr": center_border_ncv_corr,
+                "similarity_nucleus_cell": similarity_nucleus_cell,
+                "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
+                "similarity_border_neighborhood": similarity_border_neighborhood,
             }
 
     def run_volume_metrics(
@@ -961,9 +988,9 @@ class _BLFacade:
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
 
-class _RCFacade:
+class _RSFacade:
     """
-    Bound region-correlation (rc) metrics interface for a SegTraQ instance.
+    Bound region-similarity (rs) metrics interface for a SegTraQ instance.
     Methods use the parent's `sdata` and configured keys.
     No per-call overrides are allowed.
     """
@@ -971,18 +998,14 @@ class _RCFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_cell_nuc_match(
+    def match_nuclei_to_cells(
         self,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        assert self._p.nucleus_shapes_key is not None, (
-            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
-        )
-        return rc.compute_cell_nuc_match(
+        return rs.match_nuclei_to_cells(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -991,13 +1014,12 @@ class _RCFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
-            use_progress=True,
             inplace=inplace,
         )
 
-    compute_cell_nuc_match.__doc__ = rc.compute_cell_nuc_match.__doc__
+    match_nuclei_to_cells.__doc__ = rs.match_nuclei_to_cells.__doc__
 
-    def compute_cell_nuc_correlation(
+    def similarity_nucleus_cell(
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
@@ -1007,11 +1029,7 @@ class _RCFacade:
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        assert self._p.nucleus_shapes_key is not None, (
-            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
-        )
-        return rc.compute_cell_nuc_correlation(
+        return rs.similarity_nucleus_cell(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1032,23 +1050,20 @@ class _RCFacade:
             inplace=inplace,
         )
 
-    compute_cell_nuc_correlation.__doc__ = rc.compute_cell_nuc_correlation.__doc__
+    similarity_nucleus_cell.__doc__ = rs.similarity_nucleus_cell.__doc__
 
-    def compute_correlation_between_parts(
+    def similarity_nucleus_cytoplasm(
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
         metric: str = "cosine_sim",
+        scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
         inplace: bool = True,
     ):
-        assert self._p.nucleus_shapes_key is not None, (
-            "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-            "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
-        )
-        return rc.compute_correlation_between_parts(
+        return rs.similarity_nucleus_cytoplasm(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1063,24 +1078,25 @@ class _RCFacade:
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             metric=metric,
+            scale=scale,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
             inplace=inplace,
         )
 
-    compute_correlation_between_parts.__doc__ = rc.compute_correlation_between_parts.__doc__
+    similarity_nucleus_cytoplasm.__doc__ = rs.similarity_nucleus_cytoplasm.__doc__
 
-    def compute_center_border_ncv_correlation(
+    def similarity_border_neighborhood(
         self,
         erosion_fraction_of_radius: float = 0.2,
-        radius_factor: float = 2.0,
+        neighborhood_radius_factor: float = 2.0,
         min_transcripts: int = 10,
         min_genes: int = 5,
         metric: str = "cosine_sim",
         inplace: bool = True,
     ):
-        return rc.compute_center_border_ncv_correlation(
+        return rs.similarity_border_neighborhood(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1094,12 +1110,41 @@ class _RCFacade:
             erosion_fraction_of_radius=erosion_fraction_of_radius,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            radius_factor=radius_factor,
+            neighborhood_radius_factor=neighborhood_radius_factor,
             metric=metric,
             inplace=inplace,
         )
 
-    compute_center_border_ncv_correlation.__doc__ = rc.compute_center_border_ncv_correlation.__doc__
+    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
+
+    # function for debugging / exploration
+    # this function will not be highlighted in the main docs
+    def get_genes_in_compartment(
+        self,
+        cell,
+        compartment,
+        scale: float = 1e4,
+        erosion_fraction_of_radius: float = 0.2,
+        neighborhood_radius_factor: float = 2.0,
+    ):
+        return rs.get_genes_in_compartment(
+            cell=cell,
+            compartment=compartment,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            nucleus_shapes_key=self._p.nucleus_shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_gene_key=self._p.points_gene_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            scale=scale,
+            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            neighborhood_radius_factor=neighborhood_radius_factor,
+        )
 
 
 class _SPFacade:
