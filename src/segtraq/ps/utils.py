@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 
-from ..rc.region_correlation import compute_cell_nuc_match
+from ..rs.region_similarity import match_nuclei_to_cells
 
 
 def _get_cell_geometry_lookup(
@@ -20,7 +20,6 @@ def _get_cell_geometry_lookup(
     select_by: Literal["iou", "nucleus_fraction"],
     min_intersection_area: float,
     n_jobs: int,
-    use_progress: bool,
     inplace: bool,
 ) -> tuple[pd.DataFrame, gpd.GeoDataFrame]:
     """
@@ -46,8 +45,8 @@ def _get_cell_geometry_lookup(
 
     gdf_nuc = sdata.shapes[nucleus_shapes_key][["geometry"]]
 
-    if "best_nuc_id" not in tbl.obs.columns:
-        match_df = compute_cell_nuc_match(
+    if "nucleus_id" not in tbl.obs.columns:
+        match_df = match_nuclei_to_cells(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
@@ -56,26 +55,25 @@ def _get_cell_geometry_lookup(
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
-            use_progress=use_progress,
             inplace=inplace,
         )
 
-    match_df = tbl.obs[[tables_cell_id_key, "best_nuc_id"]].copy()
+    match_df = tbl.obs[[tables_cell_id_key, "nucleus_id"]].copy()
 
-    match_df = match_df[[tables_cell_id_key, "best_nuc_id"]].dropna(subset=["best_nuc_id"]).copy()
-    match_df["best_nuc_id"] = match_df["best_nuc_id"].astype(gdf_nuc.index.dtype, copy=False)
+    match_df = match_df[[tables_cell_id_key, "nucleus_id"]].dropna(subset=["nucleus_id"]).copy()
+    match_df["nucleus_id"] = match_df["nucleus_id"].astype(gdf_nuc.index.dtype, copy=False)
 
     nuc_centroids = pd.DataFrame(
         {
-            "best_nuc_id": gdf_nuc.index,
+            "nucleus_id": gdf_nuc.index,
             f"{points_x_key}_centroid": gdf_nuc.geometry.centroid.x.to_numpy(),
             f"{points_y_key}_centroid": gdf_nuc.geometry.centroid.y.to_numpy(),
         }
     )
 
-    centroids_df = match_df.merge(nuc_centroids, on="best_nuc_id", how="left").set_index(tables_cell_id_key)
+    centroids_df = match_df.merge(nuc_centroids, on="nucleus_id", how="left").set_index(tables_cell_id_key)
 
-    boundary_gdf = match_df.merge(gdf_nuc, left_on="best_nuc_id", right_index=True, how="left").set_index(
+    boundary_gdf = match_df.merge(gdf_nuc, left_on="nucleus_id", right_index=True, how="left").set_index(
         tables_cell_id_key
     )[["geometry"]]
 

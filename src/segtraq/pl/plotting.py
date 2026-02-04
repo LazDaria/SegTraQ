@@ -126,9 +126,7 @@ def umap(
 
     # validate color column
     if color not in umap_df.columns:
-        raise ValueError(
-            f"Column '{color}' not found in UMAP dataframe. " f"Available columns: {list(umap_df.columns)}"
-        )
+        raise ValueError(f"Column '{color}' not found in UMAP dataframe. Available columns: {list(umap_df.columns)}")
 
     methods = umap_df["Segmentation Method"].unique().tolist()
     n = len(methods)
@@ -203,7 +201,8 @@ def umap(
                 frameon=False,
             )
         else:
-            cbar = fig.colorbar(sc, ax=axes, label=color, shrink=0.8)
+            # cbar for continuous
+            _ = fig.colorbar(sc, ax=axes, label=color, shrink=0.8)
 
     fig.suptitle(f"UMAP colored by {color}", y=0.995, fontsize=14)
     # we do not use tight_layout here to avoid messing with the position of the legend/colorbar
