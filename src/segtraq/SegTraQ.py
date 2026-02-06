@@ -449,7 +449,7 @@ class SegTraQ:
             Cell-type column in `sdata.tables[tables_key].obs`.
 
         use_quantiles : bool, optional
-            Passed to SP.calculate_marker_purity.
+            Passed to SP.marker_purity.
 
         inplace : bool, default=True
             If True: write results into the `sdata.tables[...]` object.
@@ -473,19 +473,19 @@ class SegTraQ:
             "MECR requires `mutually_exclusive_pairs`. Please compute them externally "
             "with `segtraq.get_mut_excl_markers` and pass them here."
         )
-        fisher_or, fisher_pval = self.sp.compute_MECR(
+        fisher_or, fisher_pval = self.sp.mutually_exclusive_coexpression_rate(
             markers=markers,
             inplace=inplace,
         )
 
-        purity_df = self.sp.calculate_marker_purity(
+        purity_df = self.sp.marker_purity(
             cell_type_key=cell_type_key,
             markers=markers,
             use_quantiles=use_quantiles,
             inplace=inplace,
         )
 
-        per_cell_contam, cont_mat, cont_mat_bin = self.sp.calculate_neighbor_contamination(
+        per_cell_contam, cont_mat, cont_mat_bin = self.sp.neighbor_contamination(
             cell_type_key=cell_type_key,
             markers=markers,
             inplace=inplace,
@@ -970,8 +970,10 @@ class _SPFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_MECR(self, markers: dict[str, dict[str, list[str]]], pseudocount: float = 0.5, inplace: bool = True):
-        return sp.compute_MECR(
+    def mutually_exclusive_coexpression_rate(
+        self, markers: dict[str, dict[str, list[str]]], pseudocount: float = 0.5, inplace: bool = True
+    ):
+        return sp.mutually_exclusive_coexpression_rate(
             sdata=self._p.sdata,
             markers=markers,
             pseudocount=pseudocount,
@@ -979,9 +981,9 @@ class _SPFacade:
             inplace=inplace,
         )
 
-    compute_MECR.__doc__ = sp.compute_MECR.__doc__
+    mutually_exclusive_coexpression_rate.__doc__ = sp.mutually_exclusive_coexpression_rate.__doc__
 
-    def calculate_marker_purity(
+    def marker_purity(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
@@ -991,7 +993,7 @@ class _SPFacade:
         neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
     ):
-        return sp.calculate_marker_purity(
+        return sp.marker_purity(
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
@@ -1006,9 +1008,9 @@ class _SPFacade:
             inplace=inplace,
         )
 
-    calculate_marker_purity.__doc__ = sp.calculate_marker_purity.__doc__
+    marker_purity.__doc__ = sp.marker_purity.__doc__
 
-    def calculate_neighbor_contamination(
+    def neighbor_contamination(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
@@ -1018,7 +1020,7 @@ class _SPFacade:
         uns_key_binary: str = "negative_marker_contamination_binary",
         inplace: bool = True,
     ):
-        return sp.calculate_neighbor_contamination(
+        return sp.neighbor_contamination(
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
@@ -1033,32 +1035,7 @@ class _SPFacade:
             inplace=inplace,
         )
 
-    calculate_neighbor_contamination.__doc__ = sp.calculate_neighbor_contamination.__doc__
-
-    def neighbor_prediction(
-        self,
-        ct1: str,
-        ct2: str,
-        cell_type_key: str = "transferred_cell_type",
-        grid_shape: tuple[int, int] = (10, 10),
-        n_permutations: int = 100,
-        seed: int = 0,
-        inplace: bool = True,
-    ):
-        return sp.neighbor_prediction(
-            self._p.sdata,
-            ct1,
-            ct2,
-            cell_type_key=cell_type_key,
-            tables_x_key=self._p.tables_centroid_x_key,
-            tables_y_key=self._p.tables_centroid_y_key,
-            grid_shape=grid_shape,
-            n_permutations=n_permutations,
-            seed=seed,
-            inplace=inplace,
-        )
-
-    neighbor_prediction.__doc__ = sp.neighbor_prediction.__doc__
+    neighbor_contamination.__doc__ = sp.neighbor_contamination.__doc__
 
 
 class _PSFacade:
@@ -1319,6 +1296,7 @@ class _VLFacade:
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
+        normalisation: str | None = "pearson",
         min_genes: int = 5,
         min_transcripts: int = 10,
         inplace: bool = True,
@@ -1338,6 +1316,7 @@ class _VLFacade:
             seed=seed,
             q=q,
             scale=scale,
+            normalisation=normalisation,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
             inplace=inplace,
