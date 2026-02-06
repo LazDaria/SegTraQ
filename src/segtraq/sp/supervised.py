@@ -3,20 +3,14 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import squidpy as sq
-from joblib import Parallel, delayed
 from scipy import sparse
 from scipy.stats import fisher_exact
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score
-from sklearn.preprocessing import StandardScaler
 
 from ..utils import _looks_like_counts, _score_negative_with_neighbors, _score_one_list, merge_into_obs
-from .utils import add_neighbor_celltype_binary, assign_grid_splits, run_single_permutation
 
 
-def compute_MECR(
+def mutually_exclusive_coexpression_rate(
     sdata,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
@@ -51,42 +45,52 @@ def compute_MECR(
     tbl = sdata.tables[tables_key]
 
     X = tbl.X
-    arr = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
+    array = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
     var_index = pd.Index(tbl.var_names)
-    n_cells = arr.shape[0]
-    pc = float(pseudocount)
+    n_cells = array.shape[0]
+    pseudocount = float(pseudocount)
 
     # --- build unique unordered candidate pairs ---
     candidate_pairs = set()
-    pos_sets = {}
+    positive_sets = {}
 
+    # go through all reference markers (positive and negative) for a given cell type
     for ct, d in markers.items():
-        pos = set((d or {}).get("positive", []) or [])
-        neg = set((d or {}).get("negative", []) or [])
-        pos_sets[ct] = pos
+        positive = set((d or {}).get("positive", []) or [])
+        negative = set((d or {}).get("negative", []) or [])
+        # record the positive markers for the given cell type
+        positive_sets[ct] = positive
 
-        for g1 in pos:
-            for g2 in neg:
-                if g1 != g2:
-                    a, b = (g1, g2) if g1 < g2 else (g2, g1)
+        for pos in positive:
+            for neg in negative:
+                # only consider pairs of different genes
+                if pos != neg:
+                    # order the candidates genes alphabetically
+                    a, b = (pos, neg) if pos < neg else (neg, pos)
                     candidate_pairs.add((a, b))
 
     # --- drop pairs co-positive in any cell type ---
-    kept_pairs = [(g1, g2) for g1, g2 in candidate_pairs if not any(g1 in ps and g2 in ps for ps in pos_sets.values())]
+    kept_pairs = [
+        (pos, neg) for pos, neg in candidate_pairs if not any(pos in ps and neg in ps for ps in positive_sets.values())
+    ]
 
-    det = arr > 0
+    # only consider positive expression values in the spatial data
+    det = array > 0
 
     rows = []
-
+    # go over all positive/negative gene pairs from the scRNAseq reference that were kept through the filtering
     for g1, g2 in kept_pairs:
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
+        # extract all cell types positive/negative for combination from the spatial data for the
+        # mutually exclusive gene pairs found in the scRNA seq data.
         e1, e2 = det[:, i1], det[:, i2]
-
+        # count all the occurences of the confusion table
         a = int((e1 & e2).sum())
         b = int((e1 & ~e2).sum())
         c = int((~e1 & e2).sum())
-        d = n_cells - a - b - c
+        d = int((~e1 & ~e2).sum())
+        assert d == n_cells - a - b - c
 
         # Fisher's exact returns exact p-value for under-co-occurrence (mutual exclusivity)
         try:
@@ -95,13 +99,13 @@ def compute_MECR(
             pval = np.nan
 
         # odds ratio is computed with a pseudocount (Haldane–Anscombe correction)
-        or_pc = ((a + pc) * (d + pc)) / ((b + pc) * (c + pc))
+        or_pseudocount = ((a + pseudocount) * (d + pseudocount)) / ((b + pseudocount) * (c + pseudocount))
 
         rows.append(
             {
                 "gene1": g1,
                 "gene2": g2,
-                "odds_ratio": float(or_pc),
+                "odds_ratio": float(or_pseudocount),
                 "pvalue": float(pval) if np.isfinite(pval) else np.nan,
                 "a": a,
                 "b": b,
@@ -113,12 +117,12 @@ def compute_MECR(
     df = pd.DataFrame(rows)
 
     if inplace:
-        tbl.uns["MECR"] = df
+        tbl.uns["mutually_exclusive_coexpression_rate"] = df
 
     return df
 
 
-def calculate_neighbor_contamination(
+def neighbor_contamination(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
@@ -193,9 +197,9 @@ def calculate_neighbor_contamination(
     -------
     per_cell_df : pd.DataFrame
         Per-cell contamination metrics, indexed by cell ID.
-    contam_matrix_df : pd.DataFrame
+    contamination_matrix_df : pd.DataFrame
         Directed type x type mean contamination fraction matrix (c_src rows, c_tgt columns).
-    contam_binary_df : pd.DataFrame
+    contamination_binary_df : pd.DataFrame
         Directed type x type binary contamination proportion matrix (c_src rows, c_tgt columns).
     """
 
@@ -209,7 +213,8 @@ def calculate_neighbor_contamination(
     cell_types = np.asarray(adata.obs[cell_type_key])
     n_cells = X.shape[0]
 
-    # Dense expression (counts)
+    # Dense expression (counts) - TODO: offer sparse matrix support to reduce memory
+    # footprint
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
     elif "raw" not in adata.layers:
@@ -221,7 +226,7 @@ def calculate_neighbor_contamination(
         raw = adata.layers["raw"]
         X_dense = raw.toarray() if hasattr(raw, "toarray") else raw
 
-    # Neighbors
+    # Checking if neighborhood graph is present, else compute Delaunay triangulation
     if neighbors_key not in adata.obsp:
         warnings.warn(
             f"neighbors_key={neighbors_key} missing; computing Delaunay neighbors.",
@@ -232,7 +237,7 @@ def calculate_neighbor_contamination(
         import squidpy as sq  # local import so this function doesn't hard-require squidpy
 
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
-
+    # extract indices from the neighborhood graph
     G = adata.obsp[neighbors_key]
     if sparse.issparse(G):
         G = G.tocsr()
@@ -242,13 +247,13 @@ def calculate_neighbor_contamination(
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
     # Marker sets
-    pos_sets = {ct: set(m.get("positive", [])) for ct, m in markers.items()}
-    neg_sets = {ct: set(m.get("negative", [])) for ct, m in markers.items()}
+    positive_sets = {ct: set(m.get("positive", [])) for ct, m in markers.items()}
+    negative_sets = {ct: set(m.get("negative", [])) for ct, m in markers.items()}
 
-    # all cell types actually present
+    # get the set of all cell types present in the anndata object
     all_cts = sorted({ct for ct in cell_types if not pd.isna(ct)})
 
-    # denominator per target type for binary matrix
+    # count the occurences of the cell types
     tgt_totals = {ct: int(np.sum(cell_types == ct)) for ct in all_cts}
 
     # ----------------------------------------------------------------------
@@ -257,11 +262,11 @@ def calculate_neighbor_contamination(
     type_pair_genes: dict[tuple[str, str], np.ndarray] = {}
 
     for c_tgt in all_cts:
-        neg = neg_sets.get(c_tgt, set())
+        neg = negative_sets.get(c_tgt, set())
         if not neg:
             continue
         for c_src in all_cts:
-            pos = pos_sets.get(c_src, set())
+            pos = positive_sets.get(c_src, set())
             genes_inter = list(neg & pos)
             if not genes_inter:
                 continue
@@ -287,7 +292,7 @@ def calculate_neighbor_contamination(
     # ----------------------------------------------------------------------
     for i in range(n_cells):
         c_tgt = cell_types[i]
-        if pd.isna(c_tgt) or c_tgt not in neg_sets:
+        if pd.isna(c_tgt) or c_tgt not in negative_sets:
             continue
 
         nbs = neighbor_indices[i]
@@ -295,6 +300,7 @@ def calculate_neighbor_contamination(
             continue
 
         x_i = X_dense[i, :]
+        # get cells around the target cell
         nb_cts = cell_types[nbs]
 
         # track per-cell genes already counted (per-cell metrics)
@@ -307,15 +313,16 @@ def calculate_neighbor_contamination(
             pair = (c_src, c_tgt)
             if pair not in type_pair_genes:
                 continue
-
+            # get gene indices for cell type pair
             gene_idx = type_pair_genes[pair]
+            # get gene expression for this pair
             x_i_sub = x_i[gene_idx]
 
             # neighbors of this source type
             nb_src = nbs[nb_cts == c_src]
             if len(nb_src) == 0:
                 continue
-
+            # get gene expression for the neighbours
             X_nb_src = X_dense[np.ix_(nb_src, gene_idx)]
 
             # loop genes
@@ -363,7 +370,7 @@ def calculate_neighbor_contamination(
     # ----------------------------------------------------------------------
     # Build per-cell output
     # ----------------------------------------------------------------------
-    contam_fraction = np.divide(
+    contamination_fraction = np.divide(
         sum_cell_frac,
         count_cell_genes,
         out=np.full(n_cells, np.nan),
@@ -372,25 +379,25 @@ def calculate_neighbor_contamination(
 
     per_cell_df = pd.DataFrame(
         {
-            "neg_marker_contam_counts": numer_cell,
-            "neg_marker_contam_fraction": contam_fraction,
+            "neg_marker_contamination_counts": numer_cell,
+            "neg_marker_contamination_fraction": contamination_fraction,
         },
         index=adata.obs[tables_cell_id_key],
     )
 
     # ----------------------------------------------------------------------
-    # Build contamination matrices contam_matrix_df, contam_binary_df
+    # Build contamination matrices contamination_matrix_df, contamination_binary_df
     # ----------------------------------------------------------------------
     ct_list = all_cts
     idxmap = {ct: j for j, ct in enumerate(ct_list)}
 
-    contam_mat = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)
+    contamination_mat = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)
     for (c_src, c_tgt), total in sum_pair.items():
         n = count_pair[(c_src, c_tgt)]
         if n > 0:
-            contam_mat[idxmap[c_src], idxmap[c_tgt]] = total / n
+            contamination_mat[idxmap[c_src], idxmap[c_tgt]] = total / n
 
-    contam_matrix_df = pd.DataFrame(contam_mat, index=ct_list, columns=ct_list)
+    contamination_matrix_df = pd.DataFrame(contamination_mat, index=ct_list, columns=ct_list)
 
     # binary target-normalized matrix
     contam_bin = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)
@@ -398,7 +405,7 @@ def calculate_neighbor_contamination(
         denom = tgt_totals.get(c_tgt, 0)
         if denom > 0:
             contam_bin[idxmap[c_src], idxmap[c_tgt]] = hits / denom
-    contam_binary_df = pd.DataFrame(contam_bin, index=ct_list, columns=ct_list)
+    contamination_binary_df = pd.DataFrame(contam_bin, index=ct_list, columns=ct_list)
 
     # ----------------------------------------------------------------------
     # Write to .obs and .uns
@@ -411,13 +418,13 @@ def calculate_neighbor_contamination(
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
-        sdata.tables[tables_key].uns[uns_key] = contam_matrix_df
-        sdata.tables[tables_key].uns[uns_key_binary] = contam_binary_df
+        sdata.tables[tables_key].uns[uns_key] = contamination_matrix_df
+        sdata.tables[tables_key].uns[uns_key_binary] = contamination_binary_df
 
-    return per_cell_df, contam_matrix_df, contam_binary_df
+    return per_cell_df, contamination_matrix_df, contamination_binary_df
 
 
-def calculate_marker_purity(
+def marker_purity(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
@@ -503,7 +510,7 @@ def calculate_marker_purity(
 
     adata = sdata.tables[tables_key]
 
-    X = adata.X  # keep sparse if sparse
+    X = adata.X  # TODO: keep sparse if sparse
 
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
@@ -526,13 +533,13 @@ def calculate_marker_purity(
             return np.empty(0, dtype=int)
         return var_index.get_indexer_for(lst)
 
-    # Output arrays
-    pos_prec = np.full(n_cells, np.nan, dtype=float)
-    pos_rec = np.full(n_cells, np.nan, dtype=float)
+    # Output arrays initialisation
+    pos_precision = np.full(n_cells, np.nan, dtype=float)
+    pos_recall = np.full(n_cells, np.nan, dtype=float)
     pos_f1 = np.full(n_cells, np.nan, dtype=float)
 
-    neg_prec = np.full(n_cells, np.nan, dtype=float)
-    neg_rec = np.full(n_cells, np.nan, dtype=float)
+    neg_precision = np.full(n_cells, np.nan, dtype=float)
+    neg_recall = np.full(n_cells, np.nan, dtype=float)
     neg_f1 = np.full(n_cells, np.nan, dtype=float)
 
     purity = np.full(n_cells, np.nan, dtype=float)
@@ -563,14 +570,14 @@ def calculate_marker_purity(
 
         X_ct = X_dense[mask_cells]
 
-        p_prec_ct, p_rec_ct, p_f1_ct = _score_one_list(
+        p_precision_ct, p_recall_ct, p_f1_ct = _score_one_list(
             X_ct,
             pos_idx,
             all_idx,
             use_quantiles=use_quantiles,
         )
-        pos_prec[idx_cells] = p_prec_ct
-        pos_rec[idx_cells] = p_rec_ct
+        pos_precision[idx_cells] = p_precision_ct
+        pos_recall[idx_cells] = p_recall_ct
         pos_f1[idx_cells] = p_f1_ct
 
     # ------------- NEGATIVE markers: neighborhood-aware ---------------------
@@ -595,7 +602,7 @@ def calculate_marker_purity(
         G = np.asarray(G)
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
-    neg_prec, neg_rec, neg_f1 = _score_negative_with_neighbors(
+    neg_precision, neg_recall, neg_f1 = _score_negative_with_neighbors(
         X_dense=X_dense,
         cell_types=cell_types,
         markers=markers,
@@ -621,11 +628,11 @@ def calculate_marker_purity(
     # Build DataFrame
     result = pd.DataFrame(
         {
-            "positive_precision": pos_prec,
-            "positive_recall": pos_rec,
+            "positive_precision": pos_precision,
+            "positive_recall": pos_recall,
             "positive_F1": pos_f1,
-            "negative_precision": neg_prec,
-            "negative_recall": neg_rec,
+            "negative_precision": neg_precision,
+            "negative_recall": neg_recall,
             "negative_F1": neg_f1,
             "F1_purity": purity,
         },
@@ -642,199 +649,3 @@ def calculate_marker_purity(
         )
 
     return result
-
-
-def neighbor_prediction(
-    sdata,
-    ct1,
-    ct2,
-    tables_key="table",
-    cell_type_key="transferred_cell_type",
-    tables_x_key="x_centroid",
-    tables_y_key="y_centroid",
-    grid_shape=(10, 10),
-    n_permutations=100,
-    seed=0,
-    inplace=True,
-    n_jobs=-1,
-):
-    """
-    See if it is possible to predict adjacency of ct1 next to ct2 based on ct1's expression profiles using
-    logistic regression.
-    Parameters
-    ----------
-    sdata : object
-        Container object expected to expose a mapping-like attribute `tables` such
-        that `sdata.tables[tables_key]` returns an AnnData-like object. The AnnData
-        must provide:
-          - .obs: a pandas.DataFrame containing at least the `cell_type_key` column
-          - .var_names: iterable of gene names
-          - .X: expression matrix (numpy array or sparse matrix)
-          - .obsm: a dict-like object; the function will look for or add
-            "neighbor_celltype_binary"
-    ct1 : str or int
-        The focal cell type (as stored in `.obs[cell_type_key]`) for which to
-        predict the presence of neighboring ct2 cells.
-    ct2 : str or int
-        The neighbor cell type (column name in `adata.obsm["neighbor_celltype_binary"]`)
-        whose presence/absence among neighbors is the target binary outcome.
-    tables_key : str, optional
-        Key in `sdata.tables` to read the AnnData from (default: "table").
-    cell_type_key : str, optional
-        Column name in `.obs` containing transferred/annotated cell types
-        (default: "transferred_cell_type").
-    tables_x_key, tables_y_key : str, optional
-        Column names in `.obs` used as spatial coordinates for grid splitting and
-        for computing neighbor relations if `neighbor_celltype_binary` must be added.
-        (default: "x_centroid", "y_centroid").
-    grid_shape : tuple of two ints, optional
-        Number of spatial grid cells along (nx, ny) used to assign spatial folds;
-        cells within the same grid tile go to the same split (default: (10, 10)).
-    n_permutations : int, optional
-        Number of permutations to build an empirical null distribution of AP scores
-        (default: 100).
-    seed : int, optional
-        Random seed used for reproducible splitting and permutation seeds (default: 0).
-    inplace : bool, optional
-        If True, operate on the AnnData in `sdata.tables[tables_key]` directly and
-        write results into its `.uns`. If False, operate on a copy and return the
-        result without mutating the original (default: True).
-    n_jobs : int, optional
-        Number of parallel jobs for permutation computation. Passed to joblib. If
-        -1, use all available cores. The implementation uses the 'threading'
-        backend to reduce memory-copy overhead (default: -1).
-    Returns
-    -------
-    dict
-        A dictionary describing the trained model and permutation results, saved
-        into `adata.uns["neighbor_prediction"]` and also returned. Keys include:
-          - "model_params": {"weights": array, "intercept": float}
-              Coefficients of the trained high-precision logistic regression.
-          - "test_ap": float
-              Observed average-precision (AP) on the spatial test fold.
-          - "empirical_p_value": float
-              Fraction of permutation APs greater than or equal to observed AP.
-          - "null_aps": ndarray, shape (n_permutations,)
-              AP scores computed under the null (permuted) models.
-          - "gene_names": ndarray
-              Names of features (genes) corresponding to model coefficients.
-          - "splits": {"train_indices": array, "test_indices": array}
-              Indices (into the focal-cell index set) of the train/test split.
-    Raises
-    ------
-    ValueError
-        If fewer than 10 cells of type `ct1` are available (insufficient data).
-    """
-    if inplace:
-        adata = sdata.tables[tables_key]
-    else:
-        adata = sdata.tables[tables_key].copy()
-
-    # --- 1. Data Preparation ---
-    # here, we add a matrix of shape (cells, cell_types) in
-    # adata.obsm["neighbor_celltype_binary"] that indicates if a cell has
-    # at least one neighbor of that cell type
-    if "neighbor_celltype_binary" not in adata.obsm:
-        add_neighbor_celltype_binary(
-            adata, cell_type_col=cell_type_key, tables_x_key=tables_x_key, tables_y_key=tables_y_key
-        )
-
-    mask_focal = adata.obs[cell_type_key].astype(str) == str(ct1)
-    idx_focal = np.where(mask_focal)[0]
-
-    if len(idx_focal) < 10:
-        raise ValueError(f"Too few cells ({len(idx_focal)}) of type {ct1}.")
-
-    y_all = adata.obsm["neighbor_celltype_binary"].iloc[idx_focal][ct2].astype(int).values
-
-    # check if there are both positive and negative samples
-    if np.unique(y_all).size < 2:
-        raise ValueError(
-            f"Could not find both positive and negative samples for cell type {ct2} among neighbors of {ct1}."
-        )
-
-    # Check for log normalization
-    if _looks_like_counts(adata.X):
-        warnings.warn(
-            "Reference adata does not appear log-normalized."
-            "Counts will be log1p-transformed before running label transfer."
-            "Raw counts will be stored in `adata.layers['raw']`.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        adata.layers["raw"] = adata.X.copy()
-        sc.pp.normalize_total(adata, target_sum=1e4)
-        sc.pp.log1p(adata)
-
-    X_all = adata.X[idx_focal]
-    if sparse.issparse(X_all):
-        X_all = X_all.toarray()
-
-    gene_names = np.array(adata.var_names)
-
-    # --- 2. Splitting & Standardization ---
-    # to make sure there is as little spatial leakage as possible
-    # between train and test, we assign splits based on a spatial grid
-    is_train, is_test = assign_grid_splits(
-        adata, mask_focal, grid_shape, seed=seed, tables_x_key=tables_x_key, tables_y_key=tables_y_key
-    )
-
-    scaler = StandardScaler()
-    scaler.fit(X_all[is_train])
-    X_train = scaler.transform(X_all[is_train])
-    X_test = scaler.transform(X_all[is_test])
-    y_train = y_all[is_train]
-    y_test = y_all[is_test]
-
-    # check that both classes are present in training data
-    if np.unique(y_train).size < 2:
-        raise ValueError(f"Training data after spatial split does not contain both classes for cell type {ct2}.")
-    if np.unique(y_test).size < 2:
-        raise ValueError(f"Test data after spatial split does not contain both classes for cell type {ct2}.")
-
-    # --- 3. Model Fitting ---
-    rng = np.random.RandomState(seed)
-    perm_scores = np.zeros(n_permutations)
-
-    # Parameters for the logistic regression
-    real_model_params = {
-        "solver": "liblinear",
-        "penalty": "l2",
-        "C": 1.0,
-        "class_weight": "balanced",
-        "tol": 1e-4,
-        "max_iter": 1000,
-        "random_state": seed,
-    }
-
-    real_model = LogisticRegression(**real_model_params)
-    real_model.fit(X_train, y_train)
-
-    # Calculate observed score
-    obs_probs = real_model.predict_proba(X_test)[:, 1]
-    observed_score = average_precision_score(y_test, obs_probs)
-
-    weights = real_model.coef_.ravel()
-    intercept = real_model.intercept_[0]
-
-    # --- 4. Permutation Testing ---
-    # We use the 'threading' backend to avoid memory copy/serialization overhead.
-    # We generate a unique seed for each permutation for better statistical validity.
-    seeds = [rng.randint(2**32 - 1) for _ in range(n_permutations)]
-
-    perm_scores = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(run_single_permutation)(obs_probs, y_test, seed=s) for s in seeds
-    )
-    perm_scores = np.array(perm_scores)
-    p_value = np.mean(perm_scores >= observed_score)
-
-    adata.uns["neighbor_prediction"] = {
-        "model_params": {"weights": weights, "intercept": intercept},
-        "test_ap": observed_score,
-        "empirical_p_value": p_value,
-        "null_aps": perm_scores,
-        "gene_names": gene_names,
-        "splits": {"train_indices": idx_focal[is_train], "test_indices": idx_focal[is_test]},
-    }
-
-    return adata.uns["neighbor_prediction"]

@@ -1,3 +1,3 @@
-from .supervised import calculate_marker_purity, calculate_neighbor_contamination, compute_MECR, neighbor_prediction
+from .supervised import marker_purity, mutually_exclusive_coexpression_rate, neighbor_contamination
 
-__all__ = ["compute_MECR", "calculate_marker_purity", "calculate_neighbor_contamination", "neighbor_prediction"]
+__all__ = ["mutually_exclusive_coexpression_rate", "marker_purity", "neighbor_contamination"]

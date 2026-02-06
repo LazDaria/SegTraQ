@@ -142,6 +142,7 @@ def similarity_top_bottom(
     max_points: int = 1_000_000,
     seed: int | None = 0,
     q: float = 0.30,
+    normalisation: str | None = "pearson",
     scale: float = 1e4,
     min_genes: int = 5,
     min_transcripts: int = 10,
@@ -197,6 +198,9 @@ def similarity_top_bottom(
         Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.
     q : float, default=0.30
         Quantile defining bottom and top parts. bottom = q, top = 1-q.
+    normalisation: str, default="pearson"
+        Normalisation to be applied to the data. Either Pearson residuals, scaled log-transform or raw
+        counts
     scale : float, default=1e4
         Scale for within-cell library size normalization (bottom+top).
     min_genes : int, default=5
@@ -276,17 +280,31 @@ def similarity_top_bottom(
     n_tx_bottom = counts_bottom_raw.sum(axis=1)
     n_tx_top = counts_top_raw.sum(axis=1)
 
-    # aggregate the counts to total counts
-    X = np.vstack([counts_bottom_raw.to_numpy(), counts_top_raw.to_numpy()])
-    # estimate the overdispersion parameter from the counts per region according to the
-    # variance of a negative binomial; var = mu + mu^2 / theta - solve for theta
-    theta = estimate_theta_simple(X)
-    # normalise the total counts data with analytical pearson residuals
-    R = pearson_residuals(X, theta=theta, clip=None)
-    # take them apart again
-    n = counts_bottom_raw.shape[0]
-    bottom_norm = R[:n, :]
-    top_norm = R[n:, :]
+    if normalisation == "pearson":
+        # aggregate the counts to total counts
+        X = np.vstack([counts_bottom_raw.to_numpy(), counts_top_raw.to_numpy()])
+        # estimate the overdispersion parameter from the counts per region according to the
+        # variance of a negative binomial; var = mu + mu^2 / theta - solve for theta
+        theta = estimate_theta_simple(X)
+        # normalise the total counts data with analytical pearson residuals
+        R = pearson_residuals(X, theta=theta, clip=None)
+        # take them apart again
+        n = counts_bottom_raw.shape[0]
+        bottom_norm = R[:n, :]
+        top_norm = R[n:, :]
+    elif normalisation == "log":
+        # within-cell normalization using (bottom + top)
+        total_counts = (counts_bottom_raw + counts_top_raw).sum(axis=1).replace(0, np.nan)
+        bottom_norm = counts_bottom_raw.div(total_counts, axis=0) * scale
+        top_norm = counts_top_raw.div(total_counts, axis=0) * scale
+        bottom_norm = np.log1p(bottom_norm).fillna(0.0)
+        top_norm = np.log1p(top_norm).fillna(0.0)
+    elif normalisation == "raw":
+        bottom_norm = counts_bottom_raw
+        top_norm = counts_top_raw
+    else:
+        bottom_norm = counts_bottom_raw
+        top_norm = counts_top_raw
 
     # cast into dataframe
     bottom_norm = pd.DataFrame(bottom_norm, columns=counts_bottom_raw.columns, index=counts_bottom_raw.index)
