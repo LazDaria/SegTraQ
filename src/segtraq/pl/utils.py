@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -81,59 +79,6 @@ def build_umap_df(
     return pd.concat(rows, ignore_index=True)
 
 
-# TODO: WILL BE DEPRECATED, REMOVE
-def build_umap_and_scores_df(
-    method_to_adata: dict[str, ad.AnnData],
-    celltype_col: str,
-    umap_key: str = "X_umap",
-    bl_metrics_path: tuple[str, str] = ("segtraq", "bl", "summary"),
-    cs_metrics_path: tuple[str, str] = ("segtraq", "cs"),
-    missing_label: str = "None",
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    rows, mrows = [], []
-    for method, adata in method_to_adata.items():
-        if umap_key not in adata.obsm:
-            raise KeyError(f"{method}: adata.obsm['{umap_key}'] not found.")
-        umap = np.asarray(adata.obsm[umap_key])
-        if umap.shape[1] != 2:
-            raise ValueError(f"{method}: {umap_key} must be n_cells x 2.")
-
-        ct = _fill_celltype(adata.obs[celltype_col], missing_label)
-        rows.append(
-            pd.DataFrame(
-                {
-                    "x": umap[:, 0],
-                    "y": umap[:, 1],
-                    "Cell Type": ct.values,
-                    "Segmentation Method": method,
-                }
-            )
-        )
-
-        d = adata.uns
-        cs = d
-        for k in cs_metrics_path:
-            cs = cs.get(k, {}) if isinstance(cs, dict) else {}
-
-        bl = d
-        for k in bl_metrics_path:
-            bl = bl.get(k, {}) if isinstance(bl, dict) else {}
-
-        mrows.append(
-            {
-                "Segmentation Method": method,
-                "n_cells": bl.get("num_cells", np.nan),
-                "perc_unassigned": bl.get("perc_unassigned_transcripts", np.nan),
-                "rmsd": cs.get("rmsd", np.nan),
-                "silhouette": cs.get("silhouette", np.nan),
-                "ari": cs.get("ari", np.nan),
-                "purity": cs.get("purity", np.nan),
-            }
-        )
-
-    return pd.concat(rows, ignore_index=True), pd.DataFrame(mrows)
-
-
 def build_obs_box_df(
     method_to_adata: dict[str, ad.AnnData],
     celltype_col: str,
@@ -157,24 +102,3 @@ def build_obs_box_df(
         if frames
         else pd.DataFrame(columns=["Segmentation Method", "Cell Type", "value", "variable"])
     )
-
-
-def build_mecr_df(method_to_mecr: Mapping[str, Mapping[tuple[str, str], float]]) -> pd.DataFrame:
-    """
-    Flatten {(gene1,gene2)->MECR} dicts for many methods into one DF.
-
-    Columns: ['Segmentation Method','gene1','gene2','MECR']
-    """
-    frames = []
-    for method, mecr in method_to_mecr.items():
-        if not mecr:
-            continue
-        part = pd.DataFrame(
-            [(g1, g2, float(v)) for (g1, g2), v in mecr.items()],
-            columns=["gene1", "gene2", "MECR"],
-        )
-        part["Segmentation Method"] = method
-        frames.append(part)
-    if not frames:
-        return pd.DataFrame(columns=["Segmentation Method", "gene1", "gene2", "MECR"])
-    return pd.concat(frames, ignore_index=True)
