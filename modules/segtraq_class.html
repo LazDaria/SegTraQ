@@ -336,11 +336,12 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_poor_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_poor_quality_transcripts()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_clustering_stability"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_clustering_stability()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised_metrics()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume_metrics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.sdata"><code class="docutils literal notranslate"><span class="pre">SegTraQ.sdata</span></code></a></li>
 </ul>
 </li>
@@ -462,8 +463,8 @@ This is always done in place.</p>
 <li><p><strong>min_qv</strong> (<em>float</em><em>, </em><em>default=20.0</em>) – Minimum quality value (qv) threshold for transcripts to be considered valid.</p></li>
 <li><p><strong>control_genes</strong> (<em>tuple</em><em> | </em><em>list</em><em>, </em><em>default=</em><em>(</em><em>)</em>) – Additional keywords to identify control probes in gene names.
 By default, only standard control prefixes are used.
-These are: “<a href="#id3"><span class="problematic" id="id4">NegControlProbe_</span></a>”, “<a href="#id5"><span class="problematic" id="id6">antisense_</span></a>”, “NegControlCodeword”, “<a href="#id7"><span class="problematic" id="id8">BLANK_</span></a>”, “Blank-”, “NegPrb”,
-“<a href="#id9"><span class="problematic" id="id10">DeprecatedCodeword_</span></a>”, “<a href="#id11"><span class="problematic" id="id12">UnassignedCodeword_</span></a>”.</p></li>
+These are: “<a href="#id1"><span class="problematic" id="id2">NegControlProbe_</span></a>”, “<a href="#id3"><span class="problematic" id="id4">antisense_</span></a>”, “NegControlCodeword”, “<a href="#id5"><span class="problematic" id="id6">BLANK_</span></a>”, “Blank-”, “NegPrb”,
+“<a href="#id7"><span class="problematic" id="id8">DeprecatedCodeword_</span></a>”, “<a href="#id9"><span class="problematic" id="id10">UnassignedCodeword_</span></a>”.</p></li>
 <li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>default=&quot;transcripts&quot;</em>) – The key in the SpatialData points attribute that contains transcript data.</p></li>
 <li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>default=&quot;feature_name&quot;</em>) – The column name in the points DataFrame that contains gene names.</p></li>
 <li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – The column name in the points DataFrame that contains cell IDs.</p></li>
@@ -484,43 +485,93 @@ Note that this can be computationally expensive for large datasets.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_baseline">
-<span class="sig-name descname"><span class="pre">run_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_baseline" title="Link to this definition">#</a></dt>
-<dd><p>Compute baseline SegTraQ metrics (via the bound BL facade) and optionally
-merge them into the cell table.</p>
-<section id="metrics">
-<h3>Metrics<a class="headerlink" href="#metrics" title="Link to this heading">#</a></h3>
-<ul class="simple">
-<li><p>genes_per_cell</p></li>
-<li><p>transcripts_per_cell</p></li>
-<li><p>mean_transcripts_per_gene_per_cell</p></li>
-<li><p>transcript_density</p></li>
-<li><p>morphological features per cell</p></li>
-<li><p>global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)</p></li>
-</ul>
-<dl class="field-list">
-<dt class="field-odd">param inplace<span class="colon">:</span></dt>
-<dd class="field-odd"><p>If True, metrics are merged into <cite>sdata.tables[tables_key].obs</cite> and
-<a href="#id1"><span class="problematic" id="id2">`</span></a>sdata.tables[tables_key].uns.
-If False, returns the computed objects.</p>
-</dd>
-<dt class="field-even">type inplace<span class="colon">:</span></dt>
-<dd class="field-even"><p>bool, default=True</p>
-</dd>
-<dt class="field-odd">returns<span class="colon">:</span></dt>
+<span class="sig-name descname"><span class="pre">run_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">morphological_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_baseline" title="Link to this definition">#</a></dt>
+<dd><p>Run baseline (bl) metrics.</p>
+<p>Convenience wrapper around global and per-cell summary metrics. Runs, in order:</p>
+<ol class="arabic simple">
+<li><p>number of cells</p></li>
+<li><p>number of transcripts</p></li>
+<li><p>number of genes</p></li>
+<li><p>% unassigned transcripts</p></li>
+<li><p>% unassigned transcripts per gene</p></li>
+<li><p>transcripts per cell</p></li>
+<li><p>genes per cell</p></li>
+<li><p>mean transcripts per detected gene per cell</p></li>
+<li><p>morphological features</p></li>
+<li><p>transcript density</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p>If <cite>inplace=True</cite>: returns None after writing to <cite>sdata</cite>.</p></li>
-<li><p>If <cite>inplace=False</cite>: returns a dict with keys:</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, results are merged into <cite>.uns</cite>, <cite>.obs</cite>, and/or <cite>.var</cite> as implemented
+by each metric, and None is returned.
+If False, per-metric results are returned in a dict.</p></li>
+<li><p><strong>morphological_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">bl.morphological_features()</span></code>.</p></li>
 </ul>
-<dl class="simple">
-<dt><cite>summary</cite>, <cite>genes_per_cell</cite>, <cite>transcripts_per_cell</cite>,</dt><dd><p><cite>mean_transcripts_per_gene_per_cell`and optionally `transcript_density</cite>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code>, returns None.
+If <code class="docutils literal notranslate"><span class="pre">inplace=False</span></code>, returns a dict with keys:
+- <code class="docutils literal notranslate"><span class="pre">&quot;num_cells&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;num_transcripts&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;num_genes&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;perc_unassigned_transcripts&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;perc_unassigned_transcripts_per_gene&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;transcripts_per_cell&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;genes_per_cell&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;mean_transcripts_per_gene_per_cell&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;morphological_features&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;transcript_density&quot;</span></code></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_clustering_stability">
+<span class="sig-name descname"><span class="pre">run_clustering_stability</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'leiden_subset'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectedness_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">silhouette_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ari_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_clustering_stability" title="Link to this definition">#</a></dt>
+<dd><p>Run clustering-stability metrics.</p>
+<p>This method is a convenience wrapper around the clustering-stability (cs)
+functions. It runs, in order:</p>
+<ol class="arabic simple">
+<li><p>cluster connectedness</p></li>
+<li><p>silhouette score</p></li>
+<li><p>purity (subset stability)</p></li>
+<li><p>ARI (subset stability)</p></li>
+</ol>
+<p>Only parameters shared by all four computations are exposed explicitly.
+All other parameters are provided via method-specific <code class="docutils literal notranslate"><span class="pre">*_kwargs</span></code> dictionaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key_prefix</strong> (<em>str</em><em>, </em><em>default=&quot;leiden_subset&quot;</em>) – Prefix for Leiden clustering labels written to <cite>.obs</cite> by the underlying
+methods (where applicable).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, metrics are written to <cite>sdata.tables[“table”].uns</cite> by the
+underlying methods and this function returns None. If False, the
+computed metrics are returned as a dictionary.</p></li>
+<li><p><strong>connectedness_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_cluster_connectedness()</span></code>.</p></li>
+<li><p><strong>silhouette_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_silhouette_score()</span></code>.</p></li>
+<li><p><strong>purity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_purity()</span></code>.</p></li>
+<li><p><strong>ari_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_ari()</span></code>.</p></li>
+</ul>
 </dd>
-<dt class="field-even">rtype<span class="colon">:</span></dt>
-<dd class="field-even"><p>None or dict</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>If <cite>inplace=True</cite>, returns None.
+If <cite>inplace=False</cite>, returns a dict with keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;cluster_connectedness&quot;</span></code> : float</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;silhouette_score&quot;</span></code> : float</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;mean_purity&quot;</span></code> : float</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;mean_ari&quot;</span></code> : float</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
 </dd>
 </dl>
-</section>
 </dd></dl>
 
 <dl class="py method">
@@ -568,8 +619,43 @@ If False, returns a DataFrame with [‘cell_id’, ‘transferred_cell_type’, 
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_point_statistics">
 <span class="sig-name descname"><span class="pre">run_point_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">membrane_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skew_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compartments_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_point_statistics" title="Link to this definition">#</a></dt>
-<dd><p>Run all point-statistics metrics (ps) with shared filtering (genes + cell-type)
-and return a dict when inplace=False.</p>
+<dd><p>Run point-statistics (ps) metrics.</p>
+<p>Convenience wrapper around point-level spatial statistics. Applies shared
+transcript and cell filtering (by gene(s) and cell type) and runs, in order:</p>
+<ol class="arabic simple">
+<li><p>percentage of transcripts in compartments (nucleus overlap, cytoplasm, outside)</p></li>
+<li><p>distance to centroid (cell or nucleus)</p></li>
+<li><p>distance to membrane (cell or nucleus)</p></li>
+<li><p>membrane-distance skewness</p></li>
+</ol>
+<p>Only parameters shared by all computations are exposed explicitly. All other
+parameters are forwarded via method-specific <code class="docutils literal notranslate"><span class="pre">*_kwargs</span></code> dictionaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>genes</strong> (<em>str</em><em> | </em><em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Gene(s) to include. If None, all genes are used.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>default=&quot;transferred_cell_type&quot;</em>) – Cell-type annotation key in <cite>sdata.tables[…].obs</cite>.</p></li>
+<li><p><strong>cell_type_query</strong> (<em>str</em><em> | </em><em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Restrict computations to cells matching these label(s).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, results are merged into <cite>.obs</cite> and None is returned.
+If False, per-metric results are returned.</p></li>
+<li><p><strong>centroid_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.distance_to_centroid()</span></code>.</p></li>
+<li><p><strong>membrane_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.distance_to_membrane()</span></code>.</p></li>
+<li><p><strong>skew_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.membrane_distance_skewness()</span></code>.</p></li>
+<li><p><strong>compartments_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.percentage_transcripts_in_compartments()</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code>, returns None.
+If <code class="docutils literal notranslate"><span class="pre">inplace=False</span></code>, returns a dict with keys:
+- <code class="docutils literal notranslate"><span class="pre">&quot;percentage_transcripts_in_compartments&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;distance_to_centroid&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;distance_to_membrane&quot;</span></code>
+- <code class="docutils literal notranslate"><span class="pre">&quot;membrane_distance_skewness&quot;</span></code></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -602,11 +688,10 @@ If False, returns a dictionary of DataFrames without writing.</p></li>
 <li><p><em>None or dict</em></p></li>
 <li><p><strong>- If `inplace=True`</strong> (returns None after writing to <cite>sdata</cite>.)</p></li>
 <li><p><strong>- If `inplace=False`</strong> (<em>returns a dict with keys:</em>)</p></li>
-<li><p><strong>* “ious”</strong> (<em>DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]</em>)</p></li>
-<li><p><strong>* “similarity_nucleus_cell”</strong> (<em>DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,</em>) – similarity_nucleus_cell, nucleus_fraction]</p></li>
-<li><p><strong>* “similarity_nucleus_cytoplasm”</strong> (<em>DataFrame with columns [tables_cell_id_key,</em>) – nucleus_id, iou, similarity_nucleus_cytoplasm]</p></li>
-<li><p><strong>* “similarity_border_neighborhood”</strong> (<em>DataFrame with columns</em>) – [tables_cell_id_key, similarity_center_border,
-similarity_border_neighborhood, similarity_border_neighborhood]</p></li>
+<li><p><strong>* “ious”</strong> (<em>pd.DataFrame</em>)</p></li>
+<li><p><strong>* “similarity_nucleus_cell”</strong> (<em>pd.DataFrame</em>)</p></li>
+<li><p><strong>* “similarity_nucleus_cytoplasm”</strong> (<em>pd.DataFrame</em>)</p></li>
+<li><p><strong>* “similarity_border_neighborhood”</strong> (<em>pd.DataFrame</em>)</p></li>
 </ul>
 </p>
 </dd>
@@ -666,9 +751,43 @@ If False: return a dictionary of all computed results.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="segtraq.SegTraQ.run_volume">
-<span class="sig-name descname"><span class="pre">run_volume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_volume" title="Link to this definition">#</a></dt>
-<dd><p>Run volume metrics for SegTraQ.</p>
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_volume_metrics">
+<span class="sig-name descname"><span class="pre">run_volume_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">vsi_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">heterotypic_overlap_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vsi_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_volume_metrics" title="Link to this definition">#</a></dt>
+<dd><p>Run volume-layer (vl) metrics.</p>
+<p>Convenience wrapper around segtraq.vl functions via the instance facade <cite>self.vl</cite>.
+Runs, in order:</p>
+<ol class="arabic simple">
+<li><p>similarity_top_bottom</p></li>
+<li><p>fraction_heterotypic_overlap</p></li>
+<li><p>vertical_signal_integrity_per_cell (only if <cite>vsi_map</cite> is provided)</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vsi_map</strong> (<em>np.ndarray</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Precomputed 2D VSI map required for <cite>vertical_signal_integrity_per_cell</cite>.
+If None, VSI will be skipped.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, metrics are written into <cite>sdata.tables[tables_key].obs</cite> by the
+underlying methods and this function returns None.
+If False, returns a dict of result DataFrames.</p></li>
+<li><p><strong>similarity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">vl.similarity_top_bottom()</span></code>.</p></li>
+<li><p><strong>heterotypic_overlap_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">vl.fraction_heterotypic_overlap()</span></code>.</p></li>
+<li><p><strong>vsi_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">vl.vertical_signal_integrity_per_cell()</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>If <cite>inplace=True</cite>, returns None.</p>
+<p>If <cite>inplace=False</cite>, returns a dict with keys:</p>
+<ul class="simple">
+<li><p>”similarity_top_bottom”: pd.DataFrame</p></li>
+<li><p>”fraction_heterotypic_overlap”: pd.DataFrame</p></li>
+<li><p>”vertical_signal_integrity_per_cell”: pd.DataFrame   (only if vsi_map is not None)</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict[str, object]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py property">
@@ -732,11 +851,12 @@ If False: return a dictionary of all computed results.</p></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_poor_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_poor_quality_transcripts()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_clustering_stability"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_clustering_stability()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised_metrics()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume_metrics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.sdata"><code class="docutils literal notranslate"><span class="pre">SegTraQ.sdata</span></code></a></li>
 </ul>
 </li>
