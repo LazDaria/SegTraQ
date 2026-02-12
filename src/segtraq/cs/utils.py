@@ -167,7 +167,7 @@ def compute_mean_ari(ari_matrix: np.ndarray) -> float:
     """
     n = ari_matrix.shape[0]
     upper_triangle = ari_matrix[np.triu_indices(n, k=1)]
-    return np.mean(upper_triangle)
+    return np.nanmean(upper_triangle)
 
 
 def compute_purity_score(labels_true, labels_pred):
@@ -232,23 +232,23 @@ def compute_mean_purity(purity_matrix: np.ndarray) -> float:
         Mean pairwise purity score.
     """
     n = purity_matrix.shape[0]
-    return np.mean(purity_matrix[np.triu_indices(n, k=1)])
+    return np.nanmean(purity_matrix[np.triu_indices(n, k=1)])
 
 
-def _compute_cluster_connectedness(
-    connectivities: sp.spmatrix,
-    labels: np.ndarray,
-) -> float:
+def _compute_cluster_connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
     """
     Compute how well connected a clustering is in a kNN graph.
 
     Parameters
     ----------
     connectivities : scipy.sparse.spmatrix
-        Sparse connectivity matrix (n_cells × n_cells), e.g. from Scanpy.
+        Sparse connectivity matrix (n_cells x n_cells), e.g. from Scanpy.
         Nonzero entries indicate graph neighbors.
     labels : np.ndarray
         Cluster labels of shape (n_cells,).
+    use_weights: bool
+        Use edge weights to evaluate connectedness. If false, fraction of
+        equal neighbors is used.
 
     Returns
     -------
@@ -263,19 +263,44 @@ def _compute_cluster_connectedness(
         raise ValueError("connectivities and labels must have compatible shapes")
 
     G = connectivities.tocsr()
+
     labels = np.asarray(labels)
+    # Define which cells are labeled (non-missing)
+    # to avoid false negatives in comparison below
+    labeled_mask = ~pd.isna(labels)
 
     n = G.shape[0]
     per_cell = np.empty(n)
     per_cell.fill(np.nan)
 
     for i in range(n):
+        if not labeled_mask[i]:
+            continue
+
         start, end = G.indptr[i], G.indptr[i + 1]
         neighbors = G.indices[start:end]
 
         if len(neighbors) == 0:
             continue
 
-        per_cell[i] = np.mean(labels[neighbors] == labels[i])
+        # Only consider labeled neighbors
+        neigh_labeled = labeled_mask[neighbors]
+        if not np.any(neigh_labeled):
+            continue
+
+        neighbors = neighbors[neigh_labeled]
+        same = labels[neighbors] == labels[i]
+
+        if use_weights:
+            row_w = G.data[start:end]
+            row_w = row_w[neigh_labeled]
+            denom = row_w.sum()
+            if denom <= 0:
+                continue
+
+            per_cell[i] = float(row_w[same].sum() / denom)
+
+        else:
+            per_cell[i] = float(np.mean(same))
 
     return np.nanmean(per_cell)

@@ -45,10 +45,31 @@ def test_sdata_new():
 
     # this is important, because the test object initially contains some duplicate nucleus_ids
     # by calling validate_spatialdata,
-    # we ensure that these get resolved before continuting with the tests
+    # we ensure that these get resolved before continuing with the tests
     st.validate_spatialdata(sdata_new, images_key="image", tables_centroid_x_key=None, tables_centroid_y_key=None)
 
     return sdata_new
+
+
+@pytest.fixture(scope="session", name="sdata_3D")
+def test_sdata_3D():
+    """Load the SpatialData test sample once per test session."""
+
+    test_data_path = Path(__file__).parent / "data" / "proseg2.zarr"
+    sdata_3D = SpatialData.read(test_data_path)
+    st.SegTraQ(
+        sdata_3D,
+        points_cell_id_key="assignment",
+        points_background_id=None,
+        points_gene_key="gene",
+        tables_area_key="volume",
+        tables_cell_id_key="cell",
+        shapes_cell_id_key="cell",
+        tables_centroid_x_key="centroid_x",
+        tables_centroid_y_key="centroid_y",
+    )
+
+    return sdata_3D
 
 
 @pytest.fixture(scope="session", name="adata_ref")
@@ -71,6 +92,23 @@ def test_sdata_labeled(sdata_new, adata_ref):
         inplace=True,
     )
     return sdata_new
+
+
+@pytest.fixture(scope="session", name="sdata_3D_labeled")
+def test_sdata_3D_labeled(sdata_3D, adata_ref):
+    # run label transfer once; modifies sdata_new in place
+    st.run_label_transfer(
+        sdata=sdata_3D,
+        adata_ref=adata_ref,
+        ref_cell_type="celltype_major",
+        tables_cell_id_key="cell",
+        points_key="transcripts",
+        points_cell_id_key="assignment",
+        points_gene_key="gene",
+        query_ensemble_key=None,
+        inplace=True,
+    )
+    return sdata_3D
 
 
 @pytest.fixture(scope="session", name="segtraq_obj")
