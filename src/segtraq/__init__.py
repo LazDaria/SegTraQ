@@ -8,7 +8,7 @@ from .SegTraQ import SegTraQ
 from .utils import (
     add_nuc_shapes_via_cellpose,
     filter_cells,
-    get_ref_markers,
+    markers_from_reference,
     run_label_transfer,
     validate_spatialdata,
 )
@@ -16,7 +16,7 @@ from .utils import (
 # Override canonical module path for Sphinx
 for _f in (
     run_label_transfer,
-    get_ref_markers,
+    markers_from_reference,
     validate_spatialdata,
     add_nuc_shapes_via_cellpose,
     filter_cells,
@@ -31,7 +31,7 @@ __all__ = [
     "pl",
     "vl",
     "ps",
-    "get_ref_markers",
+    "markers_from_reference",
     "get_mut_excl_markers",
     "run_label_transfer",
     "validate_spatialdata",

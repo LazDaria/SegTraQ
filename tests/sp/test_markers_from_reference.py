@@ -3,14 +3,14 @@ import pandas as pd
 import segtraq as st
 
 
-def test_get_ref_markers_real_adata_structure_and_overlap(adata_ref):
+def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref):
     assert "celltype_major" in adata_ref.obs.columns
     n_types = adata_ref.obs["celltype_major"].nunique()
     assert n_types >= 2, "Need >= 2 types for differential markers"
 
-    markers = st.get_ref_markers(
+    markers = st.markers_from_reference(
         adata_ref.copy(),
-        ref_cell_type="celltype_major",
+        cell_type_key="celltype_major",
     )
 
     # Basic structure
@@ -38,8 +38,8 @@ def test_get_ref_markers_real_adata_structure_and_overlap(adata_ref):
 
 
 def test_overlap_filter_effect_without_internals(adata_ref):
-    markers_loose = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t_pos=0.5)
-    markers_strict = st.get_ref_markers(adata_ref.copy(), ref_cell_type="celltype_major", t_pos=0.1)
+    markers_loose = st.markers_from_reference(adata_ref.copy(), cell_type_key="celltype_major", t_pos=0.5)
+    markers_strict = st.markers_from_reference(adata_ref.copy(), cell_type_key="celltype_major", t_pos=0.1)
 
     n_types = adata_ref.obs["celltype_major"].nunique()
 
