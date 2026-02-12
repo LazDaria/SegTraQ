@@ -45,7 +45,7 @@ def test_sdata_new():
 
     # this is important, because the test object initially contains some duplicate nucleus_ids
     # by calling validate_spatialdata,
-    # we ensure that these get resolved before continuting with the tests
+    # we ensure that these get resolved before continuing with the tests
     st.validate_spatialdata(sdata_new, images_key="image", tables_centroid_x_key=None, tables_centroid_y_key=None)
 
     return sdata_new
@@ -109,8 +109,8 @@ def test_sdata_3D_labeled(sdata_3D, adata_ref):
         inplace=True,
     )
     return sdata_3D
-  
-  
+
+
 @pytest.fixture(scope="session", name="segtraq_obj")
 def test_segtraq_obj(sdata_labeled):
     """Load the SpatialData test sample once per test session."""
