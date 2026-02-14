@@ -460,14 +460,14 @@ def _compute_ncvs_within_radius(
 
     if _looks_like_counts(X):
         arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in ad.layers:
+    elif "counts" not in ad.layers:
         raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = ad.layers["raw"]
-        arr = raw.toarray() if hasattr(raw, "toarray") else raw
+        counts = ad.layers["counts"]
+        arr = counts.toarray() if hasattr(counts, "toarray") else counts
 
     mask = ad.obs[tables_cell_id_key].isin(cells_gdf.index)
     expr_cells = pd.DataFrame(
