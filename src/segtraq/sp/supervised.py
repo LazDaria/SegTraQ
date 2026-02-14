@@ -212,14 +212,14 @@ def calculate_neighbor_contamination(
     # Dense expression (counts)
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in adata.layers:
+    elif "counts" not in adata.layers:
         raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = adata.layers["raw"]
-        X_dense = raw.toarray() if hasattr(raw, "toarray") else raw
+        counts = adata.layers["counts"]
+        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     # Neighbors
     if neighbors_key not in adata.obsp:
@@ -507,14 +507,14 @@ def calculate_marker_purity(
 
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in adata.layers:
+    elif "counts" not in adata.layers:
         raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = adata.layers["raw"]
-        X_dense = raw.toarray() if hasattr(raw, "toarray") else raw
+        counts = adata.layers["counts"]
+        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     genes = np.asarray(adata.var_names)
     var_index = pd.Index(genes)
@@ -758,11 +758,11 @@ def neighbor_prediction(
         warnings.warn(
             "Reference adata does not appear log-normalized."
             "Counts will be log1p-transformed before running label transfer."
-            "Raw counts will be stored in `adata.layers['raw']`.",
+            "Raw counts will be stored in `adata.layers['counts']`.",
             RuntimeWarning,
             stacklevel=2,
         )
-        adata.layers["raw"] = adata.X.copy()
+        adata.layers["counts"] = adata.X.copy()
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 
