@@ -33,7 +33,7 @@ def test_sdata_new():
 
     # adding raw counts etc.
     adata = sdata_new.tables["table"]
-    adata.layers["raw"] = adata.X.copy()
+    adata.layers["counts"] = adata.X.copy()
     # normalizing and log-transforming the counts
     sc.pp.normalize_total(adata, inplace=True)
     sc.pp.log1p(adata)
