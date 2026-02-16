@@ -1819,7 +1819,7 @@ def estimate_theta_simple(x):
 def pearson_residuals(x: np.ndarray, theta, clip: None):
     """
     Computes the Analytic pearson residuals from a negative binomial distribution to
-    normalise the data
+    normalize the data
 
     Args:
         x (np.ndarray): The raw counts
