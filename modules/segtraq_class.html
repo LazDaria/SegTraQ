@@ -334,7 +334,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq-class">SegTraQ class</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ"><code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_poor_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_poor_quality_transcripts()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_low_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_low_quality_transcripts()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_clustering_stability"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_clustering_stability()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
@@ -452,9 +452,9 @@ If False, returns a new SpatialData object with the filtered cells.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="segtraq.SegTraQ.filter_control_and_poor_quality_transcripts">
-<span class="sig-name descname"><span class="pre">filter_control_and_poor_quality_transcripts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_qv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">control_genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recompute_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.filter_control_and_poor_quality_transcripts" title="Link to this definition">#</a></dt>
-<dd><p>Filter control and poor-quality transcripts from the SpatialData object.
+<dt class="sig sig-object py" id="segtraq.SegTraQ.filter_control_and_low_quality_transcripts">
+<span class="sig-name descname"><span class="pre">filter_control_and_low_quality_transcripts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_qv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">control_genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recompute_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.filter_control_and_low_quality_transcripts" title="Link to this definition">#</a></dt>
+<dd><p>Filter control and low-quality transcripts from the SpatialData object.
 This is always done in place.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -713,7 +713,6 @@ provided markers and mutually exclusive gene pairs.</p>
 <li><p>MECR per mutually-exclusive gene pair</p></li>
 <li><p>Spatial contamination (directional leakage)</p></li>
 <li><p>Per-cell marker purity</p></li>
-<li><p>Differential abundance between bordering/non-bordering cells</p></li>
 </ol>
 </dd>
 </dl>
@@ -724,7 +723,7 @@ provided markers and mutually exclusive gene pairs.</p>
 {cell_type: {“positive”: […], “negative”: […]}}</p></li>
 <li><p><strong>mutually_exclusive_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Precomputed mutually exclusive gene pairs.</p></li>
 <li><p><strong>cell_type_key</strong> (<em>str</em>) – Cell-type column in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em>) – Passed to SP.calculate_marker_purity.</p></li>
+<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em>) – Passed to SP.marker_purity.</p></li>
 <li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True: write results into the <cite>sdata.tables[…]</cite> object.
 If False: return a dictionary of all computed results.</p></li>
 </ul>
@@ -736,7 +735,7 @@ If False: return a dictionary of all computed results.</p></li>
 <dt>dict with keys:</dt><dd><p>{
 “MECR”: …,
 “contamination”: …,
-“marker_purity”: …,
+“marker_purity”: …
 }</p>
 </dd>
 </dl>
@@ -849,7 +848,7 @@ If False, returns a dict of result DataFrames.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq-class">SegTraQ class</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ"><code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_poor_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_poor_quality_transcripts()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_low_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_low_quality_transcripts()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_clustering_stability"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_clustering_stability()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
