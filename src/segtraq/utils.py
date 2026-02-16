@@ -1136,7 +1136,16 @@ def validate_spatialdata(
                 RuntimeWarning,
                 stacklevel=2,
             )
-            bl.morphological_features(sdata, features_to_compute=["cell_area"], inplace=True)
+            bl.morphological_features(
+                sdata,
+                features_to_compute=["cell_area"],
+                tables_cell_id_key=tables_cell_id_key,
+                tables_centroid_x_key=tables_centroid_x_key,
+                tables_centroid_y_key=tables_centroid_y_key,
+                shapes_key=shapes_key,
+                tables_key=tables_key,
+                inplace=True,
+            )
 
         if tables_centroid_x_key is not None:
             assert tables_centroid_x_key in table.obs.columns, (
@@ -1695,7 +1704,7 @@ def filter_cells(adata, col: str, func: Callable):
 
 def _filter_control_and_low_quality_transcripts(
     sdata,
-    min_qv: float = 20.0,
+    min_qv: float | None = 20.0,
     control_genes: tuple | list = (),
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
@@ -1712,8 +1721,9 @@ def _filter_control_and_low_quality_transcripts(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing transcript data.
-    min_qv : float, default=20.0
+    min_qv : float | None, default=20.0
         Minimum quality value (qv) threshold for transcripts to be considered valid.
+        If None, no filtering is applied based on quality.
     control_genes : tuple | list, default=()
         Additional keywords to identify control probes in gene names.
         By default, only standard control prefixes are used.
@@ -1756,14 +1766,23 @@ def _filter_control_and_low_quality_transcripts(
     ) + tuple(control_genes)
 
     # ---- transcripts ----
-    invalid_mask = pts[points_gene_key].str.startswith(prefixes) | (pts["qv"] < min_qv)
+    if "qv" not in pts.columns and min_qv is not None:
+        raise KeyError(
+            f"Quality value column 'qv' not found in points DataFrame. "
+            f"Available columns: {pts.columns.tolist()}. "
+            f"If you do not want to filter by quality, set min_qv=None."
+        )
+    elif "qv" not in pts.columns and min_qv is None:
+        invalid_mask = pts[points_gene_key].str.startswith(prefixes)
+    else:
+        invalid_mask = pts[points_gene_key].str.startswith(prefixes) | (pts["qv"] < min_qv)
 
     # getting all gene names that are being removed
     removed_genes = pts.loc[invalid_mask, points_gene_key].unique().compute().tolist()
 
     # removing points that are invalid
     pts = pts[~invalid_mask]
-    sdata.points[points_key] = pts
+    sdata.points[points_key] = sd.models.PointsModel.parse(pts)
 
     # ---- tables ----
     # on the anndata object, we remove genes that are control genes

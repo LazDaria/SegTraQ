@@ -1498,7 +1498,7 @@ class _VLFacade:
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
-        normalization: str | None = None,
+        normalization: str | None = "log",
         min_genes: int = 5,
         min_transcripts: int = 10,
         inplace: bool = True,

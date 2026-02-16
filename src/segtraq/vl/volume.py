@@ -199,8 +199,8 @@ def similarity_top_bottom(
     q : float, default=0.30
         Quantile defining bottom and top parts. bottom = q, top = 1-q.
     normalization: str, default="pearson"
-        Normalization to be applied to the data. Either Pearson residuals, scaled log-transform or raw
-        counts
+        Normalization to be applied to the data. Either Pearson residuals ("pearson"),
+        scaled log-transform ("log") or raw counts ("raw" or None).
     scale : float, default=1e4
         Scale for within-cell library size normalization (bottom+top).
     min_genes : int, default=5
