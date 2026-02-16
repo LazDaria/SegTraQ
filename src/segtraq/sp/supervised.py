@@ -26,12 +26,14 @@ def mutually_exclusive_coexpression_rate(
     sdata : SpatialData-like
         Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
     markers : dict
+        A dictionary mapping cell types to their positive and negative markers, in the format
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
     pseudocount : float, optional, default=0.5
         Pseudocount added to all cells of the contingency table to avoid
         division by zero when computing odds ratios.
+        This is equivalent to the Haldane–Anscombe correction, see https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076.
     inplace : bool, optional, default=True
         If True, store the resulting DataFrame in `sdata.tables[tables_key].uns["MECR"]`.
 
@@ -90,7 +92,10 @@ def mutually_exclusive_coexpression_rate(
         b = int((e1 & ~e2).sum())
         c = int((~e1 & e2).sum())
         d = int((~e1 & ~e2).sum())
-        assert d == n_cells - a - b - c
+        assert d == n_cells - a - b - c, (
+            "Contingency table counts do not sum to total number of cells. "
+            "Please report this to the developers of SegTraQ."
+        )
 
         # Fisher's exact returns exact p-value for under-co-occurrence (mutual exclusivity)
         try:
@@ -141,11 +146,11 @@ def neighbor_contamination(
     contamination summaries.
 
     Per-cell outputs (written to .obs):
-        - neg_marker_contam_counts:
+        - negative_marker_contamination_counts:
             Total transcripts in the focal cell that belong to genes that are
             (i) negative markers of the focal cell type and
             (ii) positive markers of at least one neighboring cell type.
-        - neg_marker_contam_fraction:
+        - negative_marker_contamination_fraction:
             For each such gene g, compute x_i(g) / (x_i(g) + mean_neighbor(g)),
             averaged across genes (neighbors pooled across all neighbor types).
 
@@ -199,8 +204,10 @@ def neighbor_contamination(
         Per-cell contamination metrics, indexed by cell ID.
     contamination_matrix_df : pd.DataFrame
         Directed type x type mean contamination fraction matrix (c_src rows, c_tgt columns).
+        This matrix report the average strength of contamination from one cell type into another.
     contamination_binary_df : pd.DataFrame
         Directed type x type binary contamination proportion matrix (c_src rows, c_tgt columns).
+        This matrix reports what percentage of cells of a target type is contaminated by each source type.
     """
 
     # ----------------------------------------------------------------------
@@ -234,7 +241,6 @@ def neighbor_contamination(
             stacklevel=2,
         )
         adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
-        import squidpy as sq  # local import so this function doesn't hard-require squidpy
 
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
     # extract indices from the neighborhood graph
@@ -278,7 +284,7 @@ def neighbor_contamination(
     # ----------------------------------------------------------------------
     # Accumulators
     # ----------------------------------------------------------------------
-    numer_cell = np.zeros(n_cells, dtype=float)
+    number_cell = np.zeros(n_cells, dtype=float)
     sum_cell_frac = np.zeros(n_cells, dtype=float)
     count_cell_genes = np.zeros(n_cells, dtype=int)
 
@@ -358,7 +364,7 @@ def neighbor_contamination(
 
                 # per-cell stats: update once per gene per cell
                 if g_idx not in used_genes:
-                    numer_cell[i] += x_i_g
+                    number_cell[i] += x_i_g
                     sum_cell_frac[i] += frac_g
                     count_cell_genes[i] += 1
                     used_genes.add(g_idx)
@@ -379,8 +385,8 @@ def neighbor_contamination(
 
     per_cell_df = pd.DataFrame(
         {
-            "neg_marker_contamination_counts": numer_cell,
-            "neg_marker_contamination_fraction": contamination_fraction,
+            "negative_marker_contamination_counts": number_cell,
+            "negative_marker_contamination_fraction": contamination_fraction,
         },
         index=adata.obs[tables_cell_id_key],
     )
@@ -471,6 +477,7 @@ def marker_purity(
     cell_type_key : str
         Column in the AnnData `.obs` with cell-type labels.
     markers : dict
+        A dictionary mapping cell types to their positive and negative markers, in the format
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     use_quantiles : bool, optional, default=False
         If True, define predictions by the top-|markers| fraction per cell (rank-based);
