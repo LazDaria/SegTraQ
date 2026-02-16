@@ -7,7 +7,7 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, ps, rs, sp, vl
-from .utils import _filter_control_and_poor_quality_transcripts, validate_spatialdata
+from .utils import _filter_control_and_low_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
 
@@ -434,7 +434,6 @@ class SegTraQ:
             1) MECR per mutually-exclusive gene pair
             2) Spatial contamination (directional leakage)
             3) Per-cell marker purity
-            4) Differential abundance between bordering/non-bordering cells
 
         Parameters
         ----------
@@ -463,7 +462,7 @@ class SegTraQ:
                 {
                 "MECR": ...,
                 "contamination": ...,
-                "marker_purity": ...,
+                "marker_purity": ...
                 }
         """
 
@@ -490,8 +489,6 @@ class SegTraQ:
             markers=markers,
             inplace=inplace,
         )
-
-        # TODO: need to add the neighbor prediction here! Should we do this for all pairs of cell types?
 
         if inplace:
             return None
@@ -621,7 +618,7 @@ class SegTraQ:
 
     filter_cells.__doc__ = filter_cells.__doc__
 
-    def filter_control_and_poor_quality_transcripts(
+    def filter_control_and_low_quality_transcripts(
         self,
         min_qv: float = 20.0,
         control_genes: tuple | list = (),
@@ -629,7 +626,7 @@ class SegTraQ:
         inplace: bool = True,
     ):
         """
-        Filter control and poor-quality transcripts from the SpatialData object.
+        Filter control and low-quality transcripts from the SpatialData object.
 
         Parameters
         ----------
@@ -649,7 +646,7 @@ class SegTraQ:
             - If `inplace=True`: returns None after modifying `self.sdata`.
             - If `inplace=False`: returns a new SpatialData object with filtered transcripts.
         """
-        _filter_control_and_poor_quality_transcripts(
+        _filter_control_and_low_quality_transcripts(
             sdata=self.sdata,
             min_qv=min_qv,
             control_genes=control_genes,
@@ -661,7 +658,7 @@ class SegTraQ:
             inplace=inplace,
         )
 
-    filter_control_and_poor_quality_transcripts.__doc__ = _filter_control_and_poor_quality_transcripts.__doc__
+    filter_control_and_low_quality_transcripts.__doc__ = _filter_control_and_low_quality_transcripts.__doc__
 
 
 class _BLFacade:
@@ -1306,17 +1303,18 @@ class _VLFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             points_key=self._p.points_key,
-            points_background_id=self._p.points_background_id,
             points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_z_key=self._p.points_z_key,
             correct_z_drift=correct_z_drift,
+            max_points=max_points,
             seed=seed,
             q=q,
-            scale=scale,
             normalization=normalization,
+            scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
             inplace=inplace,

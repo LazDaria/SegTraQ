@@ -1683,7 +1683,7 @@ def filter_cells(adata, col: str, func: Callable):
     return adata[mask]
 
 
-def _filter_control_and_poor_quality_transcripts(
+def _filter_control_and_low_quality_transcripts(
     sdata,
     min_qv: float = 20.0,
     control_genes: tuple | list = (),
@@ -1695,7 +1695,7 @@ def _filter_control_and_poor_quality_transcripts(
     inplace: bool = True,
 ) -> sd.SpatialData:
     """
-    Filter control and poor-quality transcripts from the SpatialData object.
+    Filter control and low-quality transcripts from the SpatialData object.
     This is always done in place.
 
     Parameters
@@ -1778,7 +1778,14 @@ def _filter_control_and_poor_quality_transcripts(
             # the aggregate function from spatialdata is not sufficient,
             # because it removes all layers but the shapes and transcripts
             # TODO: implement recomputation of expression matrix
-            raise NotImplementedError("Recomputing expression matrix is not yet implemented.")
+            raise NotImplementedError(
+                "Recomputing expression matrix is not yet implemented. "
+                "For some segmentation methods, this is a non-trivial task, "
+                "and we are talking to the developers about how to best implement this in the future. "
+                "In the meantime, you can set recompute_expression=False to skip this step, "
+                "but be aware that the expression matrix will still contain the control genes, "
+                "which will affect some metrics."
+            )
 
     return sdata
 
