@@ -236,14 +236,14 @@ def similarity_nucleus_cell(
     # Check if X looks like counts
     if _looks_like_counts(X):
         arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in tbl.layers:
+    elif "counts" not in tbl.layers:
         raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = tbl.layers["raw"]
-        arr = raw.toarray() if hasattr(raw, "toarray") else raw
+        counts = tbl.layers["counts"]
+        arr = counts.toarray() if hasattr(counts, "toarray") else counts
 
     expr_cells = pd.DataFrame(
         arr,

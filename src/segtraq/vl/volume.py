@@ -482,12 +482,12 @@ def fraction_heterotypic_overlap(
         area_i = row["_area"]
         # store invalid cell areas
         if area_i is None or np.isnan(area_i) or area_i <= 0:
-            out_rows.append((cid, np.nan))
+            out_rows.append((cid, np.nan, np.nan))
             continue
 
         if unknown_policy == "exclude":
             if bool(row["_is_unknown"]) or pd.isna(t_i):
-                out_rows.append((cid, np.nan))
+                out_rows.append((cid, np.nan, np.nan))
                 continue
         # get indices of the intersections of the spatial index with the
         # target cell
@@ -496,7 +496,7 @@ def fraction_heterotypic_overlap(
         cand_idx = [j for j in cand_idx if j != i]
         # if empty add 0.0 - do here to avoid empty indexing
         if not cand_idx:
-            out_rows.append((cid, 0.0))
+            out_rows.append((cid, 0.0, 0.0))
             continue
 
         cands = gdf_all.iloc[cand_idx]
@@ -511,7 +511,7 @@ def fraction_heterotypic_overlap(
         cands = cands[cands["_cell_type"] != t_i]
         # if empty add 0.0
         if cands.empty:
-            out_rows.append((cid, 0.0))
+            out_rows.append((cid, 0.0, 0.0))
             continue
         # compute area intersections between candidate cells and
         # target cell
