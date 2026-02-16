@@ -9,7 +9,7 @@ SegTraQ documentation
 `SegTraQ` is a tool for the assessment of segmentation quality in spatial transcriptomics data.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
    modules/baseline
@@ -26,10 +26,6 @@ SegTraQ documentation
    :maxdepth: 2
    :caption: Tutorials:
    
-   notebooks/10x_xenium_focus_simplified
-   notebooks/10x_xenium_focus
-   notebooks/vizgen_merscope_focus
-   notebooks/cosmx_focus
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
@@ -38,3 +34,7 @@ SegTraQ documentation
    notebooks/supervised
    notebooks/point_statistics
    notebooks/plotting
+   notebooks/10x_xenium_focus_simplified
+   notebooks/10x_xenium_focus
+   # notebooks/vizgen_merscope_focus
+   # notebooks/cosmx_focus
