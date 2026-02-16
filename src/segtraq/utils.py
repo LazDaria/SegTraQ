@@ -512,12 +512,12 @@ def merge_into_var(sdata, tables_key, df_to_merge):
 def _pairwise_auc(
     adata: AnnData,
     ctypes: pd.Categorical,
-    ref_cell_type: str,
+    cell_type_key: str,
     ct_a: str,
     ct_b: str,
     max_fpr: float | None,
     auc_pos_thresh: float,
-    min_cells_per_type: int,
+    min_cells_per_celltype: int,
 ) -> tuple[str, str, list[str], bool]:
     """
     Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b)
@@ -525,7 +525,7 @@ def _pairwise_auc(
     """
     # Restrict to cells of ct_a and ct_b
     mask = ctypes.isin([ct_a, ct_b])
-    if mask.sum() < 2 * min_cells_per_type:
+    if mask.sum() < 2 * min_cells_per_celltype:
         # too few cells total -> skip
         return (ct_a, ct_b, [], False)
 
@@ -537,7 +537,7 @@ def _pairwise_auc(
         X_pair = np.asarray(X_pair)  # (n_cells_pair, n_genes)
 
     genes = np.asarray(ad_pair.var_names)
-    labels = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
+    labels = (ad_pair.obs[cell_type_key].values == ct_a).astype(int)
     if labels.sum() == 0 or labels.sum() == labels.size:
         # Only one class present -> skip
         return (ct_a, ct_b, [], False)
@@ -569,19 +569,19 @@ def _pairwise_auc(
 def _pairwise_de(
     adata: AnnData,
     ctypes: pd.Categorical,
-    ref_cell_type: str,
+    cell_type_key: str,
     ct_a: str,
     ct_b: str,
     method: str,
     pval_adj_thresh: float,
     logfc_pos_thresh: float,
-    min_cells_per_type: int,
+    min_cells_per_celltype: int,
 ) -> tuple[str, str, list[str], bool]:
     """
     Helper: run DE for one pair (ct_a, ct_b) and return genes up in ct_a.
     """
     mask = ctypes.isin([ct_a, ct_b])
-    if mask.sum() < 2 * min_cells_per_type:
+    if mask.sum() < 2 * min_cells_per_celltype:
         # too few cells total, skip
         return (ct_a, ct_b, [], False)
 
@@ -590,7 +590,7 @@ def _pairwise_de(
     # DE: ct_a vs ct_b
     sc.tl.rank_genes_groups(
         ad_pair,
-        groupby=ref_cell_type,
+        groupby=cell_type_key,
         groups=[ct_a],
         reference=ct_b,
         method=method,
@@ -604,9 +604,9 @@ def _pairwise_de(
     return (ct_a, ct_b, pos_genes_a, True)
 
 
-def get_ref_markers(
-    adata_ref: AnnData,
-    ref_cell_type: str,
+def markers_from_reference(
+    adata: AnnData,
+    cell_type_key: str,
     mode: str = "de",
     max_fpr: float | None = None,
     auc_pos_thresh: float = 0.9,
@@ -618,7 +618,7 @@ def get_ref_markers(
     max_neg_frac: float = 0.05,
     t_pos: float = 0.25,
     t_neg: float = 1.0,
-    min_cells_per_type: int = 10,
+    min_cells_per_celltype: int = 10,
     n_jobs: int = 1,
 ) -> dict[str, dict[str, list[str]]]:
     """
@@ -635,9 +635,9 @@ def get_ref_markers(
 
     Negative markers:
     -----------------
-    For each ordered pair (a, b), take genes up in a vs b and consider them
-    negative-marker candidates for b if they are expressed (> 0) in at most
-    max_neg_frac fraction of cells of type b, and are not up in b vs any cell
+    For each ordered pair (a, b) of cell types, take genes up in a vs b and consider them
+    negative-marker candidates for b if  (1.) they are expressed (> 0) in at most
+    max_neg_frac fraction of cells of type b, and (2.) are not up in b vs any cell
     type (computed across all ordered contrasts).
 
     Overlap filtering:
@@ -648,10 +648,10 @@ def get_ref_markers(
 
     Parameters
     ----------
-    adata_ref : AnnData
+    adata : AnnData
         Reference single-cell dataset (cells x genes).
-    ref_cell_type : str
-        Column in `adata_ref.obs` containing cell type labels.
+    cell_type_key : str
+        Column in `adata.obs` containing cell type labels.
     mode : {"auc", "de"}, optional (default: "de")
         - "auc": compute markers using pairwise AUC/pAUC.
         - "de" : compute markers using pairwise DE.
@@ -687,7 +687,7 @@ def get_ref_markers(
         Overlap filter threshold for positive markers.
     t_neg : float, optional (default: 1.0)
         Overlap filter threshold for negative markers.
-    min_cells_per_type : int, optional (default: 10)
+    min_cells_per_celltype : int, optional (default: 10)
         Minimum number of cells required per cell type to be included in pairwise
         computations.
     n_jobs : int, optional (default: 1)
@@ -696,9 +696,10 @@ def get_ref_markers(
     Returns
     -------
     dict
+        A dictionary mapping each cell type to its positive and negative markers:
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
-    adata = adata_ref.copy()
+    adata = adata.copy()
 
     # Normalize/log if this looks like raw counts
     if _looks_like_counts(adata.X):
@@ -715,30 +716,34 @@ def get_ref_markers(
 
     adata.var_names_make_unique()
 
-    ctypes = pd.Categorical(adata.obs[ref_cell_type])
+    ctypes = pd.Categorical(adata.obs[cell_type_key])
     types = list(ctypes.categories)
     if len(types) < 2:
         raise ValueError("Need at least two cell types to compute markers.")
 
-    # Cell counts per type -> filter rare types from pairwise contrasts
+    # Cell counts per type -> filter rare cell types from pairwise contrasts
     cell_counts = ctypes.value_counts().to_dict()
-    usable_types = [ct for ct in types if cell_counts.get(ct, 0) >= min_cells_per_type]
-    n_types = len(usable_types)
-    if n_types < 2:
+    usable_celltypes = [ct for ct in types if cell_counts.get(ct, 0) >= min_cells_per_celltype]
+    n_celltypes = len(usable_celltypes)
+    if n_celltypes < 2:
         raise ValueError(
-            f"Fewer than two cell types have at least {min_cells_per_type} cells; cannot perform pairwise contrasts."
+            f"Fewer than two cell types have at least {min_cells_per_celltype} cells; "
+            f"cannot perform pairwise contrasts."
         )
 
-    # ordered pairs (a, b), a != b
-    pairs = [(ct_a, ct_b) for ct_a in usable_types for ct_b in usable_types if ct_a != ct_b]
+    # ordered cell type pairs (a, b), a != b
+    celltype_pairs = [(ct_a, ct_b) for ct_a in usable_celltypes for ct_b in usable_celltypes if ct_a != ct_b]
 
+    # getting gene names and mapping to indices for later use
     var_names = np.asarray(adata.var_names)
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # Precompute fraction of cells with counts > 0 per type
+    # This dictionary maps cell type to an array of shape (n_genes,)
+    # with the fraction of cells of that type expressing each gene.
     expr_frac: dict[str, np.ndarray] = {}
     X = adata.X
-    for ct in usable_types:
+    for ct in usable_celltypes:
         mask_ct = ctypes == ct
         X_ct = X[mask_ct]
         if sparse.issparse(X_ct):
@@ -755,12 +760,12 @@ def get_ref_markers(
             return _pairwise_auc(
                 adata=adata,
                 ctypes=ctypes,
-                ref_cell_type=ref_cell_type,
+                cell_type_key=cell_type_key,
                 ct_a=ct_a,
                 ct_b=ct_b,
                 max_fpr=max_fpr,
                 auc_pos_thresh=auc_pos_thresh,
-                min_cells_per_type=min_cells_per_type,
+                min_cells_per_celltype=min_cells_per_celltype,
             )
 
     elif mode == "de":
@@ -769,13 +774,13 @@ def get_ref_markers(
             return _pairwise_de(
                 adata=adata,
                 ctypes=ctypes,
-                ref_cell_type=ref_cell_type,
+                cell_type_key=cell_type_key,
                 ct_a=ct_a,
                 ct_b=ct_b,
                 method=method,
                 pval_adj_thresh=pval_adj_thresh,
                 logfc_pos_thresh=logfc_pos_thresh,
-                min_cells_per_type=min_cells_per_type,
+                min_cells_per_celltype=min_cells_per_celltype,
             )
 
     else:
@@ -783,31 +788,33 @@ def get_ref_markers(
 
     # Run over all pairs, possibly in parallel
     if n_jobs == 1:
-        results = [worker(ct_a, ct_b) for ct_a, ct_b in pairs]
+        results = [worker(ct_a, ct_b) for ct_a, ct_b in celltype_pairs]
     else:
-        results = Parallel(n_jobs=n_jobs)(delayed(worker)(ct_a, ct_b) for ct_a, ct_b in pairs)
+        results = Parallel(n_jobs=n_jobs)(delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
 
+    # the ok column indicates whether the pairwise computation was valid (enough cells, etc.)
+    # we filter out invalid pairs before building the up_by_pair dictionary
     pair_df = pd.DataFrame(results, columns=["ct_a", "ct_b", "pos_genes_a", "ok"])
     pair_df = pair_df[pair_df["ok"]].reset_index(drop=True)
 
+    # Dictionary mapping (ct_a, ct_b) -> list of genes up in ct_a vs ct_b
     up_by_pair: dict[tuple[str, str], list[str]] = {
         (row.ct_a, row.ct_b): list(row.pos_genes_a) for row in pair_df.itertuples(index=False)
     }
 
     # per-cell-type union of all "up" genes
-    up_any: dict[str, set[str]] = {ct: set() for ct in usable_types}
+    up_any: dict[str, set[str]] = {ct: set() for ct in usable_celltypes}
     for row in pair_df.itertuples(index=False):
         up_any[row.ct_a].update(row.pos_genes_a)
 
     # -------------------------------------------------------------------------
     # Aggregate positives by voting; aggregate negatives by union (no vote filter)
     # -------------------------------------------------------------------------
-    pos_votes = {ct: collections.Counter() for ct in usable_types}
-    pair_counts_pos = {ct: 0 for ct in usable_types}  # valid (ct as "a")
+    pos_votes = {ct: collections.Counter() for ct in usable_celltypes}
+    pair_counts_pos = {ct: 0 for ct in usable_celltypes}  # valid (ct as "a")
+    neg_sets = {ct: set() for ct in usable_celltypes}  # accumulate negatives as a set (union)
 
-    neg_sets = {ct: set() for ct in usable_types}  # accumulate negatives as a set (union)
-
-    for ct_a, ct_b in pairs:
+    for ct_a, ct_b in celltype_pairs:
         up_ab = up_by_pair.get((ct_a, ct_b), set())
         if not up_ab:
             continue  # no genes passed in this contrast
@@ -839,7 +846,7 @@ def get_ref_markers(
     # Build positive marker lists using per-type voting thresholds
     # ------------------------------------------------------------
     pos_lists: dict[str, list[str]] = {}
-    for ct in usable_types:
+    for ct in usable_celltypes:
         M_c = pair_counts_pos.get(ct, 0)
         if M_c == 0:
             pos_lists[ct] = []
@@ -852,24 +859,25 @@ def get_ref_markers(
         pos_lists[ct] = pos_genes
 
     # Overlap filter for positive markers
-    pos_lists = _apply_overlap_filter(pos_lists, t=t_pos, n_ct=n_types)
+    pos_lists = _apply_overlap_filter(pos_lists, t=t_pos, n_ct=n_celltypes)
 
     # ------------------------------------------------------------
     # Build negative marker lists
     # ------------------------------------------------------------
     # Keep negative markers only if they are positive markers of at least one other cell type
     pos_any_final: set[str] = set().union(*pos_lists.values()) if len(pos_lists) else set()
-    for ct in usable_types:
+    for ct in usable_celltypes:
         neg_sets[ct] = {g for g in neg_sets[ct] if g in pos_any_final}
 
-    neg_lists: dict[str, list[str]] = {ct: sorted(list(neg_sets[ct])) for ct in usable_types}
+    neg_lists: dict[str, list[str]] = {ct: sorted(list(neg_sets[ct])) for ct in usable_celltypes}
 
     # Overlap filter for negative markers
-    neg_lists = _apply_overlap_filter(neg_lists, t=t_neg, n_ct=n_types)
+    neg_lists = _apply_overlap_filter(neg_lists, t=t_neg, n_ct=n_celltypes)
 
     markers: dict[str, dict[str, list[str]]] = {
-        ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in usable_types
+        ct: {"positive": pos_lists.get(ct, []), "negative": neg_lists.get(ct, [])} for ct in usable_celltypes
     }
+
     return markers
 
 
