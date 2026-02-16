@@ -367,11 +367,11 @@ def run_label_transfer(
         warnings.warn(
             "Reference adata_ref does not appear log-normalized."
             "Counts will be log1p-transformed before running label transfer."
-            "Raw counts will be stored in `adata_ref.raw`.",
+            "Raw counts will be stored in `adata_ref.layers['counts']`.",
             RuntimeWarning,
             stacklevel=2,
         )
-        adata_ref.raw = adata_ref.X.copy()
+        adata_ref.layers["counts"] = adata_ref.X.copy()
         sc.pp.normalize_total(adata_ref, target_sum=1e4)
         sc.pp.log1p(adata_ref)
 
@@ -419,11 +419,11 @@ def run_label_transfer(
         warnings.warn(
             "Spatialdata table appears to contain raw counts. "
             "Counts will be log1p-transformed before running label transfer."
-            'Raw counts will be stored in `adata_q.layers["raw"]`.',
+            'Raw counts will be stored in `adata_q.layers["counts"]`.',
             RuntimeWarning,
             stacklevel=2,
         )
-        adata_q.layers["raw"] = adata_q.X
+        adata_q.layers["counts"] = adata_q.X
         sc.pp.normalize_total(adata_q)
         sc.pp.log1p(adata_q)
 
@@ -704,10 +704,12 @@ def get_ref_markers(
     if _looks_like_counts(adata.X):
         warnings.warn(
             "Reference adata_ref does not appear log-normalized. "
-            "normalize_total + log1p will be applied to a copy for marker computation.",
+            "normalize_total + log1p will be applied to a copy for marker computation."
+            "Raw counts will be stored in `adata_ref.layers['counts']`.",
             RuntimeWarning,
             stacklevel=2,
         )
+        adata.layers["counts"] = adata.X.copy()
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 

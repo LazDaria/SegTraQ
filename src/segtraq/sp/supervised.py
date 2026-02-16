@@ -224,14 +224,14 @@ def neighbor_contamination(
     # footprint
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in adata.layers:
+    elif "counts" not in adata.layers:
         raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = adata.layers["raw"]
-        X_dense = raw.toarray() if hasattr(raw, "toarray") else raw
+        counts = adata.layers["counts"]
+        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     # Checking if neighborhood graph is present, else compute Delaunay triangulation
     if neighbors_key not in adata.obsp:
@@ -521,14 +521,14 @@ def marker_purity(
 
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "raw" not in adata.layers:
+    elif "counts" not in adata.layers:
         raise ValueError(
-            f"'raw' layer does not exist in sdata.tables['{tables_key}'], "
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        raw = adata.layers["raw"]
-        X_dense = raw.toarray() if hasattr(raw, "toarray") else raw
+        counts = adata.layers["counts"]
+        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     genes = np.asarray(adata.var_names)
     var_index = pd.Index(genes)

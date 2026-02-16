@@ -155,8 +155,9 @@ class SegTraQ:
 
         self.tables_key = tables_key
         self.tables_cell_id_key = tables_cell_id_key
-        self.tables_area_key = tables_area_key
+
         # if these are set to None, the validate_spatialdata automatically computes them
+        self.tables_area_key = tables_area_key if tables_area_key is not None else "cell_area"
         self.tables_centroid_x_key = tables_centroid_x_key if tables_centroid_x_key is not None else "centroid_x"
         self.tables_centroid_y_key = tables_centroid_y_key if tables_centroid_y_key is not None else "centroid_y"
 
@@ -190,65 +191,84 @@ class SegTraQ:
             raise TypeError("Must be a SpatialData object")
         self._sdata = value
 
-    def run_baseline(self, inplace: bool = True):
+    def run_baseline(
+        self,
+        inplace: bool = True,
+        *,
+        morphological_kwargs: dict | None = None,
+    ):
         """
-        Compute baseline SegTraQ metrics (via the bound BL facade) and optionally
-        merge them into the cell table.
+        Run baseline (bl) metrics.
 
-        Metrics
-        -------
-        - genes_per_cell
-        - transcripts_per_cell
-        - mean_transcripts_per_gene_per_cell
-        - transcript_density
-        - morphological features per cell
-        - global count metrics (num_cells, num_genes, num_transcripts, perc_unassigned_transcripts)
+        Convenience wrapper around global and per-cell summary metrics. Runs, in order:
+
+        1) number of cells
+        2) number of transcripts
+        3) number of genes
+        4) % unassigned transcripts
+        5) % unassigned transcripts per gene
+        6) transcripts per cell
+        7) genes per cell
+        8) mean transcripts per detected gene per cell
+        9) morphological features
+        10) transcript density
 
         Parameters
         ----------
         inplace : bool, default=True
-            If True, metrics are merged into `sdata.tables[tables_key].obs` and
-            `sdata.tables[tables_key].uns.
-            If False, returns the computed objects.
+            If True, results are merged into `.uns`, `.obs`, and/or `.var` as implemented
+            by each metric, and None is returned.
+            If False, per-metric results are returned in a dict.
+        morphological_kwargs : dict or None, optional
+            Extra arguments forwarded to :meth:`bl.morphological_features`.
 
         Returns
         -------
         None or dict
-            - If `inplace=True`: returns None after writing to `sdata`.
-            - If `inplace=False`: returns a dict with keys:
-            `summary`, `genes_per_cell`, `transcripts_per_cell`,
-                `mean_transcripts_per_gene_per_cell`and optionally `transcript_density`.
+            If ``inplace=True``, returns None.
+            If ``inplace=False``, returns a dict with keys:
+            - ``"num_cells"``
+            - ``"num_transcripts"``
+            - ``"num_genes"``
+            - ``"perc_unassigned_transcripts"``
+            - ``"perc_unassigned_transcripts_per_gene"``
+            - ``"transcripts_per_cell"``
+            - ``"genes_per_cell"``
+            - ``"mean_transcripts_per_gene_per_cell"``
+            - ``"morphological_features"``
+            - ``"transcript_density"``
         """
+        morphological_kwargs = {} if morphological_kwargs is None else dict(morphological_kwargs)
 
-        gpc = self.bl.genes_per_cell(inplace=inplace)
+        nc = self.bl.num_cells(inplace=inplace)
+        nt = self.bl.num_transcripts(inplace=inplace)
+        ng = self.bl.num_genes(inplace=inplace)
+        pu = self.bl.perc_unassigned_transcripts(inplace=inplace)
+
+        pu_pg = self.bl.perc_unassigned_transcripts_per_gene(inplace=inplace)
+
         tpc = self.bl.transcripts_per_cell(inplace=inplace)
-        tgc = self.bl.mean_transcripts_per_gene_per_cell(inplace=inplace)
-        mrp = self.bl.morphological_features(inplace=inplace)
+        gpc = self.bl.genes_per_cell(inplace=inplace)
+        mtg = self.bl.mean_transcripts_per_gene_per_cell(inplace=inplace)
+        dens = self.bl.transcript_density(inplace=inplace)
 
-        dens_raw = self.bl.transcript_density(inplace=inplace)
-        dens = None if dens_raw is None else dens_raw
-
-        summary = dict(
-            num_cells=self.bl.num_cells(inplace=inplace),
-            num_genes=self.bl.num_genes(inplace=inplace),
-            num_transcripts=self.bl.num_transcripts(inplace=inplace),
-            perc_unassigned_transcripts=self.bl.perc_unassigned_transcripts(inplace=inplace),
-            perc_unassigned_transcripts_per_gene=self.bl.perc_unassigned_transcripts_per_gene(inplace=inplace),
-        )
+        morph = self.bl.morphological_features(inplace=inplace, **(morphological_kwargs))
 
         if inplace:
             return None
-        else:
-            out = {
-                "summary": summary,
-                "genes_per_cell": gpc,
-                "transcripts_per_cell": tpc,
-                "mean_transcripts_per_gene_per_cell": tgc,
-                "morphological_feautres": mrp,
-            }
-            if dens is not None:
-                out["transcript_density"] = dens
-            return out
+
+        return {
+            "num_cells": nc,
+            "num_transcripts": nt,
+            "num_genes": ng,
+            "perc_unassigned_transcripts": pu,
+            "perc_unassigned_transcripts_per_gene": pu_pg,
+            "transcripts_per_cell": tpc,
+            "genes_per_cell": gpc,
+            "mean_transcripts_per_gene_per_cell": mtg,
+            "morphological_features": morph,
+            "transcript_density": dens,
+        }
 
     def run_region_similarity(
         self,
@@ -291,14 +311,10 @@ class SegTraQ:
         None or dict
         - If `inplace=True`: returns None after writing to `sdata`.
         - If `inplace=False`: returns a dict with keys:
-        * "ious": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU]
-        * "similarity_nucleus_cell": DataFrame with columns [tables_cell_id_key, nucleus_id, IoU,
-                                    similarity_nucleus_cell, nucleus_fraction]
-        * "similarity_nucleus_cytoplasm": DataFrame with columns [tables_cell_id_key,
-          nucleus_id, iou, similarity_nucleus_cytoplasm]
-        * "similarity_border_neighborhood": DataFrame with columns
-                                    [tables_cell_id_key, similarity_center_border,
-                                    similarity_border_neighborhood, similarity_border_neighborhood]
+        * "ious": pd.DataFrame
+        * "similarity_nucleus_cell": pd.DataFrame
+        * "similarity_nucleus_cytoplasm": pd.DataFrame
+        * "similarity_border_neighborhood": pd.DataFrame
 
         Notes
         -----
@@ -331,90 +347,167 @@ class SegTraQ:
                 "similarity_border_neighborhood": similarity_border_neighborhood,
             }
 
-    def run_label_transfer(
+    def run_volume_metrics(
         self,
-        adata_ref=AnnData,
-        tx_min: float = 10.0,
-        tx_max: float = 2000.0,
-        gn_min: float = 5.0,
-        gn_max: float = np.inf,
-        cell_type_key: str = "transferred_cell_type",
-        ref_cell_type: str = "cell_type",
-        ref_ensemble_key: str | None = None,
-        query_ensemble_key: str | None = "gene_ids",
+        *,
+        vsi_map: np.ndarray | None = None,
         inplace: bool = True,
+        similarity_kwargs: dict | None = None,
+        heterotypic_overlap_kwargs: dict | None = None,
+        vsi_kwargs: dict | None = None,
     ):
         """
-        Transfer cell-type labels from a reference AnnData to the current SpatialData table.
-        Cells are optionally filtered by per-cell transcript and gene counts before transfer.
+        Run volume-layer (vl) metrics.
+
+        Convenience wrapper around segtraq.vl functions via the instance facade `self.vl`.
+        Runs, in order:
+
+        1) similarity_top_bottom
+        2) fraction_heterotypic_overlap
+        3) vertical_signal_integrity_per_cell (only if `vsi_map` is provided)
 
         Parameters
         ----------
-        adata_ref : AnnData
-            Reference AnnData with cell-type annotations in `.obs[self.ref_cell_type]`.
-        tx_min, tx_max : float, default=(10.0, 2000.0)
-            Inclusive lower and upper bounds for per-cell transcript count filtering.
-        gn_min, gn_max : float, default=(5.0, inf)
-            Inclusive lower and upper bounds for per-cell gene count filtering.
-        cell_type_key : str
-            Column name to store transferred labels in `.obs` when `inplace=True`.
-        ref_cell_type: str, default="cell_type"
-            Column name of cell-type annotations in `adata_ref.obs[ref_cell_type]`.
-        ref_ensemble_key: str or None, default=None
-            Column name in `adata_ref.var` that contains unique gene/ensemble IDs.
-            If None, `adata_ref.var_names` will be used.
-        query_ensemble_key: str or None, default="gene_ids"
-            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
-            If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        vsi_map : np.ndarray or None, optional
+            Precomputed 2D VSI map required for `vertical_signal_integrity_per_cell`.
+            If None, VSI will be skipped.
         inplace : bool, default=True
-            If True, writes labels/scores into `sdata.tables[tables_key].obs` and returns None.
-            If False, returns a DataFrame with the assignment and scores without writing.
+            If True, metrics are written into `sdata.tables[tables_key].obs` by the
+            underlying methods and this function returns None.
+            If False, returns a dict of result DataFrames.
+        similarity_kwargs : dict or None, optional
+            Additional keyword arguments forwarded to :meth:`vl.similarity_top_bottom`.
+        heterotypic_overlap_kwargs : dict or None, optional
+            Additional keyword arguments forwarded to :meth:`vl.fraction_heterotypic_overlap`.
+        vsi_kwargs : dict or None, optional
+            Additional keyword arguments forwarded to :meth:`vl.vertical_signal_integrity_per_cell`.
 
         Returns
         -------
-        None or pd.DataFrame
-            None when `inplace=True`; otherwise a DataFrame of assignments.
-        """
+        None or dict[str, object]
+            If `inplace=True`, returns None.
 
-        # Delegate to utility (aliased to avoid name confusion)
-        result = _run_label_transfer(
-            sdata=self.sdata,
-            adata_ref=adata_ref,
-            ref_cell_type=ref_cell_type,
-            tables_key=self.tables_key,
-            tables_cell_id_key=self.tables_cell_id_key,
-            points_key=self.points_key,
-            points_cell_id_key=self.points_cell_id_key,
-            points_gene_key=self.points_gene_key,
-            tx_min=tx_min,
-            tx_max=tx_max,
-            gn_min=gn_min,
-            gn_max=gn_max,
-            cell_type_key=cell_type_key,
-            ref_ensemble_key=ref_ensemble_key,
-            query_ensemble_key=query_ensemble_key,
+            If `inplace=False`, returns a dict with keys:
+
+            - "similarity_top_bottom": pd.DataFrame
+            - "fraction_heterotypic_overlap": pd.DataFrame
+            - "vertical_signal_integrity_per_cell": pd.DataFrame   (only if vsi_map is not None)
+        """
+        sim = self.vl.similarity_top_bottom(
             inplace=inplace,
+            **(similarity_kwargs or {}),
         )
 
-        return None if inplace else result
+        het = self.vl.fraction_heterotypic_overlap(
+            inplace=inplace,
+            **(heterotypic_overlap_kwargs or {}),
+        )
 
-    run_label_transfer.__doc__ = _run_label_transfer.__doc__
+        vsi = None
+        if vsi_map is not None:
+            vsi = self.vl.vertical_signal_integrity_per_cell(
+                vsi_map=vsi_map,
+                inplace=inplace,
+                **(vsi_kwargs or {}),
+            )
 
-    def run_volume(self, inplace: bool = True):
-        """
-        Run volume metrics for SegTraQ.
-        """
-        sim_top_bottom = self.vl.similarity_top_bottom(inplace=inplace)
-        heterotypic_overlap = self.vl.fraction_heterotypic_overlap(inplace=inplace)
-        mean_vsi = self.vl.vertical_signal_integrity_per_cell(inplace=inplace)
         if inplace:
             return None
-        else:
-            return {
-                "cosine_sim_top_bottom_z": sim_top_bottom,
-                "heterotypic_overlap": heterotypic_overlap,
-                "mean_vsi": mean_vsi,
-            }
+
+        out = {
+            "similarity_top_bottom": sim,
+            "fraction_heterotypic_overlap": het,
+        }
+        if vsi_map is not None:
+            out["vertical_signal_integrity_per_cell"] = vsi
+
+        return out
+
+    def run_clustering_stability(
+        self,
+        key_prefix: str = "leiden_subset",
+        inplace: bool = True,
+        connectedness_kwargs: dict | None = None,
+        silhouette_kwargs: dict | None = None,
+        purity_kwargs: dict | None = None,
+        ari_kwargs: dict | None = None,
+    ):
+        """
+        Run clustering-stability metrics.
+
+        This method is a convenience wrapper around the clustering-stability (cs)
+        functions. It runs, in order:
+
+        1) cluster connectedness
+        2) silhouette score
+        3) purity (subset stability)
+        4) ARI (subset stability)
+
+        Only parameters shared by all four computations are exposed explicitly.
+        All other parameters are provided via method-specific ``*_kwargs`` dictionaries.
+
+        Parameters
+        ----------
+        key_prefix : str, default="leiden_subset"
+            Prefix for Leiden clustering labels written to `.obs` by the underlying
+            methods (where applicable).
+        inplace : bool, default=True
+            If True, metrics are written to `sdata.tables["table"].uns` by the
+            underlying methods and this function returns None. If False, the
+            computed metrics are returned as a dictionary.
+        connectedness_kwargs : dict or None, optional
+            Additonal keyword arguments forwarded to :meth:`cs.compute_cluster_connectedness`.
+        silhouette_kwargs : dict or None, optional
+            Additonal keyword arguments forwarded to :meth:`cs.compute_silhouette_score`.
+        purity_kwargs : dict or None, optional
+            Additonal keyword arguments forwarded to :meth:`cs.compute_purity`.
+        ari_kwargs : dict or None, optional
+            Additonal keyword arguments forwarded to :meth:`cs.compute_ari`.
+
+        Returns
+        -------
+        None or dict
+            If `inplace=True`, returns None.
+            If `inplace=False`, returns a dict with keys:
+
+            - ``"cluster_connectedness"`` : float
+            - ``"silhouette_score"`` : float
+            - ``"mean_purity"`` : float
+            - ``"mean_ari"`` : float
+        """
+        cc = self.cs.compute_cluster_connectedness(
+            key_prefix=key_prefix,
+            inplace=inplace,
+            **(connectedness_kwargs or {}),
+        )
+
+        sil = self.cs.compute_silhouette_score(
+            key_prefix=key_prefix,
+            inplace=inplace,
+            **(silhouette_kwargs or {}),
+        )
+
+        purity = self.cs.compute_purity(
+            key_prefix=key_prefix,
+            inplace=inplace,
+            **(purity_kwargs or {}),
+        )
+
+        ari = self.cs.compute_ari(
+            key_prefix=key_prefix,
+            inplace=inplace,
+            **(ari_kwargs or {}),
+        )
+
+        if inplace:
+            return None
+
+        return {
+            "cluster_connectedness": cc,
+            "silhouette_score": sil,
+            "mean_purity": purity,
+            "mean_ari": ari,
+        }
 
     def run_supervised_metrics(
         self,
@@ -514,8 +607,49 @@ class SegTraQ:
         compartments_kwargs: dict | None = None,
     ):
         """
-        Run all point-statistics metrics (ps) with shared filtering (genes + cell-type)
-        and return a dict when inplace=False.
+        Run point-statistics (ps) metrics.
+
+        Convenience wrapper around point-level spatial statistics. Applies shared
+        transcript and cell filtering (by gene(s) and cell type) and runs, in order:
+
+        1) percentage of transcripts in compartments (nucleus overlap, cytoplasm, outside)
+        2) distance to centroid (cell or nucleus)
+        3) distance to membrane (cell or nucleus)
+        4) membrane-distance skewness
+
+        Only parameters shared by all computations are exposed explicitly. All other
+        parameters are forwarded via method-specific ``*_kwargs`` dictionaries.
+
+        Parameters
+        ----------
+        genes : str | list[str] | None, optional
+            Gene(s) to include. If None, all genes are used.
+        cell_type_key : str, default="transferred_cell_type"
+            Cell-type annotation key in `sdata.tables[...].obs`.
+        cell_type_query : str | list[str] | None, optional
+            Restrict computations to cells matching these label(s).
+        inplace : bool, default=True
+            If True, results are merged into `.obs` and None is returned.
+            If False, per-metric results are returned.
+
+        centroid_kwargs : dict or None, optional
+            Extra arguments for :meth:`ps.distance_to_centroid`.
+        membrane_kwargs : dict or None, optional
+            Extra arguments for :meth:`ps.distance_to_membrane`.
+        skew_kwargs : dict or None, optional
+            Extra arguments for :meth:`ps.membrane_distance_skewness`.
+        compartments_kwargs : dict or None, optional
+            Extra arguments for :meth:`ps.percentage_transcripts_in_compartments`.
+
+        Returns
+        -------
+        None or dict
+            If ``inplace=True``, returns None.
+            If ``inplace=False``, returns a dict with keys:
+            - ``"percentage_transcripts_in_compartments"``
+            - ``"distance_to_centroid"``
+            - ``"distance_to_membrane"``
+            - ``"membrane_distance_skewness"``
         """
         common = dict(
             genes=genes,
@@ -562,6 +696,75 @@ class SegTraQ:
             "distance_to_membrane": dtm_df,
             "membrane_distance_skewness": mb_skw,
         }
+
+    def run_label_transfer(
+        self,
+        adata_ref=AnnData,
+        tx_min: float = 10.0,
+        tx_max: float = 2000.0,
+        gn_min: float = 5.0,
+        gn_max: float = np.inf,
+        cell_type_key: str = "transferred_cell_type",
+        ref_cell_type: str = "cell_type",
+        ref_ensemble_key: str | None = None,
+        query_ensemble_key: str | None = "gene_ids",
+        inplace: bool = True,
+    ):
+        """
+        Transfer cell-type labels from a reference AnnData to the current SpatialData table.
+        Cells are optionally filtered by per-cell transcript and gene counts before transfer.
+
+        Parameters
+        ----------
+        adata_ref : AnnData
+            Reference AnnData with cell-type annotations in `.obs[self.ref_cell_type]`.
+        tx_min, tx_max : float, default=(10.0, 2000.0)
+            Inclusive lower and upper bounds for per-cell transcript count filtering.
+        gn_min, gn_max : float, default=(5.0, inf)
+            Inclusive lower and upper bounds for per-cell gene count filtering.
+        cell_type_key : str
+            Column name to store transferred labels in `.obs` when `inplace=True`.
+        ref_cell_type: str, default="cell_type"
+            Column name of cell-type annotations in `adata_ref.obs[ref_cell_type]`.
+        ref_ensemble_key: str or None, default=None
+            Column name in `adata_ref.var` that contains unique gene/ensemble IDs.
+            If None, `adata_ref.var_names` will be used.
+        query_ensemble_key: str or None, default="gene_ids"
+            Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
+            If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        inplace : bool, default=True
+            If True, writes labels/scores into `sdata.tables[tables_key].obs` and returns None.
+            If False, returns a DataFrame with the assignment and scores without writing.
+
+        Returns
+        -------
+        None or pd.DataFrame
+            None when `inplace=True`; otherwise a DataFrame of assignments.
+        """
+
+        # Delegate to utility (aliased to avoid name confusion)
+        result = _run_label_transfer(
+            sdata=self.sdata,
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
+            tables_key=self.tables_key,
+            tables_cell_id_key=self.tables_cell_id_key,
+            points_key=self.points_key,
+            points_cell_id_key=self.points_cell_id_key,
+            points_gene_key=self.points_gene_key,
+            tx_min=tx_min,
+            tx_max=tx_max,
+            gn_min=gn_min,
+            gn_max=gn_max,
+            cell_type_key=cell_type_key,
+            ref_ensemble_key=ref_ensemble_key,
+            query_ensemble_key=query_ensemble_key,
+            inplace=inplace,
+        )
+
+        return None if inplace else result
+
+    run_label_transfer.__doc__ = _run_label_transfer.__doc__
 
     def filter_cells(
         self,
@@ -783,7 +986,7 @@ class _BLFacade:
 
     morphological_features.__doc__ = bl.morphological_features.__doc__
 
-    def transcript_density(self, inplace: bool = False):
+    def transcript_density(self, inplace: bool = True):
         return bl.transcript_density(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
@@ -1259,6 +1462,7 @@ class _CSFacade:
     def compute_cluster_connectedness(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
+        use_weights: bool = False,
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
@@ -1267,6 +1471,7 @@ class _CSFacade:
         return cs.compute_cluster_connectedness(
             sdata=self._p.sdata,
             resolution=resolution,
+            use_weights=use_weights,
             key_prefix=key_prefix,
             random_state=random_state,
             cell_type_key=cell_type_key,
@@ -1320,6 +1525,8 @@ class _VLFacade:
             inplace=inplace,
         )
 
+    similarity_top_bottom.__doc__ = vl.similarity_top_bottom.__doc__
+
     def fraction_heterotypic_overlap(
         self,
         cell_type_key: str = "transferred_cell_type",
@@ -1345,6 +1552,8 @@ class _VLFacade:
             inplace=inplace,
         )
 
+    fraction_heterotypic_overlap.__doc__ = vl.fraction_heterotypic_overlap.__doc__
+
     def vertical_signal_integrity_per_cell(
         self,
         vsi_map: np.ndarray,
@@ -1363,3 +1572,5 @@ class _VLFacade:
             vsi_map=vsi_map,
             inplace=inplace,
         )
+
+    vertical_signal_integrity_per_cell.__doc__ = vl.vertical_signal_integrity_per_cell.__doc__
