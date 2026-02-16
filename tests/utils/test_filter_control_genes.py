@@ -1,8 +1,8 @@
-from segtraq.utils import _filter_control_and_poor_quality_transcripts
+from segtraq.utils import _filter_control_and_low_quality_transcripts
 
 
 def test_filter_control_genes(sdata_new):
-    sdata = _filter_control_and_poor_quality_transcripts(
+    sdata = _filter_control_and_low_quality_transcripts(
         sdata_new,
         min_qv=30.0,
         control_genes=("A2ML1", "AAMP", "AAR2", "AARSD1", "ABAT", "ABCA1", "ABCA10", "ABCA3"),
@@ -29,7 +29,7 @@ def test_filter_control_genes(sdata_new):
 
 
 def test_filter_control_genes_no_transcripts_remain(sdata_new):
-    sdata = _filter_control_and_poor_quality_transcripts(
+    sdata = _filter_control_and_low_quality_transcripts(
         sdata_new,
         min_qv=100.0,  # setting a high threshold to filter out all transcripts
         points_key="transcripts",
