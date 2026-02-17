@@ -6,11 +6,9 @@
 SegTraQ documentation
 =====================
 
-SegTraQ (**Seg**mentation and **Tra**nscript Assignment **Q**uality Control) is a Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data.
+SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data.
 
-⚠️ Note: SegTraQ is under active development. 
-Features, interfaces, and functionality may change in upcoming releases.
-To install the latest development version, run `pip install git+https://github.com/LazDaria/SegTraQ`.
+⚠️ Note: SegTraQ is under active development. Features, interfaces, and functionality may change in upcoming releases.
 
 .. image:: _static/img/figure_1.png
    :width: 100%
