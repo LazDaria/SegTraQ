@@ -170,19 +170,17 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus_simplified.html">Technology Focus - 10x Genomics Xenium (Simplified)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Similarity between subcellular regions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Module: Point Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/plotting.html">Plotting</a></li>
 
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 </ul>
 
     </div>
@@ -443,8 +441,8 @@ The corrected values are used only for defining top/bottom subsets.</p></li>
 <li><p><strong>max_points</strong> (<em>int</em><em>, </em><em>default=1_000_000</em>) – Max. number of points used to fit the regression (random subsampling) in z drift correction.</p></li>
 <li><p><strong>seed</strong> (<em>int</em><em> or </em><em>None</em><em>, </em><em>default=0</em>) – Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.</p></li>
 <li><p><strong>q</strong> (<em>float</em><em>, </em><em>default=0.30</em>) – Quantile defining bottom and top parts. bottom = q, top = 1-q.</p></li>
-<li><p><strong>normalization</strong> (<em>str</em><em>, </em><em>default=&quot;pearson&quot;</em>) – Normalization to be applied to the data. Either Pearson residuals, scaled log-transform or raw
-counts</p></li>
+<li><p><strong>normalization</strong> (<em>str</em><em>, </em><em>default=&quot;pearson&quot;</em>) – Normalization to be applied to the data. Either Pearson residuals (“pearson”),
+scaled log-transform (“log”) or raw counts (“raw” or None).</p></li>
 <li><p><strong>scale</strong> (<em>float</em><em>, </em><em>default=1e4</em>) – Scale for within-cell library size normalization (bottom+top).</p></li>
 <li><p><strong>min_genes</strong> (<em>int</em><em>, </em><em>default=5</em>) – Minimum number of genes with nonzero counts in (bottom OR top) required to score a cell.</p></li>
 <li><p><strong>min_transcripts</strong> (<em>int</em><em>, </em><em>default=10</em>) – Minimum number of transcripts required in EACH part (bottom and top) to score a cell.</p></li>

@@ -170,19 +170,17 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus_simplified.html">Technology Focus - 10x Genomics Xenium (Simplified)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/vizgen_merscope_focus.html">Technology Focus - Vizgen MERSCOPE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/cosmx_focus.html">Technology Focus - NanoString CosMx</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Getting data into the right format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Baseline metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Clustering stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Similarity between subcellular regions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">3D Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Supervised metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Point statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Module: Point Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../notebooks/plotting.html">Plotting</a></li>
 
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus - 10x Genomics Xenium</a></li>
 </ul>
 
     </div>
@@ -460,7 +458,8 @@ This is always done in place.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing transcript data.</p></li>
-<li><p><strong>min_qv</strong> (<em>float</em><em>, </em><em>default=20.0</em>) – Minimum quality value (qv) threshold for transcripts to be considered valid.</p></li>
+<li><p><strong>min_qv</strong> (<em>float</em><em> | </em><em>None</em><em>, </em><em>default=20.0</em>) – Minimum quality value (qv) threshold for transcripts to be considered valid.
+If None, no filtering is applied based on quality.</p></li>
 <li><p><strong>control_genes</strong> (<em>tuple</em><em> | </em><em>list</em><em>, </em><em>default=</em><em>(</em><em>)</em>) – Additional keywords to identify control probes in gene names.
 By default, only standard control prefixes are used.
 These are: “<a href="#id1"><span class="problematic" id="id2">NegControlProbe_</span></a>”, “<a href="#id3"><span class="problematic" id="id4">antisense_</span></a>”, “NegControlCodeword”, “<a href="#id5"><span class="problematic" id="id6">BLANK_</span></a>”, “Blank-”, “NegPrb”,
