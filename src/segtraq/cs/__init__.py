@@ -1,13 +1,13 @@
 from .clustering_stability import (
-    compute_ari,
-    compute_cluster_connectedness,
-    compute_purity,
-    compute_silhouette_score,
+    ari,
+    cluster_connectedness,
+    purity,
+    silhouette_score,
 )
 
 __all__ = [
-    "compute_ari",
-    "compute_silhouette_score",
-    "compute_purity",
-    "compute_cluster_connectedness",
+    "ari",
+    "silhouette_score",
+    "purity",
+    "cluster_connectedness",
 ]

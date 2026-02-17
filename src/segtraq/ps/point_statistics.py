@@ -96,8 +96,9 @@ def percentage_transcripts_in_compartments(
       pct_outside_cell, pct_nucleus, pct_cytoplasm
     """
     # transformations alignment check
-    T_transcripts = sd.transformations.get_transformation(sdata.points[points_key])
-    T_shapes = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    T_transcripts = sdata.points[points_key].attrs["transform"]
+    T_shapes = sdata.shapes[shapes_key].attrs["transform"]
+
     assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
         "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
     )
