@@ -1432,7 +1432,7 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         inplace: bool = True,
     ) -> float:
-        return cs.compute_purity(
+        return cs.purity(
             self._p.sdata,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
@@ -1443,14 +1443,14 @@ class _CSFacade:
 
     purity.__doc__ = cs.purity.__doc__
 
-    def ari(
+    def adjusted_rand_index(
         self,
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         inplace: bool = True,
     ) -> float:
-        return cs.compute_ari(
+        return cs.adjusted_rand_index(
             self._p.sdata,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
@@ -1459,7 +1459,7 @@ class _CSFacade:
             inplace=inplace,
         )
 
-    ari.__doc__ = cs.ari.__doc__
+    adjusted_rand_index.__doc__ = cs.adjusted_rand_index.__doc__
 
     def cluster_connectedness(
         self,
