@@ -1,7 +1,6 @@
-import copy
-
 import numpy as np
 import pytest
+import spatialdata as sd
 
 import segtraq as st
 
@@ -16,7 +15,7 @@ def test_constructor_invalid_coordinate(sdata_new):
 
 
 def test_constructor_missing_table_centroids(sdata_new):
-    sdata = copy.deepcopy(sdata_new)
+    sdata = sd.deepcopy(sdata_new)
     # get the original centroid columns and drop them
     centroids_old = sdata.tables["table"].obs[["x_centroid", "y_centroid"]].copy()
     centroids_old.columns = ["centroid_x", "centroid_y"]

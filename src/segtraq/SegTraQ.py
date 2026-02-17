@@ -1,4 +1,3 @@
-import copy
 from collections.abc import Callable
 from typing import Literal
 
@@ -475,25 +474,25 @@ class SegTraQ:
             - ``"mean_purity"`` : float
             - ``"mean_ari"`` : float
         """
-        cc = self.cs.compute_cluster_connectedness(
+        cc = self.cs.cluster_connectedness(
             key_prefix=key_prefix,
             inplace=inplace,
             **(connectedness_kwargs or {}),
         )
 
-        sil = self.cs.compute_silhouette_score(
+        sil = self.cs.silhouette_score(
             key_prefix=key_prefix,
             inplace=inplace,
             **(silhouette_kwargs or {}),
         )
 
-        purity = self.cs.compute_purity(
+        purity = self.cs.purity(
             key_prefix=key_prefix,
             inplace=inplace,
             **(purity_kwargs or {}),
         )
 
-        ari = self.cs.compute_ari(
+        ari = self.cs.adjusted_rand_index(
             key_prefix=key_prefix,
             inplace=inplace,
             **(ari_kwargs or {}),
@@ -805,7 +804,7 @@ class SegTraQ:
         # synchronizing the rest of the sdata object to the now filtered table
         # (removes e.g. shapes whose cell_id is gone after filtering)
         if not inplace:
-            sdata = copy.deepcopy(self.sdata)
+            sdata = sd.deepcopy(self.sdata)
         else:
             sdata = self.sdata
 
@@ -1404,7 +1403,7 @@ class _CSFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def compute_silhouette_score(
+    def silhouette_score(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
         metric: str = "euclidean",
@@ -1413,53 +1412,56 @@ class _CSFacade:
         cell_type_key: str | None = None,
         inplace: bool = True,
     ) -> float:
-        return cs.compute_silhouette_score(
+        return cs.silhouette_score(
             self._p.sdata,
             resolution=resolution,
             metric=metric,
+            tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             random_state=random_state,
             cell_type_key=cell_type_key,
             inplace=inplace,
         )
 
-    compute_silhouette_score.__doc__ = cs.compute_silhouette_score.__doc__
+    silhouette_score.__doc__ = cs.silhouette_score.__doc__
 
-    def compute_purity(
+    def purity(
         self,
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         inplace: bool = True,
     ) -> float:
-        return cs.compute_purity(
+        return cs.purity(
             self._p.sdata,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
+            tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             inplace=inplace,
         )
 
-    compute_purity.__doc__ = cs.compute_purity.__doc__
+    purity.__doc__ = cs.purity.__doc__
 
-    def compute_ari(
+    def adjusted_rand_index(
         self,
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         inplace: bool = True,
     ) -> float:
-        return cs.compute_ari(
+        return cs.adjusted_rand_index(
             self._p.sdata,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
+            tables_key=self._p.tables_key,
             inplace=inplace,
         )
 
-    compute_ari.__doc__ = cs.compute_ari.__doc__
+    adjusted_rand_index.__doc__ = cs.adjusted_rand_index.__doc__
 
-    def compute_cluster_connectedness(
+    def cluster_connectedness(
         self,
         resolution: float | list[float] = (0.6, 0.8, 1.0),
         use_weights: bool = False,
@@ -1468,17 +1470,18 @@ class _CSFacade:
         cell_type_key: str | None = None,
         inplace: bool = True,
     ):
-        return cs.compute_cluster_connectedness(
+        return cs.cluster_connectedness(
             sdata=self._p.sdata,
             resolution=resolution,
             use_weights=use_weights,
             key_prefix=key_prefix,
+            tables_key=self._p.tables_key,
             random_state=random_state,
             cell_type_key=cell_type_key,
             inplace=inplace,
         )
 
-    compute_cluster_connectedness.__doc__ = cs.compute_cluster_connectedness.__doc__
+    cluster_connectedness.__doc__ = cs.cluster_connectedness.__doc__
 
 
 class _VLFacade:
@@ -1498,7 +1501,7 @@ class _VLFacade:
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
-        normalization: str | None = None,
+        normalization: str | None = "log",
         min_genes: int = 5,
         min_transcripts: int = 10,
         inplace: bool = True,

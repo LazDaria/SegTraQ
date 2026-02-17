@@ -111,3 +111,5 @@ ENV/
 tests/data*
 tests/data/scRNAseq_ref_large.h5ad
 data/
+# required for symlink
+data
