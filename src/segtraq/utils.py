@@ -412,7 +412,7 @@ def run_label_transfer(
             raise KeyError(f"QC column '{key}' not found in table.obs.")
         mask &= (tbl.obs[key].to_numpy() >= low) & (tbl.obs[key].to_numpy() <= high)
 
-    adata_q = tbl[mask]
+    adata_q = tbl[mask].copy()
 
     # Normalize & log1p (query)
     if _looks_like_counts(tbl.X):

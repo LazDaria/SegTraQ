@@ -474,25 +474,25 @@ class SegTraQ:
             - ``"mean_purity"`` : float
             - ``"mean_ari"`` : float
         """
-        cc = self.cs.compute_cluster_connectedness(
+        cc = self.cs.cluster_connectedness(
             key_prefix=key_prefix,
             inplace=inplace,
             **(connectedness_kwargs or {}),
         )
 
-        sil = self.cs.compute_silhouette_score(
+        sil = self.cs.silhouette_score(
             key_prefix=key_prefix,
             inplace=inplace,
             **(silhouette_kwargs or {}),
         )
 
-        purity = self.cs.compute_purity(
+        purity = self.cs.purity(
             key_prefix=key_prefix,
             inplace=inplace,
             **(purity_kwargs or {}),
         )
 
-        ari = self.cs.compute_ari(
+        ari = self.cs.adjusted_rand_index(
             key_prefix=key_prefix,
             inplace=inplace,
             **(ari_kwargs or {}),
