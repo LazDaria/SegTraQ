@@ -10,5 +10,3 @@ Region similarity metrics
 --------------------------
 .. automodule:: segtraq.rs.region_similarity
    :members:
-   :undoc-members:
-   :show-inheritance:

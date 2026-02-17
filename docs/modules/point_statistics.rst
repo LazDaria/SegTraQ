@@ -10,5 +10,3 @@ Point statistics
 ----------------
 .. automodule:: segtraq.ps.point_statistics
    :members:
-   :undoc-members:
-   :show-inheritance:

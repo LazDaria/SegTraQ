@@ -10,5 +10,3 @@ Supervised metrics
 ------------------
 .. automodule:: segtraq.sp.supervised
    :members:
-   :undoc-members:
-   :show-inheritance:
