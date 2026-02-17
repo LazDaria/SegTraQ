@@ -1,8 +1,7 @@
-import copy
-
 import numpy as np
 import pandas as pd
 import pytest
+import spatialdata as sd
 
 import segtraq as st
 
@@ -37,7 +36,7 @@ def test_fraction_heterotypic_overlap_runs_and_returns_expected_columns(sdata_3D
 
 
 def test_fraction_heterotypic_overlap_inplace_writes_to_obs(sdata_3D_labeled):
-    sdata = copy.deepcopy(sdata_3D_labeled)
+    sdata = sd.deepcopy(sdata_3D_labeled)
 
     # drop existing cols if present (avoid false positives if tests re-run)
     obs = sdata.tables["table"].obs
@@ -64,7 +63,7 @@ def test_fraction_heterotypic_overlap_forced_full_overlap_two_cells(sdata_3D_lab
 
     Because geometries are identical and types differ, each should get overlap_fraction ~ 1.
     """
-    sdata = copy.deepcopy(sdata_3D_labeled)
+    sdata = sd.deepcopy(sdata_3D_labeled)
 
     shapes = sdata.shapes["cell_boundaries"].copy()
 
@@ -111,7 +110,7 @@ def test_fraction_heterotypic_overlap_unknown_exclude_returns_nan_for_focal(sdat
     Hit the unknown_policy='exclude' branch:
     If the focal cell has unknown type, its overlap fraction should be NaN.
     """
-    sdata = copy.deepcopy(sdata_3D_labeled)
+    sdata = sd.deepcopy(sdata_3D_labeled)
 
     shapes = sdata.shapes["cell_boundaries"].copy()
 

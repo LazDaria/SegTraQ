@@ -1618,7 +1618,7 @@ def add_nuc_shapes_via_cellpose(
     """
 
     if not inplace:
-        sdata = copy.deepcopy(sdata)
+        sdata = sd.deepcopy(sdata)
 
     # assert that the format is correct and extract the image
     image = _process_image(
@@ -1749,7 +1749,7 @@ def _filter_control_and_low_quality_transcripts(
         The updated SpatialData object with invalid transcripts marked (in an extra column).
     """
     if not inplace:
-        sdata = copy.deepcopy(sdata)
+        sdata = sd.deepcopy(sdata)
 
     pts = sdata.points[points_key]
     adata = sdata.tables[tables_key]

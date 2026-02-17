@@ -69,8 +69,9 @@ def match_nuclei_to_cells(
         "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `nc` metrics."
     )
 
-    T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
-    T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+    T_cells = sdata.shapes[shapes_key].attrs["transform"]
+    T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+
     assert T_cells == T_nuclei, (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
@@ -208,8 +209,9 @@ def similarity_nucleus_cell(
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
 
-    T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
-    T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+    T_cells = sdata.shapes[shapes_key].attrs["transform"]
+    T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+
     assert T_cells == T_nuclei, (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
@@ -427,8 +429,9 @@ def similarity_nucleus_cytoplasm(
     if metric not in ["pearson", "spearman", "cosine_sim"]:
         raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
 
-    T_cells = sd.transformations.get_transformation(sdata.shapes[shapes_key])
-    T_nuclei = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+    T_cells = sdata.shapes[shapes_key].attrs["transform"]
+    T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+
     assert T_cells == T_nuclei, (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
