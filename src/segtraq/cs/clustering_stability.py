@@ -251,7 +251,7 @@ def purity(
     return mean_purity
 
 
-def ari(
+def adjusted_rand_index(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
     frac_cells_subset: float = 0.63,

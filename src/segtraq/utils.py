@@ -898,40 +898,6 @@ def _ensure_index(
     id_key: str,
 ):
     """
-    Ensure `gdf` is indexed by `id_key`. Returns (gdf, used_id_key).
-
-    If `id_key` matches the current index name, the GeoDataFrame is returned unchanged.
-    Otherwise, `id_key` must be a column name and will be set as the index.
-    """
-    # Already indexed correctly
-    if gdf.index.name == id_key:
-        return gdf
-
-    # Otherwise require column to exist and set it as index
-    if id_key not in gdf.columns:
-        raise KeyError(
-            f"'{id_key}' not found in shapes '{shapes_key}'. "
-            f"Available columns: {gdf.columns.tolist()}. "
-            f"Provide a valid {id_key_name}, or set it to the current index name if IDs are in the index."
-        )
-
-    warnings.warn(
-        f"Setting column '{id_key}' as the index for shapes '{shapes_key}', "
-        "as this is required to link the table to shapes in SpatialData.",
-        UserWarning,
-        stacklevel=2,
-    )
-    return gdf.set_index(id_key, drop=True)
-
-
-def _ensure_index(
-    gdf,
-    *,
-    shapes_key: str,
-    id_key_name: str,
-    id_key: str,
-):
-    """
     Ensure `gdf` is indexed by `id_key`.
 
     If `id_key` matches the current index name, the GeoDataFrame is returned unchanged.
@@ -1117,69 +1083,6 @@ def validate_spatialdata(
         f"You can set this with the 'points_gene_key' argument."
     )
 
-    if contains_tables:
-        assert tables_key in sdata.tables, (
-            f"Tables DataFrame must contain key: {tables_key}. "
-            f"Available keys: {list(sdata.tables.keys())}. "
-            f"If you want to use a different key, set the tables_key parameter."
-        )
-        table = sdata.tables[tables_key]
-        if tables_area_key is not None:
-            assert tables_area_key in table.obs.columns, (
-                f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_area_key' argument (set to None if you do not have this)."
-            )
-        if tables_area_key is None:
-            warnings.warn(
-                "No area column specified for tables. Area will be automatically computed from shapes.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            bl.morphological_features(
-                sdata,
-                features_to_compute=["cell_area"],
-                tables_cell_id_key=tables_cell_id_key,
-                tables_centroid_x_key=tables_centroid_x_key,
-                tables_centroid_y_key=tables_centroid_y_key,
-                shapes_key=shapes_key,
-                tables_key=tables_key,
-                inplace=True,
-            )
-
-        if tables_centroid_x_key is not None:
-            assert tables_centroid_x_key in table.obs.columns, (
-                f"Tables DataFrame must contain x coordinate column '{tables_centroid_x_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_centroid_x_key' argument (set to None if you do not have this)."
-            )
-
-        if tables_centroid_y_key is not None:
-            assert tables_centroid_y_key in table.obs.columns, (
-                f"Tables DataFrame must contain y coordinate column '{tables_centroid_y_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
-            )
-
-        if tables_centroid_x_key is None or tables_centroid_y_key is None:
-            warnings.warn(
-                "No centroids specified for tables. Centroids will be automatically computed from shapes.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            bl.morphological_features(
-                sdata,
-                tables_cell_id_key=tables_cell_id_key,
-                tables_centroid_x_key=tables_centroid_x_key,
-                tables_centroid_y_key=tables_centroid_y_key,
-                shapes_key=shapes_key,
-                features_to_compute=["centroid"],
-                tables_key=tables_key,
-                inplace=True,
-            )
-    else:
-        raise ValueError("SpatialData object must contain tables.")
-
     # get unique cell IDs from points
     transcript_ids = set(points[points_cell_id_key].unique())
     shapes_cell_ids = set()
@@ -1356,6 +1259,69 @@ def validate_spatialdata(
             id_key_name="nucleus_shapes_cell_id_key",
         )
         sdata.shapes[nucleus_shapes_key] = nucleus_shapes
+
+    if contains_tables:
+        assert tables_key in sdata.tables, (
+            f"Tables DataFrame must contain key: {tables_key}. "
+            f"Available keys: {list(sdata.tables.keys())}. "
+            f"If you want to use a different key, set the tables_key parameter."
+        )
+        table = sdata.tables[tables_key]
+        if tables_area_key is not None:
+            assert tables_area_key in table.obs.columns, (
+                f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'tables_area_key' argument (set to None if you do not have this)."
+            )
+        if tables_area_key is None:
+            warnings.warn(
+                "No area column specified for tables. Area will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(
+                sdata,
+                features_to_compute=["cell_area"],
+                tables_cell_id_key=tables_cell_id_key,
+                tables_centroid_x_key=tables_centroid_x_key,
+                tables_centroid_y_key=tables_centroid_y_key,
+                shapes_key=shapes_key,
+                tables_key=tables_key,
+                inplace=True,
+            )
+
+        if tables_centroid_x_key is not None:
+            assert tables_centroid_x_key in table.obs.columns, (
+                f"Tables DataFrame must contain x coordinate column '{tables_centroid_x_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'tables_centroid_x_key' argument (set to None if you do not have this)."
+            )
+
+        if tables_centroid_y_key is not None:
+            assert tables_centroid_y_key in table.obs.columns, (
+                f"Tables DataFrame must contain y coordinate column '{tables_centroid_y_key}'. "
+                f"Available columns: {table.obs.columns.tolist()}. "
+                f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
+            )
+
+        if tables_centroid_x_key is None or tables_centroid_y_key is None:
+            warnings.warn(
+                "No centroids specified for tables. Centroids will be automatically computed from shapes.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            bl.morphological_features(
+                sdata,
+                tables_cell_id_key=tables_cell_id_key,
+                tables_centroid_x_key=tables_centroid_x_key,
+                tables_centroid_y_key=tables_centroid_y_key,
+                shapes_key=shapes_key,
+                features_to_compute=["centroid"],
+                tables_key=tables_key,
+                inplace=True,
+            )
+    else:
+        raise ValueError("SpatialData object must contain tables.")
 
     return True
 
