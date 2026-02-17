@@ -3,8 +3,8 @@ import pytest
 import segtraq as st
 
 
-def test_compute_purity(sdata_new):
-    purity = st.cs.compute_purity(sdata_new, resolution=1.0, key_prefix="leiden_subset")
+def test_purity(sdata_new):
+    purity = st.cs.purity(sdata_new, resolution=1.0, key_prefix="leiden_subset")
     assert isinstance(purity, float), "Purity should be a float"
     assert 0 <= purity <= 1, "Purity should be in the range [0, 1]"
     assert "mean_purity" in sdata_new.tables["table"].uns.keys(), (
@@ -12,9 +12,9 @@ def test_compute_purity(sdata_new):
     )
 
 
-def test_compute_purity_invalid_frac_cells_subset(sdata_new):
+def test_purity_invalid_frac_cells_subset(sdata_new):
     with pytest.raises(ValueError):
-        st.cs.compute_purity(
+        st.cs.purity(
             sdata_new,
             resolution=1.0,
             key_prefix="leiden_subset",

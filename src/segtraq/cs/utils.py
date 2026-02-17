@@ -102,7 +102,7 @@ def run_leiden_clustering_on_random_subset(
     return key_added, pca
 
 
-def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
+def ari_pairwise(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
     """
     Compute the pairwise adjusted Rand index (ARI) for given cluster keys in an AnnData object.
     Handles non-overlapping label sets by restricting to rows where both labels exist.
@@ -151,7 +151,7 @@ def compute_pairwise_ari(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarr
     return ARI_matrix
 
 
-def compute_mean_ari(ari_matrix: np.ndarray) -> float:
+def ari_mean(ari_matrix: np.ndarray) -> float:
     """
     Compute the mean ARI from the pairwise ARI matrix.
 
@@ -190,7 +190,7 @@ def compute_purity_score(labels_true, labels_pred):
     return np.sum(np.max(contingency, axis=0)) / np.sum(contingency)
 
 
-def compute_pairwise_purity(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
+def purity_pairwise(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
     n = len(cluster_keys)
     purity_matrix = np.zeros((n, n))
 
@@ -217,7 +217,7 @@ def compute_pairwise_purity(adata: ad.AnnData, cluster_keys: list[str]) -> np.nd
     return purity_matrix
 
 
-def compute_mean_purity(purity_matrix: np.ndarray) -> float:
+def purity_mean(purity_matrix: np.ndarray) -> float:
     """
     Compute the mean of the upper triangle of the purity matrix.
 
@@ -235,7 +235,7 @@ def compute_mean_purity(purity_matrix: np.ndarray) -> float:
     return np.nanmean(purity_matrix[np.triu_indices(n, k=1)])
 
 
-def _compute_cluster_connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
+def _cluster_connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
     """
     Compute how well connected a clustering is in a kNN graph.
 

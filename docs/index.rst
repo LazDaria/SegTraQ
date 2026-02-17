@@ -6,7 +6,16 @@
 SegTraQ documentation
 =====================
 
-`SegTraQ` is a tool for the assessment of segmentation quality in spatial transcriptomics data.
+SegTraQ (**Seg**mentation and **Tra**nscript Assignment **Q**uality Control) is a Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data.
+
+⚠️ Note: SegTraQ is under active development. 
+Features, interfaces, and functionality may change in upcoming releases.
+To install the latest development version, run `pip install git+https://github.com/LazDaria/SegTraQ`.
+
+.. image:: _static/img/figure_1.png
+   :width: 100%
+   :align: center
+   :alt: SegTraQ provides quality control metrics for segmentation of spatial transcriptomics data.
 
 .. toctree::
    :maxdepth: 1
@@ -23,13 +32,9 @@ SegTraQ documentation
    modules/utils
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorials:
    
-   notebooks/10x_xenium_focus_simplified
-   notebooks/10x_xenium_focus
-   notebooks/vizgen_merscope_focus
-   notebooks/cosmx_focus
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
@@ -38,3 +43,7 @@ SegTraQ documentation
    notebooks/supervised
    notebooks/point_statistics
    notebooks/plotting
+   notebooks/10x_xenium_focus_simplified
+   notebooks/10x_xenium_focus
+   # notebooks/vizgen_merscope_focus
+   # notebooks/cosmx_focus

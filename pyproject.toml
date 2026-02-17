@@ -19,8 +19,8 @@ classifiers = [
 license = {text = "MIT"}
 dependencies = [
   "typer",
-  "scanpy<1.12", # for compatibility with squidpy
-  "spatialdata==0.6.1",
+  "scanpy",
+  "spatialdata>=0.7.2",  # not strictly required
   "joblib",
   "geopandas",
   "igraph",

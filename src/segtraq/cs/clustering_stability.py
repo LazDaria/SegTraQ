@@ -1,22 +1,23 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score as _silhouette_score
 
 from .utils import (
-    _compute_cluster_connectedness,
-    compute_mean_ari,
-    compute_mean_purity,
-    compute_pairwise_ari,
-    compute_pairwise_purity,
+    _cluster_connectedness,
+    ari_mean,
+    ari_pairwise,
+    purity_mean,
+    purity_pairwise,
     run_leiden_clustering_on_random_subset,
 )
 
 
-def compute_cluster_connectedness(
+def cluster_connectedness(
     sdata: sd.SpatialData,
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     use_weights: bool = False,
+    tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
@@ -36,6 +37,8 @@ def compute_cluster_connectedness(
     use_weights: bool
         Use edge weights to evaluate connectedness. If false, fraction of
         equal neighbors is used.
+    tables_key : str, optional
+        The key in sdata.tables where the relevant AnnData is stored, by default "table".
     key_prefix : str, optional
         Prefix for clustering keys in .obs, by default "leiden_subset".
     random_state : int, optional
@@ -50,7 +53,7 @@ def compute_cluster_connectedness(
     float
         The best (highest) cluster connectedness across resolutions.
     """
-    adata = sdata.tables["table"]
+    adata = sdata.tables[tables_key]
 
     if isinstance(resolution, float):
         resolution = [resolution]
@@ -69,7 +72,7 @@ def compute_cluster_connectedness(
                     "Connectivities not found in adata.obsp['connectivities']. "
                     "Please compute neighbors first by running sc.pp.neighbors(adata)."
                 )
-            distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels)
+            distance_val = _cluster_connectedness(adata.obsp["connectivities"], labels)
             return float(distance_val)
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
@@ -90,20 +93,21 @@ def compute_cluster_connectedness(
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
-            distance_val = _compute_cluster_connectedness(adata.obsp["connectivities"], labels, use_weights=use_weights)
+            distance_val = _cluster_connectedness(adata.obsp["connectivities"], labels, use_weights=use_weights)
             if distance_val > best_distance:
                 best_distance = float(distance_val)
 
     if inplace:
-        sdata.tables["table"].uns["cluster_connectedness"] = best_distance
+        sdata.tables[tables_key].uns["cluster_connectedness"] = best_distance
 
     return best_distance
 
 
-def compute_silhouette_score(
+def silhouette_score(
     sdata: sd.SpatialData,
     resolution: float | list[float] = (0.6, 0.8, 1.0),
     metric: str = "euclidean",
+    tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
@@ -121,6 +125,8 @@ def compute_silhouette_score(
         The resolution parameter for Leiden clustering, by default 1.0.
     metric : str, optional
         The metric to use for silhouette score calculation, by default "euclidean".
+    tables_key : str, optional
+        The key in sdata.tables where the relevant AnnData is stored, by default "table".
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     random_state : int, optional
@@ -135,7 +141,7 @@ def compute_silhouette_score(
     float
         The silhouette score of the clustering.
     """
-    adata = sdata.tables["table"]
+    adata = sdata.tables[tables_key]
 
     best_silhouette_score = -1
     if isinstance(resolution, float):
@@ -154,7 +160,7 @@ def compute_silhouette_score(
             # remove NaN labels
             adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
             labels = adata_subset.obs[cell_type_key].values
-            silhouette_avg = silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
+            silhouette_avg = _silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
             best_silhouette_score = float(silhouette_avg)
             key = "silhouette_score_labels"
         else:
@@ -184,20 +190,20 @@ def compute_silhouette_score(
             labels = adata.obs[key_added]
             labels_nn = labels[~pd.isna(labels)]
             if len(pd.unique(labels_nn)) > 1:  # Ensure more than one cluster exists
-                silhouette_avg = silhouette_score(pca, labels, metric=metric)
+                silhouette_avg = _silhouette_score(pca, labels, metric=metric)
                 if silhouette_avg > best_silhouette_score:
                     best_silhouette_score = silhouette_avg
 
     if inplace:
-        sdata.tables["table"].uns[key] = best_silhouette_score
-
+        sdata.tables[tables_key].uns[key] = best_silhouette_score
     return best_silhouette_score
 
 
-def compute_purity(
+def purity(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
     frac_cells_subset: float = 0.63,
+    tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     inplace: bool = True,
 ) -> float:
@@ -209,6 +215,8 @@ def compute_purity(
         The SpatialData object containing clustering information.
     resolution : float, optional
         The resolution parameter for Leiden clustering, by default 1.0.
+    tables_key : str, optional
+        The key in sdata.tables where the relevant AnnData is stored, by default "table".
     frac_cells_subset : float, optional
         The fraction of cells to subset for clustering, by default 0.63.
     key_prefix : str, optional
@@ -221,7 +229,7 @@ def compute_purity(
     float
         The average pairwise purity across the specified cluster keys.
     """
-    adata = sdata.tables["table"]
+    adata = sdata.tables[tables_key]
     cluster_keys = []
 
     for random_state in range(5):
@@ -234,19 +242,20 @@ def compute_purity(
         )
         cluster_keys.append(key_added)
 
-    purity_matrix = compute_pairwise_purity(adata, cluster_keys)
-    mean_purity = float(compute_mean_purity(purity_matrix))
+    purity_matrix = purity_pairwise(adata, cluster_keys)
+    mean_purity = float(purity_mean(purity_matrix))
 
     if inplace:
-        sdata.tables["table"].uns["mean_purity"] = mean_purity
+        sdata.tables[tables_key].uns["mean_purity"] = mean_purity
 
     return mean_purity
 
 
-def compute_ari(
+def adjusted_rand_index(
     sdata: sd.SpatialData,
     resolution: float = 1.0,
     frac_cells_subset: float = 0.63,
+    tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     inplace: bool = True,
 ) -> float:
@@ -261,6 +270,8 @@ def compute_ari(
         The resolution parameter for Leiden clustering, by default 1.0.
     frac_cells_subset : float, optional
         The fraction of cells to subset for clustering, by default 0.63.
+    tables_key : str, optional
+        The key in sdata.tables where the relevant AnnData is stored, by default "table".
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     inplace : bool, optional
@@ -271,8 +282,9 @@ def compute_ari(
     float
         The average pairwise ARI across the specified cluster keys.
     """
-    adata = sdata.tables["table"]
+    adata = sdata.tables[tables_key]
     cluster_keys = []
+
     # Run clustering on random subsets of genes
     for random_state in range(5):
         key_added, _pca = run_leiden_clustering_on_random_subset(
@@ -283,10 +295,10 @@ def compute_ari(
             random_state=random_state,
         )
         cluster_keys.append(key_added)
-    pairwise_aris = compute_pairwise_ari(adata, cluster_keys)
-    mean_ari = float(compute_mean_ari(pairwise_aris))
+    pairwise_aris = ari_pairwise(adata, cluster_keys)
+    mean_ari = float(ari_mean(pairwise_aris))
 
     if inplace:
-        sdata.tables["table"].uns["mean_ari"] = mean_ari
+        sdata.tables[tables_key].uns["mean_ari"] = mean_ari
 
     return mean_ari
