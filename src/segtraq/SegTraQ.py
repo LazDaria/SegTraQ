@@ -597,7 +597,6 @@ class SegTraQ:
             "mutually_exclusive_coexpression_rate": mecr_df,
         }
 
-
     def run_point_statistics(
         self,
         genes: str | list[str] | None = None,
@@ -817,7 +816,7 @@ class SegTraQ:
         assert adata.n_obs > 0, "Filtering removed all cells; no cells remain after filtering."
 
         sdata.tables[self.tables_key] = adata
-        #sdata = sd.match_sdata_to_table(sdata, "table")
+        # sdata = sd.match_sdata_to_table(sdata, "table")
         # SpatialData currently only allows syncing one layer to tables, will be fixed in future release.
         # For now, we only filter the cells in the table.
 
