@@ -3,7 +3,9 @@
 [![PyPI version](https://badge.fury.io/py/segtraq.svg)](https://badge.fury.io/py/segtraq)
 
 > ⚠️ Note: SegTraQ is under active development. 
-> Features, interfaces, and functionality may change in upcoming releases.
+> Features, interfaces, and functionality may change in upcoming releases. 
+> SegTraQ currently supports imaging-based spatial transcriptomics data only. 
+> Support for sequencing-based spatial transcriptomics is under development and will be included in a future release.
 > To install the latest development version, run `pip install git+https://github.com/LazDaria/SegTraQ`.
 
 SegTraQ (**Seg**mentation and **Tra**nscript Assignment **Q**uality Control) is a Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data.

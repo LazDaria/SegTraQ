@@ -85,6 +85,7 @@ def cluster_connectedness(
     for res in resolution:
         key_added, _ = run_leiden_clustering_on_random_subset(
             sdata,
+            tables_key=tables_key,
             resolution=res,
             frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
@@ -179,6 +180,7 @@ def silhouette_score(
             # Run clustering for each resolution
             key_added, pca = run_leiden_clustering_on_random_subset(
                 sdata,
+                tables_key=tables_key,
                 resolution=res,
                 frac_cells_subset=1.0,  # Use all cells
                 key_prefix=key_prefix,
@@ -235,6 +237,7 @@ def purity(
     for random_state in range(5):
         key_added, _pca = run_leiden_clustering_on_random_subset(
             sdata,
+            tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
@@ -289,6 +292,7 @@ def adjusted_rand_index(
     for random_state in range(5):
         key_added, _pca = run_leiden_clustering_on_random_subset(
             sdata,
+            tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,

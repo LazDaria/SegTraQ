@@ -627,21 +627,18 @@ def markers_from_reference(
     negative markers.
 
     Positive markers:
-    -----------------
     For each cell type c, a gene g is considered a positive marker if it is
     "up in c" in at least ceil(vote_fraction_pos * M_c) of its valid pairwise
     comparisons (M_c). Additionally, g must be expressed (> 0) in at least
     min_pos_frac fraction of cells of type c in the reference dataset.
 
     Negative markers:
-    -----------------
     For each ordered pair (a, b) of cell types, take genes up in a vs b and consider them
     negative-marker candidates for b if  (1.) they are expressed (> 0) in at most
     max_neg_frac fraction of cells of type b, and (2.) are not up in b vs any cell
     type (computed across all ordered contrasts).
 
     Overlap filtering:
-    ------------------
     Overlap filtering is applied separately to positive and negative markers:
         - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
         - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
@@ -1084,7 +1081,8 @@ def validate_spatialdata(
     )
 
     # get unique cell IDs from points
-    transcript_ids = set(points[points_cell_id_key].unique())
+    points_df = points.compute() if hasattr(points, "compute") else points  # precompute is faster
+    transcript_ids = set(points_df[points_cell_id_key].unique())
     shapes_cell_ids = set()
 
     # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
@@ -1230,7 +1228,7 @@ def validate_spatialdata(
                 )
 
             # check that gene names in the table are compatible with those in the points
-            genes_in_points = set(points[points_gene_key].unique())
+            genes_in_points = set(points_df[points_gene_key].unique()) #faster
             genes_in_table = set(table.var_names)
             common_genes = genes_in_points & genes_in_table
             if len(common_genes) == 0:

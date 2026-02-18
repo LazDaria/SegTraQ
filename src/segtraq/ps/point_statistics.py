@@ -351,14 +351,14 @@ def distance_to_centroid(
         raise ValueError("centroid_region='nucleus' requires `nucleus_shapes_key` to be not None.")
 
     # transformations alignment check (only for the shapes actually used)
-    T_transcripts = sd.transformations.get_transformation(sdata.points[points_key])
+    T_transcripts = sdata.points[points_key].attrs["transform"]
 
-    T_shapes = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    T_shapes = sdata.shapes[shapes_key].attrs["transform"]
     assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
         "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
     )
     if centroid_region == "nucleus":
-        T_shapes = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+        T_shapes = sdata.shapes[nucleus_shapes_key].attrs["transform"]
         assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
         )
@@ -577,14 +577,14 @@ def distance_to_membrane(
         raise ValueError("membrane_region='nucleus' requires `nucleus_shapes_key` to be not None.")
 
     # transformations alignment check (only for the shapes actually used)
-    T_transcripts = sd.transformations.get_transformation(sdata.points[points_key])
+    T_transcripts = sdata.points[points_key].attrs["transform"]
 
-    T_shapes = sd.transformations.get_transformation(sdata.shapes[shapes_key])
+    T_shapes = sdata.shapes[shapes_key].attrs["transform"]
     assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
         "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
     )
     if membrane_region == "nucleus":
-        T_shapes = sd.transformations.get_transformation(sdata.shapes[nucleus_shapes_key])
+        T_shapes = sdata.shapes[nucleus_shapes_key].attrs["transform"]
         assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
         )

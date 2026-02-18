@@ -67,13 +67,14 @@ def subset_adata(
 
 def run_leiden_clustering_on_random_subset(
     sdata: sd.SpatialData,
+    tables_key: str,
     resolution: float = 1.0,
     frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden",
     random_state: int = 42,
     recompute_neighbors: bool = True,
 ):
-    adata = sdata.tables["table"]
+    adata = sdata.tables[tables_key]
 
     # --- Perform subsetting --- #
     adata_subset, subset_label = subset_adata(
