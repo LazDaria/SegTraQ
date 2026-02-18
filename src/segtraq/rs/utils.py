@@ -527,12 +527,10 @@ def _get_center_border_counts(
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
-    sdata.shapes["cell_centers"] = sd.models.ShapesModel.parse(center_gdf, transformations=None)
-    sdata.shapes["cell_borders"] = sd.models.ShapesModel.parse(border_gdf, transformations=None)
+    cell_shape_transformation = sdata.shapes[shapes_key].attrs["transform"]
 
-    cell_shape_transformation = sd.transformations.get_transformation(sdata.shapes[shapes_key])
-    sd.transformations.set_transformation(sdata.shapes["cell_centers"], cell_shape_transformation)
-    sd.transformations.set_transformation(sdata.shapes["cell_borders"], cell_shape_transformation)
+    sdata.shapes["cell_centers"] = sd.models.ShapesModel.parse(center_gdf, transformations=cell_shape_transformation)
+    sdata.shapes["cell_borders"] = sd.models.ShapesModel.parse(border_gdf, transformations=cell_shape_transformation)
 
     tx_assigned_to_center, expr_center = _join_points_regions(
         sdata=sdata,

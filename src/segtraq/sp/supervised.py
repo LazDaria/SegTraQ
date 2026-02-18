@@ -33,7 +33,7 @@ def mutually_exclusive_coexpression_rate(
     pseudocount : float, optional, default=0.5
         Pseudocount added to all cells of the contingency table to avoid
         division by zero when computing odds ratios.
-        This is equivalent to the Haldane–Anscombe correction, see https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076.
+        This is equivalent to the Haldane-Anscombe correction, see https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076.
     inplace : bool, optional, default=True
         If True, store the resulting DataFrame in `sdata.tables[tables_key].uns["MECR"]`.
 
