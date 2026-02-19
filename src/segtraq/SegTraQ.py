@@ -305,11 +305,6 @@ class SegTraQ:
         -----
         - Requires `self.nucleus_shapes_key` (nucleus boundaries).
         """
-        assert self.nucleus_shapes_key is not None, (
-            "Cannot run region similarity: `nucleus_shapes_key` is None. "
-            "Define the nucleus shape layer when initializing SegTraQ."
-        )
-
         ious = self.rs.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
         similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
             metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cell_kwargs or {})

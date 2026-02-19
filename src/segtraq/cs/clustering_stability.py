@@ -79,7 +79,8 @@ def cluster_connectedness(
 
     if "neighbors" not in adata.uns:
         raise ValueError(
-            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+            f"Neighbors not found in adata. Please use scanpy to compute neighbors:\n"
+            f"adata=st_obj.sdata.tables['{tables_key}']; sc.pp.neighbors(adata)."
         )
 
     for res in resolution:
@@ -172,7 +173,8 @@ def silhouette_score(
         # this way we avoid recomputing neighbors multiple times (for the different resolutions)
         if "neighbors" not in adata.uns:
             raise ValueError(
-                "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+                f"Neighbors not found in adata. Please use scanpy to compute neighbors:\n"
+                f"adata=st_obj.sdata.tables['{tables_key}']; sc.pp.neighbors(adata)."
             )
 
         key = "silhouette_score"
