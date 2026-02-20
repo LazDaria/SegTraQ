@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SegTraQ documentation
-=====================
+SegTraQ
+=======
 
 SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data.
 
