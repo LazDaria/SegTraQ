@@ -109,20 +109,6 @@ class SegTraQ:
         After initializing a SegTraQ instance, all SegTraQ modules can be run
         directly from the object using its module facades.
 
-        For example:
-
-        .. code-block:: python
-
-            st = SegTraQ(sdata, ...)
-
-            st.bl.genes_per_cell()
-
-            st.nc.compute_cell_nuc_ious()
-
-            st.ps.distance_to_centroid("ERBB2")
-
-            st.sp.calculate_contamination(markers=...)
-
         Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.
         """
 
@@ -319,11 +305,6 @@ class SegTraQ:
         -----
         - Requires `self.nucleus_shapes_key` (nucleus boundaries).
         """
-        assert self.nucleus_shapes_key is not None, (
-            "Cannot run region similarity: `nucleus_shapes_key` is None. "
-            "Define the nucleus shape layer when initializing SegTraQ."
-        )
-
         ious = self.rs.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
         similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
             metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cell_kwargs or {})
@@ -392,6 +373,11 @@ class SegTraQ:
             - "fraction_heterotypic_overlap": pd.DataFrame
             - "vertical_signal_integrity_per_cell": pd.DataFrame   (only if vsi_map is not None)
         """
+        assert self.points_z_key is not None, (
+            "Cannot run volume metrics for 2D data: `points_z_key` is None. "
+            "If available, define the column for z-coordinate of transcripts when initializing SegTraQ."
+        )
+
         sim = self.vl.similarity_top_bottom(
             inplace=inplace,
             **(similarity_kwargs or {}),
@@ -508,89 +494,103 @@ class SegTraQ:
             "mean_ari": ari,
         }
 
-    def run_supervised_metrics(
+    def run_supervised(
         self,
+        *,
         markers: dict[str, dict[str, list[str]]],
-        mutually_exclusive_pairs: list[tuple[str, str]],
         cell_type_key: str = "transferred_cell_type",
-        use_quantiles: bool = False,
         inplace: bool = True,
+        # per-metric parameters (optional)
+        purity_kwargs: dict | None = None,
+        contamination_kwargs: dict | None = None,
+        mecr_kwargs: dict | None = None,
     ):
         """
-        Run supervised metrics (SP) for SegTraQ.
+        Run supervised (sp) metrics.
 
-        This function executes supervised metrics that require externally
-        provided markers and mutually exclusive gene pairs.
+        Convenience wrapper around supervised marker-based QC metrics. Runs, in order:
 
-        This runs, in order:
-            1) MECR per mutually-exclusive gene pair
-            2) Spatial contamination (directional leakage)
-            3) Per-cell marker purity
+        1) marker_purity (per-cell precision/recall/F1, neighborhood-aware negatives)
+        2) neighbor_contamination (per-cell + directed type-type matrices)
+        3) mutually_exclusive_coexpression_rate (MECR)
+
+        Only parameters shared by all computations are exposed explicitly. All other
+        parameters are forwarded via method-specific ``*_kwargs`` dictionaries.
 
         Parameters
         ----------
         markers : dict
-            Required. Precomputed marker dictionary:
-            {cell_type: {"positive": [...], "negative": [...]}}
-
-        mutually_exclusive_pairs : list of tuple
-            Precomputed mutually exclusive gene pairs.
-
-        cell_type_key : str
-            Cell-type column in `sdata.tables[tables_key].obs`.
-
-        use_quantiles : bool, optional
-            Passed to SP.marker_purity.
-
+            {cell_type: {"positive": list[str], "negative": list[str]}}.
+        cell_type_key : str, default="transferred_cell_type"
+            Column in the AnnData `.obs` with cell-type labels.
         inplace : bool, default=True
-            If True: write results into the `sdata.tables[...]` object.
-            If False: return a dictionary of all computed results.
+            If True, writes results into `.obs` / `.uns` / `.uns[...]` as implemented
+            by the underlying functions and returns None.
+            If False, returns all results as a dict.
+
+        purity_kwargs : dict or None, optional
+            Extra args for :meth:`sp.marker_purity`.
+            (e.g. use_quantiles=..., weight_cont=..., require_neighbor_expression=..., neighbors_key=...)
+        contamination_kwargs : dict or None, optional
+            Extra args for :meth:`sp.neighbor_contamination`.
+            (e.g. require_neighbor_expression=..., neighbors_key=..., uns_key=..., uns_key_binary=...)
+        mecr_kwargs : dict or None, optional
+            Extra args for :meth:`sp.mutually_exclusive_coexpression_rate`.
+            (e.g. pseudocount=...)
 
         Returns
         -------
         None or dict
-            - None if inplace=True
-            - dict with keys:
-                {
-                "MECR": ...,
-                "contamination": ...,
-                "marker_purity": ...
-                }
+            If ``inplace=True``, returns None.
+            If ``inplace=False``, returns a dict with keys:
+            - ``"marker_purity"`` (pd.DataFrame)
+            - ``"neighbor_contamination"`` (dict with per-cell + matrices)
+            - ``"mutually_exclusive_coexpression_rate"`` (pd.DataFrame)
         """
+        purity_kwargs = {} if purity_kwargs is None else dict(purity_kwargs)
+        contamination_kwargs = {} if contamination_kwargs is None else dict(contamination_kwargs)
+        mecr_kwargs = {} if mecr_kwargs is None else dict(mecr_kwargs)
 
-        out = {}
+        # Respect runner-level inplace unless explicitly overridden per-metric
+        purity_inplace = purity_kwargs.pop("inplace", inplace)
+        cont_inplace = contamination_kwargs.pop("inplace", inplace)
+        mecr_inplace = mecr_kwargs.pop("inplace", inplace)
 
-        assert mutually_exclusive_pairs is not None and len(mutually_exclusive_pairs) > 0, (
-            "MECR requires `mutually_exclusive_pairs`. Please compute them externally "
-            "with `segtraq.get_mut_excl_markers` and pass them here."
-        )
-        fisher_or, fisher_pval = self.sp.mutually_exclusive_coexpression_rate(
-            markers=markers,
-            inplace=inplace,
-        )
-
+        # 1) Marker purity
         purity_df = self.sp.marker_purity(
             cell_type_key=cell_type_key,
             markers=markers,
-            use_quantiles=use_quantiles,
-            inplace=inplace,
+            inplace=purity_inplace,
+            **purity_kwargs,
         )
 
-        per_cell_contam, cont_mat, cont_mat_bin = self.sp.neighbor_contamination(
+        # 2) Neighbor contamination
+        per_cell_cont_df, cont_mat_df, cont_bin_df = self.sp.neighbor_contamination(
             cell_type_key=cell_type_key,
             markers=markers,
-            inplace=inplace,
+            inplace=cont_inplace,
+            **contamination_kwargs,
+        )
+
+        # 3) MECR
+        mecr_df = self.sp.mutually_exclusive_coexpression_rate(
+            markers=markers,
+            inplace=mecr_inplace,
+            **mecr_kwargs,
         )
 
         if inplace:
             return None
-        else:
-            out = {
-                "MECR": (fisher_or, fisher_pval),
-                "marker_purity": purity_df,
-                "neighbor_contamination": (per_cell_contam, cont_mat, cont_mat_bin),
-            }
-            return out
+
+        return {
+            "marker_purity": purity_df,
+            "neighbor_contamination": {
+                "per_cell": per_cell_cont_df,
+                "matrix": cont_mat_df,
+                "binary_matrix": cont_bin_df,
+            },
+            "mutually_exclusive_coexpression_rate": mecr_df,
+        }
 
     def run_point_statistics(
         self,
@@ -811,7 +811,9 @@ class SegTraQ:
         assert adata.n_obs > 0, "Filtering removed all cells; no cells remain after filtering."
 
         sdata.tables[self.tables_key] = adata
-        sdata = sd.match_sdata_to_table(sdata, "table")
+        # sdata = sd.match_sdata_to_table(sdata, "table")
+        # SpatialData currently only allows syncing one layer to tables, will be fixed in future release.
+        # For now, we only filter the cells in the table.
 
         if inplace:
             self.sdata = sdata

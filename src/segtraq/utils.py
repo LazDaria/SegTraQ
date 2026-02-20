@@ -65,6 +65,7 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     counts = pd.Series(all_genes).value_counts()
     # drop genes appearing in >= t * n_types lists
     drop_genes = set(counts[counts >= (t * n_ct)].index)
+
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
 
@@ -627,21 +628,18 @@ def markers_from_reference(
     negative markers.
 
     Positive markers:
-    -----------------
     For each cell type c, a gene g is considered a positive marker if it is
     "up in c" in at least ceil(vote_fraction_pos * M_c) of its valid pairwise
     comparisons (M_c). Additionally, g must be expressed (> 0) in at least
     min_pos_frac fraction of cells of type c in the reference dataset.
 
     Negative markers:
-    -----------------
     For each ordered pair (a, b) of cell types, take genes up in a vs b and consider them
     negative-marker candidates for b if  (1.) they are expressed (> 0) in at most
     max_neg_frac fraction of cells of type b, and (2.) are not up in b vs any cell
     type (computed across all ordered contrasts).
 
     Overlap filtering:
-    ------------------
     Overlap filtering is applied separately to positive and negative markers:
         - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
         - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
@@ -1047,7 +1045,7 @@ def validate_spatialdata(
     assert points_key in sdata.points, (
         f"SpatialData must contain points with key: {points_key}. "
         f"Available keys: {list(sdata.points.keys())}. "
-        f"If you want to use a different key, set the points_key parameter."
+        f"You can set this with the 'points_key' argument."
     )
     points = sdata.points[points_key]
 
@@ -1055,7 +1053,7 @@ def validate_spatialdata(
     assert points_cell_id_key in points.columns, (
         f"Points DataFrame must contain column to identify cells: {points_cell_id_key}. "
         f"Available columns: {points.columns.tolist()}. "
-        f"If you want to use a different column, set the points_cell_id_key parameter."
+        f"You can set this with the 'points_cell_id_key' argument."
     )
 
     # check coordinate columns in points
@@ -1084,7 +1082,8 @@ def validate_spatialdata(
     )
 
     # get unique cell IDs from points
-    transcript_ids = set(points[points_cell_id_key].unique())
+    points_df = points.compute() if hasattr(points, "compute") else points  # precompute is faster
+    transcript_ids = set(points_df[points_cell_id_key].unique())
     shapes_cell_ids = set()
 
     # if there are shapes, ensure that there are no cell IDs in the points that are not in the shapes
@@ -1094,7 +1093,7 @@ def validate_spatialdata(
             assert shapes_key in sdata.shapes, (
                 f"Shapes DataFrame must contain key: {shapes_key}. "
                 f"Available keys: {list(sdata.shapes.keys())}. "
-                f"If you want to use a different key, set the shapes_key parameter."
+                f"If you want to use a different key, you can set this with the 'shapes_key' argument."
             )
             shapes = sdata.shapes[shapes_key]
 
@@ -1132,7 +1131,7 @@ def validate_spatialdata(
         if points_background_id is not None:
             assert points_background_id in transcript_ids, (
                 f"points_background_id '{points_background_id}' not found among point cell IDs. "
-                f"You can set this with the points_background_id parameter. "
+                f"You can set this with the 'points_background_id' argument. "
                 f"If you do not have a background ID, set this parameter to None."
             )
 
@@ -1155,13 +1154,13 @@ def validate_spatialdata(
             assert tables_key in sdata.tables, (
                 f"Tables DataFrame must contain key: {tables_key}. "
                 f"Available keys: {list(sdata.tables.keys())}. "
-                f"If you want to use a different key, set the tables_key parameter."
+                f"If you want to use a different key, set the 'tables_key' parameter."
             )
             table = sdata.tables[tables_key]
             assert tables_cell_id_key in table.obs.columns, (
                 f"Tables DataFrame must contain column: {tables_cell_id_key}. "
                 f"Available columns: {table.obs.columns.tolist()}. "
-                f"If you want to use a different column, set the tables_cell_id_key parameter."
+                f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
 
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
@@ -1230,7 +1229,7 @@ def validate_spatialdata(
                 )
 
             # check that gene names in the table are compatible with those in the points
-            genes_in_points = set(points[points_gene_key].unique())
+            genes_in_points = set(points_df[points_gene_key].unique())  # faster
             genes_in_table = set(table.var_names)
             common_genes = genes_in_points & genes_in_table
             if len(common_genes) == 0:
@@ -1249,6 +1248,8 @@ def validate_spatialdata(
             raise KeyError(
                 f"Nucleus shapes key '{nucleus_shapes_key}' not found in sdata.shapes. "
                 f"Available keys: {list(sdata.shapes.keys())}."
+                f"You can set this with the 'nucleus_shapes_key' argument. "
+                f"Set to None if you do not have nucleus shapes."
             )
 
         nucleus_shapes = sdata.shapes[nucleus_shapes_key]

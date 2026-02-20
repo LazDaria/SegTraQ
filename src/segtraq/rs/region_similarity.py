@@ -66,7 +66,7 @@ def match_nuclei_to_cells(
     """
     assert nucleus_shapes_key is not None, (
         "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `nc` metrics."
+        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `rs` metrics."
     )
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
@@ -203,7 +203,7 @@ def similarity_nucleus_cell(
     """
     assert nucleus_shapes_key is not None, (
         "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `nc` metrics."
+        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `rs` metrics."
     )
 
     if metric not in ["pearson", "spearman", "cosine_sim"]:
@@ -423,7 +423,7 @@ def similarity_nucleus_cytoplasm(
     """
     assert nucleus_shapes_key is not None, (
         "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-        "Define a valid nucleus shape layer in `SegTraQ` before running `nc` metrics."
+        "Define a valid nucleus shape layer in `SegTraQ` before running `rs` metrics."
     )
 
     if metric not in ["pearson", "spearman", "cosine_sim"]:
