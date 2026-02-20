@@ -338,7 +338,7 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised_metrics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume_metrics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.sdata"><code class="docutils literal notranslate"><span class="pre">SegTraQ.sdata</span></code></a></li>
 </ul>
@@ -405,18 +405,6 @@ index name or a column name (which will be set as the index if needed).</p></li>
 <p class="rubric">Notes</p>
 <p>After initializing a SegTraQ instance, all SegTraQ modules can be run
 directly from the object using its module facades.</p>
-<p>For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">st</span> <span class="o">=</span> <span class="n">SegTraQ</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
-
-<span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">genes_per_cell</span><span class="p">()</span>
-
-<span class="n">st</span><span class="o">.</span><span class="n">nc</span><span class="o">.</span><span class="n">compute_cell_nuc_ious</span><span class="p">()</span>
-
-<span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_centroid</span><span class="p">(</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">)</span>
-
-<span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">calculate_contamination</span><span class="p">(</span><span class="n">markers</span><span class="o">=...</span><span class="p">)</span>
-</pre></div>
-</div>
 <p>Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.filter_cells">
@@ -702,45 +690,39 @@ If False, returns a dictionary of DataFrames without writing.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="segtraq.SegTraQ.run_supervised_metrics">
-<span class="sig-name descname"><span class="pre">run_supervised_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mutually_exclusive_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_quantiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_supervised_metrics" title="Link to this definition">#</a></dt>
-<dd><p>Run supervised metrics (SP) for SegTraQ.</p>
-<p>This function executes supervised metrics that require externally
-provided markers and mutually exclusive gene pairs.</p>
-<dl class="simple">
-<dt>This runs, in order:</dt><dd><ol class="arabic simple">
-<li><p>MECR per mutually-exclusive gene pair</p></li>
-<li><p>Spatial contamination (directional leakage)</p></li>
-<li><p>Per-cell marker purity</p></li>
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_supervised">
+<span class="sig-name descname"><span class="pre">run_supervised</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contamination_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mecr_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_supervised" title="Link to this definition">#</a></dt>
+<dd><p>Run supervised (sp) metrics.</p>
+<p>Convenience wrapper around supervised marker-based QC metrics. Runs, in order:</p>
+<ol class="arabic simple">
+<li><p>marker_purity (per-cell precision/recall/F1, neighborhood-aware negatives)</p></li>
+<li><p>neighbor_contamination (per-cell + directed type-type matrices)</p></li>
+<li><p>mutually_exclusive_coexpression_rate (MECR)</p></li>
 </ol>
-</dd>
-</dl>
+<p>Only parameters shared by all computations are exposed explicitly. All other
+parameters are forwarded via method-specific <code class="docutils literal notranslate"><span class="pre">*_kwargs</span></code> dictionaries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>markers</strong> (<em>dict</em>) – Required. Precomputed marker dictionary:
-{cell_type: {“positive”: […], “negative”: […]}}</p></li>
-<li><p><strong>mutually_exclusive_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Precomputed mutually exclusive gene pairs.</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em>) – Cell-type column in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em>) – Passed to SP.marker_purity.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True: write results into the <cite>sdata.tables[…]</cite> object.
-If False: return a dictionary of all computed results.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>default=&quot;transferred_cell_type&quot;</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, writes results into <cite>.obs</cite> / <cite>.uns</cite> / <cite>.uns[…]</cite> as implemented
+by the underlying functions and returns None.
+If False, returns all results as a dict.</p></li>
+<li><p><strong>purity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra args for <code class="xref py py-meth docutils literal notranslate"><span class="pre">sp.marker_purity()</span></code>.
+(e.g. use_quantiles=…, weight_cont=…, require_neighbor_expression=…, neighbors_key=…)</p></li>
+<li><p><strong>contamination_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra args for <code class="xref py py-meth docutils literal notranslate"><span class="pre">sp.neighbor_contamination()</span></code>.
+(e.g. require_neighbor_expression=…, neighbors_key=…, uns_key=…, uns_key_binary=…)</p></li>
+<li><p><strong>mecr_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra args for <code class="xref py py-meth docutils literal notranslate"><span class="pre">sp.mutually_exclusive_coexpression_rate()</span></code>.
+(e.g. pseudocount=…)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p>None if inplace=True</p></li>
-<li><dl class="simple">
-<dt>dict with keys:</dt><dd><p>{
-“MECR”: …,
-“contamination”: …,
-“marker_purity”: …
-}</p>
-</dd>
-</dl>
-</li>
-</ul>
-</p>
+<dd class="field-even"><p>If <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code>, returns None.
+If <code class="docutils literal notranslate"><span class="pre">inplace=False</span></code>, returns a dict with keys:
+- <code class="docutils literal notranslate"><span class="pre">&quot;marker_purity&quot;</span></code> (pd.DataFrame)
+- <code class="docutils literal notranslate"><span class="pre">&quot;neighbor_contamination&quot;</span></code> (dict with per-cell + matrices)
+- <code class="docutils literal notranslate"><span class="pre">&quot;mutually_exclusive_coexpression_rate&quot;</span></code> (pd.DataFrame)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>None or dict</p>
@@ -853,7 +835,7 @@ If False, returns a dict of result DataFrames.</p></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised_metrics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume_metrics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.sdata"><code class="docutils literal notranslate"><span class="pre">SegTraQ.sdata</span></code></a></li>
 </ul>

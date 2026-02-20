@@ -329,12 +329,9 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.supervised">Supervised metrics</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.marker_purity"><code class="docutils literal notranslate"><span class="pre">marker_purity()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate"><code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">neighbor_contamination()</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.marker_purity"><code class="docutils literal notranslate"><span class="pre">marker_purity()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate"><code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">neighbor_contamination()</span></code></a></li>
 </ul>
             </nav>
         </div>
@@ -349,9 +346,7 @@ document.write(`
   <section id="the-supervised-sp-accessor">
 <h1>The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-supervised-sp-accessor" title="Link to this heading">#</a></h1>
 <p>The supervised metrics accessor provides metrics to compare the spatial single cell expression profiles to those from a single-cell RNA sequencing dataset.</p>
-<section id="module-segtraq.sp.supervised">
-<span id="supervised-metrics"></span><h2>Supervised metrics<a class="headerlink" href="#module-segtraq.sp.supervised" title="Link to this heading">#</a></h2>
-<dl class="py function">
+<dl class="py function" id="module-segtraq.sp.supervised">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.marker_purity">
 <span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">marker_purity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_quantiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_cont</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.marker_purity" title="Link to this definition">#</a></dt>
 <dd><p>Compute per-cell marker purity using positive markers globally
@@ -443,7 +438,7 @@ Returns a DataFrame with one row per unordered gene pair.</p>
 <li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;table&quot;</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
 <li><p><strong>pseudocount</strong> (<em>float</em><em>, </em><em>optional</em><em>, </em><em>default=0.5</em>) – Pseudocount added to all cells of the contingency table to avoid
 division by zero when computing odds ratios.
-This is equivalent to the Haldane–Anscombe correction, see <a class="reference external" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076">https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076</a>.</p></li>
+This is equivalent to the Haldane-Anscombe correction, see <a class="reference external" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076">https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076</a>.</p></li>
 <li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, store the resulting DataFrame in <cite>sdata.tables[tables_key].uns[“MECR”]</cite>.</p></li>
 </ul>
 </dd>
@@ -539,7 +534,6 @@ This matrix reports what percentage of cells of a target type is contaminated by
 </dd></dl>
 
 </section>
-</section>
 
 
                 </article>
@@ -586,12 +580,9 @@ This matrix reports what percentage of cells of a target type is contaminated by
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.supervised">Supervised metrics</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.marker_purity"><code class="docutils literal notranslate"><span class="pre">marker_purity()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate"><code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">neighbor_contamination()</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.marker_purity"><code class="docutils literal notranslate"><span class="pre">marker_purity()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate"><code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">neighbor_contamination()</span></code></a></li>
 </ul>
   </nav></div>
 
