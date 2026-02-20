@@ -65,6 +65,7 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     counts = pd.Series(all_genes).value_counts()
     # drop genes appearing in >= t * n_types lists
     drop_genes = set(counts[counts >= (t * n_ct)].index)
+
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
 
