@@ -79,12 +79,14 @@ def cluster_connectedness(
 
     if "neighbors" not in adata.uns:
         raise ValueError(
-            "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+            f"Neighbors not found in adata. Please use scanpy to compute neighbors:\n"
+            f"adata=st_obj.sdata.tables['{tables_key}']; sc.pp.neighbors(adata)."
         )
 
     for res in resolution:
         key_added, _ = run_leiden_clustering_on_random_subset(
             sdata,
+            tables_key=tables_key,
             resolution=res,
             frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
@@ -171,7 +173,8 @@ def silhouette_score(
         # this way we avoid recomputing neighbors multiple times (for the different resolutions)
         if "neighbors" not in adata.uns:
             raise ValueError(
-                "Neighbors not found in adata. Please compute neighbors first by running sc.pp.neighbors(adata)."
+                f"Neighbors not found in adata. Please use scanpy to compute neighbors:\n"
+                f"adata=st_obj.sdata.tables['{tables_key}']; sc.pp.neighbors(adata)."
             )
 
         key = "silhouette_score"
@@ -179,6 +182,7 @@ def silhouette_score(
             # Run clustering for each resolution
             key_added, pca = run_leiden_clustering_on_random_subset(
                 sdata,
+                tables_key=tables_key,
                 resolution=res,
                 frac_cells_subset=1.0,  # Use all cells
                 key_prefix=key_prefix,
@@ -235,6 +239,7 @@ def purity(
     for random_state in range(5):
         key_added, _pca = run_leiden_clustering_on_random_subset(
             sdata,
+            tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
@@ -289,6 +294,7 @@ def adjusted_rand_index(
     for random_state in range(5):
         key_added, _pca = run_leiden_clustering_on_random_subset(
             sdata,
+            tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
