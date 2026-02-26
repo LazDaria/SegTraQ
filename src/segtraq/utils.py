@@ -1100,6 +1100,9 @@ def validate_spatialdata(
             shapes = _ensure_index(
                 shapes, shapes_key=shapes_key, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key"
             )
+            # setting the coordinate system to None to avoid issues when computing cell area
+            # or other morphological features later on
+            shapes = shapes.set_crs(None, allow_override=True)
             sdata.shapes[shapes_key] = shapes
             shapes_cell_ids = set(shapes.index.tolist())
         else:
@@ -1259,6 +1262,9 @@ def validate_spatialdata(
             id_key=nucleus_shapes_cell_id_key,
             id_key_name="nucleus_shapes_cell_id_key",
         )
+        # setting the coordinate system to None to avoid issues when computing cell area
+        # or other morphological features later on
+        nucleus_shapes = nucleus_shapes.set_crs(None, allow_override=True)
         sdata.shapes[nucleus_shapes_key] = nucleus_shapes
 
     if contains_tables:
