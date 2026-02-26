@@ -441,7 +441,7 @@ def transcript_density(
     )
     area_df = adata.obs[[tables_cell_id_key, tables_area_key]]
 
-    merged = counts_df.merge(area_df, on=tables_cell_id_key, how="left")
+    merged = counts_df.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
     merged["transcript_density"] = merged["transcript_count"] / merged[tables_area_key]
 
     if inplace:
