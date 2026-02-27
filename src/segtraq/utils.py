@@ -432,7 +432,17 @@ def _pairwise_auc(
     # Identify genes up in ct_a vs ct_b
     #   high AUC and higher mean in ct_a
     up_mask = (aucs >= auc_pos_thresh) & (mean_a > mean_b)
-    pos_genes_a = genes[up_mask].tolist()
+
+    # get indices of candidate genes
+    idx = np.where(up_mask)[0]
+
+    # sort candidates by AUC descending
+    idx = idx[np.argsort(-aucs[idx])]
+
+    # cap at 200 genes
+    idx = idx[:200]
+
+    pos_genes_a = genes[idx].tolist()
 
     return (ct_a, ct_b, pos_genes_a, True)
 
@@ -469,6 +479,7 @@ def _pairwise_de(
     df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
 
     pos_df = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
+    pos_df = pos_df.sort_values("logfoldchanges", ascending=False).head(200)
 
     pos_genes_a = pos_df["names"].tolist()
 
@@ -707,7 +718,7 @@ def markers_from_reference(
             idx = gene_to_idx.get(g)
             if idx is None:
                 continue
-            if frac_b[idx] <= max_neg_frac:
+            if frac_b[idx] <= max_neg_frac and (frac_a[idx] >= min_pos_frac):
                 neg_sets[ct_b].add(g)
 
     # ------------------------------------------------------------
