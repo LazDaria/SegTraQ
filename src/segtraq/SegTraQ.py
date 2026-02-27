@@ -411,6 +411,7 @@ class SegTraQ:
     def run_clustering_stability(
         self,
         key_prefix: str = "leiden_subset",
+        use_hvg: bool = False,
         inplace: bool = True,
         connectedness_kwargs: dict | None = None,
         silhouette_kwargs: dict | None = None,
@@ -436,6 +437,8 @@ class SegTraQ:
         key_prefix : str, default="leiden_subset"
             Prefix for Leiden clustering labels written to `.obs` by the underlying
             methods (where applicable).
+        use_hvg: bool, optional
+            Whether to use highly variable genes (HVGs) for PCA. By default False.
         inplace : bool, default=True
             If True, metrics are written to `sdata.tables["table"].uns` by the
             underlying methods and this function returns None. If False, the
@@ -462,24 +465,28 @@ class SegTraQ:
         """
         cc = self.cs.cluster_connectedness(
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             inplace=inplace,
             **(connectedness_kwargs or {}),
         )
 
         sil = self.cs.silhouette_score(
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             inplace=inplace,
             **(silhouette_kwargs or {}),
         )
 
         purity = self.cs.purity(
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             inplace=inplace,
             **(purity_kwargs or {}),
         )
 
         ari = self.cs.adjusted_rand_index(
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             inplace=inplace,
             **(ari_kwargs or {}),
         )
@@ -707,6 +714,7 @@ class SegTraQ:
         ref_cell_type: str = "cell_type",
         ref_ensemble_key: str | None = None,
         query_ensemble_key: str | None = "gene_ids",
+        use_hvg: bool = False,
         inplace: bool = True,
     ):
         """
@@ -731,6 +739,8 @@ class SegTraQ:
         query_ensemble_key: str or None, default="gene_ids"
             Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
             If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        use_hvg: bool, optional
+            Whether to use highly variable genes (HVGs) for PCA. By default False.
         inplace : bool, default=True
             If True, writes labels/scores into `sdata.tables[tables_key].obs` and returns None.
             If False, returns a DataFrame with the assignment and scores without writing.
@@ -758,6 +768,7 @@ class SegTraQ:
             cell_type_key=cell_type_key,
             ref_ensemble_key=ref_ensemble_key,
             query_ensemble_key=query_ensemble_key,
+            use_hvg=use_hvg,
             inplace=inplace,
         )
 
@@ -1412,6 +1423,7 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
+        use_hvg: bool = False,
         inplace: bool = True,
     ) -> float:
         return cs.silhouette_score(
@@ -1422,6 +1434,7 @@ class _CSFacade:
             key_prefix=key_prefix,
             random_state=random_state,
             cell_type_key=cell_type_key,
+            use_hvg=use_hvg,
             inplace=inplace,
         )
 
@@ -1432,6 +1445,7 @@ class _CSFacade:
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
+        use_hvg: bool = False,
         inplace: bool = True,
     ) -> float:
         return cs.purity(
@@ -1440,6 +1454,7 @@ class _CSFacade:
             frac_cells_subset=frac_cells_subset,
             tables_key=self._p.tables_key,
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             inplace=inplace,
         )
 
@@ -1450,6 +1465,7 @@ class _CSFacade:
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
+        use_hvg: bool = False,
         inplace: bool = True,
     ) -> float:
         return cs.adjusted_rand_index(
@@ -1458,6 +1474,7 @@ class _CSFacade:
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
             tables_key=self._p.tables_key,
+            use_hvg=use_hvg,
             inplace=inplace,
         )
 
@@ -1470,6 +1487,7 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
+        use_hvg: bool = False,
         inplace: bool = True,
     ):
         return cs.cluster_connectedness(
@@ -1480,6 +1498,7 @@ class _CSFacade:
             tables_key=self._p.tables_key,
             random_state=random_state,
             cell_type_key=cell_type_key,
+            use_hvg=use_hvg,
             inplace=inplace,
         )
 

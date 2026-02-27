@@ -7,8 +7,8 @@ import squidpy as sq
 from scipy import sparse
 from scipy.stats import fisher_exact
 
-from ..utils import _looks_like_counts, _score_negative_with_neighbors, _score_one_list, merge_into_obs
-
+from ..utils import _looks_like_counts, merge_into_obs
+from .utils import _score_one_list, _score_negative_with_neighbors
 
 def mutually_exclusive_coexpression_rate(
     sdata,
