@@ -11,6 +11,7 @@ def run_leiden_clustering_on_adata(
     adata_input,
     resolution: float = 1.0,
     key_added: str = "leiden",
+    use_hvg: bool = False,
     recompute_neighbors: bool = True,
 ):
     """
@@ -24,6 +25,8 @@ def run_leiden_clustering_on_adata(
         Resolution parameter for Leiden.
     key_added : str
         Key under which to store clustering result in `.obs`.
+    use_hvg: bool, optional
+        Whether to use highly variable genes (HVGs) for PCA. By default False.
     recompute_neighbors : bool
         Whether to recompute neighbors before clustering.
 
@@ -34,7 +37,7 @@ def run_leiden_clustering_on_adata(
     """
     adata = adata_input.copy()
     if recompute_neighbors:
-        sc.pp.pca(adata)
+        sc.pp.pca(adata, use_highly_variable=use_hvg)
         sc.pp.neighbors(adata)
 
     sc.tl.leiden(
@@ -72,6 +75,7 @@ def run_leiden_clustering_on_random_subset(
     frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden",
     random_state: int = 42,
+    use_hvg: bool = False,
     recompute_neighbors: bool = True,
 ):
     adata = sdata.tables[tables_key]
@@ -90,6 +94,7 @@ def run_leiden_clustering_on_random_subset(
         adata_subset,
         resolution=resolution,
         key_added=key_added,
+        use_hvg=use_hvg,
         recompute_neighbors=recompute_neighbors,
     )
 
