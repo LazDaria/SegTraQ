@@ -14,7 +14,7 @@ import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
 from typing import Optional
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed as joblib_delayed
 from dask import delayed
 from packaging import version as pkg_version
 from spatialdata.models import PointsModel
@@ -669,7 +669,7 @@ def markers_from_reference(
     if n_jobs == 1:
         results = [worker(ct_a, ct_b) for ct_a, ct_b in celltype_pairs]
     else:
-        results = Parallel(n_jobs=n_jobs)(delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
+        results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
 
     # the ok column indicates whether the pairwise computation was valid (enough cells, etc.)
     # we filter out invalid pairs before building the up_by_pair dictionary
