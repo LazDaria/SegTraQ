@@ -7,11 +7,11 @@ from . import bl, cs, pl, ps, rs, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
     add_nuc_shapes_via_cellpose,
+    bins_to_molecules_points,
     filter_cells,
     markers_from_reference,
     run_label_transfer,
     validate_spatialdata,
-    bins_to_molecules_points,
 )
 
 # Override canonical module path for Sphinx
@@ -21,7 +21,7 @@ for _f in (
     validate_spatialdata,
     add_nuc_shapes_via_cellpose,
     filter_cells,
-    bins_to_molecules_points
+    bins_to_molecules_points,
 ):
     _f.__module__ = "segtraq"
 

@@ -12,6 +12,7 @@ def run_leiden_clustering_on_adata(
     resolution: float = 1.0,
     key_added: str = "leiden",
     use_hvg: bool = False,
+    representation: str | None = None,
     recompute_neighbors: bool = True,
 ):
     """
@@ -27,6 +28,8 @@ def run_leiden_clustering_on_adata(
         Key under which to store clustering result in `.obs`.
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
+    representation: str, optional
+        Representation to use for computing neighbors. If None, PCA is used.
     recompute_neighbors : bool
         Whether to recompute neighbors before clustering.
 
@@ -37,8 +40,11 @@ def run_leiden_clustering_on_adata(
     """
     adata = adata_input.copy()
     if recompute_neighbors:
-        sc.pp.pca(adata, use_highly_variable=use_hvg)
-        sc.pp.neighbors(adata)
+        if representation is None:
+            sc.pp.pca(adata, use_highly_variable=use_hvg)
+            sc.pp.neighbors(adata)
+        else:
+            sc.pp.neighbors(adata, use_rep=representation)
 
     sc.tl.leiden(
         adata,
@@ -77,6 +83,7 @@ def run_leiden_clustering_on_random_subset(
     random_state: int = 42,
     use_hvg: bool = False,
     recompute_neighbors: bool = True,
+    representation: str | None = None,
 ):
     adata = sdata.tables[tables_key]
 
@@ -96,6 +103,7 @@ def run_leiden_clustering_on_random_subset(
         key_added=key_added,
         use_hvg=use_hvg,
         recompute_neighbors=recompute_neighbors,
+        representation=representation,
     )
 
     # Store labels in the full AnnData

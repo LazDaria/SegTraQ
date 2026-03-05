@@ -8,12 +8,14 @@ from scipy import sparse
 from scipy.stats import fisher_exact
 
 from ..utils import _looks_like_counts, merge_into_obs
-from .utils import _score_one_list, _score_negative_with_neighbors
+from .utils import _score_negative_with_neighbors, _score_one_list
+
 
 def mutually_exclusive_coexpression_rate(
     sdata,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
+    layer: str = "counts",
     pseudocount: float = 0.5,
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -30,6 +32,8 @@ def mutually_exclusive_coexpression_rate(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
+    layer: str, optional, default="counts"
+        Layer to use for expression.
     pseudocount : float, optional, default=0.5
         Pseudocount added to all cells of the contingency table to avoid
         division by zero when computing odds ratios.
@@ -44,13 +48,22 @@ def mutually_exclusive_coexpression_rate(
             ['gene1', 'gene2', 'odds_ratio', 'pvalue', 'a', 'b', 'c', 'd']
         where (a, b, c, d) are the counts in the contingency table.
     """
-    tbl = sdata.tables[tables_key]
+    adata = sdata.tables[tables_key]
+    X = adata.X
 
-    X = tbl.X
-    array = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
+    if _looks_like_counts(X):
+        X_dense = X.toarray() if hasattr(X, "toarray") else X
+    elif layer not in adata.layers:
+        raise ValueError(
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
+            "and the main matrix does not look like counts."
+        )
+    else:
+        counts = adata.layers[layer]
+        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
-    var_index = pd.Index(tbl.var_names)
-    n_cells = array.shape[0]
+    var_index = pd.Index(adata.var_names)
+    n_cells = X_dense.shape[0]
     pseudocount = float(pseudocount)
 
     # --- build unique unordered candidate pairs ---
@@ -78,7 +91,7 @@ def mutually_exclusive_coexpression_rate(
     ]
 
     # only consider positive expression values in the spatial data
-    det = array > 0
+    det = X_dense > 0
 
     rows = []
     # go over all positive/negative gene pairs from the scRNAseq reference that were kept through the filtering
@@ -122,7 +135,7 @@ def mutually_exclusive_coexpression_rate(
     df = pd.DataFrame(rows)
 
     if inplace:
-        tbl.uns["mutually_exclusive_coexpression_rate"] = df
+        adata.uns["mutually_exclusive_coexpression_rate"] = df
 
     return df
 
@@ -132,6 +145,7 @@ def neighbor_contamination(
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
+    layer: str = "counts",
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
@@ -176,6 +190,8 @@ def neighbor_contamination(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
+    layer: str, optional, default="counts"
+        Layer to use for expression.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
@@ -224,13 +240,13 @@ def neighbor_contamination(
     # footprint
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in adata.layers:
+    elif layer not in adata.layers:
         raise ValueError(
             f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        counts = adata.layers["counts"]
+        counts = adata.layers[layer]
         X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     # Checking if neighborhood graph is present, else compute Delaunay triangulation
@@ -436,6 +452,7 @@ def marker_purity(
     markers: dict[str, dict[str, list[str]]],
     use_quantiles: bool = False,
     tables_key: str = "table",
+    layer: str = "counts",
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
@@ -484,6 +501,8 @@ def marker_purity(
         if False, use direct expression-based criteria (expression > 0).
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
+    layer: str, optional, default="counts"
+        Layer to use for expression.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
@@ -521,13 +540,13 @@ def marker_purity(
 
     if _looks_like_counts(X):
         X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in adata.layers:
+    elif layer not in adata.layers:
         raise ValueError(
             f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        counts = adata.layers["counts"]
+        counts = adata.layers[layer]
         X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     genes = np.asarray(adata.var_names)

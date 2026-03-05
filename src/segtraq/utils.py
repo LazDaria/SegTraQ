@@ -13,17 +13,17 @@ import scanpy as sc
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
-from typing import Optional
-from joblib import Parallel, delayed as joblib_delayed
 from dask import delayed
+from joblib import Parallel
+from joblib import delayed as joblib_delayed
 from packaging import version as pkg_version
-from spatialdata.models import PointsModel
 from rasterio.features import shapes
 from scipy import sparse
 from scipy.spatial.distance import cdist
 from shapely.affinity import affine_transform, translate
 from shapely.geometry import shape
 from sklearn.metrics import roc_auc_score
+from spatialdata.models import PointsModel
 from spatialdata.transformations import (
     get_transformation,
     get_transformation_between_coordinate_systems,
@@ -72,8 +72,12 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
 
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
+
 def _assign_celltype_by_pearson(
-    adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, tables_cell_id_key: str = "cell_id", 
+    adata: AnnData,
+    ref_mean_df: pd.DataFrame,
+    q_ensemble_key: str = None,
+    tables_cell_id_key: str = "cell_id",
     genes_to_use: set[str] | None = None,
 ) -> pd.DataFrame:
     """
@@ -137,6 +141,7 @@ def _assign_celltype_by_pearson(
             "pearson_score": best_score.values,
         }
     )
+
 
 def run_label_transfer(
     sdata,
@@ -295,11 +300,9 @@ def run_label_transfer(
         genes_to_use = {g for g in hvgs if _keep(g)}
 
     # Assign labels
-    ct_corr = _assign_celltype_by_pearson(adata_q, 
-                                          ref_mean_df, 
-                                          query_ensemble_key, 
-                                          tables_cell_id_key,
-                                          genes_to_use=genes_to_use)
+    ct_corr = _assign_celltype_by_pearson(
+        adata_q, ref_mean_df, query_ensemble_key, tables_cell_id_key, genes_to_use=genes_to_use
+    )
 
     if inplace:
         # Write back only to the filtered subset cells
@@ -826,16 +829,17 @@ def _ensure_index(
     )
     return gdf.set_index(id_key, drop=True)
 
+
 def bins_to_molecules_points(
     sdata: sd.SpatialData,
     tables_key: str,
     cell_shapes_key: str,
-    bins_shapes_key: Optional[str] = None,
-    coordinate_system: Optional[str] = None,
-    bins_points_key: Optional[str] = None,
+    bins_shapes_key: str | None = None,
+    coordinate_system: str | None = None,
+    bins_points_key: str | None = None,
     cell_id_key: str = "cell_id",
     background_id: str | int = "UNASSIGNED",
-    chunk_bins: int = 50_000
+    chunk_bins: int = 50_000,
 ) -> sd.SpatialData:
     """
     Convert per-bin/spot counts in sdata.tables[table_key] into per-transcript points.
@@ -905,7 +909,7 @@ def bins_to_molecules_points(
             coordinate_system=coordinate_system,
         )
         # copy transforms so points align with images/shapes
-        centroids.attrs["transform"] = sdata.shapes[bins_shapes_key].attrs.get("transform", None) 
+        centroids.attrs["transform"] = sdata.shapes[bins_shapes_key].attrs.get("transform", None)
 
         # save in sdata.points under a new key
         bins_points_key = f"{bins_shapes_key}_centroids"
@@ -924,8 +928,7 @@ def bins_to_molecules_points(
 
     if cent_pd[["x", "y"]].isna().any().any():
         raise ValueError(
-            "Centroid x/y contains NaNs after alignment. "
-            "Check bins_points/bins_shapes vs table row identifiers."
+            "Centroid x/y contains NaNs after alignment. Check bins_points/bins_shapes vs table row identifiers."
         )
 
     x_all = cent_pd["x"].to_numpy(dtype=np.float32, copy=False)
@@ -933,7 +936,7 @@ def bins_to_molecules_points(
 
     # assign each bin/spot to a cell_id
 
-    points_gdf = gpd.GeoDataFrame( #spatial join
+    points_gdf = gpd.GeoDataFrame(  # spatial join
         cent_pd.copy(),
         geometry=gpd.points_from_xy(cent_pd["x"], cent_pd["y"]),
     )
@@ -941,7 +944,7 @@ def bins_to_molecules_points(
     cells = sdata.shapes[cell_shapes_key]
 
     # ensure cell_id_key exists as column (if it's in index, expose it)
-    cells_gdf = cells[[ "geometry" ]].copy()
+    cells_gdf = cells[["geometry"]].copy()
     if cell_id_key in cells.columns:
         cells_gdf[cell_id_key] = cells[cell_id_key].values
     elif cells.index.name == cell_id_key:
@@ -959,15 +962,11 @@ def bins_to_molecules_points(
     )
 
     cell_id_series = (
-        joined[cell_id_key]
-        .groupby(level=0)      # centroid index
-        .first()
-        .reindex(points_gdf.index)
-        .fillna(background_id)
+        joined[cell_id_key].groupby(level=0).first().reindex(points_gdf.index).fillna(background_id)  # centroid index
     )
 
     # expand sparse counts -> per-transcript rows (x, y, gene, cell_id)
-    cell_cat = cell_id_series.astype("category") #categorical codes (memory-friendly)
+    cell_cat = cell_id_series.astype("category")  # categorical codes (memory-friendly)
     cell_codes = cell_cat.cat.codes.to_numpy(dtype=np.int32, copy=False)
     cell_categories = cell_cat.cat.categories.to_numpy()
 
@@ -975,9 +974,7 @@ def bins_to_molecules_points(
     def chunk_to_molecules(start: int, end: int) -> pd.DataFrame:
         Xc = X[start:end].tocoo()
         if Xc.nnz == 0:
-            return pd.DataFrame(
-                {"x": [], "y": [], out_gene_key: [], out_cell_id_key: []}
-            )
+            return pd.DataFrame({"x": [], "y": [], "feature_name": [], "cell_id": []})
 
         bin_idx = (Xc.row + start).astype(np.int64, copy=False)
         gene_idx = Xc.col.astype(np.int32, copy=False)
@@ -1006,11 +1003,9 @@ def bins_to_molecules_points(
     )
 
     n_bins = X.shape[0]
-    parts = [
-        chunk_to_molecules(start, min(start + chunk_bins, n_bins))
-        for start in range(0, n_bins, chunk_bins)
-    ]
+    parts = [chunk_to_molecules(start, min(start + chunk_bins, n_bins)) for start in range(0, n_bins, chunk_bins)]
     molecules_ddf = dd.from_delayed(parts, meta=meta)
+    # molecules_ddf = molecules_ddf.reset_index(drop=True)
 
     # wrap as SpatialData points with transforms
     transforms = cent.attrs.get("transform", None)

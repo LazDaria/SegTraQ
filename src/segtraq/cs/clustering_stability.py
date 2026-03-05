@@ -94,7 +94,7 @@ def cluster_connectedness(
             frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
             random_state=random_state,
-            use_hvg = use_hvg,
+            use_hvg=use_hvg,
             recompute_neighbors=False,
         )
         labels = adata.obs[key_added].values
@@ -194,7 +194,7 @@ def silhouette_score(
                 frac_cells_subset=1.0,  # Use all cells
                 key_prefix=key_prefix,
                 random_state=random_state,
-                use_hvg = use_hvg,
+                use_hvg=use_hvg,
                 recompute_neighbors=False,
             )
 
@@ -218,6 +218,7 @@ def purity(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool = False,
+    representation: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
@@ -236,6 +237,8 @@ def purity(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
+    representation: str, optional
+        Representation to use for computing neighbors. If None, PCA is used.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
 
@@ -254,8 +257,9 @@ def purity(
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
-            use_hvg = use_hvg,
+            use_hvg=use_hvg,
             random_state=random_state,
+            representation=representation,
         )
         cluster_keys.append(key_added)
 
@@ -275,6 +279,7 @@ def adjusted_rand_index(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool = False,
+    representation: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
@@ -294,6 +299,8 @@ def adjusted_rand_index(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
+    representation: str, optional
+        Representation to use for computing neighbors. If None, PCA is used.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
 
@@ -313,8 +320,9 @@ def adjusted_rand_index(
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
-            use_hvg = use_hvg,
+            use_hvg=use_hvg,
             random_state=random_state,
+            representation=representation,
         )
         cluster_keys.append(key_added)
     pairwise_aris = ari_pairwise(adata, cluster_keys)

@@ -506,6 +506,7 @@ class SegTraQ:
         *,
         markers: dict[str, dict[str, list[str]]],
         cell_type_key: str = "transferred_cell_type",
+        layer: str = "counts",
         inplace: bool = True,
         # per-metric parameters (optional)
         purity_kwargs: dict | None = None,
@@ -530,6 +531,8 @@ class SegTraQ:
             {cell_type: {"positive": list[str], "negative": list[str]}}.
         cell_type_key : str, default="transferred_cell_type"
             Column in the AnnData `.obs` with cell-type labels.
+        layer: str, optional, default="counts"
+            Layer to use for expression.
         inplace : bool, default=True
             If True, writes results into `.obs` / `.uns` / `.uns[...]` as implemented
             by the underlying functions and returns None.
@@ -566,6 +569,7 @@ class SegTraQ:
         # 1) Marker purity
         purity_df = self.sp.marker_purity(
             cell_type_key=cell_type_key,
+            layer=layer,
             markers=markers,
             inplace=purity_inplace,
             **purity_kwargs,
@@ -574,6 +578,7 @@ class SegTraQ:
         # 2) Neighbor contamination
         per_cell_cont_df, cont_mat_df, cont_bin_df = self.sp.neighbor_contamination(
             cell_type_key=cell_type_key,
+            layer=layer,
             markers=markers,
             inplace=cont_inplace,
             **contamination_kwargs,
@@ -582,6 +587,7 @@ class SegTraQ:
         # 3) MECR
         mecr_df = self.sp.mutually_exclusive_coexpression_rate(
             markers=markers,
+            layer=layer,
             inplace=mecr_inplace,
             **mecr_kwargs,
         )
@@ -1183,11 +1189,16 @@ class _SPFacade:
         self._p = parent
 
     def mutually_exclusive_coexpression_rate(
-        self, markers: dict[str, dict[str, list[str]]], pseudocount: float = 0.5, inplace: bool = True
+        self,
+        markers: dict[str, dict[str, list[str]]],
+        layer: str = "counts",
+        pseudocount: float = 0.5,
+        inplace: bool = True,
     ):
         return sp.mutually_exclusive_coexpression_rate(
             sdata=self._p.sdata,
             markers=markers,
+            layer=layer,
             pseudocount=pseudocount,
             tables_key=self._p.tables_key,
             inplace=inplace,
@@ -1199,6 +1210,7 @@ class _SPFacade:
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
+        layer: str = "counts",
         use_quantiles: bool = False,
         require_neighbor_expression: bool = True,
         weight_cont: float = 0.7,
@@ -1209,6 +1221,7 @@ class _SPFacade:
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
+            layer=layer,
             use_quantiles=use_quantiles,
             require_neighbor_expression=require_neighbor_expression,
             tables_key=self._p.tables_key,
@@ -1226,6 +1239,7 @@ class _SPFacade:
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
+        layer: str = "counts",
         require_neighbor_expression: bool = True,
         neighbors_key: str | None = "spatial_connectivities",
         uns_key: str = "negative_marker_contamination",
@@ -1236,6 +1250,7 @@ class _SPFacade:
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
+            layer=layer,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_centroid_x_key=self._p.tables_centroid_x_key,
@@ -1446,6 +1461,7 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool = False,
+        representation: str | None = None,
         inplace: bool = True,
     ) -> float:
         return cs.purity(
@@ -1455,6 +1471,7 @@ class _CSFacade:
             tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             use_hvg=use_hvg,
+            representation=representation,
             inplace=inplace,
         )
 
@@ -1466,6 +1483,7 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool = False,
+        representation: str | None = None,
         inplace: bool = True,
     ) -> float:
         return cs.adjusted_rand_index(
@@ -1475,6 +1493,7 @@ class _CSFacade:
             key_prefix=key_prefix,
             tables_key=self._p.tables_key,
             use_hvg=use_hvg,
+            representation=representation,
             inplace=inplace,
         )
 
