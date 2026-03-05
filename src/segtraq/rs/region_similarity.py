@@ -766,14 +766,14 @@ def similarity_border_neighborhood(
         ):
             ratio_border_neighborhood_to_center = corr_border_neighborhood / corr_center_border
 
-            rows.append(
-                {
-                    id_key: cid,
-                    "similarity_center_border": corr_center_border,
-                    "similarity_border_neighborhood": corr_border_neighborhood,
-                    "ratio_border_neighborhood_to_center": ratio_border_neighborhood_to_center,
-                }
-            )
+        rows.append(
+            {
+                id_key: cid,
+                "similarity_center_border": corr_center_border,
+                "similarity_border_neighborhood": corr_border_neighborhood,
+                "ratio_border_neighborhood_to_center": ratio_border_neighborhood_to_center,
+            }
+        )
 
     corr_df = pd.DataFrame(rows)
 

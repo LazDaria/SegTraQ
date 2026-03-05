@@ -3,6 +3,7 @@ import pandas as pd
 import squidpy as sq
 from sklearn.metrics import average_precision_score
 
+
 def _score_one_list(
     X: np.ndarray,
     marker_idx: np.ndarray,
@@ -59,6 +60,7 @@ def _score_one_list(
         )
 
     return precision, recall, F1
+
 
 def _score_negative_with_neighbors(
     X_dense: np.ndarray,
@@ -172,6 +174,7 @@ def _score_negative_with_neighbors(
         neg_f1[i] = n_f1_i[0]
 
     return neg_prec, neg_rec, neg_f1
+
 
 def add_neighbor_celltype_binary(
     adata,
