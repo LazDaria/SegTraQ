@@ -21,6 +21,7 @@ def cluster_connectedness(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
+    use_hvg: bool = False,
     inplace: bool = True,
 ) -> float:
     """
@@ -45,6 +46,8 @@ def cluster_connectedness(
         Seed for reproducibility, by default 42.
     cell_type_key : str, optional
         If provided, compute the mean cosine distance for this clustering only.
+    use_hvg: bool, optional
+        Whether to use highly variable genes (HVGs) for PCA. By default False.
     inplace : bool, optional
         Whether to store the computed mean cosine distance in sdata.uns, by default True.
 
@@ -91,6 +94,7 @@ def cluster_connectedness(
             frac_cells_subset=1.0,  # Use all cells
             key_prefix=key_prefix,
             random_state=random_state,
+            use_hvg=use_hvg,
             recompute_neighbors=False,
         )
         labels = adata.obs[key_added].values
@@ -113,6 +117,7 @@ def silhouette_score(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
+    use_hvg: bool = False,
     inplace: bool = True,
 ) -> float:
     """
@@ -135,6 +140,8 @@ def silhouette_score(
         Seed for reproducibility, by default 42.
     cell_type_key : str, optional
         If provided, compute the silhouette score for provided labels.
+    use_hvg: bool, optional
+        Whether to use highly variable genes (HVGs) for PCA. By default False.
     inplace : bool, optional
         Whether to store the computed silhouette score in sdata.uns, by default True.
 
@@ -187,6 +194,7 @@ def silhouette_score(
                 frac_cells_subset=1.0,  # Use all cells
                 key_prefix=key_prefix,
                 random_state=random_state,
+                use_hvg=use_hvg,
                 recompute_neighbors=False,
             )
 
@@ -209,6 +217,8 @@ def purity(
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
+    use_hvg: bool = False,
+    representation: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
@@ -225,6 +235,13 @@ def purity(
         The fraction of cells to subset for clustering, by default 0.63.
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
+    use_hvg: bool, optional
+        Whether to use highly variable genes (HVGs) for PCA. By default False.
+    representation : str | None, optional
+        Key in `adata.obsm` specifying the feature representation used to compute
+        the k-nearest neighbor graph before clustering. This is passed to
+        `scanpy.pp.neighbors(..., use_rep=representation)`.
+        If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
 
@@ -243,7 +260,9 @@ def purity(
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             random_state=random_state,
+            representation=representation,
         )
         cluster_keys.append(key_added)
 
@@ -262,6 +281,8 @@ def adjusted_rand_index(
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
+    use_hvg: bool = False,
+    representation: str | None = None,
     inplace: bool = True,
 ) -> float:
     """
@@ -279,6 +300,13 @@ def adjusted_rand_index(
         The key in sdata.tables where the relevant AnnData is stored, by default "table".
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
+    use_hvg: bool, optional
+        Whether to use highly variable genes (HVGs) for PCA. By default False.
+    representation : str | None, optional
+        Key in `adata.obsm` specifying the feature representation used to compute
+        the k-nearest neighbor graph before clustering. This is passed to
+        `scanpy.pp.neighbors(..., use_rep=representation)`.
+        If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
 
@@ -298,7 +326,9 @@ def adjusted_rand_index(
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
+            use_hvg=use_hvg,
             random_state=random_state,
+            representation=representation,
         )
         cluster_keys.append(key_added)
     pairwise_aris = ari_pairwise(adata, cluster_keys)

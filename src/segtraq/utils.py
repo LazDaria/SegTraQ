@@ -5,6 +5,7 @@ import warnings
 from collections.abc import Callable
 from importlib.metadata import version
 
+import dask.dataframe as dd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -12,7 +13,9 @@ import scanpy as sc
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
-from joblib import Parallel, delayed
+from dask import delayed
+from joblib import Parallel
+from joblib import delayed as joblib_delayed
 from packaging import version as pkg_version
 from rasterio.features import shapes
 from scipy import sparse
@@ -20,6 +23,7 @@ from scipy.spatial.distance import cdist
 from shapely.affinity import affine_transform, translate
 from shapely.geometry import shape
 from sklearn.metrics import roc_auc_score
+from spatialdata.models import PointsModel
 from spatialdata.transformations import (
     get_transformation,
     get_transformation_between_coordinate_systems,
@@ -69,180 +73,12 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
 
-def _score_one_list(
-    X: np.ndarray,
-    marker_idx: np.ndarray,
-    all_markers_idx: np.ndarray | None = None,
-    use_quantiles: bool = False,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Computes precision, recall, F1 using upper-quantile rule for all cells simultaneously.
-
-    Returns:
-        precision: (n_cells,)
-        recall:    (n_cells,)
-        F1:        (n_cells,)
-    """
-    # Restrict scoring to a positive and negative markers
-    all_markers_idx = np.asarray(all_markers_idx, dtype=int)
-    X = X[:, all_markers_idx]
-    n_cells, n_genes = X.shape
-
-    # remap marker_idx into the all_markers_idx
-    marker_set = set(np.asarray(marker_idx, dtype=int))
-    marker_idx = np.array([k for k, g in enumerate(all_markers_idx) if g in marker_set], dtype=int)
-
-    # No markers -> all metrics NaN for all cells
-    if marker_idx.size == 0:
-        return (np.full(n_cells, np.nan), np.full(n_cells, np.nan), np.full(n_cells, np.nan))
-
-    # Boolean array marking actual positives
-    actual = np.zeros(n_genes, dtype=bool)
-    actual[marker_idx] = True
-
-    frac = actual.mean()
-
-    if use_quantiles:
-        # Compute quantile threshold per cell
-        thr = np.quantile(X, 1.0 - frac, axis=1)
-        predicted = X > thr[:, None]
-    else:
-        predicted = X > 0
-
-    actual_mat = np.broadcast_to(actual, (n_cells, n_genes))
-
-    tp = (predicted & actual_mat).sum(axis=1)
-    fp = (predicted & ~actual_mat).sum(axis=1)
-    fn = (~predicted & actual_mat).sum(axis=1)
-
-    with np.errstate(divide="ignore", invalid="ignore"):
-        precision = np.where(tp + fp > 0, tp / (tp + fp), 0.0)
-        recall = np.where(tp + fn > 0, tp / (tp + fn), 0.0)
-        F1 = np.where(
-            (precision + recall) > 0,
-            2 * precision * recall / (precision + recall),
-            0.0,
-        )
-
-    return precision, recall, F1
-
-
-def _score_negative_with_neighbors(
-    X_dense: np.ndarray,
-    cell_types: np.ndarray,
-    markers: dict[str, dict[str, list[str]]],
-    genes: np.ndarray,
-    require_neighbor_expression: bool,
-    neighbor_indices: list[np.ndarray],
-    use_quantiles: bool = True,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Neighborhood-aware negative marker scoring.
-
-    For each cell i of type c:
-      - Get its neighbors (indices neighbor_indices[i]).
-      - Collect the cell types present in these neighbors.
-      - Take negative markers of c: markers[c]["negative"].
-      - Intersect with the union of positive markers of the neighbor types.
-        -> cell-specific "relevant negatives".
-      - Run `_score_one_list` on X_dense[i, :] with these markers to obtain
-        precision, recall, F1 for negatives.
-
-    Returns
-    -------
-    neg_precision, neg_recall, neg_F1 : (n_cells,) each
-        Per-cell metrics for neighborhood-relevant negative markers.
-    """
-    n_cells, n_genes = X_dense.shape
-    var_index = pd.Index(genes)
-
-    # Precompute per-type sets for fast membership checks
-    pos_sets: dict[str, set] = {}
-    neg_sets: dict[str, set] = {}
-    for ct, m in markers.items():
-        pos_sets[ct] = set(m.get("positive", []))
-        neg_sets[ct] = set(m.get("negative", []))
-
-    neg_prec = np.full(n_cells, np.nan, dtype=float)
-    neg_rec = np.full(n_cells, np.nan, dtype=float)
-    neg_f1 = np.full(n_cells, np.nan, dtype=float)
-
-    for i in range(n_cells):
-        ct = cell_types[i]
-        if pd.isna(ct) or ct not in markers:
-            continue
-
-        nbs = neighbor_indices[i]
-        if nbs.size == 0:
-            continue  # no neighborhood -> skip
-
-        nb_cts = set(cell_types[nbs])
-        if not nb_cts:
-            continue
-
-        neg_all = neg_sets.get(ct, set())
-        if not neg_all:
-            continue
-
-        # union of positive markers from neighbor types
-        nb_pos_union: set = set()
-        for nb_ct in nb_cts:
-            if nb_ct in pos_sets:
-                nb_pos_union.update(pos_sets[nb_ct])
-
-        # relevant negatives = negative markers of ct that are also
-        # positive in at least one neighbor type
-        rel_neg_genes = list(neg_all & nb_pos_union)
-        if not rel_neg_genes:
-            continue
-
-        if require_neighbor_expression:
-            keep_genes = []
-
-            for g in rel_neg_genes:
-                g_idx = var_index.get_loc(g)
-
-                # check neighbors of types for which g is a positive marker
-                for nb_ct in nb_cts:
-                    if g not in pos_sets.get(nb_ct, set()):
-                        continue
-
-                    nb_mask = cell_types[nbs] == nb_ct
-                    if nb_mask.any() and (X_dense[nbs[nb_mask], g_idx] > 0).any():
-                        keep_genes.append(g)
-                        break
-
-            rel_neg_genes = keep_genes
-            if not rel_neg_genes:
-                continue
-
-        # gene not present in spatial data
-        neg_idx_i = var_index.get_indexer(rel_neg_genes)
-        neg_idx_i = neg_idx_i[neg_idx_i >= 0]
-        if neg_idx_i.size == 0:
-            continue
-
-        all_markers_idx = list(set(rel_neg_genes) | nb_pos_union)
-        all_markers_idx_i = var_index.get_indexer(all_markers_idx)
-        all_markers_idx_i = all_markers_idx_i[all_markers_idx_i >= 0]
-
-        x_i = X_dense[i, :][None, :]  # (1, n_genes)
-        n_prec_i, n_rec_i, n_f1_i = _score_one_list(
-            x_i,
-            neg_idx_i,
-            all_markers_idx_i,
-            use_quantiles=use_quantiles,
-        )
-
-        neg_prec[i] = n_prec_i[0]
-        neg_rec[i] = n_rec_i[0]
-        neg_f1[i] = n_f1_i[0]
-
-    return neg_prec, neg_rec, neg_f1
-
-
 def _assign_celltype_by_pearson(
-    adata: AnnData, ref_mean_df: pd.DataFrame, q_ensemble_key: str = None, tables_cell_id_key: str = "cell_id"
+    adata: AnnData,
+    ref_mean_df: pd.DataFrame,
+    q_ensemble_key: str = None,
+    tables_cell_id_key: str = "cell_id",
+    genes_to_use: set[str] | None = None,
 ) -> pd.DataFrame:
     """
     Assign cell types to cells in `adata` via Pearson correlation with reference means.
@@ -258,6 +94,8 @@ def _assign_celltype_by_pearson(
         If None, `self.sdata.tables[self.tables_key].var_names` will be used.
     tables_cell_id_key : str, default="cell_id"
         Column in the query cell table uniquely identifying each cell.
+    genes_to_use: set[str] or None, optional
+        Optional subset of genes to restrict to.
 
     Returns
     -------
@@ -272,6 +110,17 @@ def _assign_celltype_by_pearson(
     )
 
     common_genes = X_query.columns.intersection(ref_mean_df.columns)
+
+    if genes_to_use is not None:
+        common_genes = common_genes.intersection(pd.Index(list(genes_to_use)))
+        print(f"Using {len(common_genes)} common genes.")
+
+    if len(common_genes) == 0:
+        raise ValueError("No common genes found between query and reference after filtering.")
+
+    X_query = X_query[common_genes]
+    X_ref = ref_mean_df[common_genes]
+
     if len(common_genes) == 0:
         raise ValueError("No common genes found between query and reference.")
 
@@ -310,6 +159,7 @@ def run_label_transfer(
     cell_type_key: str = "transferred_cell_type",
     ref_ensemble_key: str | None = None,
     query_ensemble_key: str | None = "gene_ids",
+    use_hvg: bool = False,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
@@ -349,8 +199,8 @@ def run_label_transfer(
     query_ensemble_key: str or None, default="gene_ids"
         Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
         If None, `self.sdata.tables[self.tables_key].var_names` will be used.
-    q_gene_key: str
-
+    use_hvg: bool, optional
+        Whether to use highly variable genes (HVGs) for PCA. By default False.
     inplace : bool
         If True, writes labels into `sdata.tables[tables_key].obs` and returns None.
         If False, returns a DataFrame with ['cell_id', 'transferred_cell_type', 'pearson_score'].
@@ -416,7 +266,7 @@ def run_label_transfer(
     adata_q = tbl[mask].copy()
 
     # Normalize & log1p (query)
-    if _looks_like_counts(tbl.X):
+    if _looks_like_counts(adata_q.X):
         warnings.warn(
             "Spatialdata table appears to contain raw counts. "
             "Counts will be log1p-transformed before running label transfer."
@@ -424,12 +274,35 @@ def run_label_transfer(
             RuntimeWarning,
             stacklevel=2,
         )
-        adata_q.layers["counts"] = adata_q.X
+        adata_q.layers["counts"] = adata_q.X.copy()
         sc.pp.normalize_total(adata_q)
         sc.pp.log1p(adata_q)
 
+    # HVGs
+    genes_to_use = None
+    if use_hvg:
+        if "highly_variable" not in adata_ref.var.columns:
+            sc.pp.highly_variable_genes(
+                adata_ref,
+                flavor="seurat",
+                n_top_genes=2000,
+                inplace=True,
+            )
+
+        ref_hvg_mask = adata_ref.var["highly_variable"].to_numpy()
+        hvgs = set(genes[ref_hvg_mask])
+
+        # remove mit and other genes
+        def _keep(g: str) -> bool:
+            g = str(g).upper()
+            return not any(g.startswith(p) for p in ("MT-", "RPL", "RPS"))
+
+        genes_to_use = {g for g in hvgs if _keep(g)}
+
     # Assign labels
-    ct_corr = _assign_celltype_by_pearson(adata_q, ref_mean_df, query_ensemble_key, tables_cell_id_key)
+    ct_corr = _assign_celltype_by_pearson(
+        adata_q, ref_mean_df, query_ensemble_key, tables_cell_id_key, genes_to_use=genes_to_use
+    )
 
     if inplace:
         # Write back only to the filtered subset cells
@@ -562,7 +435,17 @@ def _pairwise_auc(
     # Identify genes up in ct_a vs ct_b
     #   high AUC and higher mean in ct_a
     up_mask = (aucs >= auc_pos_thresh) & (mean_a > mean_b)
-    pos_genes_a = genes[up_mask].tolist()
+
+    # get indices of candidate genes
+    idx = np.where(up_mask)[0]
+
+    # sort candidates by AUC descending
+    idx = idx[np.argsort(-aucs[idx])]
+
+    # cap at 200 genes
+    idx = idx[:200]
+
+    pos_genes_a = genes[idx].tolist()
 
     return (ct_a, ct_b, pos_genes_a, True)
 
@@ -599,6 +482,7 @@ def _pairwise_de(
     df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
 
     pos_df = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
+    pos_df = pos_df.sort_values("logfoldchanges", ascending=False).head(200)
 
     pos_genes_a = pos_df["names"].tolist()
 
@@ -788,7 +672,7 @@ def markers_from_reference(
     if n_jobs == 1:
         results = [worker(ct_a, ct_b) for ct_a, ct_b in celltype_pairs]
     else:
-        results = Parallel(n_jobs=n_jobs)(delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
+        results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
 
     # the ok column indicates whether the pairwise computation was valid (enough cells, etc.)
     # we filter out invalid pairs before building the up_by_pair dictionary
@@ -837,7 +721,7 @@ def markers_from_reference(
             idx = gene_to_idx.get(g)
             if idx is None:
                 continue
-            if frac_b[idx] <= max_neg_frac:
+            if frac_b[idx] <= max_neg_frac and (frac_a[idx] >= min_pos_frac):
                 neg_sets[ct_b].add(g)
 
     # ------------------------------------------------------------
@@ -944,6 +828,197 @@ def _ensure_index(
         stacklevel=2,
     )
     return gdf.set_index(id_key, drop=True)
+
+
+def bins_to_transcripts(
+    sdata: sd.SpatialData,
+    tables_key: str,
+    cell_shapes_key: str,
+    bins_shapes_key: str | None = None,
+    coordinate_system: str | None = None,
+    bins_points_key: str | None = None,
+    cell_id_key: str = "cell_id",
+    background_id: str | int = "UNASSIGNED",
+    chunk_bins: int = 50_000,
+) -> sd.SpatialData:
+    """
+    Convert per-bin/spot counts in sdata.tables[table_key] into per-transcript points.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        SpatialData object containing tables, shapes and/or points layers.
+    tables_key : str
+        Key in `sdata.tables` containing the per-bin or per-spot count matrix
+    cell_shapes_key : str
+        Key in `sdata.shapes` containing cell segmentation polygons used to
+        assign each bin/spot to a `cell_id`.
+    bins_shapes_key : str or None, optional
+        Key in `sdata.shapes` describing bin/spot geometries. If provided,
+        centroids will be computed from these shapes. Exactly one of
+        `bins_shapes_key` or `bins_points_key` must be given.
+    coordinate_system : str or None, optional
+        Coordinate system used when computing centroids from `bins_shapes_key`.
+        Required if `bins_shapes_key` is provided.
+    bins_points_key : str or None, optional
+        Key in `sdata.points` containing precomputed bin/spot centroids with
+        x/y coordinates. Used instead of computing centroids from shapes.
+    cell_id_key : str, default="cell_id"
+        Column or index name in `sdata.shapes[cell_shapes_key]` identifying
+        individual cells.
+    background_id : str or int, default="UNASSIGNED"
+        Identifier assigned to bins/spots that do not intersect any cell.
+    chunk_bins : int, default=50_000
+        Number of bins processed per chunk when expanding counts into
+        transcripts. Smaller values reduce peak memory usage but may increase
+        runtime.
+
+    Returns
+    -------
+    SpatialData
+        Updated `SpatialData` object where per-bin counts have been expanded
+        into a transcript-level points layer.
+
+    Requirements
+    ------------
+    - sdata.tables[table_key] is AnnData-like with X = counts (n_bins x n_genes), var_names = genes.
+    - You can provide either:
+        (A) bins_shapes_key (+ coordinate_system) to compute centroids, OR
+        (B) bins_points_key containing x/y for each bin/spot.
+    - cell_shapes_key contains cell polygons with a column (or index) cell_id_key.
+    """
+
+    if (bins_shapes_key is None) == (bins_points_key is None):
+        raise ValueError("Provide exactly one of bins_shapes_key or bins_points_key.")
+
+    tbl = sdata.tables[tables_key]
+    if not sparse.issparse(tbl.X):
+        X = sparse.csr_matrix(tbl.X)
+    else:
+        X = tbl.X.tocsr()
+
+    gene_names = np.asarray(tbl.var_names)
+
+    # build centroid points for bins/spots
+    if bins_points_key is None:
+        if coordinate_system is None:
+            raise ValueError("coordinate_system is required when computing centroids from shapes.")
+
+        centroids = sd.get_centroids(
+            sdata.shapes[bins_shapes_key],
+            coordinate_system=coordinate_system,
+        )
+        # copy transforms so points align with images/shapes
+        centroids.attrs["transform"] = sdata.shapes[bins_shapes_key].attrs.get("transform", None)
+
+        # save in sdata.points under a new key
+        bins_points_key = f"{bins_shapes_key}_centroids"
+        sdata.points[bins_points_key] = centroids
+
+    cent = sdata.points[bins_points_key]
+
+    # Dask dataframe - compute only necessary cols once
+    cent_pd = cent[["x", "y"]].compute()
+
+    # ensure same order
+    if "location_id" in tbl.obs.columns:
+        cent_pd = cent_pd.reindex(tbl.obs["location_id"].to_numpy())
+    else:
+        cent_pd = cent_pd.reindex(tbl.obs_names)
+
+    if cent_pd[["x", "y"]].isna().any().any():
+        raise ValueError(
+            "Centroid x/y contains NaNs after alignment. Check bins_points/bins_shapes vs table row identifiers."
+        )
+
+    x_all = cent_pd["x"].to_numpy(dtype=np.float32, copy=False)
+    y_all = cent_pd["y"].to_numpy(dtype=np.float32, copy=False)
+
+    # assign each bin/spot to a cell_id
+
+    points_gdf = gpd.GeoDataFrame(  # spatial join
+        cent_pd.copy(),
+        geometry=gpd.points_from_xy(cent_pd["x"], cent_pd["y"]),
+    )
+
+    cells = sdata.shapes[cell_shapes_key]
+
+    # ensure cell_id_key exists as column (if it's in index, expose it)
+    cells_gdf = cells[["geometry"]].copy()
+    if cell_id_key in cells.columns:
+        cells_gdf[cell_id_key] = cells[cell_id_key].values
+    elif cells.index.name == cell_id_key:
+        cells_gdf[cell_id_key] = cells.index.values
+    else:
+        raise ValueError(
+            f"cell_id_key={cell_id_key!r} not found as a column or index name in sdata.shapes[{cell_shapes_key!r}]."
+        )
+
+    joined = gpd.sjoin(
+        points_gdf[["geometry"]],
+        cells_gdf,
+        how="left",
+        predicate="intersects",
+    )
+
+    cell_id_series = (
+        joined[cell_id_key].groupby(level=0).first().reindex(points_gdf.index).fillna(background_id)  # centroid index
+    )
+
+    # expand sparse counts -> per-transcript rows (x, y, gene, cell_id)
+    cell_cat = cell_id_series.astype("category")  # categorical codes (memory-friendly)
+    cell_codes = cell_cat.cat.codes.to_numpy(dtype=np.int32, copy=False)
+    cell_categories = cell_cat.cat.categories.to_numpy()
+
+    @delayed
+    def chunk_to_molecules(start: int, end: int) -> pd.DataFrame:
+        Xc = X[start:end].tocoo()
+        if Xc.nnz == 0:
+            return pd.DataFrame({"x": [], "y": [], "feature_name": [], "cell_id": []})
+
+        bin_idx = (Xc.row + start).astype(np.int64, copy=False)
+        gene_idx = Xc.col.astype(np.int32, copy=False)
+        counts = Xc.data.astype(np.int32, copy=False)
+
+        # expand each (bin,gene,count) into `count` molecules
+        bin_rep = np.repeat(bin_idx, counts)
+        gene_rep = np.repeat(gene_idx, counts)
+
+        return pd.DataFrame(
+            {
+                "x": x_all[bin_rep],
+                "y": y_all[bin_rep],
+                "feature_name": gene_names[gene_rep].astype(object),
+                "cell_id": cell_categories[cell_codes[bin_rep]].astype(object),
+            }
+        )
+
+    meta = pd.DataFrame(
+        {
+            "x": pd.Series(dtype="float32"),
+            "y": pd.Series(dtype="float32"),
+            "feature_name": pd.Series(dtype="object"),
+            "cell_id": pd.Series(dtype="object"),
+        }
+    )
+
+    n_bins = X.shape[0]
+    parts = [chunk_to_molecules(start, min(start + chunk_bins, n_bins)) for start in range(0, n_bins, chunk_bins)]
+    molecules_ddf = dd.from_delayed(parts, meta=meta)
+    # molecules_ddf = molecules_ddf.reset_index(drop=True)
+
+    # wrap as SpatialData points with transforms
+    transforms = cent.attrs.get("transform", None)
+
+    molecules_points = PointsModel.parse(
+        molecules_ddf,
+        feature_key="feature_name",
+        transformations=transforms,
+    )
+
+    sdata.points["transcripts"] = molecules_points
+
+    return sdata
 
 
 def validate_spatialdata(
