@@ -32,19 +32,37 @@ def _get_count_matrix(adata, layer=None, tables_key="table"):
     )
 
 
-def _score_one_list(
+def _score_marker_detection(
     X: np.ndarray,
     marker_idx: np.ndarray,
     all_markers_idx: np.ndarray | None = None,
     use_quantiles: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Computes precision, recall, F1 using upper-quantile rule for all cells simultaneously.
+    Compute per-cell precision, recall, and F1 for detecting a set of marker genes.
 
-    Returns:
-        precision: (n_cells,)
-        recall:    (n_cells,)
-        F1:        (n_cells,)
+    The function evaluates how well a cell expresses a given marker set
+    (typically positive and negative markers). Gene presence is predicted either 
+    by expression > 0 or by selecting the top fraction of genes
+    per cell (`use_quantiles=True`).
+
+    Parameters
+    ----------
+    X : ndarray (n_cells, n_genes)
+        Expression matrix restricted to the marker universe.
+    marker_idx : ndarray
+        Indices of genes in `X` that correspond to the marker set being evaluated.
+    all_markers_idx : ndarray
+        Indices defining the gene universe used for scoring.
+    use_quantiles : bool, optional
+        If True, predict expressed genes by selecting the top-|markers| fraction
+        per cell (rank-based). If False, use expression > 0.
+
+    Returns
+    -------
+    precision : ndarray (n_cells,)
+    recall : ndarray (n_cells,)
+    F1 : ndarray (n_cells,)
     """
     # Restrict scoring to a positive and negative markers
     all_markers_idx = np.asarray(all_markers_idx, dtype=int)
@@ -90,7 +108,7 @@ def _score_one_list(
     return precision, recall, F1
 
 
-def _score_negative_with_neighbors(
+def _score_neighbor_negative_markers(
     X_dense: np.ndarray,
     cell_types: np.ndarray,
     markers: dict[str, dict[str, list[str]]],
@@ -108,7 +126,7 @@ def _score_negative_with_neighbors(
       - Take negative markers of c: markers[c]["negative"].
       - Intersect with the union of positive markers of the neighbor types.
         -> cell-specific "relevant negatives".
-      - Run `_score_one_list` on X_dense[i, :] with these markers to obtain
+      - Run `_score_marker_detection` on X_dense[i, :] with these markers to obtain
         precision, recall, F1 for negatives.
 
     Returns
@@ -190,7 +208,7 @@ def _score_negative_with_neighbors(
         all_markers_idx_i = all_markers_idx_i[all_markers_idx_i >= 0]
 
         x_i = X_dense[i, :][None, :]  # (1, n_genes)
-        n_prec_i, n_rec_i, n_f1_i = _score_one_list(
+        n_prec_i, n_rec_i, n_f1_i = _score_marker_detection(
             x_i,
             neg_idx_i,
             all_markers_idx_i,

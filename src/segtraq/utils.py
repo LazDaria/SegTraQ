@@ -830,7 +830,7 @@ def _ensure_index(
     return gdf.set_index(id_key, drop=True)
 
 
-def bins_to_molecules_points(
+def bins_to_transcripts(
     sdata: sd.SpatialData,
     tables_key: str,
     cell_shapes_key: str,

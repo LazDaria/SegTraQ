@@ -539,7 +539,6 @@ class SegTraQ:
             If True, writes results into `.obs` / `.uns` / `.uns[...]` as implemented
             by the underlying functions and returns None.
             If False, returns all results as a dict.
-
         purity_kwargs : dict or None, optional
             Extra args for :meth:`sp.marker_purity`.
             (e.g. use_quantiles=..., weight_cont=..., require_neighbor_expression=..., neighbors_key=...)
