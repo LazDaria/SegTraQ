@@ -7,7 +7,7 @@ from . import bl, cs, pl, ps, rs, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
     add_nuc_shapes_via_cellpose,
-    bins_to_molecules_points,
+    bins_to_transcripts,
     filter_cells,
     markers_from_reference,
     run_label_transfer,
@@ -21,7 +21,7 @@ for _f in (
     validate_spatialdata,
     add_nuc_shapes_via_cellpose,
     filter_cells,
-    bins_to_molecules_points,
+    bins_to_transcripts,
 ):
     _f.__module__ = "segtraq"
 
@@ -36,7 +36,7 @@ __all__ = [
     "markers_from_reference",
     "get_mut_excl_markers",
     "run_label_transfer",
-    "bins_to_molecules_points",
+    "bins_to_transcripts",
     "validate_spatialdata",
     "add_nuc_shapes_via_cellpose",
     "filter_cells",

@@ -28,8 +28,11 @@ def run_leiden_clustering_on_adata(
         Key under which to store clustering result in `.obs`.
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
-    representation: str, optional
-        Representation to use for computing neighbors. If None, PCA is used.
+    representation : str | None, optional
+        Key in `adata.obsm` specifying the feature representation used to compute
+        the k-nearest neighbor graph before clustering. This is passed to
+        `scanpy.pp.neighbors(..., use_rep=representation)`.
+        If `None`, a PCA ('X_pca') embedding is computed internally.
     recompute_neighbors : bool
         Whether to recompute neighbors before clustering.
 

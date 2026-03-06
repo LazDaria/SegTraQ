@@ -8,7 +8,7 @@ from scipy import sparse
 from scipy.stats import fisher_exact
 
 from ..utils import merge_into_obs
-from .utils import _get_count_matrix, _score_negative_with_neighbors, _score_one_list
+from .utils import _get_count_matrix, _score_neighbor_negative_markers, _score_marker_detection
 
 
 def mutually_exclusive_coexpression_rate(
@@ -573,7 +573,7 @@ def marker_purity(
 
         X_ct = X_dense[mask_cells]
 
-        p_precision_ct, p_recall_ct, p_f1_ct = _score_one_list(
+        p_precision_ct, p_recall_ct, p_f1_ct = _score_marker_detection(
             X_ct,
             pos_idx,
             all_idx,
@@ -605,7 +605,7 @@ def marker_purity(
         G = np.asarray(G)
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
-    neg_precision, neg_recall, neg_f1 = _score_negative_with_neighbors(
+    neg_precision, neg_recall, neg_f1 = _score_neighbor_negative_markers(
         X_dense=X_dense,
         cell_types=cell_types,
         markers=markers,
