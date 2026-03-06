@@ -506,7 +506,7 @@ class SegTraQ:
         *,
         markers: dict[str, dict[str, list[str]]],
         cell_type_key: str = "transferred_cell_type",
-        layer: str = "counts",
+        layer: str | None = None,
         inplace: bool = True,
         # per-metric parameters (optional)
         purity_kwargs: dict | None = None,
@@ -531,8 +531,10 @@ class SegTraQ:
             {cell_type: {"positive": list[str], "negative": list[str]}}.
         cell_type_key : str, default="transferred_cell_type"
             Column in the AnnData `.obs` with cell-type labels.
-        layer: str, optional, default="counts"
-            Layer to use for expression.
+        layer : str | None, optional
+            Layer containing count data. If `None`, `adata.X` is used if it looks
+            like counts, otherwise `adata.layers["counts"]` is used if available.
+            If a layer is specified, it must exist and contain count-like values.
         inplace : bool, default=True
             If True, writes results into `.obs` / `.uns` / `.uns[...]` as implemented
             by the underlying functions and returns None.
@@ -1191,7 +1193,7 @@ class _SPFacade:
     def mutually_exclusive_coexpression_rate(
         self,
         markers: dict[str, dict[str, list[str]]],
-        layer: str = "counts",
+        layer: str | None = None,
         pseudocount: float = 0.5,
         inplace: bool = True,
     ):
@@ -1210,7 +1212,7 @@ class _SPFacade:
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
-        layer: str = "counts",
+        layer: str | None = None,
         use_quantiles: bool = False,
         require_neighbor_expression: bool = True,
         weight_cont: float = 0.7,
@@ -1239,7 +1241,7 @@ class _SPFacade:
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]],
-        layer: str = "counts",
+        layer: str | None = None,
         require_neighbor_expression: bool = True,
         neighbors_key: str | None = "spatial_connectivities",
         uns_key: str = "negative_marker_contamination",
