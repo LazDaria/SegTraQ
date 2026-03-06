@@ -7,13 +7,15 @@ import squidpy as sq
 from scipy import sparse
 from scipy.stats import fisher_exact
 
-from ..utils import _looks_like_counts, _score_negative_with_neighbors, _score_one_list, merge_into_obs
+from ..utils import merge_into_obs
+from .utils import _get_count_matrix, _score_neighbor_negative_markers, _score_marker_detection
 
 
 def mutually_exclusive_coexpression_rate(
     sdata,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
+    layer: str | None = None,
     pseudocount: float = 0.5,
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -30,6 +32,10 @@ def mutually_exclusive_coexpression_rate(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
+    layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts, otherwise `adata.layers["counts"]` is used if available.
+        If a layer is specified, it must exist and contain count-like values.
     pseudocount : float, optional, default=0.5
         Pseudocount added to all cells of the contingency table to avoid
         division by zero when computing odds ratios.
@@ -44,13 +50,13 @@ def mutually_exclusive_coexpression_rate(
             ['gene1', 'gene2', 'odds_ratio', 'pvalue', 'a', 'b', 'c', 'd']
         where (a, b, c, d) are the counts in the contingency table.
     """
-    tbl = sdata.tables[tables_key]
+    adata = sdata.tables[tables_key]
 
-    X = tbl.X
-    array = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
+    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X_dense = X.toarray() if hasattr(X, "toarray") else X
 
-    var_index = pd.Index(tbl.var_names)
-    n_cells = array.shape[0]
+    var_index = pd.Index(adata.var_names)
+    n_cells = X_dense.shape[0]
     pseudocount = float(pseudocount)
 
     # --- build unique unordered candidate pairs ---
@@ -78,7 +84,7 @@ def mutually_exclusive_coexpression_rate(
     ]
 
     # only consider positive expression values in the spatial data
-    det = array > 0
+    det = X_dense > 0
 
     rows = []
     # go over all positive/negative gene pairs from the scRNAseq reference that were kept through the filtering
@@ -122,7 +128,7 @@ def mutually_exclusive_coexpression_rate(
     df = pd.DataFrame(rows)
 
     if inplace:
-        tbl.uns["mutually_exclusive_coexpression_rate"] = df
+        adata.uns["mutually_exclusive_coexpression_rate"] = df
 
     return df
 
@@ -132,6 +138,7 @@ def neighbor_contamination(
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
+    layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
@@ -176,6 +183,10 @@ def neighbor_contamination(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
+    layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts, otherwise `adata.layers["counts"]` is used if available.
+        If a layer is specified, it must exist and contain count-like values.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
@@ -214,24 +225,13 @@ def neighbor_contamination(
     # Setup
     # ----------------------------------------------------------------------
     adata = sdata.tables[tables_key]
-    X = adata.X
+    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X_dense = X.toarray() if hasattr(X, "toarray") else X
+
     genes = np.asarray(adata.var_names)
     var_index = pd.Index(genes)
     cell_types = np.asarray(adata.obs[cell_type_key])
     n_cells = X.shape[0]
-
-    # Dense expression (counts) - TODO: offer sparse matrix support to reduce memory
-    # footprint
-    if _looks_like_counts(X):
-        X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in adata.layers:
-        raise ValueError(
-            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
-            "and the main matrix does not look like counts."
-        )
-    else:
-        counts = adata.layers["counts"]
-        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
 
     # Checking if neighborhood graph is present, else compute Delaunay triangulation
     if neighbors_key not in adata.obsp:
@@ -436,6 +436,7 @@ def marker_purity(
     markers: dict[str, dict[str, list[str]]],
     use_quantiles: bool = False,
     tables_key: str = "table",
+    layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
@@ -484,6 +485,10 @@ def marker_purity(
         if False, use direct expression-based criteria (expression > 0).
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
+    layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts, otherwise `adata.layers["counts"]` is used if available.
+        If a layer is specified, it must exist and contain count-like values.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
@@ -517,18 +522,9 @@ def marker_purity(
 
     adata = sdata.tables[tables_key]
 
-    X = adata.X  # TODO: keep sparse if sparse
-
-    if _looks_like_counts(X):
-        X_dense = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in adata.layers:
-        raise ValueError(
-            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
-            "and the main matrix does not look like counts."
-        )
-    else:
-        counts = adata.layers["counts"]
-        X_dense = counts.toarray() if hasattr(counts, "toarray") else counts
+    # TODO: keep sparse if sparse
+    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X_dense = X.toarray() if hasattr(X, "toarray") else X
 
     genes = np.asarray(adata.var_names)
     var_index = pd.Index(genes)
@@ -577,7 +573,7 @@ def marker_purity(
 
         X_ct = X_dense[mask_cells]
 
-        p_precision_ct, p_recall_ct, p_f1_ct = _score_one_list(
+        p_precision_ct, p_recall_ct, p_f1_ct = _score_marker_detection(
             X_ct,
             pos_idx,
             all_idx,
@@ -609,7 +605,7 @@ def marker_purity(
         G = np.asarray(G)
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
-    neg_precision, neg_recall, neg_f1 = _score_negative_with_neighbors(
+    neg_precision, neg_recall, neg_f1 = _score_neighbor_negative_markers(
         X_dense=X_dense,
         cell_types=cell_types,
         markers=markers,

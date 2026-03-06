@@ -253,7 +253,7 @@ def _get_filtered_points_df(
     cell_ids = adata.obs[tables_cell_id_key]
 
     # subset points to cells in tbl
-    pts = sdata.points[points_key]
+
     pts = pts[pts[points_cell_id_key].isin(cell_ids)]
 
     # optionally subset to gene selection
@@ -376,8 +376,13 @@ def _join_points_regions(
     transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
 
     # ensure we have a clean, unique point index for deduplication after sjoin
-    transcripts = transcripts.reset_index(drop=False)  # keep old index as column, or create np.arange
-    transcripts = transcripts.rename(columns={"index": "point_id"})
+    # Dask indices are often non-unique (each partition starts at 0) - after.compute() duplicate indices persist
+    if isinstance(transcripts, pd.DataFrame):
+        if transcripts.index.is_unique:
+            transcripts = transcripts.reset_index(drop=False).rename(columns={"index": "point_id"})
+        else:
+            transcripts = transcripts.reset_index(drop=True)
+            transcripts["point_id"] = np.arange(len(transcripts), dtype=np.int64)
 
     pts_gdf = gpd.GeoDataFrame(
         transcripts,

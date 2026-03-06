@@ -3,6 +3,224 @@ import pandas as pd
 import squidpy as sq
 from sklearn.metrics import average_precision_score
 
+from ..utils import _looks_like_counts
+
+
+def _get_count_matrix(adata, layer=None, tables_key="table"):
+    if layer is None:
+        X = adata.X
+        if _looks_like_counts(X):
+            return X
+        if "counts" in adata.layers:
+            return adata.layers["counts"]
+        raise ValueError(
+            f"This function requires count data, but neither `adata.X` nor "
+            f"`adata.layers['counts']` in sdata.tables['{tables_key}'] "
+            f"look available as counts."
+        )
+
+    if layer not in adata.layers:
+        raise KeyError(f"Layer {layer!r} does not exist in sdata.tables['{tables_key}'].layers.")
+
+    X = adata.layers[layer]
+    if _looks_like_counts(X):
+        return X
+
+    raise ValueError(
+        f"Layer {layer!r} in sdata.tables['{tables_key}'] does not appear "
+        f"to contain count data. This function requires non-negative integer counts."
+    )
+
+
+def _score_marker_detection(
+    X: np.ndarray,
+    marker_idx: np.ndarray,
+    all_markers_idx: np.ndarray | None = None,
+    use_quantiles: bool = False,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute per-cell precision, recall, and F1 for detecting a set of marker genes.
+
+    The function evaluates how well a cell expresses a given marker set
+    (typically positive and negative markers). Gene presence is predicted either 
+    by expression > 0 or by selecting the top fraction of genes
+    per cell (`use_quantiles=True`).
+
+    Parameters
+    ----------
+    X : ndarray (n_cells, n_genes)
+        Expression matrix restricted to the marker universe.
+    marker_idx : ndarray
+        Indices of genes in `X` that correspond to the marker set being evaluated.
+    all_markers_idx : ndarray
+        Indices defining the gene universe used for scoring.
+    use_quantiles : bool, optional
+        If True, predict expressed genes by selecting the top-|markers| fraction
+        per cell (rank-based). If False, use expression > 0.
+
+    Returns
+    -------
+    precision : ndarray (n_cells,)
+    recall : ndarray (n_cells,)
+    F1 : ndarray (n_cells,)
+    """
+    # Restrict scoring to a positive and negative markers
+    all_markers_idx = np.asarray(all_markers_idx, dtype=int)
+    X = X[:, all_markers_idx]
+    n_cells, n_genes = X.shape
+
+    # remap marker_idx into the all_markers_idx
+    marker_set = set(np.asarray(marker_idx, dtype=int))
+    marker_idx = np.array([k for k, g in enumerate(all_markers_idx) if g in marker_set], dtype=int)
+
+    # No markers -> all metrics NaN for all cells
+    if marker_idx.size == 0:
+        return (np.full(n_cells, np.nan), np.full(n_cells, np.nan), np.full(n_cells, np.nan))
+
+    # Boolean array marking actual positives
+    actual = np.zeros(n_genes, dtype=bool)
+    actual[marker_idx] = True
+
+    frac = actual.mean()
+
+    if use_quantiles:
+        # Compute quantile threshold per cell
+        thr = np.quantile(X, 1.0 - frac, axis=1)
+        predicted = X > thr[:, None]
+    else:
+        predicted = X > 0
+
+    actual_mat = np.broadcast_to(actual, (n_cells, n_genes))
+
+    tp = (predicted & actual_mat).sum(axis=1)
+    fp = (predicted & ~actual_mat).sum(axis=1)
+    fn = (~predicted & actual_mat).sum(axis=1)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        precision = np.where(tp + fp > 0, tp / (tp + fp), 0.0)
+        recall = np.where(tp + fn > 0, tp / (tp + fn), 0.0)
+        F1 = np.where(
+            (precision + recall) > 0,
+            2 * precision * recall / (precision + recall),
+            0.0,
+        )
+
+    return precision, recall, F1
+
+
+def _score_neighbor_negative_markers(
+    X_dense: np.ndarray,
+    cell_types: np.ndarray,
+    markers: dict[str, dict[str, list[str]]],
+    genes: np.ndarray,
+    require_neighbor_expression: bool,
+    neighbor_indices: list[np.ndarray],
+    use_quantiles: bool = True,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Neighborhood-aware negative marker scoring.
+
+    For each cell i of type c:
+      - Get its neighbors (indices neighbor_indices[i]).
+      - Collect the cell types present in these neighbors.
+      - Take negative markers of c: markers[c]["negative"].
+      - Intersect with the union of positive markers of the neighbor types.
+        -> cell-specific "relevant negatives".
+      - Run `_score_marker_detection` on X_dense[i, :] with these markers to obtain
+        precision, recall, F1 for negatives.
+
+    Returns
+    -------
+    neg_precision, neg_recall, neg_F1 : (n_cells,) each
+        Per-cell metrics for neighborhood-relevant negative markers.
+    """
+    n_cells, n_genes = X_dense.shape
+    var_index = pd.Index(genes)
+
+    # Precompute per-type sets for fast membership checks
+    pos_sets: dict[str, set] = {}
+    neg_sets: dict[str, set] = {}
+    for ct, m in markers.items():
+        pos_sets[ct] = set(m.get("positive", []))
+        neg_sets[ct] = set(m.get("negative", []))
+
+    neg_prec = np.full(n_cells, np.nan, dtype=float)
+    neg_rec = np.full(n_cells, np.nan, dtype=float)
+    neg_f1 = np.full(n_cells, np.nan, dtype=float)
+
+    for i in range(n_cells):
+        ct = cell_types[i]
+        if pd.isna(ct) or ct not in markers:
+            continue
+
+        nbs = neighbor_indices[i]
+        if nbs.size == 0:
+            continue  # no neighborhood -> skip
+
+        nb_cts = set(cell_types[nbs])
+        if not nb_cts:
+            continue
+
+        neg_all = neg_sets.get(ct, set())
+        if not neg_all:
+            continue
+
+        # union of positive markers from neighbor types
+        nb_pos_union: set = set()
+        for nb_ct in nb_cts:
+            if nb_ct in pos_sets:
+                nb_pos_union.update(pos_sets[nb_ct])
+
+        # relevant negatives = negative markers of ct that are also
+        # positive in at least one neighbor type
+        rel_neg_genes = list(neg_all & nb_pos_union)
+        if not rel_neg_genes:
+            continue
+
+        if require_neighbor_expression:
+            keep_genes = []
+
+            for g in rel_neg_genes:
+                g_idx = var_index.get_loc(g)
+
+                # check neighbors of types for which g is a positive marker
+                for nb_ct in nb_cts:
+                    if g not in pos_sets.get(nb_ct, set()):
+                        continue
+
+                    nb_mask = cell_types[nbs] == nb_ct
+                    if nb_mask.any() and (X_dense[nbs[nb_mask], g_idx] > 0).any():
+                        keep_genes.append(g)
+                        break
+
+            rel_neg_genes = keep_genes
+            if not rel_neg_genes:
+                continue
+
+        # gene not present in spatial data
+        neg_idx_i = var_index.get_indexer(rel_neg_genes)
+        neg_idx_i = neg_idx_i[neg_idx_i >= 0]
+        if neg_idx_i.size == 0:
+            continue
+
+        all_markers_idx = list(set(rel_neg_genes) | nb_pos_union)
+        all_markers_idx_i = var_index.get_indexer(all_markers_idx)
+        all_markers_idx_i = all_markers_idx_i[all_markers_idx_i >= 0]
+
+        x_i = X_dense[i, :][None, :]  # (1, n_genes)
+        n_prec_i, n_rec_i, n_f1_i = _score_marker_detection(
+            x_i,
+            neg_idx_i,
+            all_markers_idx_i,
+            use_quantiles=use_quantiles,
+        )
+
+        neg_prec[i] = n_prec_i[0]
+        neg_rec[i] = n_rec_i[0]
+        neg_f1[i] = n_f1_i[0]
+
+    return neg_prec, neg_rec, neg_f1
+
 
 def add_neighbor_celltype_binary(
     adata,
