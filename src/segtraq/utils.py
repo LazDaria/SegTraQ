@@ -1104,7 +1104,7 @@ def validate_spatialdata(
     if images_key is not None:
         assert images_key in sdata.images.keys(), (
             f"{images_key} not found in the image layer. "
-            f"Available keys: {sdata.images.keys()}. "
+            f"Available keys: {list(sdata.images.keys())}. "
             "You can set this with the images_key parameter (set to None if you do not have this)."
         )
 

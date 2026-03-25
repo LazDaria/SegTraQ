@@ -9,6 +9,7 @@ from .baseline import (
     perc_unassigned_transcripts_per_gene,
     transcript_density,
     transcripts_per_cell,
+    image_features,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "mean_transcripts_per_gene_per_cell",
     "transcript_density",
     "morphological_features",
+    "image_features",
 ]
