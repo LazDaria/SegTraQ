@@ -663,7 +663,10 @@ def similarity_border_neighborhood(
 
     assert neighborhood_radius_factor > 1.0, "`neighborhood_radius_factor` must be larger than 1.0."
 
-    expr_center_raw, expr_border_raw = _get_center_border_counts(
+    from datetime import datetime
+    start_time = datetime.now()
+    print(f"[{start_time}] Computing center and border expression profiles...", end="")
+    expr_center_raw, expr_border_raw, center_areas, border_areas = _get_center_border_counts(
         sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
@@ -676,31 +679,47 @@ def similarity_border_neighborhood(
         points_gene_key=points_gene_key,
         erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
+    print(f"done. [{datetime.now() - start_time}]")
+    start_time = datetime.now()
+    print(f"[{start_time}] Computing neighborhood expression profiles...", end="")
 
     # expression in neighborhood
-    expr_neighborhood_raw = _compute_ncvs_within_radius(
+    expr_neighborhood_raw, expr_neighborhood_normalized = _compute_ncvs_within_radius(
         sdata=sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
         shapes_key=shapes_key,
         neighborhood_radius_factor=neighborhood_radius_factor,
     )
-
+    print(f"done. [{datetime.now() - start_time}]")
+    start_time = datetime.now()
+    print(f"[{start_time}] Aligning profiles and normalizing...", end="")
+    
     common_cells = expr_border_raw.index.intersection(expr_center_raw.index)
     expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
     expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
     expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
 
     # normalization and log1p
-    expr_center = _norm_log_df(expr_center_raw)
-    expr_border = _norm_log_df(expr_border_raw)
-    expr_neighborhood = _norm_log_df(expr_neighborhood_raw)
+    scale = 1e4
+    expr_center = np.log1p(expr_center_raw.div(center_areas, axis=0) * scale).fillna(0.0)
+    expr_border = np.log1p(expr_border_raw.div(border_areas, axis=0) * scale).fillna(0.0)
+    # we already normalize the NCV by the neighborhood area in its computation, so we don't need to do it again here
+    expr_neighborhood = np.log1p(expr_neighborhood_normalized * scale).fillna(0.0)
+
+    # this is the "old"  normalization
+    #expr_center = _norm_log_df(expr_center_raw)
+    #expr_border = _norm_log_df(expr_border_raw)
+    #expr_neighborhood = _norm_log_df(expr_neighborhood_raw)
+    
+    print(f"done. [{datetime.now() - start_time}]")
 
     id_key = sdata.shapes[shapes_key].index.name
 
     rows = []
 
-    for cid in expr_center.index:
+    from tqdm.auto import tqdm
+    for cid in tqdm(expr_center.index):
         x_center = expr_center.loc[cid].to_numpy()
         x_border = expr_border.loc[cid].to_numpy()
         x_neighborhood = expr_neighborhood.loc[cid].to_numpy()
@@ -723,7 +742,7 @@ def similarity_border_neighborhood(
 
         x_center_counts = x_center_raw[mask].sum()
         x_border_counts = x_border_raw[mask].sum()
-
+        
         # center–border similarity
         if (mask.sum() >= min_genes) and (x_center_counts >= min_transcripts) and (x_border_counts >= min_transcripts):
             if metric == "pearson":

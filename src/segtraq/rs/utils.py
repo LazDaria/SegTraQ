@@ -496,7 +496,8 @@ def _compute_ncvs_within_radius(
 
     n_cells = expr_cells.shape[0]
     genes = expr_cells.columns
-    ncv_arr = np.zeros_like(expr_cells.values, dtype=float)
+    ncv_arr_raw = np.zeros_like(expr_cells.values, dtype=float)
+    ncv_arr_normalized = np.zeros_like(expr_cells.values, dtype=float)
 
     for i in range(n_cells):
         # Query neighbors within radius (including itself)
@@ -505,12 +506,19 @@ def _compute_ncvs_within_radius(
         idxs = [j for j in idxs if j != i]
         if len(idxs) == 0:
             # no neighbors in radius: define NCV as zeros or NaN
-            ncv_arr[i, :] = 0.0
+            ncv_arr_raw[i, :] = 0.0
+            ncv_arr_normalized[i, :] = 0.0
         else:
-            ncv_arr[i, :] = expr_cells.values[idxs, :].mean(axis=0)
+            # normalizing by the cell area before taking the mean
+            normalized_expr = expr_cells.values[idxs, :] / areas.iloc[idxs].values[:, np.newaxis]
+            # if there are cells with an NA area, we will get NA in the normalized_expr
+            # this is not desired, hence we simply ignore these cells in the mean calculation by using np.nanmean, which will skip NA values
+            ncv_arr_raw[i, :] = np.nanmean(expr_cells.values[idxs, :], axis=0)
+            ncv_arr_normalized[i, :] = np.nanmean(normalized_expr, axis=0)
 
-    expr_ncv = pd.DataFrame(ncv_arr, index=expr_cells.index, columns=genes)
-    return expr_ncv
+    expr_ncv_raw = pd.DataFrame(ncv_arr_raw, index=expr_cells.index, columns=genes)
+    expr_ncv_normalized = pd.DataFrame(ncv_arr_normalized, index=expr_cells.index, columns=genes)
+    return expr_ncv_raw, expr_ncv_normalized
 
 
 def _get_center_border_counts(
@@ -577,8 +585,12 @@ def _get_center_border_counts(
             UserWarning,
             stacklevel=2,
         )
+        
+    # get the areas for the center and border shapes, to be used for normalization in downstream analyses
+    center_areas = center_gdf.geometry.area.rename("center_area")
+    border_areas = border_gdf.geometry.area.rename("border_area")
 
-    return expr_center, expr_border
+    return expr_center, expr_border, center_areas, border_areas
 
 
 def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
