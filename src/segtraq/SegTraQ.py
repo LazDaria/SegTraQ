@@ -243,7 +243,7 @@ class SegTraQ:
         dens = self.bl.transcript_density(inplace=inplace)
 
         morph = self.bl.morphological_features(inplace=inplace, **(morphological_kwargs))
-        
+
         res = {
             "num_cells": nc,
             "num_transcripts": nt,
@@ -256,7 +256,7 @@ class SegTraQ:
             "morphological_features": morph,
             "transcript_density": dens,
         }
-        
+
         if self.images_key is not None:
             image_kwargs = {} if image_kwargs is None else dict(image_kwargs)
             img_feats = self.bl.image_features(inplace=inplace, **image_kwargs)
@@ -1030,8 +1030,10 @@ class _BLFacade:
         )
 
     transcript_density.__doc__ = bl.transcript_density.__doc__
-    
-    def image_features(self, features=("mean", "std", "median", "min", "max"), channel_names=None, inplace: bool = True):
+
+    def image_features(
+        self, features=("mean", "std", "median", "min", "max"), channel_names=None, inplace: bool = True
+    ):
         return bl.image_features(
             sdata=self._p.sdata,
             images_key=self._p.images_key,
@@ -1041,9 +1043,9 @@ class _BLFacade:
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            inplace=inplace
+            inplace=inplace,
         )
-        
+
     image_features.__doc__ = bl.image_features.__doc__
 
 
