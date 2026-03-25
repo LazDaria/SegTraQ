@@ -181,6 +181,7 @@ class SegTraQ:
         inplace: bool = True,
         *,
         morphological_kwargs: dict | None = None,
+        image_kwargs: dict | None = None,
     ):
         """
         Run baseline (bl) metrics.
@@ -197,6 +198,7 @@ class SegTraQ:
         8) mean transcripts per detected gene per cell
         9) morphological features
         10) transcript density
+        11) image features (if an image is present in the dataset)
 
         Parameters
         ----------
@@ -206,6 +208,8 @@ class SegTraQ:
             If False, per-metric results are returned in a dict.
         morphological_kwargs : dict or None, optional
             Extra arguments forwarded to :meth:`bl.morphological_features`.
+        image_kwargs : dict or None, optional
+            Extra arguments forwarded to :meth:`bl.image_features`.
 
         Returns
         -------
@@ -222,6 +226,7 @@ class SegTraQ:
             - ``"mean_transcripts_per_gene_per_cell"``
             - ``"morphological_features"``
             - ``"transcript_density"``
+            - ``"image_features"``
         """
         morphological_kwargs = {} if morphological_kwargs is None else dict(morphological_kwargs)
 
@@ -238,11 +243,8 @@ class SegTraQ:
         dens = self.bl.transcript_density(inplace=inplace)
 
         morph = self.bl.morphological_features(inplace=inplace, **(morphological_kwargs))
-
-        if inplace:
-            return None
-
-        return {
+        
+        res = {
             "num_cells": nc,
             "num_transcripts": nt,
             "num_genes": ng,
@@ -254,6 +256,16 @@ class SegTraQ:
             "morphological_features": morph,
             "transcript_density": dens,
         }
+        
+        if self.images_key is not None:
+            image_kwargs = {} if image_kwargs is None else dict(image_kwargs)
+            img_feats = self.bl.image_features(inplace=inplace, **image_kwargs)
+            res["image_features"] = img_feats
+
+        if inplace:
+            return None
+
+        return res
 
     def run_region_similarity(
         self,
@@ -1018,6 +1030,21 @@ class _BLFacade:
         )
 
     transcript_density.__doc__ = bl.transcript_density.__doc__
+    
+    def image_features(self, features=("mean", "std", "median", "min", "max"), channel_names=None, inplace: bool = True):
+        return bl.image_features(
+            sdata=self._p.sdata,
+            images_key=self._p.images_key,
+            shapes_key=self._p.shapes_key,
+            channel_names=channel_names,
+            features=features,
+            shapes_cell_id_key=self._p.shapes_cell_id_key,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            inplace=inplace
+        )
+        
+    image_features.__doc__ = bl.image_features.__doc__
 
 
 class _RSFacade:
