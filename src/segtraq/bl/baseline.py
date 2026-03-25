@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
-from shapely.geometry import MultiPolygon, Polygon
 from rasterio.features import rasterize
 from rasterio.transform import from_bounds
+from shapely.geometry import MultiPolygon, Polygon
 
 from ..utils import _is_background, merge_into_obs, merge_into_var
 from .utils import count_polygons
@@ -677,16 +677,17 @@ def morphological_features(
 
     return features
 
+
 def image_features(
     sdata: sd.SpatialData,
-    images_key: str,
-    shapes_key: str,
+    images_key: str = "image",
+    shapes_key: str = "cell_boundaries",
     channel_names: str | list[str] | None = None,
     features: list[str] = ("mean", "std", "median", "min", "max"),
     shapes_cell_id_key: str = "cell_id",
     tables_key: str | None = "table",
     tables_cell_id_key: str = "cell_id",
-    inplace : bool = True
+    inplace: bool = True,
 ) -> pd.DataFrame:
     """
     Compute image-based features for each cell polygon in a SpatialData object.
@@ -694,7 +695,7 @@ def image_features(
     For each cell in `sdata.shapes[shapes_key]`, the method masks the cell's
     region in `sdata.images[images_key]` and computes per-channel summary
     statistics over the masked pixels.
-    
+
     Note that this requires rasterizing the cell polygons.
 
     Parameters
@@ -748,9 +749,13 @@ def image_features(
     # Load image as a numpy array (c, y, x)                              #
     # ------------------------------------------------------------------ #
     if images_key is None:
-        raise ValueError("images_key must be provided to compute image features. Please do so when initializing the SegTraQ object.")
+        raise ValueError(
+            "images_key must be provided to compute image features. Please do so when initializing the SegTraQ object."
+        )
     if images_key not in sdata.images:
-        raise KeyError(f"Image key '{images_key}' not found in sdata.images. Available keys: {list(sdata.images.keys())}")
+        raise KeyError(
+            f"Image key '{images_key}' not found in sdata.images. Available keys: {list(sdata.images.keys())}"
+        )
     image_da = sdata.images[images_key]
     # converting the data array into a numpy array
     image_np = image_da.compute().values  # (C, H, W)
@@ -794,15 +799,15 @@ def image_features(
     # Iterate over cells and compute features                            #
     # ------------------------------------------------------------------ #
     _FEAT_FUNCS = {
-        "mean":   np.mean,
-        "std":    np.std,
+        "mean": np.mean,
+        "std": np.std,
         "median": np.median,
-        "min":    np.min,
-        "max":    np.max,
+        "min": np.min,
+        "max": np.max,
     }
 
     records = []
-    for cell_id, geom in zip(cell_ids, shapes.geometry):
+    for cell_id, geom in zip(cell_ids, shapes.geometry, strict=False):
         row: dict = {shapes_cell_id_key: cell_id}
 
         if geom is None or geom.is_empty:
@@ -811,7 +816,7 @@ def image_features(
                     row[f"{ch}_{feat}"] = np.nan
             records.append(row)
             continue
-            
+
         # Bounding box of this cell in spatial coordinates
         minx, miny, maxx, maxy = geom.bounds
 
@@ -859,7 +864,7 @@ def image_features(
 
         # Sample each channel and compute statistics
         for ch_idx, ch_name in enumerate(channel_names):
-            patch = image_np[ch_idx, row_min:row_max + 1, col_min:col_max + 1]
+            patch = image_np[ch_idx, row_min : row_max + 1, col_min : col_max + 1]
             pixel_vals = patch[mask].astype(np.float64)
 
             # guard against empty masks
@@ -879,8 +884,6 @@ def image_features(
     # Optionally attach to the AnnData table                             #
     # ------------------------------------------------------------------ #
     if inplace:
-        merge_into_obs(
-            sdata, tables_key, result_df, tables_cell_id_key, shapes_cell_id_key
-        )
+        merge_into_obs(sdata, tables_key, result_df, tables_cell_id_key, shapes_cell_id_key)
 
     return result_df
