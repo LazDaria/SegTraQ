@@ -4,6 +4,7 @@ from .region_similarity import (
     similarity_border_neighborhood,
     similarity_nucleus_cell,
     similarity_nucleus_cytoplasm,
+    null_corrected_center_border_similarity
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "similarity_nucleus_cytoplasm",
     "similarity_border_neighborhood",
     "get_genes_in_compartment",
+    "null_corrected_center_border_similarity"
 ]
