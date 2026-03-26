@@ -10,6 +10,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scipy.sparse as sp
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
@@ -113,7 +114,6 @@ def _assign_celltype_by_pearson(
 
     if genes_to_use is not None:
         common_genes = common_genes.intersection(pd.Index(list(genes_to_use)))
-        print(f"Using {len(common_genes)} common genes.")
 
     if len(common_genes) == 0:
         raise ValueError("No common genes found between query and reference after filtering.")
@@ -1750,15 +1750,57 @@ def filter_cells(adata, col: str, func: Callable):
     return adata[mask]
 
 
+def _recompute_expression_matrix(
+    sdata,
+    points_key: str = "transcripts",
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int | None = "UNASSIGNED",
+):
+    transcripts = sdata.points[points_key].compute()
+
+    # remove background transcripts
+    transcripts = transcripts[~_is_background(transcripts[points_cell_id_key], points_background_id)]
+
+    # Pivot: rows = cell IDs, columns = genes, values = counts
+    expression_matrix_from_transcripts = (
+        transcripts.groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
+    )
+
+    # Align the new expression matrix with the existing one in tables
+    adata = sdata.tables[tables_key]
+    # Ensure the new matrix has the same index and columns as the existing one
+    expression_matrix_from_transcripts = expression_matrix_from_transcripts.reindex(
+        index=adata.obs[tables_cell_id_key],
+        columns=adata.var_names,
+        fill_value=0,
+    )
+    return expression_matrix_from_transcripts
+
+
 def _filter_control_and_low_quality_transcripts(
     sdata,
     min_qv: float | None = 20.0,
     control_genes: tuple | list = (),
+    control_prefixes: tuple | list = (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+    ),
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
-    points_cell_id_key: str = "cell_id",  # might make use of this when recomputing expression
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int | None = "UNASSIGNED",
     tables_key: str = "table",
-    recompute_expression: bool = False,
+    tables_cell_id_key: str = "cell_id",
+    recompute_expression: bool = True,
     inplace: bool = True,
 ) -> sd.SpatialData:
     """
@@ -1772,6 +1814,19 @@ def _filter_control_and_low_quality_transcripts(
     min_qv : float | None, default=20.0
         Minimum quality value (qv) threshold for transcripts to be considered valid.
         If None, no filtering is applied based on quality.
+    control_prefixes : tuple | list, default=(
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+    )
+        Control prefixes to identify control probes in gene names.
+        Transcripts with gene names starting with any of these prefixes will be considered
+        control probes and filtered out.
     control_genes : tuple | list, default=()
         Additional keywords to identify control probes in gene names.
         By default, only standard control prefixes are used.
@@ -1783,9 +1838,13 @@ def _filter_control_and_low_quality_transcripts(
         The column name in the points DataFrame that contains gene names.
     points_cell_id_key : str, default="cell_id"
         The column name in the points DataFrame that contains cell IDs.
+    points_background_id : str | int | None, default="UNASSIGNED"
+        The value in the points DataFrame that indicates background/unassigned transcripts.
     tables_key : str, default="table"
         The key in the SpatialData tables attribute that contains the expression table.
-    recompute_expression : bool, default=False
+    tables_cell_id_key : str, default="cell_id"
+        The column name in the tables DataFrame that contains cell IDs.
+    recompute_expression : bool, default=True
         Whether to recompute the expression matrix after filtering.
         Note that this can be computationally expensive for large datasets.
     inplace : bool, default=True
@@ -1802,16 +1861,7 @@ def _filter_control_and_low_quality_transcripts(
     pts = sdata.points[points_key]
     adata = sdata.tables[tables_key]
 
-    prefixes = (
-        "NegControlProbe_",
-        "antisense_",
-        "NegControlCodeword",
-        "BLANK_",
-        "Blank-",
-        "NegPrb",
-        "DeprecatedCodeword_",
-        "UnassignedCodeword_",
-    ) + tuple(control_genes)
+    prefixes = tuple(control_prefixes) + tuple(control_genes)
 
     # ---- transcripts ----
     if "qv" not in pts.columns and min_qv is not None:
@@ -1854,15 +1904,21 @@ def _filter_control_and_low_quality_transcripts(
             # aggregate the counts from the points to get a new expression matrix
             # the aggregate function from spatialdata is not sufficient,
             # because it removes all layers but the shapes and transcripts
-            # TODO: implement recomputation of expression matrix
-            raise NotImplementedError(
-                "Recomputing expression matrix is not yet implemented. "
-                "For some segmentation methods, this is a non-trivial task, "
-                "and we are talking to the developers about how to best implement this in the future. "
-                "In the meantime, you can set recompute_expression=False to skip this step, "
-                "but be aware that the expression matrix will still contain the control genes, "
-                "which will affect some metrics."
+            expression_matrix = _recompute_expression_matrix(
+                sdata,
+                points_key=points_key,
+                tables_key=tables_key,
+                tables_cell_id_key=tables_cell_id_key,
+                points_gene_key=points_gene_key,
+                points_cell_id_key=points_cell_id_key,
+                points_background_id=points_background_id,
             )
+
+            # updating the expression matrix in the tables
+            adata = sdata.tables[tables_key].copy()
+            # turn back into a sparse matrix
+            adata.X = sp.csr_matrix(expression_matrix.values)
+            sdata.tables[tables_key] = adata
 
     return sdata
 

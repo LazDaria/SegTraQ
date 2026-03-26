@@ -42,7 +42,7 @@ def _score_marker_detection(
     Compute per-cell precision, recall, and F1 for detecting a set of marker genes.
 
     The function evaluates how well a cell expresses a given marker set
-    (typically positive and negative markers). Gene presence is predicted either 
+    (typically positive and negative markers). Gene presence is predicted either
     by expression > 0 or by selecting the top fraction of genes
     per cell (`use_quantiles=True`).
 
