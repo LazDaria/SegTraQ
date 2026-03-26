@@ -13,6 +13,7 @@ from .utils import (
     _join_points_regions,
     _norm_log_df,
     _process_cell,
+    _null_corrected_center_border_neighborhood_one_cell
 )
 
 
@@ -952,3 +953,178 @@ def get_genes_in_compartment(
         }
     else:
         raise ValueError(f"Compartment {compartment} not recognized. Use 'nuc_cyto' or 'center_border'.")
+
+def null_corrected_center_border_similarity(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    neighborhood_radius_factor: float = 2.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    n_sim: int = 200,
+    scale: float = 1e4,
+    inplace: bool = True,
+    random_state: int | None = 0,
+) -> pd.DataFrame:
+    """
+    Compute null-corrected border-related cosine similarities for each cell.
+
+    For each cell, the function computes:
+    1. center-border cosine similarity,
+    2. border-neighborhood cosine similarity,
+    3. a combined contamination score based on the difference of null-corrected
+       z-scores:
+
+       `similarity_border_neighborhood_zscore - similarity_center_border_zscore`
+
+    The nulls are symmetric random partition nulls:
+    - the pooled center+border counts are randomly partitioned into center and border
+      with the observed totals,
+    - the pooled border+neighborhood counts are randomly partitioned into border and
+      neighborhood with the observed totals.
+
+    This is a without-replacement null, which better preserves sparse pooled count
+    structure than a multinomial null.
+
+    A single shared gene space is used for center, border, and neighborhood
+    within each cell:
+    genes are kept if they are nonzero in at least one of the three profiles.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell.
+    points_x_key : str, default="x"
+        Column for transcript x-coordinates.
+    points_y_key : str, default="y"
+        Column for transcript y-coordinates.
+    points_gene_key : str, default="feature_name"
+        Column specifying gene / feature names.
+    erosion_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to erode the cell polygon and
+        define the center region.
+    neighborhood_radius_factor : float, default=2.0
+        Radius factor used to define neighboring cells when computing the
+        neighborhood count vector.
+    min_transcripts : int, default=10
+        Minimum total transcript count required for center, border, and
+        neighborhood after restricting to the shared gene space.
+    min_genes : int, default=5
+        Minimum number of genes required in the shared gene space.
+    n_sim : int, default=200
+        Number of null simulations per cell.
+    scale : float, default=1e4
+        Library-size scaling factor applied before log1p.
+    inplace : bool, default=True
+        Whether to merge the resulting metrics into `sdata.tables[tables_key].obs`.
+    random_state : int or None, optional
+        Random seed.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns:
+            - `tables_cell_id_key`
+            - `similarity_center_border`
+            - `similarity_center_border_null_mean`
+            - `similarity_center_border_null_sd`
+            - `similarity_center_border_residual`
+            - `similarity_center_border_zscore`
+            - `similarity_border_neighborhood`
+            - `similarity_border_neighborhood_null_mean`
+            - `similarity_border_neighborhood_null_sd`
+            - `similarity_border_neighborhood_residual`
+            - `similarity_border_neighborhood_zscore`
+            - `contamination_score`
+            - count and gene-usage summaries
+    """
+    expr_center_raw, expr_border_raw = _get_center_border_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    expr_neighborhood_raw = _compute_ncvs_within_radius(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    common_cells = (
+        expr_center_raw.index
+        .intersection(expr_border_raw.index)
+        .intersection(expr_neighborhood_raw.index)
+    )
+
+    expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
+
+    id_key = sdata.shapes[shapes_key].index.name
+    rows = []
+
+    rng = np.random.default_rng(random_state)
+    seeds = rng.integers(0, 2**32 - 1, size=len(common_cells))
+
+    for cid, seed in zip(common_cells, seeds):
+        x_center_raw = expr_center_raw.loc[cid].to_numpy()
+        x_border_raw = expr_border_raw.loc[cid].to_numpy()
+        x_neighborhood_raw = expr_neighborhood_raw.loc[cid].to_numpy()
+
+        res = _null_corrected_center_border_neighborhood_one_cell(
+            x_center_raw=x_center_raw,
+            x_border_raw=x_border_raw,
+            x_neighborhood_raw=x_neighborhood_raw,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            n_sim=n_sim,
+            scale=scale,
+            random_state=int(seed),
+        )
+
+        res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out

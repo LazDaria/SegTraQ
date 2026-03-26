@@ -1177,7 +1177,36 @@ class _RSFacade:
             erosion_fraction_of_radius=erosion_fraction_of_radius,
             neighborhood_radius_factor=neighborhood_radius_factor,
         )
-
+    
+    def null_corrected_center_border_similarity(
+        self,
+        erosion_fraction_of_radius: float = 0.2,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        n_sim: int = 200,
+        scale: float = 1e4,
+        inplace: bool = True,
+        random_state: int | None = 0
+    ):
+        return rs.null_corrected_center_border_similarity(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            points_gene_key=self._p.points_gene_key,
+            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            n_sim=n_sim,
+            scale=scale,
+            inplace=inplace,
+            random_state=random_state
+        )
 
 class _SPFacade:
     """
