@@ -732,7 +732,7 @@ class SegTraQ:
         cell_type_key: str = "transferred_cell_type",
         ref_cell_type: str = "cell_type",
         ref_ensemble_key: str | None = None,
-        query_ensemble_key: str | None = "gene_ids",
+        query_ensemble_key: str | None = None,
         use_hvg: bool = False,
         inplace: bool = True,
     ):
@@ -755,7 +755,7 @@ class SegTraQ:
         ref_ensemble_key: str or None, default=None
             Column name in `adata_ref.var` that contains unique gene/ensemble IDs.
             If None, `adata_ref.var_names` will be used.
-        query_ensemble_key: str or None, default="gene_ids"
+        query_ensemble_key: str or None, default=None
             Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
             If None, `self.sdata.tables[self.tables_key].var_names` will be used.
         use_hvg: bool, optional
