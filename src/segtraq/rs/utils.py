@@ -588,57 +588,17 @@ def _get_center_border_counts(
 
     return expr_center, expr_border
 
-
-def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
-    """Align multiple expression dataframes to have the same genes and cells."""
-    # dfs is a dictionary of dataframes to align (key: name (e. g. 'expr_center'), value: dataframe)
-    # ensure there are at least 2 dataframes
-    if len(dfs) < 2:
-        raise ValueError("At least two dataframes are required for alignment.")
-
-    # Align dataframe columns to only keep common genes
-    common_genes = list(dfs.values())[0].columns
-    for i, (layer, other_df) in enumerate(dfs.items()):
-        # skip first dataframe (we already have its columns)
-        if i == 0:
-            continue
-        common_genes = common_genes.intersection(other_df.columns)
-        if len(common_genes) == 0:
-            raise ValueError(
-                f"No common genes found when aligning layer {layer}. "
-                f"Please ensure that your anndata object contains gene names in the var_names. "
-                f"Previous gene names looked like: {list(list(dfs.values())[0].columns)[:5]}. "
-                f"Gene names in layer {layer} look like: {list(other_df.columns)[:5]}."
-            )
-
-    # Only use gene`s transcripts and exclude control probes
-    valid_genes = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  # TODO - this might break, if var.index and points_gene_key do not match!
-    # e.g. one is Ensemble key and one is gene_key
-    common_genes = common_genes.intersection(valid_genes)
-
-    dfs_aligned = {}
-    for name, df in dfs.items():
-        dfs_aligned[name] = df[common_genes]
-
-    # Align dataframe rows- these might not match
-    # expr_ncv computed based on table and expr_center/border based on shapes
-    common_cells = dfs_aligned[list(dfs_aligned.keys())[0]].index
-    for other_df in list(dfs_aligned.values())[1:]:
-        common_cells = common_cells.intersection(other_df.index)
-
-    for name, df in dfs_aligned.items():
-        dfs_aligned[name] = df.loc[common_cells]
-
-    return dfs_aligned
-
 def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
-    if x.ndim == 1:
-        x = x.reshape(1, -1)
-    if y.ndim == 1:
-        y = y.reshape(1, -1)
-    return cosine_similarity(x, y)[0, 0]
+    """Return cosine similarity between two 1D vectors."""
+    x = np.asarray(x, dtype=float).ravel()
+    y = np.asarray(y, dtype=float).ravel()
+
+    x_norm = np.linalg.norm(x)
+    y_norm = np.linalg.norm(y)
+    if x_norm == 0.0 or y_norm == 0.0:
+        return np.nan
+
+    return float(np.dot(x, y) / (x_norm * y_norm))
 
 def _random_partition_counts(
     pooled_counts: np.ndarray,
@@ -646,44 +606,54 @@ def _random_partition_counts(
     rng: np.random.Generator,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Randomly partition a pooled count vector into two count vectors of sizes
-    `n_first` and `pooled_counts.sum() - n_first`, without replacement.
-
-    Parameters
-    ----------
-    pooled_counts : np.ndarray
-        One-dimensional pooled count vector.
-    n_first : int
-        Total number of transcripts to assign to the first partition.
-    rng : np.random.Generator
-        Random number generator.
-
-    Returns
-    -------
-    tuple[np.ndarray, np.ndarray]
-        Two count vectors summing to `pooled_counts`.
+    Randomly split pooled counts into two vectors of sizes `n_first` and
+    `pooled_counts.sum() - n_first`, without replacement.
     """
-    pooled_counts = np.asarray(pooled_counts, dtype=int)
-    total = int(pooled_counts.sum())
+    pooled_counts = np.asarray(pooled_counts)
+    pooled_counts = np.rint(pooled_counts).astype(int)
 
-    if n_first < 0 or n_first > total:
+    total = int(pooled_counts.sum())
+    if not 0 <= n_first <= total:
         raise ValueError("`n_first` must be between 0 and pooled_counts.sum().")
 
     if total == 0:
-        return np.zeros_like(pooled_counts), np.zeros_like(pooled_counts)
+        zeros = np.zeros_like(pooled_counts, dtype=int)
+        return zeros, zeros
 
-    # expand pooled counts into transcript-level gene labels
-    gene_ids = np.repeat(np.arange(len(pooled_counts)), pooled_counts)
-
-    # shuffle and split
-    perm = rng.permutation(total)
-    first_ids = gene_ids[perm[:n_first]]
-    second_ids = gene_ids[perm[n_first:]]
-
-    first_counts = np.bincount(first_ids, minlength=len(pooled_counts))
-    second_counts = np.bincount(second_ids, minlength=len(pooled_counts))
+    # Draw gene counts for the first partition directly, without expanding
+    # to transcript-level labels.
+    first_counts = rng.multivariate_hypergeometric(pooled_counts, n_first)
+    second_counts = pooled_counts - first_counts
 
     return first_counts, second_counts
+
+def _simulate_partition_null_cosine(
+    x_first_raw: np.ndarray,
+    x_second_raw: np.ndarray,
+    n_first: int,
+    n_sim: int,
+    scale: float,
+    rng: np.random.Generator,
+) -> tuple[float, float]:
+    """
+    Simulate cosine similarities under a random partition null for two count vectors.
+    """
+    pooled = x_first_raw + x_second_raw
+    sims = np.empty(n_sim, dtype=float)
+
+    for i in range(n_sim):
+        sim_first_raw, sim_second_raw = _random_partition_counts(
+            pooled_counts=pooled,
+            n_first=n_first,
+            rng=rng,
+        )
+        sim_first = _norm_log_vector(sim_first_raw, scale=scale)
+        sim_second = _norm_log_vector(sim_second_raw, scale=scale)
+        sims[i] = _cosine_sim(sim_first, sim_second)
+
+    null_mean = float(np.mean(sims))
+    null_sd = float(np.std(sims, ddof=1)) if n_sim > 1 else 0.0
+    return null_mean, null_sd
 
 def _null_corrected_center_border_neighborhood_one_cell(
     x_center_raw: np.ndarray,
@@ -696,78 +666,25 @@ def _null_corrected_center_border_neighborhood_one_cell(
     random_state: int | None = None,
 ) -> dict:
     """
-    Compute null-corrected cosine similarities for one cell.
-
-    The function computes:
-    1. observed similarity between center and border,
-    2. observed similarity between border and neighborhood,
-    3. null distributions for both comparisons under symmetric multinomial nulls,
-    4. residuals and z-scores relative to those null distributions,
-    5. a combined contamination score defined as:
-
-       `similarity_border_neighborhood_zscore - similarity_center_border_zscore`
-
-    The nulls are random partition nulls:
-    - the pooled center+border counts are randomly partitioned into center and border
-      with the observed totals,
-    - the pooled border+neighborhood counts are randomly partitioned into border and
-      neighborhood with the observed totals.
-
-    This is a without-replacement null and therefore preserves the pooled observed
-    count structure more faithfully than a multinomial null, which is especially
-    useful in sparse cells with many genes observed only once.
-    
-    A single shared gene space is used for all three profiles:
-    genes are kept if they are nonzero in at least one of center, border, or
-    neighborhood. This ensures that both comparisons and the final contamination
-    score are computed in the same feature space.
-
-    Parameters
-    ----------
-    x_center_raw : np.ndarray
-        Raw center gene counts for one cell.
-    x_border_raw : np.ndarray
-        Raw border gene counts for one cell.
-    x_neighborhood_raw : np.ndarray
-        Raw neighborhood gene counts for one cell.
-    min_transcripts : int, default=10
-        Minimum total transcript count required for center, border, and
-        neighborhood after restricting to the shared gene space.
-    min_genes : int, default=5
-        Minimum number of genes required in the shared gene space.
-    n_sim : int, default=200
-        Number of null simulations.
-    scale : float, default=1e4
-        Library-size scaling factor applied before log1p.
-    random_state : int or None, optional
-        Random seed.
-
-    Returns
-    -------
-    dict
-        Dictionary with:
-            - observed center-border cosine similarity,
-            - observed border-neighborhood cosine similarity,
-            - null mean / null SD / residual / z-score for both comparisons,
-            - combined contamination score,
-            - counts and number of genes used.
+    Compute null-corrected center-border and border-neighborhood similarities
+    for one cell.
     """
     rng = np.random.default_rng(random_state)
 
-    x_center_raw = np.asarray(x_center_raw, dtype=float)
-    x_border_raw = np.asarray(x_border_raw, dtype=float)
-    x_neighborhood_raw = np.asarray(x_neighborhood_raw, dtype=float)
+    # Work on a shared gene space so both similarities use the same features.
+    x_center_raw = np.rint(np.asarray(x_center_raw)).astype(int)
+    x_border_raw = np.rint(np.asarray(x_border_raw)).astype(int)
+    x_neighborhood_raw = np.rint(np.asarray(x_neighborhood_raw)).astype(int)
 
-    # one shared gene space for all three profiles
     mask = (x_center_raw + x_border_raw + x_neighborhood_raw) > 0
     x_center_raw = x_center_raw[mask]
     x_border_raw = x_border_raw[mask]
     x_neighborhood_raw = x_neighborhood_raw[mask]
 
     n_genes_used = int(mask.sum())
-    n_center = int(round(x_center_raw.sum()))
-    n_border = int(round(x_border_raw.sum()))
-    n_neighborhood = int(round(x_neighborhood_raw.sum()))
+    n_center = int(x_center_raw.sum())
+    n_border = int(x_border_raw.sum())
+    n_neighborhood = int(x_neighborhood_raw.sum())
 
     result = {
         "similarity_center_border": np.nan,
@@ -781,10 +698,10 @@ def _null_corrected_center_border_neighborhood_one_cell(
         "similarity_border_neighborhood_residual": np.nan,
         "similarity_border_neighborhood_zscore": np.nan,
         "contamination_score": np.nan,
-        "center_counts_used": int(n_center),
-        "border_counts_used": int(n_border),
-        "neighborhood_counts_used": int(n_neighborhood),
-        "n_genes_used": int(n_genes_used),
+        "center_counts_used": n_center,
+        "border_counts_used": n_border,
+        "neighborhood_counts_used": n_neighborhood,
+        "n_genes_used": n_genes_used,
     }
 
     if (
@@ -795,7 +712,6 @@ def _null_corrected_center_border_neighborhood_one_cell(
     ):
         return result
 
-    # observed similarities
     x_center = _norm_log_vector(x_center_raw, scale=scale)
     x_border = _norm_log_vector(x_border_raw, scale=scale)
     x_neighborhood = _norm_log_vector(x_neighborhood_raw, scale=scale)
@@ -803,45 +719,25 @@ def _null_corrected_center_border_neighborhood_one_cell(
     sim_obs_cb = _cosine_sim(x_center, x_border)
     sim_obs_bn = _cosine_sim(x_border, x_neighborhood)
 
-    # null for center-border: random partition of pooled center+border counts
-    pooled_cb = x_center_raw + x_border_raw
-
-    sims_null_cb = np.empty(n_sim, dtype=float)
-    for b in range(n_sim):
-        sim_center_raw, sim_border_raw_cb = _random_partition_counts(
-            pooled_counts=pooled_cb,
-            n_first=n_center,
-            rng=rng,
-        )
-
-        sim_center = _norm_log_vector(sim_center_raw, scale=scale)
-        sim_border_cb = _norm_log_vector(sim_border_raw_cb, scale=scale)
-
-        sims_null_cb[b] = _cosine_sim(sim_center, sim_border_cb)
-
-    null_mean_cb = float(np.mean(sims_null_cb))
-    null_sd_cb = float(np.std(sims_null_cb, ddof=1)) if n_sim > 1 else 0.0
+    null_mean_cb, null_sd_cb = _simulate_partition_null_cosine(
+        x_first_raw=x_center_raw,
+        x_second_raw=x_border_raw,
+        n_first=n_center,
+        n_sim=n_sim,
+        scale=scale,
+        rng=rng,
+    )
     residual_cb = float(sim_obs_cb - null_mean_cb)
     zscore_cb = np.nan if np.isclose(null_sd_cb, 0.0) else float(residual_cb / null_sd_cb)
 
-    # null for border-neighborhood: random partition of pooled border+neighborhood counts
-    pooled_bn = x_border_raw + x_neighborhood_raw
-
-    sims_null_bn = np.empty(n_sim, dtype=float)
-    for b in range(n_sim):
-        sim_border_raw_bn, sim_neighborhood_raw = _random_partition_counts(
-            pooled_counts=pooled_bn,
-            n_first=n_border,
-            rng=rng,
-        )
-
-        sim_border_bn = _norm_log_vector(sim_border_raw_bn, scale=scale)
-        sim_neighborhood = _norm_log_vector(sim_neighborhood_raw, scale=scale)
-
-        sims_null_bn[b] = _cosine_sim(sim_border_bn, sim_neighborhood)
-
-    null_mean_bn = float(np.mean(sims_null_bn))
-    null_sd_bn = float(np.std(sims_null_bn, ddof=1)) if n_sim > 1 else 0.0
+    null_mean_bn, null_sd_bn = _simulate_partition_null_cosine(
+        x_first_raw=x_border_raw,
+        x_second_raw=x_neighborhood_raw,
+        n_first=n_border,
+        n_sim=n_sim,
+        scale=scale,
+        rng=rng,
+    )
     residual_bn = float(sim_obs_bn - null_mean_bn)
     zscore_bn = np.nan if np.isclose(null_sd_bn, 0.0) else float(residual_bn / null_sd_bn)
 
@@ -857,10 +753,10 @@ def _null_corrected_center_border_neighborhood_one_cell(
             "similarity_border_neighborhood_null_sd": null_sd_bn,
             "similarity_border_neighborhood_residual": residual_bn,
             "similarity_border_neighborhood_zscore": zscore_bn,
+            "contamination_score": (
+                np.nan if np.isnan(residual_cb) or np.isnan(residual_bn) else residual_bn - residual_cb
+            ),
         }
     )
-
-    if not np.isnan(zscore_cb) and not np.isnan(zscore_bn):
-        result["contamination_score"] = zscore_bn - zscore_cb
 
     return result

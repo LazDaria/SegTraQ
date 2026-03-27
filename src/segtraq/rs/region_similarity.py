@@ -975,28 +975,20 @@ def null_corrected_center_border_similarity(
     random_state: int | None = 0,
 ) -> pd.DataFrame:
     """
-    Compute null-corrected border-related cosine similarities for each cell.
+    Compute null-corrected border-related cosine similarities.
 
-    For each cell, the function computes:
-    1. center-border cosine similarity,
-    2. border-neighborhood cosine similarity,
-    3. a combined contamination score based on the difference of null-corrected
-       z-scores:
+    For each cell, this yields:
+    - center-border similarity,
+    - border-neighborhood similarity,
+    - a contamination score:
 
-       `similarity_border_neighborhood_zscore - similarity_center_border_zscore`
+    `similarity_border_neighborhood_residual - similarity_center_border_residual`.
 
-    The nulls are symmetric random partition nulls:
-    - the pooled center+border counts are randomly partitioned into center and border
-      with the observed totals,
-    - the pooled border+neighborhood counts are randomly partitioned into border and
-      neighborhood with the observed totals.
+    Null distributions are obtained via symmetric random partitioning of pooled
+    counts (center+border and border+neighborhood), preserving observed totals.
 
-    This is a without-replacement null, which better preserves sparse pooled count
-    structure than a multinomial null.
-
-    A single shared gene space is used for center, border, and neighborhood
-    within each cell:
-    genes are kept if they are nonzero in at least one of the three profiles.
+    All similarities are computed in a shared gene space, retaining genes
+    present in at least one of the three regions.
 
     Parameters
     ----------
@@ -1059,6 +1051,7 @@ def null_corrected_center_border_similarity(
             - `contamination_score`
             - count and gene-usage summaries
     """
+    id_key = sdata.shapes[shapes_key].index.name
     expr_center_raw, expr_border_raw = _get_center_border_counts(
         sdata=sdata,
         tables_key=tables_key,
@@ -1087,38 +1080,32 @@ def null_corrected_center_border_similarity(
         .intersection(expr_neighborhood_raw.index)
     )
 
+    # Align rows and columns so all three matrices refer to the same cells/genes.
     expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
     expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
     expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
 
-    id_key = sdata.shapes[shapes_key].index.name
-    rows = []
-
     rng = np.random.default_rng(random_state)
     seeds = rng.integers(0, 2**32 - 1, size=len(common_cells))
 
+    rows = []
     for cid, seed in zip(common_cells, seeds):
-        x_center_raw = expr_center_raw.loc[cid].to_numpy()
-        x_border_raw = expr_border_raw.loc[cid].to_numpy()
-        x_neighborhood_raw = expr_neighborhood_raw.loc[cid].to_numpy()
-
         res = _null_corrected_center_border_neighborhood_one_cell(
-            x_center_raw=x_center_raw,
-            x_border_raw=x_border_raw,
-            x_neighborhood_raw=x_neighborhood_raw,
+            x_center_raw=expr_center_raw.loc[cid].to_numpy(),
+            x_border_raw=expr_border_raw.loc[cid].to_numpy(),
+            x_neighborhood_raw=expr_neighborhood_raw.loc[cid].to_numpy(),
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             n_sim=n_sim,
             scale=scale,
             random_state=int(seed),
         )
-
         res[id_key] = cid
         rows.append(res)
 
     out = pd.DataFrame(rows)
 
-    if inplace:
+    if inplace and not out.empty:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,

@@ -6,7 +6,7 @@ from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
 from ..utils import _ensure_index, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
-from .utils import _correct_z_drift
+from .utils import _correct_z_drift, _null_corrected_top_bottom_one_cell
 
 
 def vertical_signal_integrity_per_cell(
@@ -127,7 +127,7 @@ def vertical_signal_integrity_per_cell(
     return out
 
 
-def similarity_top_bottom(
+def similarity_top_bottom_old(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -542,3 +542,172 @@ def fraction_heterotypic_overlap(
         )
 
     return per_cell_overlap_fraction
+
+def similarity_top_bottom(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str | int = "UNASSIGNED",
+    points_gene_key: str = "feature_name",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_z_key: str = "z",
+    correct_z_drift: bool = True,
+    max_points: int = 1_000_000,
+    seed: int | None = 0,
+    q: float = 0.40,
+    scale: float = 1e4,
+    min_genes: int = 5,
+    min_transcripts: int = 10,
+    n_sim: int = 200,
+    inplace: bool = True,
+):
+    """
+    Compute null-corrected cosine similarity between bottom and top transcript
+    profiles within each cell.
+
+    For each cell, transcripts are split into:
+      - bottom part: z <= q-quantile within that cell
+      - top part:    z >= (1-q)-quantile within that cell
+
+    The observed bottom-top cosine similarity is compared to a random partition
+    null obtained by splitting pooled bottom+top counts into bottom and top
+    with the observed totals.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing transcript-assigned spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell.
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript.
+    points_z_key : str, default="z"
+        Column specifying the z coordinate / depth for each transcript.
+    correct_z_drift : bool, default=True
+        If True, correct global z-drift before computing within-cell z-quantiles.
+        The corrected values are used only for defining top/bottom subsets.
+    max_points : int, default=1_000_000
+        Maximum number of points used to fit the regression in z-drift correction.
+    seed : int or None, default=0
+        Random seed used for subsampling in z-drift correction and null simulation.
+    q : float, default=0.30
+        Quantile defining bottom and top parts. Bottom = q, top = 1-q.
+    scale : float, default=1e4
+        Library-size scaling factor applied before log1p.
+    min_genes : int, default=5
+        Minimum number of genes with nonzero counts across (bottom OR top).
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in BOTH bottom and top.
+    n_sim : int, default=200
+        Number of null simulations per cell.
+    inplace : bool, default=True
+        Whether to add the results to `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with per-cell observed similarity, null summary statistics,
+        residual, z-score, and count summaries.
+    """
+    if not (0.0 < q < 0.5):
+        raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
+
+    pts = sdata.points[points_key]
+    cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key, points_z_key]
+
+    tx = pts[cols]
+    tx = tx.dropna(subset=cols)
+
+    is_bg = _is_background(tx[points_cell_id_key], points_background_id)
+    tx = tx[~is_bg]
+
+    valid_features = pd.Index(sdata.tables[tables_key].var_names)
+    tx = tx[tx[points_gene_key].isin(valid_features)]
+
+    tx = tx.compute() if hasattr(tx, "compute") else tx
+    tx = tx.reset_index(drop=True)
+
+    if correct_z_drift:
+        tx["_z_for_split"] = _correct_z_drift(
+            tx=tx,
+            points_x_key=points_x_key,
+            points_y_key=points_y_key,
+            points_z_key=points_z_key,
+            max_points=max_points,
+            seed=seed,
+        )
+    else:
+        tx["_z_for_split"] = tx[points_z_key].to_numpy(dtype=float)
+
+    z = tx["_z_for_split"]
+    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(q))
+    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(
+        lambda s: s.quantile(1.0 - q)
+    )
+
+    tx["_is_bottom"] = z <= tx["_z_bottom"]
+    tx["_is_top"] = z >= tx["_z_top"]
+
+    counts_bottom = (
+        tx.loc[tx["_is_bottom"], [points_cell_id_key, points_gene_key]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
+    )
+    counts_top = (
+        tx.loc[tx["_is_top"], [points_cell_id_key, points_gene_key]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
+    )
+
+    common_cells = counts_bottom.index.intersection(counts_top.index)
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+
+    counts_bottom_raw = counts_bottom.reindex(index=common_cells, columns=all_genes, fill_value=0)
+    counts_top_raw = counts_top.reindex(index=common_cells, columns=all_genes, fill_value=0)
+
+    rng = np.random.default_rng(seed)
+    seeds = rng.integers(0, 2**32 - 1, size=len(common_cells))
+
+    rows = []
+    for cid, cell_seed in zip(common_cells, seeds):
+        res = _null_corrected_top_bottom_one_cell(
+            x_bottom_raw=counts_bottom_raw.loc[cid].to_numpy(),
+            x_top_raw=counts_top_raw.loc[cid].to_numpy(),
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            n_sim=n_sim,
+            scale=scale,
+            random_state=int(cell_seed),
+        )
+        res[tables_cell_id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return out
