@@ -1083,6 +1083,8 @@ def null_corrected_center_border_similarity(
     # Align rows and columns so all three matrices refer to the same cells/genes.
     expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
     expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_center_raw.to_csv("expr_center.csv")
+    expr_border_raw.to_csv("expr_border.csv")
     expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
 
     rng = np.random.default_rng(random_state)
