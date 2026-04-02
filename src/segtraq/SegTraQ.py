@@ -23,7 +23,7 @@ class SegTraQ:
         tables_centroid_y_key: str | None = "y_centroid",
         points_key: str = "transcripts",
         points_cell_id_key: str = "cell_id",
-        points_background_id: str | int = "UNASSIGNED",
+        points_background_id: str | int | None = "UNASSIGNED",
         points_x_key: str = "x",
         points_y_key: str = "y",
         points_z_key: str | None = "z",
@@ -74,7 +74,7 @@ class SegTraQ:
         points_cell_id_key : str, default="cell_id"
             Column in the points table linking each transcript/spot to a cell.
 
-        points_background_id : str or int, default="UNASSIGNED"
+        points_background_id : str or int or None, default="UNASSIGNED"
             Identifier for transcripts not assigned to any cell (background).
 
         points_x_key : str, default="x"
@@ -843,8 +843,18 @@ class SegTraQ:
     def filter_control_and_low_quality_transcripts(
         self,
         min_qv: float = 20.0,
+        control_prefixes: tuple | list = (
+            "NegControlProbe_",
+            "antisense_",
+            "NegControlCodeword",
+            "BLANK_",
+            "Blank-",
+            "NegPrb",
+            "DeprecatedCodeword_",
+            "UnassignedCodeword_",
+        ),
         control_genes: tuple | list = (),
-        recompute_expression: bool = False,
+        recompute_expression: bool = True,
         inplace: bool = True,
     ):
         """
@@ -854,9 +864,11 @@ class SegTraQ:
         ----------
         min_qv : float, default=20.0
             Minimum quality value (QV) threshold for transcripts to be retained.
+        control_prefixes : tuple or list, optional
+            List of gene name prefixes indicating control transcripts to be filtered out.
         control_genes : tuple or list, optional
             List of gene name prefixes indicating control genes to be filtered out.
-        recompute_expression : bool, default=False
+        recompute_expression : bool, default=True
             If True, recomputes the per-cell expression matrix after filtering transcripts.
         inplace : bool, default=True
             If True, modifies `self.sdata` in place.
@@ -871,11 +883,14 @@ class SegTraQ:
         _filter_control_and_low_quality_transcripts(
             sdata=self.sdata,
             min_qv=min_qv,
+            control_prefixes=control_prefixes,
             control_genes=control_genes,
             points_key=self.points_key,
             points_gene_key=self.points_gene_key,
             points_cell_id_key=self.points_cell_id_key,
+            points_background_id=self.points_background_id,
             tables_key=self.tables_key,
+            tables_cell_id_key=self.tables_cell_id_key,
             recompute_expression=recompute_expression,
             inplace=inplace,
         )
