@@ -13,7 +13,10 @@ from .utils import (
     _join_points_regions,
     _norm_log_df,
     _process_cell,
-    _null_corrected_center_border_neighborhood_one_cell
+    _null_corrected_center_border_neighborhood_one_cell,
+    _chi2_center_border_one_cell,
+    _fisher_freeman_halton_center_border_one_cell,
+    _mixture_fit_contamination_one_cell
 )
 
 
@@ -1101,6 +1104,381 @@ def null_corrected_center_border_similarity(
             n_sim=n_sim,
             scale=scale,
             random_state=int(seed),
+        )
+        res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out
+
+def chi2_center_border_similarity(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    inplace: bool = True
+) -> pd.DataFrame:
+    """
+    Compute a per-cell chi-square test comparing center and border
+    expression compositions.
+
+    This is mainly intended as a comparison baseline for the null-corrected
+    cosine similarity metric.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell.
+    points_x_key : str, default="x"
+        Column for transcript x-coordinates.
+    points_y_key : str, default="y"
+        Column for transcript y-coordinates.
+    points_gene_key : str, default="feature_name"
+        Column specifying gene / feature names.
+    erosion_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to erode the cell polygon and
+        define the center region.
+    min_transcripts : int, default=10
+        Minimum total transcript count required for center and border.
+    min_genes : int, default=5
+        Minimum number of genes required after restricting to the shared gene space.
+    inplace : bool, default=True
+        Whether to merge the resulting metrics into `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns:
+            - cell id
+            - chi2 statistic
+            - p-value
+            - degrees of freedom
+            - Cramér's V
+            - count and gene-usage summaries
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    expr_center_raw, expr_border_raw = _get_center_border_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    common_cells = expr_center_raw.index.intersection(expr_border_raw.index)
+    common_genes = expr_center_raw.columns.intersection(expr_border_raw.columns)
+
+    expr_center_raw = expr_center_raw.loc[common_cells, common_genes]
+    expr_border_raw = expr_border_raw.loc[common_cells, common_genes]
+
+    rows = []
+    for cid in common_cells:
+        res = _chi2_center_border_one_cell(
+            x_center_raw=expr_center_raw.loc[cid].to_numpy(),
+            x_border_raw=expr_border_raw.loc[cid].to_numpy(),
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+        )
+        res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out
+
+def fisher_center_border_similarity(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    n_sim: int = 5000,
+    inplace: bool = True,
+    random_state: int | None = 0,
+) -> pd.DataFrame:
+    """
+    Compute a per-cell Monte Carlo Fisher-Freeman-Halton exact test comparing
+    center and border expression compositions in a 2 x G contingency table.
+
+    This is a Fisher-style fixed-margins test intended as a comparison baseline
+    to the null-corrected cosine similarity metric.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell.
+    points_x_key : str, default="x"
+        Column for transcript x-coordinates.
+    points_y_key : str, default="y"
+        Column for transcript y-coordinates.
+    points_gene_key : str, default="feature_name"
+        Column specifying gene / feature names.
+    erosion_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to erode the cell polygon and
+        define the center region.
+    min_transcripts : int, default=10
+        Minimum total transcript count required for center and border.
+    min_genes : int, default=5
+        Minimum number of genes required after restricting to genes with
+        nonzero total count across center+border.
+    n_sim : int, default=5000
+        Number of Monte Carlo null tables sampled per cell.
+    inplace : bool, default=True
+        Whether to merge the resulting metrics into `sdata.tables[tables_key].obs`.
+    random_state : int or None, optional
+        Random seed.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns:
+            - cell id
+            - observed table log-probability under the fixed-margins null
+            - Fisher-style Monte Carlo p-value
+            - count and gene-usage summaries
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    expr_center_raw, expr_border_raw = _get_center_border_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    common_cells = expr_center_raw.index.intersection(expr_border_raw.index)
+    common_genes = expr_center_raw.columns.intersection(expr_border_raw.columns)
+
+    expr_center_raw = expr_center_raw.loc[common_cells, common_genes]
+    expr_border_raw = expr_border_raw.loc[common_cells, common_genes]
+
+    rng = np.random.default_rng(random_state)
+    seeds = rng.integers(0, 2**32 - 1, size=len(common_cells))
+
+    rows = []
+    for cid, seed in zip(common_cells, seeds):
+        res = _fisher_freeman_halton_center_border_one_cell(
+            x_center_raw=expr_center_raw.loc[cid].to_numpy(),
+            x_border_raw=expr_border_raw.loc[cid].to_numpy(),
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            n_sim=n_sim,
+            random_state=int(seed),
+        )
+        res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out
+
+def mixture_fit_contamination_score(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    neighborhood_radius_factor: float = 2.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute a mixture-fit contamination score per cell.
+
+    For each cell, fit:
+        p_border ~ (1 - alpha) * p_center + alpha * p_neighborhood
+
+    on normalized gene proportions, where:
+        - p_center is the center expression composition
+        - p_border is the border expression composition
+        - p_neighborhood is the local neighborhood composition
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell.
+    points_x_key : str, default="x"
+        Column for transcript x-coordinates.
+    points_y_key : str, default="y"
+        Column for transcript y-coordinates.
+    points_gene_key : str, default="feature_name"
+        Column specifying gene / feature names.
+    erosion_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to erode the cell polygon and
+        define the center region.
+    neighborhood_radius_factor : float, default=2.0
+        Radius factor used to define neighboring cells when computing the
+        neighborhood count vector.
+    min_transcripts : int, default=10
+        Minimum total transcript count required for center, border, and neighborhood.
+    min_genes : int, default=5
+        Minimum number of genes required in the shared gene space.
+    pseudocount : float, default=0.5
+        Pseudocount used when converting counts to proportions.
+    inplace : bool, default=True
+        Whether to merge the resulting metrics into `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns:
+            - tables_cell_id_key
+            - mixture_alpha_hat
+            - mixture_fit_center_only_l2
+            - mixture_fit_mixture_l2
+            - mixture_fit_improvement_l2
+            - mixture_fit_improvement_fraction
+            - count and gene-usage summaries
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    expr_center_raw, expr_border_raw = _get_center_border_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    expr_neighborhood_raw = _compute_ncvs_within_radius(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    common_cells = (
+        expr_center_raw.index
+        .intersection(expr_border_raw.index)
+        .intersection(expr_neighborhood_raw.index)
+    )
+
+    expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
+    expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
+
+    rows = []
+    for cid in common_cells:
+        res = _mixture_fit_contamination_one_cell(
+            x_center_raw=expr_center_raw.loc[cid].to_numpy(),
+            x_border_raw=expr_border_raw.loc[cid].to_numpy(),
+            x_neighborhood_raw=expr_neighborhood_raw.loc[cid].to_numpy(),
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
         )
         res[id_key] = cid
         rows.append(res)

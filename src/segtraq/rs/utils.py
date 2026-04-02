@@ -11,6 +11,7 @@ from scipy.spatial import cKDTree
 from shapely.geometry.base import BaseGeometry
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import chi2_contingency
+from scipy.special import gammaln
 
 from ..utils import _is_background, _looks_like_counts, filter_cells
 
@@ -756,6 +757,383 @@ def _null_corrected_center_border_neighborhood_one_cell(
             "contamination_score": (
                 np.nan if np.isnan(residual_cb) or np.isnan(residual_bn) else residual_bn - residual_cb
             ),
+        }
+    )
+
+    return result
+
+def _chi2_center_border_one_cell(
+    x_center_raw: np.ndarray,
+    x_border_raw: np.ndarray,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+) -> dict:
+    """
+    Compute a chi-square test of homogeneity between center and border
+    transcript count vectors for one cell.
+
+    Parameters
+    ----------
+    x_center_raw : np.ndarray
+        Raw gene counts for the center region.
+    x_border_raw : np.ndarray
+        Raw gene counts for the border region.
+    min_transcripts : int, default=10
+        Minimum total transcript count required in both center and border.
+    min_genes : int, default=5
+        Minimum number of genes with nonzero total count across center+border.
+
+    Returns
+    -------
+    dict
+        Dictionary containing chi-square statistic, p-value, degrees of freedom,
+        Cramér's V, and count summaries.
+    """
+    x_center_raw = np.rint(np.asarray(x_center_raw)).astype(int)
+    x_border_raw = np.rint(np.asarray(x_border_raw)).astype(int)
+
+    # Restrict to genes used by at least one of the two regions.
+    mask = (x_center_raw + x_border_raw) > 0
+    x_center_raw = x_center_raw[mask]
+    x_border_raw = x_border_raw[mask]
+
+    n_genes_used = int(mask.sum())
+    n_center = int(x_center_raw.sum())
+    n_border = int(x_border_raw.sum())
+
+    result = {
+        "chi2_center_border_stat": np.nan,
+        "chi2_center_border_pvalue": np.nan,
+        "chi2_center_border_dof": np.nan,
+        "chi2_center_border_cramers_v": np.nan,
+        "center_counts_used": n_center,
+        "border_counts_used": n_border,
+        "n_genes_used": n_genes_used,
+    }
+
+    if (
+        n_genes_used < min_genes
+        or n_center < min_transcripts
+        or n_border < min_transcripts
+    ):
+        return result
+
+    observed = np.vstack([x_center_raw, x_border_raw])
+
+    # Remove any all-zero columns just in case.
+    keep = observed.sum(axis=0) > 0
+    observed = observed[:, keep]
+
+    if observed.shape[1] < min_genes:
+        return result
+
+    chi2_stat, pvalue, dof, expected = chi2_contingency(
+        observed,
+        correction=False,
+    )
+
+    # Cramér's V for a 2 x k table
+    n_total = observed.sum()
+    r, k = observed.shape
+    denom = n_total * min(r - 1, k - 1)
+    cramers_v = np.sqrt(chi2_stat / denom) if denom > 0 else np.nan
+
+    result.update(
+        {
+            "chi2_center_border_stat": float(chi2_stat),
+            "chi2_center_border_pvalue": float(pvalue),
+            "chi2_center_border_dof": int(dof),
+            "chi2_center_border_cramers_v": float(cramers_v),
+            "n_genes_used": int(observed.shape[1]),
+        }
+    )
+
+    return result
+
+def _log_choose(n: np.ndarray | int, k: np.ndarray | int) -> np.ndarray:
+    """Compute log(binomial(n, k)) in a numerically stable way."""
+    n = np.asarray(n)
+    k = np.asarray(k)
+    return gammaln(n + 1) - gammaln(k + 1) - gammaln(n - k + 1)
+
+
+def _log_multivariate_hypergeom_2xg(x_first: np.ndarray, col_totals: np.ndarray) -> float:
+    """
+    Log-probability of a 2 x G table under the fixed-margins null,
+    parameterized by the first row counts and the column totals.
+
+    Under the null, the first row counts follow a multivariate hypergeometric:
+        P(X = x_first) = prod_j C(col_totals_j, x_first_j) / C(N, n_first)
+
+    where:
+        - col_totals_j are the fixed column totals
+        - n_first = sum(x_first)
+        - N = sum(col_totals)
+    """
+    x_first = np.rint(np.asarray(x_first)).astype(int)
+    col_totals = np.rint(np.asarray(col_totals)).astype(int)
+
+    n_first = int(x_first.sum())
+    N = int(col_totals.sum())
+
+    if np.any(x_first < 0) or np.any(x_first > col_totals):
+        return -np.inf
+
+    log_num = np.sum(_log_choose(col_totals, x_first))
+    log_den = _log_choose(N, n_first)
+    return float(log_num - log_den)
+
+
+def _random_2xg_table_fixed_margins(
+    col_totals: np.ndarray,
+    n_first: int,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Sample a random 2 x G table with fixed row totals and column totals.
+
+    The first row is sampled from a multivariate hypergeometric distribution;
+    the second row is determined by the column totals.
+    """
+    col_totals = np.rint(np.asarray(col_totals)).astype(int)
+    first = rng.multivariate_hypergeometric(col_totals, n_first)
+    second = col_totals - first
+    return first, second
+
+
+def _fisher_freeman_halton_center_border_one_cell(
+    x_center_raw: np.ndarray,
+    x_border_raw: np.ndarray,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    n_sim: int = 5000,
+    random_state: int | None = None,
+) -> dict:
+    """
+    Monte Carlo Fisher-Freeman-Halton exact test for a 2 x G center-border table.
+
+    This conditions on:
+        - total center count
+        - total border count
+        - total count of each gene
+
+    and estimates a Fisher-style p-value as the fraction of sampled null tables
+    whose probability is less than or equal to the observed table probability.
+
+    Parameters
+    ----------
+    x_center_raw : np.ndarray
+        Raw gene counts for the center region.
+    x_border_raw : np.ndarray
+        Raw gene counts for the border region.
+    min_transcripts : int, default=10
+        Minimum total transcript count required in both center and border.
+    min_genes : int, default=5
+        Minimum number of genes with nonzero total count across center+border.
+    n_sim : int, default=5000
+        Number of Monte Carlo null tables to sample.
+    random_state : int or None, optional
+        Random seed.
+
+    Returns
+    -------
+    dict
+        Dictionary with Fisher-style Monte Carlo test results and summaries.
+    """
+    rng = np.random.default_rng(random_state)
+
+    x_center_raw = np.rint(np.asarray(x_center_raw)).astype(int)
+    x_border_raw = np.rint(np.asarray(x_border_raw)).astype(int)
+
+    # Restrict to genes present in at least one of the two regions.
+    mask = (x_center_raw + x_border_raw) > 0
+    x_center_raw = x_center_raw[mask]
+    x_border_raw = x_border_raw[mask]
+
+    n_genes_used = int(mask.sum())
+    n_center = int(x_center_raw.sum())
+    n_border = int(x_border_raw.sum())
+    col_totals = x_center_raw + x_border_raw
+
+    result = {
+        "fisher_center_border_logprob": np.nan,
+        "fisher_center_border_pvalue": np.nan,
+        "fisher_center_border_mc_nsim": int(n_sim),
+        "center_counts_used": n_center,
+        "border_counts_used": n_border,
+        "n_genes_used": n_genes_used,
+    }
+
+    if (
+        n_genes_used < min_genes
+        or n_center < min_transcripts
+        or n_border < min_transcripts
+    ):
+        return result
+
+    # Observed table probability under fixed margins
+    logp_obs = _log_multivariate_hypergeom_2xg(
+        x_first=x_center_raw,
+        col_totals=col_totals,
+    )
+
+    # Monte Carlo null: sample tables with same margins
+    logp_null = np.empty(n_sim, dtype=float)
+    for i in range(n_sim):
+        sim_center, _ = _random_2xg_table_fixed_margins(
+            col_totals=col_totals,
+            n_first=n_center,
+            rng=rng,
+        )
+        logp_null[i] = _log_multivariate_hypergeom_2xg(
+            x_first=sim_center,
+            col_totals=col_totals,
+        )
+
+    # Fisher-style two-sided ordering:
+    # tables at least as unlikely as observed -> logp <= logp_obs
+    pvalue = (1 + np.sum(logp_null <= logp_obs)) / (n_sim + 1)
+
+    result.update(
+        {
+            "fisher_center_border_logprob": float(logp_obs),
+            "fisher_center_border_pvalue": float(pvalue),
+        }
+    )
+
+    return result
+
+def _normalize_to_proportions(x: np.ndarray, pseudocount: float = 0.0) -> np.ndarray:
+    """
+    Normalize a 1D nonnegative count vector to proportions with optional smoothing.
+    """
+    x = np.asarray(x, dtype=float).ravel()
+    if np.any(x < 0):
+        raise ValueError("Counts must be nonnegative.")
+
+    if pseudocount < 0:
+        raise ValueError("`pseudocount` must be >= 0.")
+
+    x = x + pseudocount
+    total = x.sum()
+
+    if total <= 0:
+        return np.zeros_like(x, dtype=float)
+
+    return x / total
+
+
+def _estimate_mixture_alpha_least_squares(
+    p_border: np.ndarray,
+    p_center: np.ndarray,
+    p_neighborhood: np.ndarray,
+) -> float:
+    """
+    Estimate alpha in:
+        p_border ~ (1 - alpha) * p_center + alpha * p_neighborhood
+
+    using least squares in proportion space, then clip to [0, 1].
+    """
+    d = p_neighborhood - p_center
+    denom = float(np.dot(d, d))
+
+    if np.isclose(denom, 0.0):
+        return 0.0
+
+    alpha = float(np.dot(p_border - p_center, d) / denom)
+    return float(np.clip(alpha, 0.0, 1.0))
+
+def _mixture_fit_contamination_one_cell(
+    x_center_raw: np.ndarray,
+    x_border_raw: np.ndarray,
+    x_neighborhood_raw: np.ndarray,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+) -> dict:
+    """
+    Fit a simple center-neighborhood mixture model to the border profile for one cell.
+
+    The model is:
+        p_border ~ (1 - alpha) * p_center + alpha * p_neighborhood
+
+    where all p_* are normalized gene proportions.
+
+    Returns
+    -------
+    dict
+        Dictionary containing:
+            - alpha_hat: estimated contamination fraction in [0, 1]
+            - fit_center_only_l2: squared L2 error of border vs center
+            - fit_mixture_l2: squared L2 error of border vs fitted mixture
+            - fit_improvement_l2: center-only error minus mixture error
+            - fit_improvement_fraction: relative improvement over center-only
+            - center/border/neighborhood counts used
+            - n_genes_used
+    """
+    x_center_raw = np.rint(np.asarray(x_center_raw)).astype(int)
+    x_border_raw = np.rint(np.asarray(x_border_raw)).astype(int)
+    x_neighborhood_raw = np.rint(np.asarray(x_neighborhood_raw)).astype(int)
+
+    # Shared gene space: retain genes present in at least one of the three regions
+    mask = (x_center_raw + x_border_raw + x_neighborhood_raw) > 0
+    x_center_raw = x_center_raw[mask]
+    x_border_raw = x_border_raw[mask]
+    x_neighborhood_raw = x_neighborhood_raw[mask]
+
+    n_genes_used = int(mask.sum())
+    n_center = int(x_center_raw.sum())
+    n_border = int(x_border_raw.sum())
+    n_neighborhood = int(x_neighborhood_raw.sum())
+
+    result = {
+        "mixture_alpha_hat": np.nan,
+        "mixture_fit_center_only_l2": np.nan,
+        "mixture_fit_mixture_l2": np.nan,
+        "mixture_fit_improvement_l2": np.nan,
+        "mixture_fit_improvement_fraction": np.nan,
+        "center_counts_used": n_center,
+        "border_counts_used": n_border,
+        "neighborhood_counts_used": n_neighborhood,
+        "n_genes_used": n_genes_used,
+    }
+
+    if (
+        n_genes_used < min_genes
+        or n_center < min_transcripts
+        or n_border < min_transcripts
+        or n_neighborhood < min_transcripts
+    ):
+        return result
+
+    p_center = _normalize_to_proportions(x_center_raw, pseudocount=pseudocount)
+    p_border = _normalize_to_proportions(x_border_raw, pseudocount=pseudocount)
+    p_neighborhood = _normalize_to_proportions(x_neighborhood_raw, pseudocount=pseudocount)
+
+    alpha_hat = _estimate_mixture_alpha_least_squares(
+        p_border=p_border,
+        p_center=p_center,
+        p_neighborhood=p_neighborhood,
+    )
+
+    p_mix = (1.0 - alpha_hat) * p_center + alpha_hat * p_neighborhood
+
+    # Squared L2 fit error in proportion space
+    err_center_only = float(np.sum((p_border - p_center) ** 2))
+    err_mixture = float(np.sum((p_border - p_mix) ** 2))
+
+    improvement_l2 = err_center_only - err_mixture
+    improvement_fraction = (
+        np.nan if np.isclose(err_center_only, 0.0) else float(improvement_l2 / err_center_only)
+    )
+
+    result.update(
+        {
+            "mixture_alpha_hat": float(alpha_hat),
+            "mixture_fit_center_only_l2": err_center_only,
+            "mixture_fit_mixture_l2": err_mixture,
+            "mixture_fit_improvement_l2": improvement_l2,
+            "mixture_fit_improvement_fraction": improvement_fraction,
         }
     )
 
