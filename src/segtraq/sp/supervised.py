@@ -8,7 +8,7 @@ from scipy import sparse
 from scipy.stats import fisher_exact
 
 from ..utils import merge_into_obs
-from .utils import _get_count_matrix, _score_neighbor_negative_markers, _score_marker_detection
+from .utils import _get_count_matrix, _score_marker_detection, _score_neighbor_negative_markers
 
 
 def mutually_exclusive_coexpression_rate(
