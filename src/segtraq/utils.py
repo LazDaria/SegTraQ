@@ -1829,9 +1829,9 @@ def _filter_control_and_low_quality_transcripts(
         control probes and filtered out.
     control_genes : tuple | list, default=()
         Additional keywords to identify control probes in gene names.
-        By default, only standard control prefixes are used.
-        These are: "NegControlProbe_", "antisense_", "NegControlCodeword", "BLANK_", "Blank-", "NegPrb",
-        "DeprecatedCodeword_", "UnassignedCodeword_".
+        For these ones, exact matches will be filtered out (e.g. "GAPDH" or "ERCC-00002"),
+        whereas for the control_prefixes, any gene name starting with the prefix will be
+        filtered out (e.g. "NegControlProbe_1" or "NegControlProbe_2").
     points_key : str, default="transcripts"
         The key in the SpatialData points attribute that contains transcript data.
     points_gene_key : str, default="feature_name"
@@ -1861,31 +1861,46 @@ def _filter_control_and_low_quality_transcripts(
     pts = sdata.points[points_key]
     adata = sdata.tables[tables_key]
 
-    prefixes = tuple(control_prefixes) + tuple(control_genes)
+    # materialize the df to perform the filtering
+    pts_pd = pts.compute()
 
-    # ---- transcripts ----
-    if "qv" not in pts.columns and min_qv is not None:
+    # we need multiple masks here:
+    # one for the prefixed that checks using startswith
+    # one for the genes that performs an exact match
+    # one for the quality filtering (if qv column is present and min_qv is not None)
+    prefix_mask = (
+        pts_pd[points_gene_key].str.startswith(tuple(control_prefixes))
+        if control_prefixes
+        else pd.Series(False, index=pts_pd.index)
+    )
+    gene_mask = pts_pd[points_gene_key].isin(control_genes) if control_genes else pd.Series(False, index=pts_pd.index)
+
+    if "qv" not in pts_pd.columns and min_qv is not None:
         raise KeyError(
             f"Quality value column 'qv' not found in points DataFrame. "
             f"Available columns: {pts.columns.tolist()}. "
             f"If you do not want to filter by quality, set min_qv=None."
         )
-    elif "qv" not in pts.columns and min_qv is None:
-        invalid_mask = pts[points_gene_key].str.startswith(prefixes)
+    elif "qv" not in pts_pd.columns and min_qv is None:
+        invalid_mask = prefix_mask | gene_mask
     else:
-        invalid_mask = pts[points_gene_key].str.startswith(prefixes) | (pts["qv"] < min_qv)
+        invalid_mask = prefix_mask | gene_mask | (pts_pd["qv"] < min_qv)
 
-    # getting all gene names that are being removed
-    removed_genes = pts.loc[invalid_mask, points_gene_key].unique().compute().tolist()
-
-    # removing points that are invalid
-    pts = pts[~invalid_mask]
-    sdata.points[points_key] = sd.models.PointsModel.parse(pts)
+    removed_genes = pts_pd.loc[invalid_mask, points_gene_key].unique().tolist()
+    pts_pd = pts_pd[~invalid_mask]
+    sdata.points[points_key] = sd.models.PointsModel.parse(dd.from_pandas(pts_pd, npartitions=1))
 
     # ---- tables ----
     # on the anndata object, we remove genes that are control genes
     # filtering by quality does not make sense here, as we do not have per-gene quality values
-    adata = adata[:, ~adata.var_names.str.startswith(prefixes)]
+    # again, we need to make a distinction between control prefixes (prefix match) and gene masks (exact match)
+    prefix_mask = (
+        adata.var_names.str.startswith(tuple(control_prefixes))
+        if control_prefixes
+        else pd.Series(False, index=adata.var_names)
+    )
+    gene_mask = adata.var_names.isin(control_genes) if control_genes else pd.Series(False, index=adata.var_names)
+    adata = adata[:, ~(prefix_mask | gene_mask)]
     sdata.tables[tables_key] = adata
 
     # check if any of the gene names of the removed transcripts appear in the anndata object
