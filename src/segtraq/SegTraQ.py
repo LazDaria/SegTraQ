@@ -1032,7 +1032,7 @@ class _BLFacade:
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
     def image_features(
-        self, features=("mean", "std", "median", "min", "max"), channel_names=None, inplace: bool = True
+        self, features: list[str] | tuple[str] = ("mean", "std", "median", "min", "max"), channel_names: str | list[str] | None =None, inplace: bool = True
     ):
         return bl.image_features(
             sdata=self._p.sdata,
@@ -1040,7 +1040,6 @@ class _BLFacade:
             shapes_key=self._p.shapes_key,
             channel_names=channel_names,
             features=features,
-            shapes_cell_id_key=self._p.shapes_cell_id_key,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             inplace=inplace,

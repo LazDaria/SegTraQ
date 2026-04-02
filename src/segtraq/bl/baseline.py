@@ -683,8 +683,7 @@ def image_features(
     images_key: str = "image",
     shapes_key: str = "cell_boundaries",
     channel_names: str | list[str] | None = None,
-    features: list[str] = ("mean", "std", "median", "min", "max"),
-    shapes_cell_id_key: str = "cell_id",
+    features: list[str] | tuple[str] = ("mean", "std", "median", "min", "max"),
     tables_key: str | None = "table",
     tables_cell_id_key: str = "cell_id",
     inplace: bool = True,
@@ -713,9 +712,6 @@ def image_features(
     features : list[str]
         Which statistics to compute per channel per cell.
         Supported: "mean", "std", "median", "min", "max"
-    shapes_cell_id_key : str
-        Column in `sdata.shapes[shapes_key]` that holds the cell ID.
-        If the column does not exist, the GeoDataFrame index is used instead.
     tables_key : str | None
         If provided, the returned DataFrame is also stored in
         `sdata.tables[tables_key].obsm["image_features"]` keyed by cell_id,
@@ -754,7 +750,7 @@ def image_features(
         )
     if images_key not in sdata.images:
         raise KeyError(
-            f"Image key '{images_key}' not found in sdata.images. Available keys: {list(sdata.images.keys())}"
+            f"Image key '{images_key}' not found in sdata.images. Available keys: {list(sdata.images.keys())}. Please set the 'images_key' parameter to a valid key when initializing the SegTraQ object."
         )
     image_da = sdata.images[images_key]
     # converting the data array into a numpy array
@@ -775,11 +771,9 @@ def image_features(
     # Retrieve shapes and resolve cell ids                               #
     # ------------------------------------------------------------------ #
     shapes = sdata.shapes[shapes_key].copy()
-
-    if shapes_cell_id_key in shapes.columns:
-        cell_ids = shapes[shapes_cell_id_key].values
-    else:
-        cell_ids = shapes.index.values
+    # after validate_spatialdata, the index in shapes is always the cell ID
+    cell_ids = shapes.index.values
+    shapes_cell_id_key = shapes.index.name
 
     # ------------------------------------------------------------------ #
     # Build coordinate → pixel mapping from the image's transform        #
@@ -788,9 +782,9 @@ def image_features(
     x_coords = image_da.coords["x"].values  # length W
     y_coords = image_da.coords["y"].values  # length H
 
-    x_min, x_max = float(x_coords[0]), float(x_coords[-1])
-    y_min, y_max = float(y_coords[0]), float(y_coords[-1])
-
+    x_min, x_max = float(x_coords.min()), float(x_coords.max())
+    y_min, y_max = float(y_coords.min()), float(y_coords.max())
+    
     # pixel size (handle descending y axis)
     px_w = (x_max - x_min) / (img_w - 1)  # coords per pixel, x
     px_h = (y_max - y_min) / (img_h - 1)  # coords per pixel, y (may be negative)
