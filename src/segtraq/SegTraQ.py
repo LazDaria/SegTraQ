@@ -1181,10 +1181,13 @@ class _RSFacade:
     def null_corrected_center_border_similarity(
         self,
         erosion_fraction_of_radius: float = 0.2,
+        neighborhood_radius_factor: float = 2.0,
         min_transcripts: int = 10,
         min_genes: int = 5,
         n_sim: int = 200,
         scale: float = 1e4,
+        q_low: float = 0.025,
+        q_high: float = 0.975,
         inplace: bool = True,
         random_state: int | None = 0
     ):
@@ -1200,10 +1203,13 @@ class _RSFacade:
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             erosion_fraction_of_radius=erosion_fraction_of_radius,
+            neighborhood_radius_factor=neighborhood_radius_factor,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             n_sim=n_sim,
             scale=scale,
+            q_low=q_low,
+            q_high=q_high,
             inplace=inplace,
             random_state=random_state
         )
