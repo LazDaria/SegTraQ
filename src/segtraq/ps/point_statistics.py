@@ -92,8 +92,8 @@ def percentage_transcripts_in_compartments(
     Returns
     -------
     DataFrame indexed by cell id with counts and percentages:
-      n_total, n_in_cell, n_outside_cell, n_in_nucleus_overlap, n_in_cytoplasm
-      pct_outside_cell, pct_nucleus, pct_cytoplasm
+      num_total, num_in_cell, num_outside_cell, num_in_nucleus_overlap, num_in_cytoplasm
+      perc_outside_cell, perc_nucleus, perc_cytoplasm
     """
     # transformations alignment check
     T_transcripts = sdata.points[points_key].attrs["transform"]
@@ -128,10 +128,10 @@ def percentage_transcripts_in_compartments(
     inside_cell = pts_cells["region_id"].notna() & (pts_cells["region_id"] == pts_cells[points_cell_id_key])
 
     # denominator: transcripts assigned to each cell (regardless of where they landed spatially)
-    total = pts_cells.groupby(points_cell_id_key, observed=True).size().rename("n_total")
+    total = pts_cells.groupby(points_cell_id_key, observed=True).size().rename("num_total")
 
     # inside counts
-    n_in_cell = pts_cells.loc[inside_cell].groupby(points_cell_id_key, observed=True).size().rename("n_in_cell")
+    n_in_cell = pts_cells.loc[inside_cell].groupby(points_cell_id_key, observed=True).size().rename("num_in_cell")
 
     # ensure we have cell -> best nucleus id mapping
     if "nucleus_id" not in tbl.obs.columns:
@@ -195,24 +195,24 @@ def percentage_transcripts_in_compartments(
     in_nucleus_overlap = inside_cell & pts["nuc_region_id"].notna() & (pts["nuc_region_id"] == pts["nucleus_id"])
 
     n_in_nucleus = (
-        pts.loc[in_nucleus_overlap].groupby(points_cell_id_key, observed=True).size().rename("n_in_nucleus_overlap")
+        pts.loc[in_nucleus_overlap].groupby(points_cell_id_key, observed=True).size().rename("num_in_nucleus_overlap")
     )
 
     # cytoplasm: inside cell but not in nucleus overlap
     in_cytoplasm = inside_cell & (~in_nucleus_overlap)
-    n_in_cyto = pts.loc[in_cytoplasm].groupby(points_cell_id_key, observed=True).size().rename("n_in_cytoplasm")
+    n_in_cyto = pts.loc[in_cytoplasm].groupby(points_cell_id_key, observed=True).size().rename("num_in_cytoplasm")
 
     # outside cell: assigned to cell but not inside assigned cell polygon
-    n_outside = (total - n_in_cell).rename("n_outside_cell")
+    n_outside = (total - n_in_cell).rename("num_outside_cell")
 
     # assemble output
     out = pd.concat([total, n_in_cell, n_outside, n_in_nucleus, n_in_cyto], axis=1).fillna(0)
-    for c in ["n_total", "n_in_cell", "n_outside_cell", "n_in_nucleus_overlap", "n_in_cytoplasm"]:
+    for c in ["num_total", "num_in_cell", "num_outside_cell", "num_in_nucleus_overlap", "num_in_cytoplasm"]:
         out[c] = out[c].astype(int)
 
-    out["pct_outside_cell"] = np.where(out["n_total"] > 0, 100.0 * out["n_outside_cell"] / out["n_total"], np.nan)
-    out["pct_nucleus"] = np.where(out["n_total"] > 0, 100.0 * out["n_in_nucleus_overlap"] / out["n_total"], np.nan)
-    out["pct_cytoplasm"] = np.where(out["n_total"] > 0, 100.0 * out["n_in_cytoplasm"] / out["n_total"], np.nan)
+    out["perc_outside_cell"] = np.where(out["num_total"] > 0, 100.0 * out["num_outside_cell"] / out["num_total"], np.nan)
+    out["perc_nucleus"] = np.where(out["num_total"] > 0, 100.0 * out["num_in_nucleus_overlap"] / out["num_total"], np.nan)
+    out["perc_cytoplasm"] = np.where(out["num_total"] > 0, 100.0 * out["num_in_cytoplasm"] / out["num_total"], np.nan)
 
     # generate column names
     if genes is None:
@@ -224,25 +224,25 @@ def percentage_transcripts_in_compartments(
 
     out = out[
         [
-            "n_total",
-            "n_outside_cell",
-            "n_in_nucleus_overlap",
-            "n_in_cytoplasm",
-            "pct_outside_cell",
-            "pct_nucleus",
-            "pct_cytoplasm",
+            "num_total",
+            "num_outside_cell",
+            "num_in_nucleus_overlap",
+            "num_in_cytoplasm",
+            "perc_outside_cell",
+            "perc_nucleus",
+            "perc_cytoplasm",
         ]
     ]
 
     out = out.rename(
         columns={
-            "n_total": f"n_total_{feature}",
-            "n_outside_cell": f"n_outside_cell_{feature}",
-            "n_in_nucleus_overlap": f"n_in_nucleus_overlap_{feature}",
-            "n_in_cytoplasm": f"n_in_cytoplasm_{feature}",
-            "pct_outside_cell": f"pct_outside_cell_{feature}",
-            "pct_nucleus": f"pct_nucleus_{feature}",
-            "pct_cytoplasm": f"pct_cytoplasm_{feature}",
+            "num_total": f"num_total_{feature}",
+            "num_outside_cell": f"num_outside_cell_{feature}",
+            "num_in_nucleus_overlap": f"num_in_nucleus_overlap_{feature}",
+            "num_in_cytoplasm": f"num_in_cytoplasm_{feature}",
+            "perc_outside_cell": f"perc_outside_cell_{feature}",
+            "perc_nucleus": f"perc_nucleus_{feature}",
+            "perc_cytoplasm": f"perc_cytoplasm_{feature}",
         }
     )
 
@@ -250,7 +250,7 @@ def percentage_transcripts_in_compartments(
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=out.drop(columns=f"n_total_{feature}"),
+            df_to_merge=out.drop(columns=f"num_total_{feature}"),
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=points_cell_id_key,
         )
