@@ -10,7 +10,7 @@ from rtree.index import Index
 from scipy.spatial import cKDTree
 from shapely.geometry.base import BaseGeometry
 from sklearn.metrics.pairwise import cosine_similarity
-from scipy.stats import chi2_contingency
+from scipy.stats import chi2_contingency, fisher_exact
 from scipy.special import gammaln
 
 from ..utils import _is_background, _looks_like_counts, filter_cells
@@ -635,9 +635,14 @@ def _simulate_partition_null_cosine(
     n_sim: int,
     scale: float,
     rng: np.random.Generator,
-) -> tuple[float, float]:
+    q_low: float = 0.025,
+    q_high: float = 0.975,
+) -> dict:
     """
     Simulate cosine similarities under a random partition null for two count vectors.
+
+    Returns summary statistics of the simulated null distribution, including
+    mean, SD, lower/upper quantiles, and interval width.
     """
     pooled = x_first_raw + x_second_raw
     sims = np.empty(n_sim, dtype=float)
@@ -652,9 +657,16 @@ def _simulate_partition_null_cosine(
         sim_second = _norm_log_vector(sim_second_raw, scale=scale)
         sims[i] = _cosine_sim(sim_first, sim_second)
 
-    null_mean = float(np.mean(sims))
-    null_sd = float(np.std(sims, ddof=1)) if n_sim > 1 else 0.0
-    return null_mean, null_sd
+    ql = float(np.quantile(sims, q_low))
+    qh = float(np.quantile(sims, q_high))
+
+    return {
+        "null_mean": float(np.mean(sims)),
+        "null_sd": float(np.std(sims, ddof=1)) if n_sim > 1 else 0.0,
+        "null_q_low": ql,
+        "null_q_high": qh,
+        "null_interval_width": qh - ql,
+    }
 
 def _null_corrected_center_border_neighborhood_one_cell(
     x_center_raw: np.ndarray,
@@ -665,10 +677,12 @@ def _null_corrected_center_border_neighborhood_one_cell(
     n_sim: int = 200,
     scale: float = 1e4,
     random_state: int | None = None,
+    q_low: float = 0.025,
+    q_high: float = 0.975,
 ) -> dict:
     """
     Compute null-corrected center-border and border-neighborhood similarities
-    for one cell.
+    for one cell, including empirical null quantiles.
     """
     rng = np.random.default_rng(random_state)
 
@@ -691,14 +705,23 @@ def _null_corrected_center_border_neighborhood_one_cell(
         "similarity_center_border": np.nan,
         "similarity_center_border_null_mean": np.nan,
         "similarity_center_border_null_sd": np.nan,
+        "similarity_center_border_null_q_low": np.nan,
+        "similarity_center_border_null_q_high": np.nan,
+        "similarity_center_border_null_interval_width": np.nan,
         "similarity_center_border_residual": np.nan,
         "similarity_center_border_zscore": np.nan,
+
         "similarity_border_neighborhood": np.nan,
         "similarity_border_neighborhood_null_mean": np.nan,
         "similarity_border_neighborhood_null_sd": np.nan,
+        "similarity_border_neighborhood_null_q_low": np.nan,
+        "similarity_border_neighborhood_null_q_high": np.nan,
+        "similarity_border_neighborhood_null_interval_width": np.nan,
         "similarity_border_neighborhood_residual": np.nan,
         "similarity_border_neighborhood_zscore": np.nan,
+
         "contamination_score": np.nan,
+
         "center_counts_used": n_center,
         "border_counts_used": n_border,
         "neighborhood_counts_used": n_neighborhood,
@@ -720,43 +743,66 @@ def _null_corrected_center_border_neighborhood_one_cell(
     sim_obs_cb = _cosine_sim(x_center, x_border)
     sim_obs_bn = _cosine_sim(x_border, x_neighborhood)
 
-    null_mean_cb, null_sd_cb = _simulate_partition_null_cosine(
+    null_cb = _simulate_partition_null_cosine(
         x_first_raw=x_center_raw,
         x_second_raw=x_border_raw,
         n_first=n_center,
         n_sim=n_sim,
         scale=scale,
         rng=rng,
+        q_low=q_low,
+        q_high=q_high,
     )
-    residual_cb = float(sim_obs_cb - null_mean_cb)
-    zscore_cb = np.nan if np.isclose(null_sd_cb, 0.0) else float(residual_cb / null_sd_cb)
+    residual_cb = float(sim_obs_cb - null_cb["null_mean"])
+    zscore_cb = (
+        np.nan
+        if np.isclose(null_cb["null_sd"], 0.0)
+        else float(residual_cb / null_cb["null_sd"])
+    )
 
-    null_mean_bn, null_sd_bn = _simulate_partition_null_cosine(
+    null_bn = _simulate_partition_null_cosine(
         x_first_raw=x_border_raw,
         x_second_raw=x_neighborhood_raw,
         n_first=n_border,
         n_sim=n_sim,
         scale=scale,
         rng=rng,
+        q_low=q_low,
+        q_high=q_high,
     )
-    residual_bn = float(sim_obs_bn - null_mean_bn)
-    zscore_bn = np.nan if np.isclose(null_sd_bn, 0.0) else float(residual_bn / null_sd_bn)
+    residual_bn = float(sim_obs_bn - null_bn["null_mean"])
+    zscore_bn = (
+        np.nan
+        if np.isclose(null_bn["null_sd"], 0.0)
+        else float(residual_bn / null_bn["null_sd"])
+    )
+
+    contamination_score = (
+        np.nan if np.isnan(residual_cb) or np.isnan(residual_bn)
+        else float(residual_bn - residual_cb)
+    )
 
     result.update(
         {
             "similarity_center_border": float(sim_obs_cb),
-            "similarity_center_border_null_mean": null_mean_cb,
-            "similarity_center_border_null_sd": null_sd_cb,
+            "similarity_center_border_null_mean": null_cb["null_mean"],
+            "similarity_center_border_null_sd": null_cb["null_sd"],
+            "similarity_center_border_null_q_low": null_cb["null_q_low"],
+            "similarity_center_border_null_q_high": null_cb["null_q_high"],
+            "similarity_center_border_null_interval_width": null_cb["null_interval_width"],
             "similarity_center_border_residual": residual_cb,
             "similarity_center_border_zscore": zscore_cb,
+
             "similarity_border_neighborhood": float(sim_obs_bn),
-            "similarity_border_neighborhood_null_mean": null_mean_bn,
-            "similarity_border_neighborhood_null_sd": null_sd_bn,
+            "similarity_border_neighborhood_null_mean": null_bn["null_mean"],
+            "similarity_border_neighborhood_null_sd": null_bn["null_sd"],
+            "similarity_border_neighborhood_null_q_low": null_bn["null_q_low"],
+            "similarity_border_neighborhood_null_q_high": null_bn["null_q_high"],
+            "similarity_border_neighborhood_null_interval_width": null_bn["null_interval_width"],
             "similarity_border_neighborhood_residual": residual_bn,
             "similarity_border_neighborhood_zscore": zscore_bn,
-            "contamination_score": (
-                np.nan if np.isnan(residual_cb) or np.isnan(residual_bn) else residual_bn - residual_cb
-            ),
+
+            "contamination_score": contamination_score,
         }
     )
 

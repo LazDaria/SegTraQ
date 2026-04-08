@@ -16,7 +16,7 @@ from .utils import (
     _null_corrected_center_border_neighborhood_one_cell,
     _chi2_center_border_one_cell,
     _fisher_freeman_halton_center_border_one_cell,
-    _mixture_fit_contamination_one_cell
+    _mixture_fit_contamination_one_cell,
 )
 
 
@@ -976,22 +976,22 @@ def null_corrected_center_border_similarity(
     scale: float = 1e4,
     inplace: bool = True,
     random_state: int | None = 0,
+    q_low: float = 0.025,
+    q_high: float = 0.975,
 ) -> pd.DataFrame:
     """
     Compute null-corrected border-related cosine similarities.
 
     For each cell, this yields:
-    - center-border similarity,
-    - border-neighborhood similarity,
+    - center-border similarity
+    - border-neighborhood similarity
+    - empirical null mean / SD / quantiles for both comparisons
+    - residuals relative to the null mean
     - a contamination score:
-
-    `similarity_border_neighborhood_residual - similarity_center_border_residual`.
+      similarity_border_neighborhood_residual - similarity_center_border_residual
 
     Null distributions are obtained via symmetric random partitioning of pooled
     counts (center+border and border+neighborhood), preserving observed totals.
-
-    All similarities are computed in a shared gene space, retaining genes
-    present in at least one of the three regions.
 
     Parameters
     ----------
@@ -1055,6 +1055,7 @@ def null_corrected_center_border_similarity(
             - count and gene-usage summaries
     """
     id_key = sdata.shapes[shapes_key].index.name
+
     expr_center_raw, expr_border_raw = _get_center_border_counts(
         sdata=sdata,
         tables_key=tables_key,
@@ -1086,8 +1087,6 @@ def null_corrected_center_border_similarity(
     # Align rows and columns so all three matrices refer to the same cells/genes.
     expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
     expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
-    expr_center_raw.to_csv("expr_center.csv")
-    expr_border_raw.to_csv("expr_border.csv")
     expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
 
     rng = np.random.default_rng(random_state)
@@ -1104,6 +1103,8 @@ def null_corrected_center_border_similarity(
             n_sim=n_sim,
             scale=scale,
             random_state=int(seed),
+            q_low=q_low,
+            q_high=q_high,
         )
         res[id_key] = cid
         rows.append(res)
@@ -1495,3 +1496,4 @@ def mixture_fit_contamination_score(
         )
 
     return out
+
