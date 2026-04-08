@@ -1213,6 +1213,18 @@ def validate_spatialdata(
                 f"If you do not have a background ID, set this parameter to None."
             )
 
+            # as a more stringent check, we also raise a warning if the background ID is not the most common one
+            most_common_points_id = points_df[points_cell_id_key].mode().iloc[0]
+            if most_common_points_id != points_background_id:
+                warnings.warn(
+                    f"points_background_id '{points_background_id}' is not the most common cell ID "
+                    f"among points (most common is '{most_common_points_id}'). "
+                    "This may indicate that your background ID is not correctly set. "
+                    "If you are sure that 'points_background_id' is correct, you can ignore this warning.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
         # missing_in_polygons = { #TODO - after querying sdata objects, this breaks
         #     x
         #     for x in (transcript_ids - shapes_cell_ids - {points_background_id})
