@@ -1618,7 +1618,7 @@ def _labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 
     return gdf
 
 
-def add_nuc_shapes_via_cellpose(
+def cellpose(
     sdata: sd.SpatialData,
     channel: str = "DAPI",
     images_key: str = "morphology_focus",
