@@ -210,8 +210,12 @@ def percentage_transcripts_in_compartments(
     for c in ["num_total", "num_in_cell", "num_outside_cell", "num_in_nucleus_overlap", "num_in_cytoplasm"]:
         out[c] = out[c].astype(int)
 
-    out["perc_outside_cell"] = np.where(out["num_total"] > 0, 100.0 * out["num_outside_cell"] / out["num_total"], np.nan)
-    out["perc_nucleus"] = np.where(out["num_total"] > 0, 100.0 * out["num_in_nucleus_overlap"] / out["num_total"], np.nan)
+    out["perc_outside_cell"] = np.where(
+        out["num_total"] > 0, 100.0 * out["num_outside_cell"] / out["num_total"], np.nan
+    )
+    out["perc_nucleus"] = np.where(
+        out["num_total"] > 0, 100.0 * out["num_in_nucleus_overlap"] / out["num_total"], np.nan
+    )
     out["perc_cytoplasm"] = np.where(out["num_total"] > 0, 100.0 * out["num_in_cytoplasm"] / out["num_total"], np.nan)
 
     # generate column names
