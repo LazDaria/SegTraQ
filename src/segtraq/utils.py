@@ -1863,6 +1863,8 @@ def _filter_control_and_low_quality_transcripts(
 
     # materialize the df to perform the filtering
     pts_pd = pts.compute()
+    # get the transformation
+    points_transformation = pts.attrs["transform"]
 
     # we need multiple masks here:
     # one for the prefixed that checks using startswith
@@ -1888,7 +1890,9 @@ def _filter_control_and_low_quality_transcripts(
 
     removed_genes = pts_pd.loc[invalid_mask, points_gene_key].unique().tolist()
     pts_pd = pts_pd[~invalid_mask]
-    sdata.points[points_key] = sd.models.PointsModel.parse(dd.from_pandas(pts_pd, npartitions=1))
+    sdata.points[points_key] = sd.models.PointsModel.parse(
+        dd.from_pandas(pts_pd, npartitions=1), transformations=points_transformation
+    )
 
     # ---- tables ----
     # on the anndata object, we remove genes that are control genes
