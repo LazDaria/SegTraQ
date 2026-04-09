@@ -23,7 +23,6 @@ dependencies = [
   "spatialdata>=0.7.2",  # not strictly required
   "joblib",
   "geopandas",
-  "igraph",
   "rtree",
   "rasterio",
   "squidpy>=1.6.2",
@@ -41,6 +40,8 @@ test = [
     "ruff",
     "ty",
     "ipdb",
+    "igraph",
+    "leidenalg",
     "black[jupyter]",
     "pytest-cov",
 ]

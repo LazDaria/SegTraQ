@@ -33,7 +33,6 @@ The installation of the package should take less than a minute.
 scanpy
 spatialdata
 geopandas
-igraph
 rtree
 rasterio
 squidpy
