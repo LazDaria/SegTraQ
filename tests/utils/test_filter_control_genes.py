@@ -28,6 +28,13 @@ def test_filter_control_genes(sdata_new):
         f"Expected all quality values to be >= 30.0, but got min {sdata.points['transcripts']['qv'].min()}"
     )
 
+    # check that the point transformation is preserved
+    assert sdata.points["transcripts"].attrs["transform"] == sdata_new.points["transcripts"].attrs["transform"], (
+        f"Expected the same point transformation to be preserved, "
+        f"but got {sdata.points['transcripts'].attrs['transform']} vs "
+        f"{sdata_new.points['transcripts'].attrs['transform']}"
+    )
+
 
 def test_filter_control_genes_recompute_expression_matrix(sdata_new):
     sdata = _filter_control_and_low_quality_transcripts(
