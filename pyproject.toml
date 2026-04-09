@@ -40,6 +40,8 @@ test = [
     "ruff",
     "ty",
     "ipdb",
+    "igraph",
+    "leidenalg",
     "black[jupyter]",
     "pytest-cov",
 ]
