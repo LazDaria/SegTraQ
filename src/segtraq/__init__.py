@@ -6,8 +6,8 @@ __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh
 from . import bl, cs, pl, ps, rs, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
-    add_nuc_shapes_via_cellpose,
     bins_to_transcripts,
+    cellpose,
     filter_cells,
     markers_from_reference,
     run_label_transfer,
@@ -19,7 +19,7 @@ for _f in (
     run_label_transfer,
     markers_from_reference,
     validate_spatialdata,
-    add_nuc_shapes_via_cellpose,
+    cellpose,
     filter_cells,
     bins_to_transcripts,
 ):
@@ -38,7 +38,7 @@ __all__ = [
     "run_label_transfer",
     "bins_to_transcripts",
     "validate_spatialdata",
-    "add_nuc_shapes_via_cellpose",
+    "cellpose",
     "filter_cells",
     "SegTraQ",
 ]
