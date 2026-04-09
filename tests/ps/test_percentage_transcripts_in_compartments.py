@@ -45,39 +45,39 @@ def test_percentage_transcripts_in_compartments_invariants(sdata_new):
     # Required columns exist (gene-specific naming)
     feature = gene
     expected = {
-        f"n_total_{feature}",
-        f"n_outside_cell_{feature}",
-        f"n_in_nucleus_overlap_{feature}",
-        f"n_in_cytoplasm_{feature}",
-        f"pct_outside_cell_{feature}",
-        f"pct_nucleus_{feature}",
-        f"pct_cytoplasm_{feature}",
+        f"num_total_{feature}",
+        f"num_outside_cell_{feature}",
+        f"num_in_nucleus_overlap_{feature}",
+        f"num_in_cytoplasm_{feature}",
+        f"perc_outside_cell_{feature}",
+        f"perc_nucleus_{feature}",
+        f"perc_cytoplasm_{feature}",
     }
     assert expected.issubset(set(out.columns))
 
     # Counts should be integers (after fillna + astype in your code)
     for c in [
-        f"n_total_{feature}",
-        f"n_outside_cell_{feature}",
-        f"n_in_nucleus_overlap_{feature}",
-        f"n_in_cytoplasm_{feature}",
+        f"num_total_{feature}",
+        f"num_outside_cell_{feature}",
+        f"num_in_nucleus_overlap_{feature}",
+        f"num_in_cytoplasm_{feature}",
     ]:
         assert pd.api.types.is_integer_dtype(out[c])
 
     # Invariants:
     # inside cell = total - outside
-    inside = out[f"n_total_{feature}"] - out[f"n_outside_cell_{feature}"]
+    inside = out[f"num_total_{feature}"] - out[f"num_outside_cell_{feature}"]
     # inside must equal nucleus_overlap + cytoplasm
     assert np.all(
-        inside.to_numpy() == (out[f"n_in_nucleus_overlap_{feature}"] + out[f"n_in_cytoplasm_{feature}"]).to_numpy()
+        inside.to_numpy() == (out[f"num_in_nucleus_overlap_{feature}"] + out[f"num_in_cytoplasm_{feature}"]).to_numpy()
     )
 
     # Percentages sum to ~100 for cells where denominator > 0
-    mask = out[f"n_total_{feature}"] > 0
+    mask = out[f"num_total_{feature}"] > 0
     pct_sum = (
-        out.loc[mask, f"pct_outside_cell_{feature}"]
-        + out.loc[mask, f"pct_nucleus_{feature}"]
-        + out.loc[mask, f"pct_cytoplasm_{feature}"]
+        out.loc[mask, f"perc_outside_cell_{feature}"]
+        + out.loc[mask, f"perc_nucleus_{feature}"]
+        + out.loc[mask, f"perc_cytoplasm_{feature}"]
     )
     assert np.allclose(pct_sum.to_numpy(), 100.0, rtol=0, atol=1e-6)
 
@@ -93,8 +93,8 @@ def test_percentage_transcripts_in_compartments_gene_filter_reduces_totals(sdata
     assert not common_idx.empty
 
     assert np.all(
-        out_gene.loc[common_idx, f"n_total_{gene}"].to_numpy()
-        <= out_all.loc[common_idx, "n_total_all_genes"].to_numpy()
+        out_gene.loc[common_idx, f"num_total_{gene}"].to_numpy()
+        <= out_all.loc[common_idx, "num_total_all_genes"].to_numpy()
     )
 
 
