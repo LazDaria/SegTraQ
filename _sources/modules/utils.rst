@@ -11,4 +11,4 @@ transfer and computation of reference marker genes.
 .. autofunction:: segtraq.markers_from_reference
 .. autofunction:: segtraq.get_mut_excl_markers
 .. autofunction:: segtraq.validate_spatialdata
-.. autofunction:: segtraq.add_nuc_shapes_via_cellpose
+.. autofunction:: segtraq.cellpose
