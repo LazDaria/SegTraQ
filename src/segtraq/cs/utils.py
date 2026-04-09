@@ -14,6 +14,7 @@ def run_leiden_clustering_on_adata(
     use_hvg: bool = False,
     representation: str | None = None,
     recompute_neighbors: bool = True,
+    leiden_kwargs: dict | None = None,
 ):
     """
     Run Leiden clustering on a provided AnnData object. Leiden clustering is performed on the PCA-reduced data.
@@ -35,6 +36,9 @@ def run_leiden_clustering_on_adata(
         If `None`, a PCA ('X_pca') embedding is computed internally.
     recompute_neighbors : bool
         Whether to recompute neighbors before clustering.
+    leiden_kwargs : dict, optional
+        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
+        For example, `flavor='igraph'` can be used to specify the Leiden implementation.
 
     Returns
     -------
@@ -44,7 +48,7 @@ def run_leiden_clustering_on_adata(
     adata = adata_input.copy()
     if recompute_neighbors:
         if representation is None:
-            sc.pp.pca(adata, use_highly_variable=use_hvg)
+            sc.pp.pca(adata, mask_var="highly_variable" if use_hvg else None)
             sc.pp.neighbors(adata)
         else:
             sc.pp.neighbors(adata, use_rep=representation)
@@ -52,9 +56,9 @@ def run_leiden_clustering_on_adata(
     sc.tl.leiden(
         adata,
         resolution=resolution,
-        flavor="igraph",
         n_iterations=2,
         key_added=key_added,
+        **(leiden_kwargs or {}),
     )
 
     return adata.obs[key_added].copy(), adata.obsm["X_pca"]
@@ -87,6 +91,7 @@ def run_leiden_clustering_on_random_subset(
     use_hvg: bool = False,
     recompute_neighbors: bool = True,
     representation: str | None = None,
+    leiden_kwargs: dict | None = None,
 ):
     adata = sdata.tables[tables_key]
 
@@ -107,6 +112,7 @@ def run_leiden_clustering_on_random_subset(
         use_hvg=use_hvg,
         recompute_neighbors=recompute_neighbors,
         representation=representation,
+        leiden_kwargs=leiden_kwargs,
     )
 
     # Store labels in the full AnnData

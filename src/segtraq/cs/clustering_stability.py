@@ -23,6 +23,7 @@ def cluster_connectedness(
     cell_type_key: str | None = None,
     use_hvg: bool = False,
     inplace: bool = True,
+    leiden_kwargs: dict | None = None,
 ) -> float:
     """
     Compute cluster connectedness for different Leiden clustering resolutions
@@ -50,6 +51,9 @@ def cluster_connectedness(
         Whether to use highly variable genes (HVGs) for PCA. By default False.
     inplace : bool, optional
         Whether to store the computed mean cosine distance in sdata.uns, by default True.
+    leiden_kwargs : dict, optional
+        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
+        For example, `flavor='igraph'` can be used to specify the Leiden implementation.
 
     Returns
     -------
@@ -96,6 +100,7 @@ def cluster_connectedness(
             random_state=random_state,
             use_hvg=use_hvg,
             recompute_neighbors=False,
+            leiden_kwargs=leiden_kwargs,
         )
         labels = adata.obs[key_added].values
         if len(np.unique(labels)) > 1:
@@ -119,6 +124,7 @@ def silhouette_score(
     cell_type_key: str | None = None,
     use_hvg: bool = False,
     inplace: bool = True,
+    leiden_kwargs: dict | None = None,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
@@ -144,6 +150,9 @@ def silhouette_score(
         Whether to use highly variable genes (HVGs) for PCA. By default False.
     inplace : bool, optional
         Whether to store the computed silhouette score in sdata.uns, by default True.
+    leiden_kwargs : dict, optional
+        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
+        For example, `flavor='igraph'` can be used to specify the Leiden implementation.
 
     Returns
     -------
@@ -196,6 +205,7 @@ def silhouette_score(
                 random_state=random_state,
                 use_hvg=use_hvg,
                 recompute_neighbors=False,
+                leiden_kwargs=leiden_kwargs,
             )
 
             # Compute silhouette score
@@ -220,6 +230,7 @@ def purity(
     use_hvg: bool = False,
     representation: str | None = None,
     inplace: bool = True,
+    leiden_kwargs: dict | None = None,
 ) -> float:
     """
     Compute the clustering stability using pairwise purity on random subsets of genes.
@@ -244,6 +255,9 @@ def purity(
         If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
+    leiden_kwargs : dict, optional
+        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
+        For example, `flavor='igraph'` can be used to specify the Leiden implementation.
 
     Returns
     -------
@@ -263,6 +277,7 @@ def purity(
             use_hvg=use_hvg,
             random_state=random_state,
             representation=representation,
+            leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
 
@@ -284,6 +299,7 @@ def adjusted_rand_index(
     use_hvg: bool = False,
     representation: str | None = None,
     inplace: bool = True,
+    leiden_kwargs: dict | None = None,
 ) -> float:
     """
     Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subset of cells.
@@ -309,6 +325,9 @@ def adjusted_rand_index(
         If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
+    leiden_kwargs : dict, optional
+        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
+        For example, `flavor='igraph'` can be used to specify the Leiden implementation.
 
     Returns
     -------
@@ -329,6 +348,7 @@ def adjusted_rand_index(
             use_hvg=use_hvg,
             random_state=random_state,
             representation=representation,
+            leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
     pairwise_aris = ari_pairwise(adata, cluster_keys)

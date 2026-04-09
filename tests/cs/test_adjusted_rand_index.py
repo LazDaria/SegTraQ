@@ -18,3 +18,10 @@ def test_adjusted_rand_index_invalid_frac_cells_subset(sdata_new):
             key_prefix="leiden_subset",
             frac_cells_subset=1.5,  # Invalid fraction > 1
         )
+
+
+def test_adjusted_rand_index_invalid_leiden_kwargs(sdata_new):
+    with pytest.raises(TypeError):
+        st.cs.adjusted_rand_index(
+            sdata_new, resolution=1.0, key_prefix="leiden_subset", leiden_kwargs={"invalid_key": "invalid_value"}
+        )
