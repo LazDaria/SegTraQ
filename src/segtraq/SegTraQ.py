@@ -417,6 +417,7 @@ class SegTraQ:
         silhouette_kwargs: dict | None = None,
         purity_kwargs: dict | None = None,
         ari_kwargs: dict | None = None,
+        leiden_kwargs: dict | None = None,
     ):
         """
         Run clustering-stability metrics.
@@ -451,6 +452,10 @@ class SegTraQ:
             Additonal keyword arguments forwarded to :meth:`cs.compute_purity`.
         ari_kwargs : dict or None, optional
             Additonal keyword arguments forwarded to :meth:`cs.compute_ari`.
+        leiden_kwargs : dict or None, optional
+            Additional keyword arguments forwarded to Leiden clustering in all
+            underlying methods that perform clustering.
+            For example, `flavor='igraph'` can be used to specify the Leiden implementation.
 
         Returns
         -------
@@ -468,6 +473,7 @@ class SegTraQ:
             use_hvg=use_hvg,
             inplace=inplace,
             **(connectedness_kwargs or {}),
+            leiden_kwargs=leiden_kwargs,
         )
 
         sil = self.cs.silhouette_score(
@@ -475,6 +481,7 @@ class SegTraQ:
             use_hvg=use_hvg,
             inplace=inplace,
             **(silhouette_kwargs or {}),
+            leiden_kwargs=leiden_kwargs,
         )
 
         purity = self.cs.purity(
@@ -482,6 +489,7 @@ class SegTraQ:
             use_hvg=use_hvg,
             inplace=inplace,
             **(purity_kwargs or {}),
+            leiden_kwargs=leiden_kwargs,
         )
 
         ari = self.cs.adjusted_rand_index(
@@ -489,6 +497,7 @@ class SegTraQ:
             use_hvg=use_hvg,
             inplace=inplace,
             **(ari_kwargs or {}),
+            leiden_kwargs=leiden_kwargs,
         )
 
         if inplace:
@@ -1456,6 +1465,7 @@ class _CSFacade:
         cell_type_key: str | None = None,
         use_hvg: bool = False,
         inplace: bool = True,
+        leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.silhouette_score(
             self._p.sdata,
@@ -1467,6 +1477,7 @@ class _CSFacade:
             cell_type_key=cell_type_key,
             use_hvg=use_hvg,
             inplace=inplace,
+            leiden_kwargs=leiden_kwargs,
         )
 
     silhouette_score.__doc__ = cs.silhouette_score.__doc__
@@ -1479,6 +1490,7 @@ class _CSFacade:
         use_hvg: bool = False,
         representation: str | None = None,
         inplace: bool = True,
+        leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.purity(
             self._p.sdata,
@@ -1489,6 +1501,7 @@ class _CSFacade:
             use_hvg=use_hvg,
             representation=representation,
             inplace=inplace,
+            leiden_kwargs=leiden_kwargs,
         )
 
     purity.__doc__ = cs.purity.__doc__
@@ -1501,6 +1514,7 @@ class _CSFacade:
         use_hvg: bool = False,
         representation: str | None = None,
         inplace: bool = True,
+        leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.adjusted_rand_index(
             self._p.sdata,
@@ -1511,6 +1525,7 @@ class _CSFacade:
             use_hvg=use_hvg,
             representation=representation,
             inplace=inplace,
+            leiden_kwargs=leiden_kwargs,
         )
 
     adjusted_rand_index.__doc__ = cs.adjusted_rand_index.__doc__
@@ -1524,6 +1539,7 @@ class _CSFacade:
         cell_type_key: str | None = None,
         use_hvg: bool = False,
         inplace: bool = True,
+        leiden_kwargs: dict | None = None,
     ):
         return cs.cluster_connectedness(
             sdata=self._p.sdata,
@@ -1535,6 +1551,7 @@ class _CSFacade:
             cell_type_key=cell_type_key,
             use_hvg=use_hvg,
             inplace=inplace,
+            leiden_kwargs=leiden_kwargs,
         )
 
     cluster_connectedness.__doc__ = cs.cluster_connectedness.__doc__
