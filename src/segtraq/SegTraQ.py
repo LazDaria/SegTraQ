@@ -1172,35 +1172,42 @@ class _RSFacade:
         )
 
     similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
-
-    # function for debugging / exploration
-    # this function will not be highlighted in the main docs
-    def get_genes_in_compartment(
+    
+    def border_admixture_score(
         self,
-        cell,
-        compartment,
-        scale: float = 1e4,
-        erosion_fraction_of_radius: float = 0.2,
-        neighborhood_radius_factor: float = 2.0,
+        erosion_fraction: float = 0.2,
+        neighborhood_radius_factor: float = 1.0,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        pseudocount: float = 0.5,
+        n_boot: int = 200,
+        ci_level: float = 0.95,
+        random_state: int | None = None,
+        inplace: bool = True
     ):
-        return rs.get_genes_in_compartment(
-            cell=cell,
-            compartment=compartment,
+        return rs.border_admixture_score(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_key=self._p.shapes_key,
-            nucleus_shapes_key=self._p.nucleus_shapes_key,
             points_key=self._p.points_key,
             points_cell_id_key=self._p.points_cell_id_key,
             points_background_id=self._p.points_background_id,
-            points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
-            scale=scale,
-            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            points_gene_key=self._p.points_gene_key,
+            erosion_fraction=erosion_fraction,
             neighborhood_radius_factor=neighborhood_radius_factor,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+            n_boot=n_boot,
+            ci_level=ci_level,
+            random_state=random_state,
+            inplace=inplace
         )
+    
+    border_admixture_score.__doc__ = rs.border_admixture_score.__doc__
 
 
 class _SPFacade:

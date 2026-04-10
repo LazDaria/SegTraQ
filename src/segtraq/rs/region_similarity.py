@@ -13,6 +13,8 @@ from .utils import (
     _join_points_regions,
     _norm_log_df,
     _process_cell,
+    _build_transcript_table,
+    _bootstrap_one_cell
 )
 
 
@@ -797,158 +799,149 @@ def similarity_border_neighborhood(
 
     return corr_df
 
-
-# custom method for debugging
-def get_genes_in_compartment(
-    cell,
-    compartment,
+def border_admixture_score(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
-    nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
-    points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
-    scale: float = 1e4,
-    erosion_fraction_of_radius: float = 0.2,
-):
-    if compartment == "nuc_cyto":
-        cells_gdf = sdata.shapes[shapes_key]
-        id_key = cells_gdf.index.name
+    points_gene_key: str = "feature_name",
+    erosion_fraction: float = 0.2,
+    neighborhood_radius_factor: float = 1.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+    n_boot: int = 200,
+    ci_level: float = 0.95,
+    random_state: int | None = None,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute a per-cell border admixture score with bootstrap confidence
+    intervals.
 
-        if "nucleus_id" not in sdata.tables[tables_key].obs.columns:
-            raise ValueError("Nucleus-cell matching has not been performed yet.")
-        else:
-            match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
-        best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
+    For each focal cell, transcripts are grouped into center, border, and
+    neighborhood regions. The border profile is compared against a center-only
+    model and a fitted center-neighborhood mixture model. The reported score is
+    the relative improvement of the mixture model over the center-only model.
 
-        tx_cell, _ = _join_points_regions(
+    Bootstrap confidence intervals are obtained by resampling transcript rows
+    with replacement within each focal cell.
+
+    Notes
+    -----
+    - Cells with no transcript rows are omitted from the output.
+    - Neighborhood transcripts come from cells whose geometry lies within
+      `neighborhood_radius_factor * equivalent_radius(focal_cell)` of the focal
+      cell boundary.
+    - No cell-type filtering is applied. Internally, `cell_type_key` and
+      `cell_type_query` are both set to `None`.
+
+    Parameters
+    ----------
+    sdata
+        SpatialData object.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table containing cell ids.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` containing cell polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` containing transcript points.
+    points_cell_id_key : str, default="cell_id"
+        Column in the transcript table containing transcript-assigned cell ids.
+    points_background_id : str, default="UNASSIGNED"
+        Identifier used for background or unassigned transcripts.
+    points_x_key : str, default="x"
+        X-coordinate column in the transcript table.
+    points_y_key : str, default="y"
+        Y-coordinate column in the transcript table.
+    points_gene_key : str, default="feature_name"
+        Column containing gene names.
+    erosion_fraction : float, default=0.2
+        Fraction of equivalent cell radius used to erode each cell polygon when
+        defining the center region.
+    neighborhood_radius_factor : float, default=1.0
+        Neighbor distance threshold expressed as a multiple of the focal cell's
+        equivalent radius.
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in each region.
+    min_genes : int, default=5
+        Minimum number of genes required across the three regions combined.
+    pseudocount : float, default=0.5
+        Pseudocount used when converting counts to proportions.
+    n_boot : int, default=200
+        Number of bootstrap replicates per cell.
+    ci_level : float, default=0.95
+        Percentile confidence interval level.
+    random_state : int | None, default=None
+        Random seed for reproducible bootstrap resampling.
+    inplace : bool, default=True
+        If True, merge the results into `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per scored cell with columns:
+        - cell id column
+        - `border_admixture_score`
+        - `border_admixture_score_ci_low`
+        - `border_admixture_score_ci_high`
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    focal_ids, gene_codes, region_codes, genes = _build_transcript_table(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction=erosion_fraction,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    rng = np.random.default_rng(random_state)
+
+    rows = []
+    n_genes = len(genes)
+    idx_by_cell = pd.Series(np.arange(len(focal_ids)), index=focal_ids)
+
+    for cell_id, idx in idx_by_cell.groupby(level=0, sort=False):
+        idx = idx.to_numpy()
+
+        res = _bootstrap_one_cell(
+            gene_codes=gene_codes[idx],
+            region_codes=region_codes[idx],
+            n_genes=n_genes,
+            n_boot=n_boot,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+            ci_level=ci_level,
+            rng=rng,
+        )
+        res[id_key] = cell_id
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
             sdata=sdata,
-            region_key=shapes_key,
             tables_key=tables_key,
-            points_key=points_key,
-            points_cell_id_key=points_cell_id_key,
-            points_background_id=points_background_id,
-            points_gene_key=points_gene_key,
-            points_x_key=points_x_key,
-            points_y_key=points_y_key,
-            predicate="within",
-            require_points_region_ID_match=True,  # <-- keeps only points within their labeled cell
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
         )
 
-        tx_nuc, _ = _join_points_regions(
-            sdata=sdata,
-            region_key=nucleus_shapes_key,
-            tables_key=tables_key,
-            points_key=points_key,
-            points_cell_id_key=points_cell_id_key,
-            points_background_id=points_background_id,
-            points_gene_key=points_gene_key,
-            points_x_key=points_x_key,
-            points_y_key=points_y_key,
-            predicate="within",
-            require_points_region_ID_match=False,
-        )
-
-        # keep only points that were inside their assigned cell
-        valid_point_ids = set(tx_cell["point_id"])
-        tx = tx_nuc[tx_nuc["point_id"].isin(valid_point_ids)].copy()
-
-        tx["nucleus_id"] = tx[points_cell_id_key].map(best_nuc_map)
-        tx["in_intersection"] = tx["region_id"].eq(tx["nucleus_id"])
-
-        all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-        all_genes = pd.Index(sdata.tables[tables_key].var_names)
-
-        # intersection: cell ∩ best nucleus
-        counts_intersection_raw = (
-            tx[tx["in_intersection"]]
-            .groupby([points_cell_id_key, points_gene_key])
-            .size()
-            .unstack(fill_value=0)
-            .reindex(index=all_cells, columns=all_genes, fill_value=0)
-        )
-
-        # remainder: rest of the cell
-        counts_remainder_raw = (
-            tx[~tx["in_intersection"]]
-            .groupby([points_cell_id_key, points_gene_key])
-            .size()
-            .unstack(fill_value=0)
-            .reindex(index=all_cells, columns=all_genes, fill_value=0)
-        )
-
-        # normalize
-        total_counts = (counts_intersection_raw + counts_remainder_raw).sum(axis=1).replace(0, np.nan)
-        counts_intersection_norm = counts_intersection_raw.div(total_counts, axis=0) * scale
-        counts_remainder_norm = counts_remainder_raw.div(total_counts, axis=0) * scale
-        counts_intersection_norm = np.log1p(counts_intersection_norm).fillna(0.0)
-        counts_remainder_norm = np.log1p(counts_remainder_norm).fillna(0.0)
-
-        all_genes = counts_intersection_raw.columns
-
-        cid = cell
-        nid = best_nuc_map.get(cid)
-        if pd.isna(nid):  # if no overlapping nucleus
-            raise ValueError(f"Cell {cid} has no overlapping nucleus.")
-        else:
-            x_raw = counts_intersection_raw.loc[cid].to_numpy(dtype=float)
-            y_raw = counts_remainder_raw.loc[cid].to_numpy(dtype=float)
-
-            # keep genes that are non-zero in at least one part
-            mask = (x_raw != 0) | (y_raw != 0)
-
-            genes_in_either = all_genes[mask].tolist()
-            genes_in_nucleus = all_genes[mask & (x_raw != 0)].tolist()
-            genes_in_cytoplasm = all_genes[mask & (y_raw != 0)].tolist()
-
-            return {
-                "genes_in_either": genes_in_either,
-                "genes_in_nucleus": genes_in_nucleus,
-                "genes_in_cytoplasm": genes_in_cytoplasm,
-            }
-    elif compartment == "center_border":
-        expr_center_raw, expr_border_raw = _get_center_border_counts(
-            sdata,
-            tables_key=tables_key,
-            shapes_key=shapes_key,
-            points_key=points_key,
-            points_cell_id_key=points_cell_id_key,
-            points_background_id=points_background_id,
-            points_x_key=points_x_key,
-            points_y_key=points_y_key,
-            points_gene_key=points_gene_key,
-            erosion_fraction_of_radius=erosion_fraction_of_radius,
-        )
-
-        common_cells = expr_border_raw.index.intersection(expr_center_raw.index)
-        expr_center_raw = expr_center_raw.loc[common_cells, expr_center_raw.columns]
-        expr_border_raw = expr_border_raw.loc[common_cells, expr_border_raw.columns]
-
-        id_key = sdata.shapes[shapes_key].index.name
-
-        cid = cell
-        x_center_raw = expr_center_raw.loc[cid].to_numpy()
-        x_border_raw = expr_border_raw.loc[cid].to_numpy()
-
-        # for the filtering, we need to do it independently for the two comparisons
-        # the reason is that some genes may be 0 in center and border, but expressed in neighborhood
-        # this will lead to higher correlations, because we have more 0s in common
-
-        # === comparing center and border ===
-        mask = (x_center_raw != 0) | (x_border_raw != 0)
-        genes_in_either = sdata.tables[tables_key].var_names[mask].tolist()
-        genes_in_center = sdata.tables[tables_key].var_names[mask & (x_center_raw != 0)].tolist()
-        genes_in_border = sdata.tables[tables_key].var_names[mask & (x_border_raw != 0)].tolist()
-
-        return {
-            "genes_in_either": genes_in_either,
-            "genes_in_center": genes_in_center,
-            "genes_in_border": genes_in_border,
-        }
-    else:
-        raise ValueError(f"Compartment {compartment} not recognized. Use 'nuc_cyto' or 'center_border'.")
+    return out
