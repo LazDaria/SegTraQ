@@ -17,6 +17,10 @@ from .utils import (
     _chi2_center_border_one_cell,
     _fisher_freeman_halton_center_border_one_cell,
     _mixture_fit_contamination_one_cell,
+    _compute_touching_neighbor_mean_counts,
+    _null_corrected_center_border_touching_neighbors_one_cell,
+    _get_joint_region_transcripts_numpy,
+    _mixture_fit_contamination_one_cell_bootstrap_joint
 )
 
 
@@ -957,7 +961,7 @@ def get_genes_in_compartment(
     else:
         raise ValueError(f"Compartment {compartment} not recognized. Use 'nuc_cyto' or 'center_border'.")
 
-def null_corrected_center_border_similarity(
+def null_corrected_center_border_similarity_old(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -1107,6 +1111,128 @@ def null_corrected_center_border_similarity(
             q_high=q_high,
         )
         res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out
+
+def null_corrected_center_border_similarity(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    min_shared_boundary_length: float = 0.0,
+    include_overlaps: bool = True,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    n_sim: int = 200,
+    scale: float = 1e4,
+    inplace: bool = True,
+    random_state: int | None = 0,
+    q_low: float = 0.025,
+    q_high: float = 0.975,
+) -> pd.DataFrame:
+    """
+    Compute null-corrected center-border and border-touching-neighbor similarities.
+
+    Observed metrics:
+    - center-border similarity
+    - border-neighborhood similarity, where neighborhood is the mean expression
+      profile across touching neighbors only
+    - contamination score = similarity_border_neighborhood - similarity_center_border
+
+    Null:
+    - repeatedly partition pooled center+border counts into center* and border*
+    - keep touching-neighbor mean fixed
+    - recompute CB, BN, and contamination score
+
+    Cells with
+    - similarity_center_border < similarity_center_border_null_q_low
+      are less center-like than expected
+    - similarity_border_neighborhood > similarity_border_neighborhood_null_q_high
+      are more neighbor-like than expected
+    - contamination_score > contamination_score_null_q_high
+      are contamination candidates
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    expr_center_raw, expr_border_raw = _get_center_border_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    # expr_neighbor_mean_raw, neighbor_dict = _compute_touching_neighbor_mean_counts(
+    #     sdata=sdata,
+    #     tables_key=tables_key,
+    #     tables_cell_id_key=tables_cell_id_key,
+    #     shapes_key=shapes_key,
+    #     min_shared_boundary_length=min_shared_boundary_length,
+    #     include_overlaps=include_overlaps,
+    # )
+
+    expr_neighbor_mean_raw = _compute_ncvs_within_radius(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        neighborhood_radius_factor=2.0,
+    )
+
+    common_cells = (
+        expr_center_raw.index
+        .intersection(expr_border_raw.index)
+        .intersection(expr_neighbor_mean_raw.index)
+    )
+
+    expr_center_raw = expr_center_raw.loc[common_cells, expr_neighbor_mean_raw.columns]
+    expr_border_raw = expr_border_raw.loc[common_cells, expr_neighbor_mean_raw.columns]
+    expr_neighbor_mean_raw = expr_neighbor_mean_raw.loc[common_cells, :]
+
+    rng = np.random.default_rng(random_state)
+    seeds = rng.integers(0, 2**32 - 1, size=len(common_cells))
+
+    rows = []
+    for cid, seed in zip(common_cells, seeds):
+        res = _null_corrected_center_border_touching_neighbors_one_cell(
+            x_center_raw=expr_center_raw.loc[cid].to_numpy(),
+            x_border_raw=expr_border_raw.loc[cid].to_numpy(),
+            x_neighbor_mean_raw=expr_neighbor_mean_raw.loc[cid].to_numpy(),
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            n_sim=n_sim,
+            scale=scale,
+            random_state=int(seed),
+            q_low=q_low,
+            q_high=q_high,
+        )
+        res[id_key] = cid
+        #res["n_touching_neighbors"] = len(neighbor_dict.get(cid, []))
         rows.append(res)
 
     out = pd.DataFrame(rows)
@@ -1497,3 +1623,96 @@ def mixture_fit_contamination_score(
 
     return out
 
+
+def mixture_fit_contamination_score_bootstrap(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    neighborhood_radius_factor: float = 2.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+    n_boot: int = 200,
+    ci_level: float = 0.95,
+    random_state: int | None = None,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute per-cell mixture-fit contamination score with bootstrap SE and CI
+    using Martin's transcript-level resampling approach.
+
+    Workflow
+    --------
+    1. Build transcript-level rows for center, border, and neighborhood.
+    2. For each focal cell, resample those rows with replacement.
+    3. Rebuild count vectors and recompute mixture_alpha_hat.
+    4. Report bootstrap SE and percentile CI.
+
+    Returns
+    -------
+    pd.DataFrame
+        Original mixture-fit outputs plus:
+            - mixture_alpha_boot_se
+            - mixture_alpha_ci_low
+            - mixture_alpha_ci_high
+            - mixture_alpha_boot_n_valid
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    focal_ids, gene_codes, region_codes, genes = _get_joint_region_transcripts_numpy(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    rows = []
+    n_genes = len(genes)
+
+    # group rows by focal cell once
+    order = pd.Series(np.arange(len(focal_ids)), index=focal_ids)
+    for cid, idx in order.groupby(level=0, sort=False):
+        idx = idx.to_numpy()
+
+        res = _mixture_fit_contamination_one_cell_bootstrap_joint(
+            gene_codes=gene_codes[idx],
+            region_codes=region_codes[idx],
+            n_genes=n_genes,
+            n_boot=n_boot,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+            ci_level=ci_level,
+            random_state=random_state,
+        )
+        res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out
