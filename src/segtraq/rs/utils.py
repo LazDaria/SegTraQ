@@ -10,7 +10,7 @@ from rtree.index import Index
 from scipy.spatial import cKDTree
 from shapely.geometry.base import BaseGeometry
 from sklearn.metrics.pairwise import cosine_similarity
-from scipy.stats import chi2_contingency, fisher_exact
+from scipy.stats import chi2_contingency, fisher_exact, bootstrap
 from scipy.special import gammaln
 
 from ..utils import _is_background, _looks_like_counts, filter_cells
@@ -1184,3 +1184,612 @@ def _mixture_fit_contamination_one_cell(
     )
 
     return result
+
+def _get_cell_count_matrix(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+) -> pd.DataFrame:
+    """
+    Return raw cell x gene count matrix aligned to cells present in `shapes_key`.
+    """
+    cells_gdf = sdata.shapes[shapes_key].copy()
+    ad = sdata.tables[tables_key]
+    X = ad.X
+
+    if _looks_like_counts(X):
+        arr = X.toarray() if hasattr(X, "toarray") else X
+    elif "counts" not in ad.layers:
+        raise ValueError(
+            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
+            "and the main matrix does not look like counts."
+        )
+    else:
+        counts = ad.layers["counts"]
+        arr = counts.toarray() if hasattr(counts, "toarray") else counts
+
+    mask = ad.obs[tables_cell_id_key].isin(cells_gdf.index)
+    expr_cells = pd.DataFrame(
+        arr[mask, :],
+        index=ad.obs.loc[mask, tables_cell_id_key],
+        columns=ad.var_names,
+    )
+
+    expr_cells = expr_cells.loc[expr_cells.index.intersection(cells_gdf.index)]
+    return expr_cells
+
+def _compute_touching_neighbor_mean_counts(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    min_shared_boundary_length: float = 0.0,
+    include_overlaps: bool = True,
+) -> tuple[pd.DataFrame, dict]:
+    """
+    Compute average raw expression profile across touching neighbors for each cell.
+
+    Two cells are considered touching if:
+    - they share a boundary segment with length > min_shared_boundary_length, or
+    - if `include_overlaps=True`, they overlap with positive intersection area.
+
+    Returns
+    -------
+    neighbor_mean : pd.DataFrame
+        Cell x gene matrix of mean raw counts across touching neighbors.
+        Cells with no touching neighbors get all zeros.
+    neighbor_dict : dict
+        Mapping cell_id -> list of touching neighbor cell_ids.
+    """
+    cells_gdf = sdata.shapes[shapes_key].copy()
+    expr_cells = _get_cell_count_matrix(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+    )
+
+    # align
+    common_cells = expr_cells.index.intersection(cells_gdf.index)
+    expr_cells = expr_cells.loc[common_cells]
+    cells_gdf = cells_gdf.loc[common_cells]
+
+    sindex = cells_gdf.sindex
+    neighbor_dict = {}
+    neighbor_mean_arr = np.zeros_like(expr_cells.values, dtype=float)
+
+    ids = list(cells_gdf.index)
+
+    for i, cid in enumerate(ids):
+        geom_i = cells_gdf.loc[cid].geometry
+        candidate_idx = list(sindex.intersection(geom_i.bounds))
+        candidate_ids = [ids[j] for j in candidate_idx if ids[j] != cid]
+
+        touching_neighbors = []
+        for nid in candidate_ids:
+            geom_j = cells_gdf.loc[nid].geometry
+
+            if not (geom_i.is_valid and geom_j.is_valid):
+                continue
+
+            # shared boundary length
+            shared_boundary_len = geom_i.boundary.intersection(geom_j.boundary).length
+            overlaps = include_overlaps and geom_i.intersection(geom_j).area > 0
+
+            if (shared_boundary_len > min_shared_boundary_length) or overlaps:
+                touching_neighbors.append(nid)
+
+        neighbor_dict[cid] = touching_neighbors
+
+        if len(touching_neighbors) > 0:
+            neighbor_mean_arr[i, :] = expr_cells.loc[touching_neighbors].mean(axis=0).to_numpy()
+        else:
+            neighbor_mean_arr[i, :] = 0.0
+
+    neighbor_mean = pd.DataFrame(
+        neighbor_mean_arr,
+        index=expr_cells.index,
+        columns=expr_cells.columns,
+    )
+
+    return neighbor_mean, neighbor_dict
+
+def _null_corrected_center_border_touching_neighbors_one_cell(
+    x_center_raw: np.ndarray,
+    x_border_raw: np.ndarray,
+    x_neighbor_mean_raw: np.ndarray,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    n_sim: int = 200,
+    scale: float = 1e4,
+    random_state: int | None = None,
+    q_low: float = 0.025,
+    q_high: float = 0.975,
+) -> dict:
+    """
+    One-cell null model:
+    - observed CB = sim(center, border)
+    - observed BN = sim(border, touching-neighbor mean)
+    - observed contamination score = BN - CB
+
+    Null:
+    - simulate center* and border* by random partitioning pooled center+border
+    - keep touching-neighbor mean fixed
+    - recompute CB*, BN*, and score*
+    """
+    rng = np.random.default_rng(random_state)
+
+    x_center_raw = np.rint(np.asarray(x_center_raw)).astype(int)
+    x_border_raw = np.rint(np.asarray(x_border_raw)).astype(int)
+    x_neighbor_mean_raw = np.asarray(x_neighbor_mean_raw, dtype=float)
+
+    # restrict to genes present anywhere among center/border/neighborhood
+    mask = (x_center_raw + x_border_raw + x_neighbor_mean_raw) > 0
+    x_center_raw = x_center_raw[mask]
+    x_border_raw = x_border_raw[mask]
+    x_neighbor_mean_raw = x_neighbor_mean_raw[mask]
+
+    n_genes_used = int(mask.sum())
+    n_center = int(x_center_raw.sum())
+    n_border = int(x_border_raw.sum())
+    n_neighbor = float(x_neighbor_mean_raw.sum())
+
+    result = {
+        "similarity_center_border": np.nan,
+        "similarity_center_border_null_mean": np.nan,
+        "similarity_center_border_null_sd": np.nan,
+        "similarity_center_border_null_q_low": np.nan,
+        "similarity_center_border_null_q_high": np.nan,
+        "similarity_center_border_null_interval_width": np.nan,
+        "similarity_center_border_residual": np.nan,
+        "similarity_center_border_zscore": np.nan,
+
+        "similarity_border_neighborhood": np.nan,
+        "similarity_border_neighborhood_null_mean": np.nan,
+        "similarity_border_neighborhood_null_sd": np.nan,
+        "similarity_border_neighborhood_null_q_low": np.nan,
+        "similarity_border_neighborhood_null_q_high": np.nan,
+        "similarity_border_neighborhood_null_interval_width": np.nan,
+        "similarity_border_neighborhood_residual": np.nan,
+        "similarity_border_neighborhood_zscore": np.nan,
+
+        "contamination_score": np.nan,
+        "contamination_score_null_mean": np.nan,
+        "contamination_score_null_sd": np.nan,
+        "contamination_score_null_q_low": np.nan,
+        "contamination_score_null_q_high": np.nan,
+        "contamination_score_null_interval_width": np.nan,
+        "contamination_score_residual": np.nan,
+        "contamination_score_zscore": np.nan,
+
+        "center_counts_used": n_center,
+        "border_counts_used": n_border,
+        "neighbor_mean_counts_used": n_neighbor,
+        "n_genes_used": n_genes_used,
+    }
+
+    if (
+        n_genes_used < min_genes
+        or n_center < min_transcripts
+        or n_border < min_transcripts
+        or n_neighbor < min_transcripts
+    ):
+        return result
+
+    x_center = _norm_log_vector(x_center_raw, scale=scale)
+    x_border = _norm_log_vector(x_border_raw, scale=scale)
+    x_neighbor = _norm_log_vector(x_neighbor_mean_raw, scale=scale)
+
+    sim_obs_cb = _cosine_sim(x_center, x_border)
+    sim_obs_bn = _cosine_sim(x_border, x_neighbor)
+    score_obs = sim_obs_bn - sim_obs_cb
+
+    pooled = x_center_raw + x_border_raw
+
+    sim_cb_null = np.empty(n_sim, dtype=float)
+    sim_bn_null = np.empty(n_sim, dtype=float)
+    score_null = np.empty(n_sim, dtype=float)
+
+    for i in range(n_sim):
+        sim_center_raw, sim_border_raw = _random_partition_counts(
+            pooled_counts=pooled,
+            n_first=n_center,
+            rng=rng,
+        )
+
+        sim_center = _norm_log_vector(sim_center_raw, scale=scale)
+        sim_border = _norm_log_vector(sim_border_raw, scale=scale)
+
+        cb_i = _cosine_sim(sim_center, sim_border)
+        bn_i = _cosine_sim(sim_border, x_neighbor)
+        score_i = bn_i - cb_i
+
+        sim_cb_null[i] = cb_i
+        sim_bn_null[i] = bn_i
+        score_null[i] = score_i
+
+    def _summarize(obs: float, sims: np.ndarray, prefix: str) -> dict:
+        ql = float(np.quantile(sims, q_low))
+        qh = float(np.quantile(sims, q_high))
+        mu = float(np.mean(sims))
+        sd = float(np.std(sims, ddof=1)) if len(sims) > 1 else 0.0
+        resid = float(obs - mu)
+        z = np.nan if np.isclose(sd, 0.0) else float(resid / sd)
+        return {
+            f"{prefix}_null_mean": mu,
+            f"{prefix}_null_sd": sd,
+            f"{prefix}_null_q_low": ql,
+            f"{prefix}_null_q_high": qh,
+            f"{prefix}_null_interval_width": qh - ql,
+            f"{prefix}_residual": resid,
+            f"{prefix}_zscore": z,
+        }
+
+    result["similarity_center_border"] = float(sim_obs_cb)
+    result["similarity_border_neighborhood"] = float(sim_obs_bn)
+    result["contamination_score"] = float(score_obs)
+
+    result.update(_summarize(sim_obs_cb, sim_cb_null, "similarity_center_border"))
+    result.update(_summarize(sim_obs_bn, sim_bn_null, "similarity_border_neighborhood"))
+    result.update(_summarize(score_obs, score_null, "contamination_score"))
+
+    return result
+
+
+
+
+
+def _compute_neighbor_ids_within_radius(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    neighborhood_radius_factor: float = 2.0,
+) -> dict:
+    """
+    Compute focal-cell -> neighbor-cell-id list using centroid distance.
+
+    A cell j is considered a neighbor of focal cell i if:
+        distance(centroid_i, centroid_j) <= radius_i * neighborhood_radius_factor
+
+    Returns
+    -------
+    dict
+        Mapping: focal_cell_id -> list of neighboring cell_ids.
+    """
+    cells_gdf = sdata.shapes[shapes_key].copy()
+    ad = sdata.tables[tables_key]
+
+    mask = ad.obs[tables_cell_id_key].isin(cells_gdf.index)
+    cell_ids = pd.Index(ad.obs.loc[mask, tables_cell_id_key])
+    cells_gdf = cells_gdf.loc[cell_ids]
+
+    centroids = cells_gdf.geometry.centroid
+    coords = np.c_[centroids.x.to_numpy(), centroids.y.to_numpy()]
+    radii = np.sqrt(cells_gdf.geometry.area.clip(lower=1e-6).to_numpy() / np.pi)
+
+    tree = cKDTree(coords)
+
+    return {
+        cell_ids[i]: [cell_ids[j] for j in tree.query_ball_point(coords[i], radii[i] * neighborhood_radius_factor) if j != i]
+        for i in range(len(cell_ids))
+    }
+
+
+def _get_joint_region_transcripts_numpy(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    neighborhood_radius_factor: float = 2.0,
+):
+    """
+    Build a compact transcript-level representation for bootstrapping.
+
+    For each transcript assigned to a focal cell/region, store:
+        - focal cell id
+        - gene code (int)
+        - region code (0=center, 1=border, 2=neighborhood)
+
+    Returns
+    -------
+    focal_ids : np.ndarray of shape (n_rows,)
+        Focal cell id for each transcript-row contribution.
+    gene_codes : np.ndarray of shape (n_rows,)
+        Integer-coded gene index for each row.
+    region_codes : np.ndarray of shape (n_rows,)
+        Region code for each row: 0=center, 1=border, 2=neighborhood.
+    genes : pd.Index
+        Gene universe corresponding to gene_codes.
+    """
+    # Load transcript table once
+    pts = _get_filtered_points_df(
+        sdata=sdata,
+        genes=None,
+        cell_type_key="__unused__",
+        cell_type_query=None,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_gene_key=points_gene_key,
+        points_background_id=points_background_id,
+    )[[points_cell_id_key, points_gene_key, points_x_key, points_y_key]].copy()
+
+    pts = pts.reset_index(drop=True)
+    pts["point_id"] = np.arange(len(pts), dtype=np.int64)
+
+    # Use full table gene space so output stays aligned with the rest of your code
+    genes = pd.Index(sdata.tables[tables_key].var_names)
+    gene_to_code = pd.Series(np.arange(len(genes), dtype=np.int32), index=genes)
+
+    pts = pts[pts[points_gene_key].isin(genes)].copy()
+    pts["gene_code"] = pts[points_gene_key].map(gene_to_code).astype(np.int32)
+
+    pts_gdf = gpd.GeoDataFrame(
+        pts,
+        geometry=gpd.points_from_xy(pts[points_x_key], pts[points_y_key]),
+        crs=sdata.shapes[shapes_key].crs,
+    )
+
+    center_gdf, border_gdf = _get_center_and_border_shapes(
+        sdata=sdata,
+        shapes_key=shapes_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+    )
+
+    def _join_region(region_gdf: gpd.GeoDataFrame, region_code: int) -> pd.DataFrame:
+        rg = region_gdf.reset_index().rename(columns={region_gdf.index.name: "focal_cell_id"})[["focal_cell_id", "geometry"]]
+        out = gpd.sjoin(pts_gdf, rg, how="inner", predicate="intersects").drop(columns=["index_right"])
+        out = out[out["focal_cell_id"] == out[points_cell_id_key]]
+        return out[["focal_cell_id", "gene_code"]].assign(region_code=np.int8(region_code))
+
+    center_df = _join_region(center_gdf, 0)
+    border_df = _join_region(border_gdf, 1)
+
+    # Neighborhood transcripts: transcripts from neighbor cells contribute to focal cell neighborhood
+    neighbor_map = _compute_neighbor_ids_within_radius(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    inverse_neighbor_map = {}
+    for focal, nbrs in neighbor_map.items():
+        for nbr in nbrs:
+            inverse_neighbor_map.setdefault(nbr, []).append(focal)
+
+    neigh_df = pts[[points_cell_id_key, "gene_code"]].copy()
+    neigh_df["focal_cell_id"] = neigh_df[points_cell_id_key].map(inverse_neighbor_map)
+    neigh_df = neigh_df.explode("focal_cell_id").dropna(subset=["focal_cell_id"])
+    neigh_df = neigh_df[["focal_cell_id", "gene_code"]].assign(region_code=np.int8(2))
+
+    joint = pd.concat([center_df, border_df, neigh_df], ignore_index=True)
+
+    return (
+        joint["focal_cell_id"].to_numpy(),
+        joint["gene_code"].to_numpy(dtype=np.int32),
+        joint["region_code"].to_numpy(dtype=np.int8),
+        genes,
+    )
+
+
+def _counts_from_joint_codes(
+    gene_codes: np.ndarray,
+    region_codes: np.ndarray,
+    n_genes: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Build center/border/neighborhood count vectors from bootstrap-resampled rows.
+    """
+    x_center = np.bincount(gene_codes[region_codes == 0], minlength=n_genes)
+    x_border = np.bincount(gene_codes[region_codes == 1], minlength=n_genes)
+    x_neigh = np.bincount(gene_codes[region_codes == 2], minlength=n_genes)
+    return x_center, x_border, x_neigh
+
+
+def _mixture_fit_contamination_one_cell_bootstrap_joint(
+    gene_codes: np.ndarray,
+    region_codes: np.ndarray,
+    n_genes: int,
+    n_boot: int = 200,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+    ci_level: float = 0.95,
+    random_state: int | None = None,
+) -> dict:
+    """
+    Bootstrap the mixture-fit improvement fraction for one cell using Martin's
+    transcript-level resampling approach on compact NumPy arrays.
+
+    Parameters
+    ----------
+    gene_codes : np.ndarray
+        Integer-coded gene labels for all transcript rows of one focal cell.
+    region_codes : np.ndarray
+        Region code per row: 0=center, 1=border, 2=neighborhood.
+    n_genes : int
+        Total number of genes in the fixed gene universe.
+
+    Returns
+    -------
+    dict
+        Original mixture-fit metrics from `_mixture_fit_contamination_one_cell`
+        plus bootstrap SE / percentile CI for `mixture_fit_improvement_fraction`.
+    """
+    if len(gene_codes) == 0:
+        return {
+            "mixture_alpha_hat": np.nan,
+            "mixture_fit_center_only_l2": np.nan,
+            "mixture_fit_mixture_l2": np.nan,
+            "mixture_fit_improvement_l2": np.nan,
+            "mixture_fit_improvement_fraction": np.nan,
+            "center_counts_used": 0,
+            "border_counts_used": 0,
+            "neighborhood_counts_used": 0,
+            "n_genes_used": 0,
+            "mixture_fit_improvement_fraction_boot_se": np.nan,
+            "mixture_fit_improvement_fraction_ci_low": np.nan,
+            "mixture_fit_improvement_fraction_ci_high": np.nan,
+            "mixture_fit_improvement_fraction_boot_n_valid": 0,
+        }
+
+    rng = np.random.default_rng(random_state)
+
+    # Original fit from original transcript rows
+    x_center, x_border, x_neigh = _counts_from_joint_codes(gene_codes, region_codes, n_genes)
+    result = _mixture_fit_contamination_one_cell(
+        x_center_raw=x_center,
+        x_border_raw=x_border,
+        x_neighborhood_raw=x_neigh,
+        min_transcripts=min_transcripts,
+        min_genes=min_genes,
+        pseudocount=pseudocount,
+    )
+
+    # Bootstrap rows with replacement and collect improvement_fraction
+    n_rows = len(gene_codes)
+    stat_boot = []
+
+    for _ in range(n_boot):
+        idx = rng.integers(0, n_rows, size=n_rows)
+        xb_center, xb_border, xb_neigh = _counts_from_joint_codes(
+            gene_codes=gene_codes[idx],
+            region_codes=region_codes[idx],
+            n_genes=n_genes,
+        )
+
+        stat = _mixture_fit_contamination_one_cell(
+            x_center_raw=xb_center,
+            x_border_raw=xb_border,
+            x_neighborhood_raw=xb_neigh,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+        )["mixture_fit_improvement_fraction"]
+
+        if np.isfinite(stat):
+            stat_boot.append(stat)
+
+    stat_boot = np.asarray(stat_boot, dtype=float)
+    alpha = 1.0 - ci_level
+    ci_low, ci_high = (
+        (np.nan, np.nan)
+        if len(stat_boot) == 0
+        else np.quantile(stat_boot, [alpha / 2, 1 - alpha / 2])
+    )
+
+    result.update(
+        {
+            "mixture_fit_improvement_fraction_boot_se": np.nan if len(stat_boot) < 2 else float(stat_boot.std(ddof=1)),
+            "mixture_fit_improvement_fraction_ci_low": float(ci_low) if np.isfinite(ci_low) else np.nan,
+            "mixture_fit_improvement_fraction_ci_high": float(ci_high) if np.isfinite(ci_high) else np.nan,
+            "mixture_fit_improvement_fraction_boot_n_valid": int(len(stat_boot)),
+        }
+    )
+    return result
+
+
+def mixture_fit_contamination_score_bootstrap(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction_of_radius: float = 0.2,
+    neighborhood_radius_factor: float = 2.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+    n_boot: int = 200,
+    ci_level: float = 0.95,
+    random_state: int | None = None,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute per-cell mixture-fit contamination score with bootstrap SE and CI
+    using Martin's transcript-level resampling approach.
+
+    Workflow
+    --------
+    1. Build transcript-level rows for center, border, and neighborhood.
+    2. For each focal cell, resample those rows with replacement.
+    3. Rebuild count vectors and recompute mixture_alpha_hat.
+    4. Report bootstrap SE and percentile CI.
+
+    Returns
+    -------
+    pd.DataFrame
+        Original mixture-fit outputs plus:
+            - mixture_alpha_boot_se
+            - mixture_alpha_ci_low
+            - mixture_alpha_ci_high
+            - mixture_alpha_boot_n_valid
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    focal_ids, gene_codes, region_codes, genes = _get_joint_region_transcripts_numpy(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_gene_key=points_gene_key,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    rows = []
+    n_genes = len(genes)
+
+    # group rows by focal cell once
+    order = pd.Series(np.arange(len(focal_ids)), index=focal_ids)
+    for cid, idx in order.groupby(level=0, sort=False):
+        idx = idx.to_numpy()
+
+        res = _mixture_fit_contamination_one_cell_bootstrap_joint(
+            gene_codes=gene_codes[idx],
+            region_codes=region_codes[idx],
+            n_genes=n_genes,
+            n_boot=n_boot,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+            ci_level=ci_level,
+            random_state=random_state,
+        )
+        res[id_key] = cid
+        rows.append(res)
+
+    out = pd.DataFrame(rows)
+
+    if inplace and not out.empty:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out

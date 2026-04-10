@@ -1181,7 +1181,9 @@ class _RSFacade:
     def null_corrected_center_border_similarity(
         self,
         erosion_fraction_of_radius: float = 0.2,
-        neighborhood_radius_factor: float = 2.0,
+        #neighborhood_radius_factor: float = 2.0,
+        min_shared_boundary_length: float = 0.0,
+        include_overlaps: bool = True,
         min_transcripts: int = 10,
         min_genes: int = 5,
         n_sim: int = 200,
@@ -1203,7 +1205,9 @@ class _RSFacade:
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
             erosion_fraction_of_radius=erosion_fraction_of_radius,
-            neighborhood_radius_factor=neighborhood_radius_factor,
+            #neighborhood_radius_factor=neighborhood_radius_factor,
+            min_shared_boundary_length=min_shared_boundary_length,
+            include_overlaps=include_overlaps,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             n_sim=n_sim,
@@ -1290,6 +1294,39 @@ class _RSFacade:
             pseudocount=pseudocount,
             inplace=inplace
             )
+    def mixture_fit_contamination_score_bootstrap(
+        self,
+        erosion_fraction_of_radius: float = 0.2,
+        neighborhood_radius_factor: float = 2.0,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        pseudocount: float = 0.5,
+        n_boot: int = 200,
+        ci_level: float = 0.95,
+        random_state: int | None = None,
+        inplace: bool = True
+        ):
+        return rs.mixture_fit_contamination_score_bootstrap(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            points_gene_key=self._p.points_gene_key,
+            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            neighborhood_radius_factor=neighborhood_radius_factor,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+            n_boot=n_boot,
+            ci_level=ci_level,
+            random_state=random_state,
+            inplace=inplace
+        )
 
 class _SPFacade:
     """

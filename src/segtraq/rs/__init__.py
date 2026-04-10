@@ -7,7 +7,8 @@ from .region_similarity import (
     null_corrected_center_border_similarity,
     chi2_center_border_similarity,
     fisher_center_border_similarity,
-    mixture_fit_contamination_score
+    mixture_fit_contamination_score,
+    mixture_fit_contamination_score_bootstrap
 )
 
 __all__ = [
@@ -19,5 +20,6 @@ __all__ = [
     "null_corrected_center_border_similarity",
     "chi2_center_border_similarity",
     "fisher_center_border_similarity",
-    "mixture_fit_contamination_score"
+    "mixture_fit_contamination_score",
+    "mixture_fit_contamination_score_bootstrap"
 ]
