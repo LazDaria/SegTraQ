@@ -227,7 +227,7 @@ def _get_center_and_border_shapes(
 def _get_filtered_points_df(
     sdata: sd.SpatialData,
     genes: str | list[str] | None,
-    cell_type_key: str,
+    cell_type_key: str | None,
     cell_type_query: str | list[str] | None,
     tables_key: str,
     tables_cell_id_key: str,
@@ -580,47 +580,606 @@ def _get_center_border_counts(
 
     return expr_center, expr_border
 
+def _build_count_vectors(
+    gene_codes: np.ndarray,
+    region_codes: np.ndarray,
+    n_genes: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Convert transcript-level rows into per-region gene count vectors.
 
-def _align_expression_dfs(dfs, sdata, tables_key: str = "table"):
-    """Align multiple expression dataframes to have the same genes and cells."""
-    # dfs is a dictionary of dataframes to align (key: name (e. g. 'expr_center'), value: dataframe)
-    # ensure there are at least 2 dataframes
-    if len(dfs) < 2:
-        raise ValueError("At least two dataframes are required for alignment.")
+    Parameters
+    ----------
+    gene_codes : np.ndarray
+        Integer gene indices for each transcript row.
+    region_codes : np.ndarray
+        Region assignment for each transcript row:
+            0 = center
+            1 = border
+            2 = neighborhood
+    n_genes : int
+        Total number of genes in the fixed gene universe.
 
-    # Align dataframe columns to only keep common genes
-    common_genes = list(dfs.values())[0].columns
-    for i, (layer, other_df) in enumerate(dfs.items()):
-        # skip first dataframe (we already have its columns)
-        if i == 0:
-            continue
-        common_genes = common_genes.intersection(other_df.columns)
-        if len(common_genes) == 0:
-            raise ValueError(
-                f"No common genes found when aligning layer {layer}. "
-                f"Please ensure that your anndata object contains gene names in the var_names. "
-                f"Previous gene names looked like: {list(list(dfs.values())[0].columns)[:5]}. "
-                f"Gene names in layer {layer} look like: {list(other_df.columns)[:5]}."
-            )
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray]
+        Count vectors for center, border, and neighborhood.
+    """
+    x_center = np.bincount(gene_codes[region_codes == 0], minlength=n_genes)
+    x_border = np.bincount(gene_codes[region_codes == 1], minlength=n_genes)
+    x_neighborhood = np.bincount(gene_codes[region_codes == 2], minlength=n_genes)
+    return x_center, x_border, x_neighborhood
 
-    # Only use gene`s transcripts and exclude control probes
-    valid_genes = pd.Index(
-        sdata.tables[tables_key].var_names
-    )  # TODO - this might break, if var.index and points_gene_key do not match!
-    # e.g. one is Ensemble key and one is gene_key
-    common_genes = common_genes.intersection(valid_genes)
+def _find_neighbors_by_distance(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    radius_factor: float = 2.0,
+) -> dict:
+    """
+    Find neighboring cells based on centroid distance.
 
-    dfs_aligned = {}
-    for name, df in dfs.items():
-        dfs_aligned[name] = df[common_genes]
+    A cell `j` is considered a neighbor of focal cell `i` if:
 
-    # Align dataframe rows- these might not match
-    # expr_ncv computed based on table and expr_center/border based on shapes
-    common_cells = dfs_aligned[list(dfs_aligned.keys())[0]].index
-    for other_df in list(dfs_aligned.values())[1:]:
-        common_cells = common_cells.intersection(other_df.index)
+        distance(centroid_i, centroid_j) <= radius_i * radius_factor
 
-    for name, df in dfs_aligned.items():
-        dfs_aligned[name] = df.loc[common_cells]
+    where `radius_i` is the equivalent radius of cell `i`, computed from its area.
 
-    return dfs_aligned
+    Parameters
+    ----------
+    sdata
+        SpatialData object.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in `sdata.tables[tables_key].obs` containing cell ids.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` containing cell polygons.
+    radius_factor : float, default=2.0
+        Distance threshold as a multiple of the focal cell's equivalent radius.
+
+    Returns
+    -------
+    dict
+        Mapping: focal cell id -> list of neighboring cell ids.
+    """
+    if radius_factor < 0:
+        raise ValueError("`radius_factor` must be >= 0.")
+
+    cells_gdf = sdata.shapes[shapes_key].copy()
+    ad = sdata.tables[tables_key]
+
+    # ensure unique, valid cell IDs
+    cell_ids = pd.Index(ad.obs[tables_cell_id_key]).unique()
+    cell_ids = cell_ids[cell_ids.isin(cells_gdf.index)]
+    cells_gdf = cells_gdf.loc[cell_ids]
+
+    # compute centroids
+    centroids = cells_gdf.geometry.centroid
+    coords = np.c_[centroids.x.to_numpy(), centroids.y.to_numpy()]
+
+    # equivalent radii
+    areas = cells_gdf.geometry.area.clip(lower=1e-6)
+    radii = np.sqrt(areas.to_numpy() / np.pi)
+
+    # KD-tree for fast neighbor lookup
+    tree = cKDTree(coords)
+
+    neighbors = {}
+
+    for i, cid in enumerate(cell_ids):
+        r = radii[i] * radius_factor
+        idx = tree.query_ball_point(coords[i], r)
+
+        # exclude self
+        nbrs = [cell_ids[j] for j in idx if j != i]
+        neighbors[cid] = nbrs
+
+    return neighbors
+# def _find_neighbors_by_distance(
+#     sdata,
+#     tables_key: str = "table",
+#     tables_cell_id_key: str = "cell_id",
+#     shapes_key: str = "cell_boundaries",
+#     radius_factor: float = 1.0,
+# ) -> dict:
+#     """
+#     Find neighboring cells based on distance to the focal cell boundary.
+
+#     A cell `j` is considered a neighbor of focal cell `i` if the minimum
+#     distance from the geometry of `j` to the boundary of `i` is less than or
+#     equal to:
+
+#         radius_factor * equivalent_radius(i)
+
+#     where equivalent radius is computed from the area of the focal cell.
+
+#     Parameters
+#     ----------
+#     sdata
+#         SpatialData object.
+#     tables_key : str, default="table"
+#         Key in `sdata.tables` for the cell table.
+#     tables_cell_id_key : str, default="cell_id"
+#         Column in `sdata.tables[tables_key].obs` containing cell ids.
+#     shapes_key : str, default="cell_boundaries"
+#         Key in `sdata.shapes` containing cell polygons.
+#     radius_factor : float, default=1.0
+#         Distance threshold expressed as a multiple of the focal cell's
+#         equivalent radius.
+
+#     Returns
+#     -------
+#     dict
+#         Mapping from focal cell id to a list of neighboring cell ids.
+#     """
+#     if radius_factor < 0:
+#         raise ValueError("`radius_factor` must be >= 0.")
+
+#     cells_gdf = sdata.shapes[shapes_key].copy()
+#     ad = sdata.tables[tables_key]
+
+#     cell_ids = pd.Index(ad.obs[tables_cell_id_key]).unique()
+#     cell_ids = cell_ids[cell_ids.isin(cells_gdf.index)]
+#     cells_gdf = cells_gdf.loc[cell_ids]
+
+#     areas = cells_gdf.geometry.area.clip(lower=1e-6)
+#     radii = np.sqrt(areas / np.pi)
+
+#     sindex = cells_gdf.sindex
+#     neighbors = {}
+
+#     for focal_id, focal_geom in cells_gdf.geometry.items():
+#         if focal_geom is None or focal_geom.is_empty or not focal_geom.is_valid:
+#             neighbors[focal_id] = []
+#             continue
+
+#         focal_boundary = focal_geom.boundary
+#         if focal_boundary is None or focal_boundary.is_empty:
+#             neighbors[focal_id] = []
+#             continue
+
+#         max_dist = float(radius_factor * radii.loc[focal_id])
+#         search_geom = focal_boundary.buffer(max_dist)
+
+#         candidate_idx = list(sindex.intersection(search_geom.bounds))
+#         candidates = cells_gdf.iloc[candidate_idx]
+
+#         nbrs = []
+#         for other_id, other_geom in candidates.geometry.items():
+#             if other_id == focal_id:
+#                 continue
+#             if other_geom is None or other_geom.is_empty or not other_geom.is_valid:
+#                 continue
+#             if other_geom.distance(focal_boundary) <= max_dist:
+#                 nbrs.append(other_id)
+
+#         neighbors[focal_id] = nbrs
+
+#     return neighbors
+
+
+def _build_transcript_table(
+    sdata,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    erosion_fraction: float = 0.2,
+    neighborhood_radius_factor: float = 1.0,
+):
+    """
+    Build a transcript-level representation for center, border, and neighborhood
+    contributions.
+
+    Each output row represents one transcript assigned to one focal cell and one
+    region:
+        0 = center
+        1 = border
+        2 = neighborhood
+
+    Center and border rows are obtained by spatially joining transcript points
+    to the corresponding focal-cell polygons and keeping only transcripts whose
+    assigned cell id matches the focal cell.
+
+    Neighborhood rows are obtained from transcripts assigned to neighboring
+    cells, where neighbors are defined by distance to the focal cell boundary.
+
+    Notes
+    -----
+    `cell_type_key` and `cell_type_query` are intentionally fixed to `None`
+    here, so no cell-type filtering is applied.
+
+    Parameters
+    ----------
+    sdata
+        SpatialData object.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table containing cell ids.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` containing cell polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` containing transcript points.
+    points_cell_id_key : str, default="cell_id"
+        Column in the transcript table containing transcript-assigned cell ids.
+    points_background_id : str, default="UNASSIGNED"
+        Identifier used for background / unassigned transcripts.
+    points_x_key, points_y_key : str
+        Coordinate columns in the transcript table.
+    points_gene_key : str, default="feature_name"
+        Column containing gene names.
+    erosion_fraction : float, default=0.2
+        Fraction of equivalent cell radius used to erode each cell polygon to
+        define the center region.
+    neighborhood_radius_factor : float, default=1.0
+        Neighbor distance threshold expressed as a multiple of the focal cell's
+        equivalent radius.
+
+    Returns
+    -------
+    tuple
+        `(focal_ids, gene_codes, region_codes, genes)`, where each array has
+        one entry per transcript-row contribution.
+    """
+    pts = _get_filtered_points_df(
+        sdata=sdata,
+        genes=None,
+        cell_type_key=None,
+        cell_type_query=None,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        points_key=points_key,
+        points_cell_id_key=points_cell_id_key,
+        points_gene_key=points_gene_key,
+        points_background_id=points_background_id,
+    )[[points_cell_id_key, points_gene_key, points_x_key, points_y_key]].copy()
+
+    pts = pts.reset_index(drop=True)
+    pts["point_id"] = np.arange(len(pts), dtype=np.int64)
+
+    genes = pd.Index(sdata.tables[tables_key].var_names)
+    gene_to_code = pd.Series(np.arange(len(genes), dtype=np.int32), index=genes)
+
+    pts = pts[pts[points_gene_key].isin(genes)].copy()
+    pts["gene_code"] = pts[points_gene_key].map(gene_to_code).astype(np.int32)
+
+    pts_gdf = gpd.GeoDataFrame(
+        pts,
+        geometry=gpd.points_from_xy(pts[points_x_key], pts[points_y_key]),
+        crs=sdata.shapes[shapes_key].crs,
+    )
+
+    center_gdf, border_gdf = _get_center_and_border_shapes(
+        sdata=sdata,
+        shapes_key=shapes_key,
+        erosion_fraction_of_radius=erosion_fraction,
+    )
+
+    def _assign_region(region_gdf: gpd.GeoDataFrame, region_code: int) -> pd.DataFrame:
+        region_id_key = region_gdf.index.name or "cell_id"
+        rg = (
+            region_gdf.reset_index()
+            .rename(columns={region_id_key: "focal_id"})[["focal_id", "geometry"]]
+        )
+
+        out = gpd.sjoin(pts_gdf, rg, how="inner", predicate="within").drop(
+            columns=["index_right"]
+        )
+        out = out[out["focal_id"] == out[points_cell_id_key]]
+
+        return out[["focal_id", "gene_code"]].assign(
+            region_code=np.int8(region_code)
+        )
+
+    center = _assign_region(center_gdf, 0)
+    border = _assign_region(border_gdf, 1)
+
+    neighbor_map = _find_neighbors_by_distance(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        radius_factor=neighborhood_radius_factor,
+    )
+
+    inverse_map = {}
+    for focal_id, nbrs in neighbor_map.items():
+        for nbr in nbrs:
+            inverse_map.setdefault(nbr, []).append(focal_id)
+
+    neigh = pts[[points_cell_id_key, "gene_code"]].copy()
+    neigh["focal_id"] = neigh[points_cell_id_key].map(inverse_map)
+    neigh = neigh.explode("focal_id").dropna(subset=["focal_id"])
+    neigh = neigh[["focal_id", "gene_code"]].assign(region_code=np.int8(2))
+
+    joint = pd.concat([center, border, neigh], ignore_index=True)
+
+    return (
+        joint["focal_id"].to_numpy(),
+        joint["gene_code"].to_numpy(dtype=np.int32),
+        joint["region_code"].to_numpy(dtype=np.int8),
+        genes,
+    )
+
+
+def _normalize_to_proportions(
+    x: np.ndarray,
+    pseudocount: float = 0.0,
+) -> np.ndarray:
+    """
+    Normalize a 1D nonnegative count vector to proportions.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        One-dimensional nonnegative count vector.
+    pseudocount : float, default=0.0
+        Value added to all entries before normalization.
+
+    Returns
+    -------
+    np.ndarray
+        Proportion vector with the same shape as `x`.
+    """
+    x = np.asarray(x, dtype=float).ravel()
+
+    if np.any(x < 0):
+        raise ValueError("Counts must be nonnegative.")
+    if pseudocount < 0:
+        raise ValueError("`pseudocount` must be >= 0.")
+
+    x = x + pseudocount
+    total = x.sum()
+
+    if total <= 0:
+        return np.zeros_like(x, dtype=float)
+
+    return x / total
+
+
+def _estimate_mixture_alpha_least_squares(
+    p_border: np.ndarray,
+    p_center: np.ndarray,
+    p_neighborhood: np.ndarray,
+) -> float:
+    """
+    Estimate the neighborhood mixture weight in proportion space.
+
+    The model is:
+
+        p_border ~ (1 - alpha) * p_center + alpha * p_neighborhood
+
+    Alpha is estimated by least squares and clipped to [0, 1].
+
+    Parameters
+    ----------
+    p_border : np.ndarray
+        Border gene proportions.
+    p_center : np.ndarray
+        Center gene proportions.
+    p_neighborhood : np.ndarray
+        Neighborhood gene proportions.
+
+    Returns
+    -------
+    float
+        Estimated mixture weight in [0, 1].
+    """
+    d = p_neighborhood - p_center
+    denom = float(np.dot(d, d))
+
+    if np.isclose(denom, 0.0):
+        return 0.0
+
+    alpha = float(np.dot(p_border - p_center, d) / denom)
+    return float(np.clip(alpha, 0.0, 1.0))
+
+
+def _score_one_cell(
+    x_center: np.ndarray,
+    x_border: np.ndarray,
+    x_neighborhood: np.ndarray,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+) -> float:
+    """
+    Compute the border admixture score for one cell.
+
+    The border profile is modeled as a mixture of the center and neighborhood
+    profiles in gene-proportion space:
+
+        p_border ~ (1 - alpha) * p_center + alpha * p_neighborhood
+
+    The returned score is the relative reduction in squared L2 error obtained
+    by the fitted mixture compared with the center-only fit.
+
+    Parameters
+    ----------
+    x_center, x_border, x_neighborhood : np.ndarray
+        Gene count vectors for the center, border, and neighborhood regions.
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in each region.
+    min_genes : int, default=5
+        Minimum number of genes present across the three regions combined.
+    pseudocount : float, default=0.5
+        Pseudocount used when converting counts to proportions.
+
+    Returns
+    -------
+    float
+        Border admixture score, or `np.nan` if the cell does not meet the
+        minimum requirements or if the center-only error is zero.
+    """
+    x_center = np.rint(np.asarray(x_center)).astype(int)
+    x_border = np.rint(np.asarray(x_border)).astype(int)
+    x_neighborhood = np.rint(np.asarray(x_neighborhood)).astype(int)
+
+    mask = (x_center + x_border + x_neighborhood) > 0
+    x_center = x_center[mask]
+    x_border = x_border[mask]
+    x_neighborhood = x_neighborhood[mask]
+
+    n_genes_used = int(mask.sum())
+    n_center = int(x_center.sum())
+    n_border = int(x_border.sum())
+    n_neighborhood = int(x_neighborhood.sum())
+
+    if (
+        n_genes_used < min_genes
+        or n_center < min_transcripts
+        or n_border < min_transcripts
+        or n_neighborhood < min_transcripts
+    ):
+        return np.nan
+
+    p_center = _normalize_to_proportions(x_center, pseudocount=pseudocount)
+    p_border = _normalize_to_proportions(x_border, pseudocount=pseudocount)
+    p_neighborhood = _normalize_to_proportions(
+        x_neighborhood, pseudocount=pseudocount
+    )
+
+    alpha_hat = _estimate_mixture_alpha_least_squares(
+        p_border=p_border,
+        p_center=p_center,
+        p_neighborhood=p_neighborhood,
+    )
+
+    p_mix = (1.0 - alpha_hat) * p_center + alpha_hat * p_neighborhood
+
+    err_center_only = float(np.sum((p_border - p_center) ** 2))
+    err_mixture = float(np.sum((p_border - p_mix) ** 2))
+
+    if np.isclose(err_center_only, 0.0):
+        return np.nan
+
+    return float((err_center_only - err_mixture) / err_center_only)
+
+
+def _bootstrap_one_cell(
+    gene_codes: np.ndarray,
+    region_codes: np.ndarray,
+    n_genes: int,
+    n_boot: int = 200,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    pseudocount: float = 0.5,
+    ci_level: float = 0.95,
+    rng: np.random.Generator | None = None,
+) -> dict:
+    """
+    Bootstrap the border admixture score for one cell.
+
+    Transcript rows are resampled with replacement, count vectors are rebuilt,
+    and the per-cell score is recomputed on each bootstrap replicate.
+
+    Parameters
+    ----------
+    gene_codes : np.ndarray
+        Gene index for each transcript row.
+    region_codes : np.ndarray
+        Region label for each transcript row:
+        0 = center, 1 = border, 2 = neighborhood.
+    n_genes : int
+        Total number of genes in the fixed gene universe.
+    n_boot : int, default=200
+        Number of bootstrap replicates.
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in each region.
+    min_genes : int, default=5
+        Minimum number of genes required across the three regions combined.
+    pseudocount : float, default=0.5
+        Pseudocount used when converting counts to proportions.
+    ci_level : float, default=0.95
+        Percentile confidence interval level.
+    rng : np.random.Generator | None, default=None
+        Random number generator. If None, a new generator is created.
+
+    Returns
+    -------
+    dict
+        Dictionary with:
+        - `border_admixture_score`
+        - `border_admixture_score_ci_low`
+        - `border_admixture_score_ci_high`
+    """
+    if len(gene_codes) == 0:
+        return {
+            "border_admixture_score": np.nan,
+            "border_admixture_score_ci_low": np.nan,
+            "border_admixture_score_ci_high": np.nan,
+        }
+
+    if rng is None:
+        rng = np.random.default_rng()
+
+    x_center, x_border, x_neighborhood = _build_count_vectors(
+        gene_codes=gene_codes,
+        region_codes=region_codes,
+        n_genes=n_genes,
+    )
+
+    score = _score_one_cell(
+        x_center=x_center,
+        x_border=x_border,
+        x_neighborhood=x_neighborhood,
+        min_transcripts=min_transcripts,
+        min_genes=min_genes,
+        pseudocount=pseudocount,
+    )
+
+    n_rows = len(gene_codes)
+    boot_scores = []
+
+    for _ in range(n_boot):
+        idx = rng.integers(0, n_rows, size=n_rows)
+
+        xb_center, xb_border, xb_neighborhood = _build_count_vectors(
+            gene_codes=gene_codes[idx],
+            region_codes=region_codes[idx],
+            n_genes=n_genes,
+        )
+
+        boot_score = _score_one_cell(
+            x_center=xb_center,
+            x_border=xb_border,
+            x_neighborhood=xb_neighborhood,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+        )
+
+        if np.isfinite(boot_score):
+            boot_scores.append(boot_score)
+
+    boot_scores = np.asarray(boot_scores, dtype=float)
+
+    if len(boot_scores) == 0:
+        ci_low = np.nan
+        ci_high = np.nan
+    else:
+        alpha = 1.0 - ci_level
+        ci_low, ci_high = np.quantile(
+            boot_scores,
+            [alpha / 2, 1 - alpha / 2],
+        )
+
+    return {
+        "border_admixture_score": (
+            float(score) if np.isfinite(score) else np.nan
+        ),
+        "border_admixture_score_ci_low": (
+            float(ci_low) if np.isfinite(ci_low) else np.nan
+        ),
+        "border_admixture_score_ci_high": (
+            float(ci_high) if np.isfinite(ci_high) else np.nan
+        ),
+    }
