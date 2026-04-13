@@ -8,14 +8,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
-    _bootstrap_mixture_fit,
-    _bootstrap_center_border_similarity,
     _compute_ncvs_within_radius,
     _get_center_border_counts,
-    _get_neighborhood_counts,
     _join_points_regions,
     _norm_log_df,
     _process_cell,
+    _build_transcript_table,
+    _bootstrap_one_cell
 )
 
 
@@ -800,7 +799,6 @@ def similarity_border_neighborhood(
 
     return corr_df
 
-
 def border_admixture_score(
     sdata,
     tables_key: str = "table",
@@ -831,15 +829,17 @@ def border_admixture_score(
     model and a fitted center-neighborhood mixture model. The reported score is
     the relative improvement of the mixture model over the center-only model.
 
-    Bootstrap confidence intervals are obtained by multinomial resampling of
-    the observed per-region gene count vectors within each focal cell.
+    Bootstrap confidence intervals are obtained by resampling transcript rows
+    with replacement within each focal cell.
 
     Notes
     -----
-    - The center and border count matrices are computed using
-      `_get_center_border_counts`.
-    - Neighborhood counts are computed by summing transcript count vectors of
-      neighboring cells returned by `_find_neighbors_by_distance`.
+    - Cells with no transcript rows are omitted from the output.
+    - Neighborhood transcripts come from cells whose geometry lies within
+      `neighborhood_radius_factor * equivalent_radius(focal_cell)` of the focal
+      cell boundary.
+    - No cell-type filtering is applied. Internally, `cell_type_key` and
+      `cell_type_query` are both set to `None`.
 
     Parameters
     ----------
@@ -887,7 +887,7 @@ def border_admixture_score(
     Returns
     -------
     pd.DataFrame
-        One row per cell with columns:
+        One row per scored cell with columns:
         - cell id column
         - `border_admixture_score`
         - `border_admixture_score_ci_low`
@@ -895,45 +895,34 @@ def border_admixture_score(
     """
     id_key = sdata.shapes[shapes_key].index.name
 
-    expr_center, expr_border = _get_center_border_counts(
+    focal_ids, gene_codes, region_codes, genes = _build_transcript_table(
         sdata=sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
         shapes_key=shapes_key,
         points_key=points_key,
-        points_gene_key=points_gene_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        erosion_fraction_of_radius=erosion_fraction,
-    )
-
-    expr_neighborhood, n_neighbors = _get_neighborhood_counts(
-        sdata=sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
         points_gene_key=points_gene_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
+        erosion_fraction=erosion_fraction,
         neighborhood_radius_factor=neighborhood_radius_factor,
     )
-
-    common_cells = expr_center.index.intersection(expr_border.index).intersection(expr_neighborhood.index)
-    expr_center = expr_center.loc[common_cells]
-    expr_border = expr_border.loc[common_cells]
-    expr_neighborhood = expr_neighborhood.loc[common_cells]
 
     rng = np.random.default_rng(random_state)
 
     rows = []
-    for cid in common_cells:
-        res = _bootstrap_mixture_fit(
-            x_center=expr_center.loc[cid].to_numpy(dtype=int),
-            x_border=expr_border.loc[cid].to_numpy(dtype=int),
-            x_neighborhood=expr_neighborhood.loc[cid].to_numpy(dtype=int),
+    n_genes = len(genes)
+    idx_by_cell = pd.Series(np.arange(len(focal_ids)), index=focal_ids)
+
+    for cell_id, idx in idx_by_cell.groupby(level=0, sort=False):
+        idx = idx.to_numpy()
+
+        res = _bootstrap_one_cell(
+            gene_codes=gene_codes[idx],
+            region_codes=region_codes[idx],
+            n_genes=n_genes,
             n_boot=n_boot,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
@@ -941,167 +930,12 @@ def border_admixture_score(
             ci_level=ci_level,
             rng=rng,
         )
-
-        rows.append(
-            {
-                id_key: cid,
-                "border_admixture_score": res["border_admixture_score"],
-                "border_admixture_score_ci_low": res["border_admixture_score_ci_low"],
-                "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
-                "n_neighbors": n_neighbors.loc[cid]
-            }
-        )
-
-    out = pd.DataFrame(rows)
-
-    if out.empty:
-        raise ValueError(
-            "Could not compute border admixture scores. "
-            "Try different parameters for erosion_fraction or neighborhood_radius_factor. "
-            "You used erosion_fraction="
-            f"{erosion_fraction} and neighborhood_radius_factor={neighborhood_radius_factor}."
-        )
-
-    if inplace:
-        merge_into_obs(
-            sdata=sdata,
-            tables_key=tables_key,
-            df_to_merge=out,
-            tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
-        )
-
-    return out
-
-def similarity_center_border(
-    sdata: sd.SpatialData,
-    tables_key: str = "table",
-    tables_cell_id_key: str = "cell_id",
-    shapes_key: str = "cell_boundaries",
-    points_key: str = "transcripts",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_gene_key: str = "feature_name",
-    erosion_fraction_of_radius: float = 0.2,
-    min_transcripts: int = 10,
-    min_genes: int = 5,
-    n_boot: int = 200,
-    ci_level: float = 0.95,
-    scale: float = 1e4,
-    random_state: int | None = None,
-    inplace: bool = True,
-) -> pd.DataFrame:
-    """
-    Compute the cosine similarity between the center and border expression
-    profiles of each cell and estimate percentile confidence intervals by
-    multinomial bootstrap.
-
-    The point estimate is computed from center and border count matrices
-    obtained via `_get_center_border_counts`, using row-wise library-size
-    normalization followed by log1p. Bootstrap replicates resample the observed
-    center and border gene count vectors independently with fixed region totals.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned
-        spatial transcriptomics data.
-    tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    shapes_key : str, default="cell_boundaries"
-        Key in `sdata.shapes` for cell boundary polygons.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for spot/transcript-level data.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript/spot to a cell.
-    points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
-    erosion_fraction_of_radius : float, default=0.2
-        Fraction of the equivalent radius used to erode each cell polygon when
-        defining the center region.
-    min_transcripts : int, default=10
-        Minimum number of transcripts required in both center and border.
-    min_genes : int, default=5
-        Minimum number of non-zero genes required across center and border.
-    n_boot : int, default=200
-        Number of bootstrap replicates per cell.
-    ci_level : float, default=0.95
-        Percentile confidence interval level.
-    scale : float, default=1e4
-        Library-size normalization scale used before log1p.
-    random_state : int | None, default=None
-        Random seed for reproducible bootstrap resampling.
-    inplace : bool, default=True
-        Whether to merge the results into `sdata.tables[tables_key].obs`.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns:
-            - cell id column
-            - `similarity_center_border`
-            - `similarity_center_border_ci_low`
-            - `similarity_center_border_ci_high`
-    """
-    id_key = sdata.shapes[shapes_key].index.name
-
-    expr_center, expr_border = _get_center_border_counts(
-        sdata=sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        erosion_fraction_of_radius=erosion_fraction_of_radius,
-    )
-
-    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
-
-    expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
-    expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
-
-    rng = np.random.default_rng(random_state)
-
-    rows = []
-    for cid in all_cells:
-        res = _bootstrap_center_border_similarity(
-            x_center=expr_center.loc[cid].to_numpy(dtype=int),
-            x_border=expr_border.loc[cid].to_numpy(dtype=int),
-            n_boot=n_boot,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            ci_level=ci_level,
-            scale=scale,
-            rng=rng,
-        )
-        res[id_key] = cid
+        res[id_key] = cell_id
         rows.append(res)
 
     out = pd.DataFrame(rows)
 
-    if out.empty:
-        raise ValueError(
-            "Could not compute center-border cosine similarities. "
-            "Try different parameters for erosion_fraction_of_radius. "
-            f"You used erosion_fraction_of_radius={erosion_fraction_of_radius}."
-        )
-
-    if inplace:
+    if inplace and not out.empty:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
