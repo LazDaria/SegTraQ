@@ -115,7 +115,7 @@ def _score_neighbor_negative_markers(
     genes: np.ndarray,
     require_neighbor_expression: bool,
     neighbor_indices: list[np.ndarray],
-    use_quantiles: bool = True,
+    use_quantiles: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Neighborhood-aware negative marker scoring.
@@ -203,7 +203,7 @@ def _score_neighbor_negative_markers(
         if neg_idx_i.size == 0:
             continue
 
-        all_markers_idx = list(set(rel_neg_genes) | nb_pos_union)
+        all_markers_idx = list(set(rel_neg_genes) | set(nb_pos_union))
         all_markers_idx_i = var_index.get_indexer(all_markers_idx)
         all_markers_idx_i = all_markers_idx_i[all_markers_idx_i >= 0]
 

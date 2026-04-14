@@ -284,9 +284,10 @@ def neighbor_contamination(
     # ----------------------------------------------------------------------
     # Accumulators
     # ----------------------------------------------------------------------
-    number_cell = np.zeros(n_cells, dtype=float)
+    number_cell = np.full(n_cells, np.nan, dtype=float)
     sum_cell_frac = np.zeros(n_cells, dtype=float)
     count_cell_genes = np.zeros(n_cells, dtype=int)
+    evaluable_cell = np.zeros(n_cells, dtype=bool)
 
     sum_pair = defaultdict(float)  # mean fraction numerator per (c_src, c_tgt)
     count_pair = defaultdict(int)  # gene contributions per (c_src, c_tgt)
@@ -315,14 +316,15 @@ def neighbor_contamination(
         # track which source types contaminate this target cell at least once
         contaminated_by_src = set()
 
+        # mark cell as evaluable if at least one relevant local negative marker exists
+        cell_has_relevant_gene = False
+
         for c_src in {ct for ct in nb_cts if not pd.isna(ct)}:
             pair = (c_src, c_tgt)
             if pair not in type_pair_genes:
                 continue
             # get gene indices for cell type pair
             gene_idx = type_pair_genes[pair]
-            # get gene expression for this pair
-            x_i_sub = x_i[gene_idx]
 
             # neighbors of this source type
             nb_src = nbs[nb_cts == c_src]
@@ -333,11 +335,6 @@ def neighbor_contamination(
 
             # loop genes
             for k, g_idx in enumerate(gene_idx):
-                x_i_g = x_i_sub[k]
-                if x_i_g <= 0:
-                    continue
-
-                # only call it contamination if at least one neighbor expresses the gene
                 x_nb_g = X_nb_src[:, k]
                 if require_neighbor_expression:
                     mask_pos = x_nb_g > 0
@@ -347,27 +344,37 @@ def neighbor_contamination(
                 else:
                     mean_src = x_nb_g.mean()
 
-                if not np.isfinite(mean_src):
+                if not np.isfinite(mean_src) or mean_src <= 0:
                     continue
 
-                # binary “this target cell is contaminated by this source type”
-                contaminated_by_src.add(c_src)
+                # at least one valid local negative marker exists for this cell
+                cell_has_relevant_gene = True
 
+                x_i_g = x_i[g_idx]
                 denom_all = x_i_g + mean_src
                 if denom_all <= 0:
                     continue
                 frac_g = x_i_g / denom_all
 
-                # pair stats: always update (no used_genes gating)
+                # pair stats: always update for evaluable genes, including clean zeros
                 sum_pair[pair] += frac_g
                 count_pair[pair] += 1
 
                 # per-cell stats: update once per gene per cell
                 if g_idx not in used_genes:
+                    number_cell[i] = 0.0 if np.isnan(number_cell[i]) else number_cell[i]
                     number_cell[i] += x_i_g
                     sum_cell_frac[i] += frac_g
                     count_cell_genes[i] += 1
                     used_genes.add(g_idx)
+
+                # binary “this target cell is contaminated by this source type”
+                if x_i_g > 0:
+                    contaminated_by_src.add(c_src)
+
+        evaluable_cell[i] = cell_has_relevant_gene
+        if evaluable_cell[i] and np.isnan(number_cell[i]):
+            number_cell[i] = 0.0
 
         # update per-(c_src, c_tgt) binary hit counts once per cell
         for c_src in contaminated_by_src:
@@ -376,12 +383,10 @@ def neighbor_contamination(
     # ----------------------------------------------------------------------
     # Build per-cell output
     # ----------------------------------------------------------------------
-    contamination_fraction = np.divide(
-        sum_cell_frac,
-        count_cell_genes,
-        out=np.full(n_cells, np.nan),
-        where=count_cell_genes > 0,
-    )
+    contamination_fraction = np.full(n_cells, np.nan, dtype=float)
+    mask_eval = evaluable_cell & (count_cell_genes > 0)
+    contamination_fraction[mask_eval] = sum_cell_frac[mask_eval] / count_cell_genes[mask_eval]
+    contamination_fraction[evaluable_cell & (count_cell_genes == 0)] = 0.0
 
     per_cell_df = pd.DataFrame(
         {
