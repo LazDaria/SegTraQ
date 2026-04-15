@@ -6,6 +6,18 @@ import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
+def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
+    """
+    Return a view of adata excluding cells with zero total counts.
+    Does NOT modify the original object.
+    """
+    if sp.issparse(adata.X):
+        total_counts = np.array(adata.X.sum(axis=1)).flatten()
+    else:
+        total_counts = adata.X.sum(axis=1)
+
+    mask = total_counts > 0
+    return adata[mask, :]
 
 def run_leiden_clustering_on_adata(
     adata_input,
@@ -17,12 +29,12 @@ def run_leiden_clustering_on_adata(
     leiden_kwargs: dict | None = None,
 ):
     """
-    Run Leiden clustering on a provided AnnData object. Leiden clustering is performed on the PCA-reduced data.
+    Run Leiden clustering on a provided AnnData object.
 
     Parameters
     ----------
     adata_input : AnnData
-        The AnnData object to cluster (can be subset of genes).
+        The AnnData object to cluster (can be a subset of cells).
     resolution : float
         Resolution parameter for Leiden.
     key_added : str
@@ -33,7 +45,8 @@ def run_leiden_clustering_on_adata(
         Key in `adata.obsm` specifying the feature representation used to compute
         the k-nearest neighbor graph before clustering. This is passed to
         `scanpy.pp.neighbors(..., use_rep=representation)`.
-        If `None`, a PCA ('X_pca') embedding is computed internally.
+        If `None`, a PCA ('X_pca') embedding is computed internally when
+        neighbors are recomputed.
     recompute_neighbors : bool
         Whether to recompute neighbors before clustering.
     leiden_kwargs : dict, optional
@@ -44,6 +57,10 @@ def run_leiden_clustering_on_adata(
     -------
     labels : pd.Series
         The Leiden cluster labels.
+    embedding : np.ndarray | None
+        The embedding used downstream for evaluation. This is `adata.obsm[representation]`
+        if `representation` is provided, `adata.obsm['X_pca']` if available, and `None`
+        otherwise.
     """
     adata = adata_input.copy()
     if recompute_neighbors:
@@ -61,7 +78,14 @@ def run_leiden_clustering_on_adata(
         **(leiden_kwargs or {}),
     )
 
-    return adata.obs[key_added].copy(), adata.obsm["X_pca"]
+    if representation is not None:
+        embedding = adata.obsm[representation]
+    elif "X_pca" in adata.obsm:
+        embedding = adata.obsm["X_pca"]
+    else:
+        embedding = None
+
+    return adata.obs[key_added].copy(), embedding
 
 
 def subset_adata(
@@ -72,10 +96,15 @@ def subset_adata(
     rng = np.random.default_rng(random_state)
 
     n_cells = adata.shape[0]
-    if frac_cells_subset > 1.0:
-        raise ValueError("frac_cells_subset must be <= 1.")
+    if frac_cells_subset <= 0.0 or frac_cells_subset > 1.0:
+        raise ValueError("frac_cells_subset must be in the interval (0, 1].")
 
     n_cells_subset = int(n_cells * frac_cells_subset)
+    if n_cells_subset < 2:
+        raise ValueError(
+            "frac_cells_subset results in fewer than 2 cells in the subset. "
+            "Please increase frac_cells_subset or provide more cells."
+        )
 
     cell_idx = rng.choice(n_cells, size=n_cells_subset, replace=False)
     return adata[cell_idx, :], f"cells{n_cells_subset}"
@@ -93,7 +122,8 @@ def run_leiden_clustering_on_random_subset(
     representation: str | None = None,
     leiden_kwargs: dict | None = None,
 ):
-    adata = sdata.tables[tables_key]
+    adata_full = sdata.tables[tables_key]
+    adata = filter_zero_count_cells(adata_full)
 
     # --- Perform subsetting --- #
     adata_subset, subset_label = subset_adata(
@@ -117,10 +147,9 @@ def run_leiden_clustering_on_random_subset(
 
     # Store labels in the full AnnData
     # For cell subsetting, missing cells get NaN
-    full_labels = pd.Series(index=adata.obs_names, dtype=object)
+    full_labels = pd.Series(index=adata_full.obs_names, dtype=object)
     full_labels.loc[adata_subset.obs_names] = labels.values
-
-    adata.obs[key_added] = full_labels
+    adata_full.obs[key_added] = full_labels
 
     return key_added, pca
 
