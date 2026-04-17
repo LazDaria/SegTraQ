@@ -3,21 +3,16 @@ import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
-from scipy.stats import pearsonr, spearmanr
-from sklearn.metrics.pairwise import cosine_similarity
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
-    _bootstrap_mixture_fit,
-    _bootstrap_center_border_similarity,
-    _compute_ncvs_within_radius,
     _get_center_border_counts,
     _get_neighborhood_counts,
     _join_points_regions,
-    _norm_log_df,
+    _cosine_similarity_two_vectors,
+    _bootstrap_mixture_fit,
     _process_cell,
 )
-
 
 def match_nuclei_to_cells(
     sdata: sd.SpatialData,
@@ -135,22 +130,25 @@ def similarity_nucleus_cell(
     points_y_key: str = "y",
     min_transcripts: int = 10,
     min_genes: int = 5,
-    metric: str = "cosine_sim",
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    scale: float = 1e4,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    For each cell in the SpatialData table, identifies the nucleus with highest IoU
-    and computes the similarity (cosine similarity, Pearson correlation, Spearman correlation)
-    between the gene expression profiles of the whole cell and its nucleus.
+    Compute the cosine similarity between whole-cell and matched nucleus
+    expression profiles for each cell.
+
+    The point estimate is computed from cell and nucleus count matrices using
+    genes detected in at least one of the two regions, followed by row-wise
+    library-size normalization and log1p transformation.
 
     Parameters
     ----------
     sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned spatial
-        transcriptomics data (images, tables, points, shapes and optional labels).
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
@@ -158,59 +156,53 @@ def similarity_nucleus_cell(
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
     nucleus_shapes_key : str, default="nucleus_boundaries"
-        Key in `sdata.shapes` for nucleus boundary polygons, if available.
+        Key in `sdata.shapes` for nucleus boundary polygons.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
     points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell (background).
+        Identifier for transcripts not assigned to any cell.
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript/spot.
     points_x_key : str, default="x"
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
     min_transcripts : int, default=10
-        Minimum number of transcripts (raw counts) required per region (cell and nucleus) to compute a correlation.
-        If either region has fewer than `min_transcripts` counts, the correlation is set to NaN.
+        Minimum number of transcripts required in both cell and nucleus.
     min_genes : int, default=5
-        Minimum number of non-zero genes required to compute a correlation.
-        If fewer genes are available, the correlation is set to NaN.
-    metric : str, default="cosine_sim"
-        Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
-    n_jobs: int
-        Number of jobs for computing cell nucleus match, if not yet calculated.
+        Minimum number of non-zero genes required across cell and nucleus.
     select_by : str, default="nucleus_fraction"
         Score used to select the best-matching nucleus per cell. Options:
         - "iou": maximize Intersection-over-Union (cell vs nucleus).
         - "nucleus_fraction": maximize area(cell ∩ nucleus) / area(nucleus).
-        If multiple nuclei have the same score (e.g. fully inside the cell), the
-        larger nucleus (by area) is selected.
+        If multiple nuclei have the same score, the larger nucleus is selected.
     min_intersection_area : float, default=0.0
-        Minimum area(cell ∩ nucleus) required to consider a nucleus as a candidate.
-        Overlaps <= this threshold are ignored.
-    inplace : bool, optional
-        Whether to add the results to `sdata.tables`. Default is True.
+        Minimum area(cell ∩ nucleus) required to consider a nucleus as a
+        candidate. Overlaps <= this threshold are ignored.
+    n_jobs : int, default=-1
+        Number of jobs for computing cell-nucleus matches if they have not yet
+        been calculated.
+    scale : float, default=1e4
+        Library-size normalization scale used before log1p.
+    inplace : bool, default=True
+        Whether to merge the results into `sdata.tables[tables_key].obs`.
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
         DataFrame with columns:
-            - cell_id_key : identifier of each cell,
-            - `nucleus_id`: matching nucleus ID with highest nucleus fraction or Intersection over Union (or None),
-            - `similarity_nucleus_cell`:
-                similarity (cosine similarity, Pearson correlation, Spearman correlation)
-                between the cell and its matched nucleus gene counts
-            (NaN if no match).
+            - cell id column
+            - `nucleus_id`
+            - `iou`
+            - `nucleus_fraction`
+            - `similarity_nucleus_cell`
     """
     assert nucleus_shapes_key is not None, (
-        "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-        "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `rs` metrics."
+        "Cannot compute nucleus-cell similarity: `nucleus_shapes_key` is None. "
+        "Define a valid nucleus shape layer before running this metric."
     )
-
-    if metric not in ["pearson", "spearman", "cosine_sim"]:
-        raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
@@ -222,7 +214,7 @@ def similarity_nucleus_cell(
     tbl = sdata.tables[tables_key]
 
     if "nucleus_id" not in tbl.obs.columns:
-        match_df = match_nuclei_to_cells(
+        match_nuclei_to_cells(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
@@ -238,7 +230,6 @@ def similarity_nucleus_cell(
     id_key = tables_cell_id_key
 
     X = tbl.X
-    # Check if X looks like counts
     if _looks_like_counts(X):
         arr = X.toarray() if hasattr(X, "toarray") else X
     elif "counts" not in tbl.layers:
@@ -252,8 +243,8 @@ def similarity_nucleus_cell(
 
     expr_cells = pd.DataFrame(
         arr,
-        index=sdata.tables[tables_key].obs[tables_cell_id_key],
-        columns=sdata.tables[tables_key].var_names,
+        index=tbl.obs[tables_cell_id_key],
+        columns=tbl.var_names,
     )
 
     _, expr_nucleus = _join_points_regions(
@@ -275,57 +266,33 @@ def similarity_nucleus_cell(
     expr_nucleus = expr_nucleus[common_genes]
     expr_cells = expr_cells[common_genes]
 
-    expr_cells_norm = _norm_log_df(expr_cells)
-    expr_nucleus_norm = _norm_log_df(expr_nucleus)
-
     rows = []
     for _, row in match_df.iterrows():
-        # cell ID and nucleus ID
         cid, nid = row[id_key], row["nucleus_id"]
-        if pd.isna(nid):  # if no overlapping nucleus
-            rows.append(
-                {
-                    id_key: cid,
-                    "nucleus_id": nid,
-                    "iou": row.iou,
-                    "nucleus_fraction": row.nucleus_fraction,
-                    "similarity_nucleus_cell": np.nan,
-                }
-            )
+
+        if pd.isna(nid):
+            sim = np.nan
         else:
-            # x is the expression from the whole cell, y from the nucleus
-            x_raw = expr_cells.loc[cid, :].to_numpy()
-            y_raw = expr_nucleus.loc[nid, :].to_numpy()
+            x = expr_cells.loc[cid].to_numpy()
+            y = expr_nucleus.loc[nid].to_numpy()
 
-            x_norm = expr_cells_norm.loc[cid, :].to_numpy()
-            y_norm = expr_nucleus_norm.loc[nid, :].to_numpy()
-
-            mask = (x_raw != 0) | (y_raw != 0)
-            x = x_norm[mask]
-            y = y_norm[mask]
-
-            x_counts = x_raw[mask].sum()
-            y_counts = y_raw[mask].sum()
-
-            if (mask.sum() < min_genes) or (x_counts < min_transcripts) or (y_counts < min_transcripts):
-                corr = np.nan
-            else:
-                if metric == "pearson":
-                    corr, _ = pearsonr(x, y)
-                elif metric == "spearman":
-                    corr, _ = spearmanr(x, y)
-                elif metric == "cosine_sim":
-                    corr = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
-
-            rows.append(
-                {
-                    id_key: cid,
-                    "nucleus_id": nid,
-                    "iou": row.iou,
-                    "nucleus_fraction": row.nucleus_fraction,
-                    "similarity_nucleus_cell": corr,
-                }
+            sim = _cosine_similarity_two_vectors(
+                x,
+                y,
+                min_transcripts=min_transcripts,
+                min_genes=min_genes,
+                scale=scale,
             )
+
+        rows.append(
+            {
+                id_key: cid,
+                "nucleus_id": nid,
+                "iou": row.iou,
+                "nucleus_fraction": row.nucleus_fraction,
+                "similarity_nucleus_cell": sim,
+            }
+        )
 
     corr_df = pd.DataFrame(rows)
 
@@ -342,7 +309,7 @@ def similarity_nucleus_cell(
 
 
 def similarity_nucleus_cytoplasm(
-    sdata,
+    sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
@@ -355,40 +322,40 @@ def similarity_nucleus_cytoplasm(
     points_y_key: str = "y",
     min_transcripts: int = 10,
     min_genes: int = 5,
-    metric: str = "cosine_sim",
     scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = 1,  # joblib not strictly needed; most win is from vectorization
+    n_jobs: int = 1,
     inplace: bool = True,
-    debug_cell_id: str | None = None,
-):
+) -> pd.DataFrame:
     """
-    For each cell in the SpatialData table, identifies the nucleus with highest intersection over union (IoU)
-    and computes the similarity (cosine similarity, Pearson correlation, Spearman correlation)
-    between the gene expression profiles of the cytoplasm (cell - nucleus) and the cell region overlapping the nucleus.
+    Compute the cosine similarity between nucleus-overlapping and cytoplasmic
+    expression profiles for each cell.
+
+    The point estimate is computed from count matrices for the part of the cell
+    overlapping the matched nucleus and the remaining part of the cell, using
+    genes detected in at least one of the two regions, followed by row-wise
+    library-size normalization and log1p transformation.
 
     Parameters
     ----------
     sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned spatial
-        transcriptomics data (images, tables, points, shapes and optional labels).
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
+        Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
     nucleus_shapes_key : str, default="nucleus_boundaries"
-        Key in `sdata.shapes` for nucleus boundary polygons, if available.
+        Key in `sdata.shapes` for nucleus boundary polygons.
     points_key : str, default="transcripts"
         Key in `sdata.points` for spot/transcript-level data.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
     points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell (background).
+        Identifier for transcripts not assigned to any cell.
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
     points_x_key : str, default="x"
@@ -396,41 +363,41 @@ def similarity_nucleus_cytoplasm(
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
     min_transcripts : int, default=10
-        Minimum number of transcripts (raw counts) required per region (cytoplasm and nucleus) to compute a correlation.
-        If either region has fewer than `min_transcripts` counts, the correlation is set to NaN.
+        Minimum number of transcripts required in both nucleus-overlapping and
+        cytoplasmic regions.
     min_genes : int, default=5
-        Minimum number of non-zero genes required to compute a correlation.
-        If fewer genes are available, the correlation is set to NaN.
-    metric : str, default="cosine_sim"
-        Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
-    scale: float, default=1e4,
-        Scale for library size normalization.
+        Minimum number of non-zero genes required across nucleus-overlapping and
+        cytoplasmic regions.
+    scale : float, default=1e4
+        Library-size normalization scale used before log1p.
     select_by : str, default="nucleus_fraction"
         Score used to select the best-matching nucleus per cell. Options:
         - "iou": maximize Intersection-over-Union (cell vs nucleus).
         - "nucleus_fraction": maximize area(cell ∩ nucleus) / area(nucleus).
-        If multiple nuclei have the same score (e.g. fully inside the cell), the
-        larger nucleus (by area) is selected.
+        If multiple nuclei have the same score, the larger nucleus is selected.
     min_intersection_area : float, default=0.0
-        Minimum area(cell ∩ nucleus) required to consider a nucleus as a candidate.
-        Overlaps <= this threshold are ignored.
-    n_jobs : int
-        Number of parallel jobs for correlation computation.
-    inplace : bool, optional
-        Whether to add the results to `sdata.tables`. Default is True.
+        Minimum area(cell ∩ nucleus) required to consider a nucleus as a
+        candidate. Overlaps <= this threshold are ignored.
+    n_jobs : int, default=1
+        Number of jobs for computing cell-nucleus matches if they have not yet
+        been calculated.
+    inplace : bool, default=True
+        Whether to merge the results into `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [cell_id_key, "nucleus_id", "similarity_nucleus_cytoplasm"]
+        DataFrame with columns:
+            - cell id column
+            - `nucleus_id`
+            - `iou`
+            - `nucleus_fraction`
+            - `similarity_nucleus_cytoplasm`
     """
     assert nucleus_shapes_key is not None, (
-        "Cannot compute IoUs: `nucleus_shapes_key` is None. "
-        "Define a valid nucleus shape layer in `SegTraQ` before running `rs` metrics."
+        "Cannot compute nucleus-cytoplasm similarity: `nucleus_shapes_key` is None. "
+        "Define a valid nucleus shape layer before running this metric."
     )
-
-    if metric not in ["pearson", "spearman", "cosine_sim"]:
-        raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
@@ -455,7 +422,9 @@ def similarity_nucleus_cytoplasm(
             inplace=inplace,
         )
     else:
-        match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
+        match_df = sdata.tables[tables_key].obs[
+            [id_key, "nucleus_id", "iou", "nucleus_fraction"]
+        ].copy()
 
     best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
 
@@ -471,7 +440,7 @@ def similarity_nucleus_cytoplasm(
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         predicate="within",
-        require_points_region_ID_match=True,  # <-- keeps only points within their labeled cell
+        require_points_region_ID_match=True,
     )
 
     tx_nuc, _ = _join_points_regions(
@@ -489,7 +458,6 @@ def similarity_nucleus_cytoplasm(
         require_points_region_ID_match=False,
     )
 
-    # keep only points that were inside their assigned cell
     valid_point_ids = set(tx_cell["point_id"])
     tx = tx_nuc[tx_nuc["point_id"].isin(valid_point_ids)].copy()
 
@@ -499,8 +467,7 @@ def similarity_nucleus_cytoplasm(
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
     all_genes = pd.Index(sdata.tables[tables_key].var_names)
 
-    # intersection: cell ∩ best nucleus
-    counts_intersection_raw = (
+    counts_intersection = (
         tx[tx["in_intersection"]]
         .groupby([points_cell_id_key, points_gene_key])
         .size()
@@ -508,8 +475,7 @@ def similarity_nucleus_cytoplasm(
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
 
-    # remainder: rest of the cell
-    counts_remainder_raw = (
+    counts_cytoplasm = (
         tx[~tx["in_intersection"]]
         .groupby([points_cell_id_key, points_gene_key])
         .size()
@@ -517,50 +483,34 @@ def similarity_nucleus_cytoplasm(
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
 
-    # normalize
-    total_counts = (counts_intersection_raw + counts_remainder_raw).sum(axis=1).replace(0, np.nan)
-    counts_intersection_norm = counts_intersection_raw.div(total_counts, axis=0) * scale
-    counts_remainder_norm = counts_remainder_raw.div(total_counts, axis=0) * scale
-    counts_intersection_norm = np.log1p(counts_intersection_norm).fillna(0.0)
-    counts_remainder_norm = np.log1p(counts_remainder_norm).fillna(0.0)
-
     rows = []
     for cid in all_cells:
         nid = best_nuc_map.get(cid)
-        if pd.isna(nid):  # if no overlapping nucleus
-            r = np.nan
+
+        if pd.isna(nid):
+            sim = np.nan
         else:
-            x_raw = counts_intersection_raw.loc[cid].to_numpy(dtype=float)
-            y_raw = counts_remainder_raw.loc[cid].to_numpy(dtype=float)
+            x = counts_intersection.loc[cid].to_numpy(dtype=float)
+            y = counts_cytoplasm.loc[cid].to_numpy(dtype=float)
 
-            # keep genes that are non-zero in at least one part
-            mask = (x_raw != 0) | (y_raw != 0)
+            sim = _cosine_similarity_two_vectors(
+                x,
+                y,
+                min_transcripts=min_transcripts,
+                min_genes=min_genes,
+                scale=scale,
+            )
 
-            x_counts = x_raw[mask].sum()
-            y_counts = y_raw[mask].sum()
+        rows.append(
+            {
+                id_key: cid,
+                "similarity_nucleus_cytoplasm": sim,
+            }
+        )
 
-            x = counts_intersection_norm.loc[cid].to_numpy(dtype=float)[mask]
-            y = counts_remainder_norm.loc[cid].to_numpy(dtype=float)[mask]
+    sim_df = pd.DataFrame(rows)
 
-            if (mask.sum() < min_genes) or (x_counts < min_transcripts) or (y_counts < min_transcripts):
-                r = np.nan
-            else:
-                if metric == "pearson":
-                    r, _ = pearsonr(x, y)
-                elif metric == "spearman":
-                    r, _ = spearmanr(x, y)
-                elif metric == "cosine_sim":
-                    r = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
-                else:
-                    raise ValueError(f"Metric {metric} not supported")
-
-        rows.append((cid, r))
-
-    corr_per_cell = pd.DataFrame(rows, columns=[points_cell_id_key, "similarity_nucleus_cytoplasm"]).set_index(
-        points_cell_id_key
-    )
-
-    out = match_df.reset_index(drop=True).merge(corr_per_cell, left_on=id_key, right_index=True, how="left")
+    out = match_df.merge(sim_df, on=id_key, how="left")
 
     if inplace:
         merge_into_obs(
@@ -573,8 +523,7 @@ def similarity_nucleus_cytoplasm(
 
     return out
 
-
-def similarity_border_neighborhood(
+def similarity_center_border(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -586,31 +535,24 @@ def similarity_border_neighborhood(
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
     erosion_fraction_of_radius: float = 0.2,
-    neighborhood_radius_factor: float = 2.0,
     min_transcripts: int = 10,
     min_genes: int = 5,
-    metric: str = "cosine_sim",
+    scale: float = 1e4,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Computes the similarity between gene expression profiles in the border region of each cell
-    and two references: (1) the center region of the same cell, and (2) the neighborhood composition vector (NCV)
-    computed within a specified radius around the cell.
+    Compute the cosine similarity between the center and border expression
+    profiles of each cell.
 
-    Specifically, the function:
-    1. Erodes each cell polygon to obtain a center region.
-    2. Defines the border region as the set difference between the full cell
-        and its eroded center.
-    3. Computes gene expression profiles for center and border.
-    4. Computes the correlation between center and border expression.
-    5. Computes the correlation between border expression and the
-        NCV expression profile of the same cell.
+    The point estimate is computed from center and border count matrices
+    obtained via `_get_center_border_counts`, using row-wise library-size
+    normalization followed by log1p.
 
     Parameters
     ----------
     sdata : SpatialData
         A `SpatialData` object containing segmented and transcript-assigned
-        spatial transcriptomics data (tables, points, shapes, etc.).
+        spatial transcriptomics data.
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
@@ -622,184 +564,93 @@ def similarity_border_neighborhood(
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript/spot to a cell.
     points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell (background).
+        Identifier for transcripts not assigned to any cell.
     points_x_key : str, default="x"
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
-    neighborhood_radius_factor : float, default=2.0
-        For each cell, the neighborhood consists of the cells whose centroids
-        lie within the radius of the cell times this factor.
     erosion_fraction_of_radius : float, default=0.2
-        Fraction of the equivalent radius to use as erosion
-        Example: 0.2 means erode by 20% of the radius.
+        Fraction of the equivalent radius used to erode each cell polygon when
+        defining the center region.
     min_transcripts : int, default=10
-        Minimum number of transcripts (raw counts) required per region to compute a correlation.
-        If either region has fewer than `min_transcripts` counts, the correlation is set to NaN.
+        Minimum number of transcripts required in both center and border.
     min_genes : int, default=5
-        Minimum number of non-zero genes required to compute a correlation.
-        If fewer genes are available, the correlation is set to NaN.
-    metric : str, default="cosine_sim"
-        Correlation metric to use ("pearson", "spearman", "cosine_sim" currently supported).
-    inplace : bool, optional
-        Whether to add the results to `sdata.tables[tables_key].obs`. Default is True.
+        Minimum number of non-zero genes required across center and border.
+    scale : float, default=1e4
+        Library-size normalization scale used before log1p.
+    inplace : bool, default=True
+        Whether to merge the results into `sdata.tables[tables_key].obs`.
 
     Returns
     -------
-    pandas.DataFrame
+    pd.DataFrame
         DataFrame with columns:
-            - `tables_cell_id_key`: identifier of each cell,
-            - `similarity_center_border`: similarity between center and border expression,
-            - `similarity_border_neighborhood`: similarity between border and neighborhood expression
-            - `ratio_border_neighborhood_to_center`: ratio of the two similarities. A value > 1 indicates
-              that the border is more similar to the neighborhood than to the center, while a value < 1 indicates
-              the opposite.
+            - cell id column
+            - `similarity_center_border`
     """
-    if metric not in ["pearson", "spearman", "cosine_sim"]:
-        raise ValueError(f"Metric {metric} not supported. Please choose from 'pearson', 'spearman', or 'cosine_sim'.")
+    id_key = sdata.shapes[shapes_key].index.name
 
-    assert erosion_fraction_of_radius > 0.0 and erosion_fraction_of_radius < 1.0, (
-        "`erosion_fraction_of_radius` must be between 0 and 1."
-    )
-
-    assert neighborhood_radius_factor > 1.0, "`neighborhood_radius_factor` must be larger than 1.0."
-
-    expr_center_raw, expr_border_raw = _get_center_border_counts(
-        sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_gene_key=points_gene_key,
-        erosion_fraction_of_radius=erosion_fraction_of_radius,
-    )
-
-    # expression in neighborhood
-    expr_neighborhood_raw = _compute_ncvs_within_radius(
+    expr_center, expr_border = _get_center_border_counts(
         sdata=sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
         shapes_key=shapes_key,
-        neighborhood_radius_factor=neighborhood_radius_factor,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        erosion_fraction_of_radius=erosion_fraction_of_radius,
     )
 
-    common_cells = expr_border_raw.index.intersection(expr_center_raw.index)
-    expr_center_raw = expr_center_raw.loc[common_cells, expr_neighborhood_raw.columns]
-    expr_border_raw = expr_border_raw.loc[common_cells, expr_neighborhood_raw.columns]
-    expr_neighborhood_raw = expr_neighborhood_raw.loc[common_cells, :]
+    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)
 
-    # normalization and log1p
-    expr_center = _norm_log_df(expr_center_raw)
-    expr_border = _norm_log_df(expr_border_raw)
-    expr_neighborhood = _norm_log_df(expr_neighborhood_raw)
-
-    id_key = sdata.shapes[shapes_key].index.name
+    expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
+    expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
     rows = []
-
-    for cid in expr_center.index:
+    for cid in all_cells:
         x_center = expr_center.loc[cid].to_numpy()
         x_border = expr_border.loc[cid].to_numpy()
-        x_neighborhood = expr_neighborhood.loc[cid].to_numpy()
 
-        x_center_raw = expr_center_raw.loc[cid].to_numpy()
-        x_border_raw = expr_border_raw.loc[cid].to_numpy()
-        x_neighborhood_raw = expr_neighborhood_raw.loc[cid].to_numpy()
-
-        # for the filtering, we need to do it independently for the two comparisons
-        # the reason is that some genes may be 0 in center and border, but expressed in neighborhood
-        # this will lead to higher correlations, because we have more 0s in common
-
-        # === comparing center and border ===
-        mask = (x_center_raw != 0) | (x_border_raw != 0)
-        x_center_filtered = x_center[mask]
-        x_border_filtered = x_border[mask]
-
-        corr_center_border = np.nan
-        corr_border_neighborhood = np.nan
-
-        x_center_counts = x_center_raw[mask].sum()
-        x_border_counts = x_border_raw[mask].sum()
-
-        # center–border similarity
-        if (mask.sum() >= min_genes) and (x_center_counts >= min_transcripts) and (x_border_counts >= min_transcripts):
-            if metric == "pearson":
-                corr_center_border, _ = pearsonr(x_center_filtered, x_border_filtered)
-            elif metric == "spearman":
-                corr_center_border, _ = spearmanr(x_center_filtered, x_border_filtered)
-            elif metric == "cosine_sim":
-                corr_center_border = cosine_similarity(
-                    x_center_filtered.reshape(1, -1), x_border_filtered.reshape(1, -1)
-                )[0, 0]
-
-        # === comparing border and neighborhood ===
-        mask = (x_border_raw != 0) | (x_neighborhood_raw != 0)
-        x_border_filtered = x_border[mask]
-        x_neighborhood_filtered = x_neighborhood[mask]
-
-        x_border_counts = x_border_raw[mask].sum()
-        x_neighborhood_counts = x_neighborhood_raw[mask].sum()
-
-        if (
-            (mask.sum() >= min_genes)
-            and (x_neighborhood_counts >= min_transcripts)
-            and (x_border_counts >= min_transcripts)
-        ):
-            if metric == "pearson":
-                corr_border_neighborhood, _ = pearsonr(x_border_filtered, x_neighborhood_filtered)
-            elif metric == "spearman":
-                corr_border_neighborhood, _ = spearmanr(x_border_filtered, x_neighborhood_filtered)
-            elif metric == "cosine_sim":
-                corr_border_neighborhood = cosine_similarity(
-                    x_border_filtered.reshape(1, -1), x_neighborhood_filtered.reshape(1, -1)
-                )[0, 0]
-
-        # ratio: border–neighborhood vs center–border
-        ratio_border_neighborhood_to_center = np.nan
-        if (
-            not np.isnan(corr_center_border)
-            and not np.isnan(corr_border_neighborhood)
-            and not np.isclose(corr_center_border, 0.0)
-        ):
-            ratio_border_neighborhood_to_center = corr_border_neighborhood / corr_center_border
+        sim = _cosine_similarity_two_vectors(
+            x_center,
+            x_border,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
+        )
 
         rows.append(
             {
                 id_key: cid,
-                "similarity_center_border": corr_center_border,
-                "similarity_border_neighborhood": corr_border_neighborhood,
-                "ratio_border_neighborhood_to_center": ratio_border_neighborhood_to_center,
+                "similarity_center_border": sim,
             }
         )
 
-    corr_df = pd.DataFrame(rows)
+    out = pd.DataFrame(rows)
 
-    # check that the df is not empty
-    if corr_df.empty:
+    if out.empty:
         raise ValueError(
-            "Could not compute similarities. "
-            "Try different parameters for erosion_fraction_of_radius or neighborhood_radius_factor. "
-            "You used erosion_fraction_of_radius="
-            f"{erosion_fraction_of_radius} and neighborhood_radius_factor={neighborhood_radius_factor}."
+            "Could not compute center-border cosine similarities. "
+            "Try different parameters for erosion_fraction_of_radius. "
+            f"You used erosion_fraction_of_radius={erosion_fraction_of_radius}."
         )
 
     if inplace:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=corr_df,
+            df_to_merge=out,
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=id_key,
         )
 
-    return corr_df
-
+    return out
 
 def border_admixture_score(
     sdata,
@@ -820,6 +671,7 @@ def border_admixture_score(
     n_boot: int = 200,
     ci_level: float = 0.95,
     random_state: int | None = None,
+    n_jobs: int = -1,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -881,6 +733,8 @@ def border_admixture_score(
         Percentile confidence interval level.
     random_state : int | None, default=None
         Random seed for reproducible bootstrap resampling.
+    n_jobs : int, default=1
+        Number of parallel jobs across cells.
     inplace : bool, default=True
         If True, merge the results into `sdata.tables[tables_key].obs`.
 
@@ -926,10 +780,17 @@ def border_admixture_score(
     expr_border = expr_border.loc[common_cells]
     expr_neighborhood = expr_neighborhood.loc[common_cells]
 
-    rng = np.random.default_rng(random_state)
+    seed_rng = np.random.default_rng(random_state)
+    seeds = seed_rng.integers(
+        0,
+        np.iinfo(np.uint32).max,
+        size=len(common_cells),
+        dtype=np.uint32,
+    )
 
-    rows = []
-    for cid in common_cells:
+    def _process_one(cid, seed):
+        rng = np.random.default_rng(int(seed))
+
         res = _bootstrap_mixture_fit(
             x_center=expr_center.loc[cid].to_numpy(dtype=int),
             x_border=expr_border.loc[cid].to_numpy(dtype=int),
@@ -942,15 +803,18 @@ def border_admixture_score(
             rng=rng,
         )
 
-        rows.append(
-            {
-                id_key: cid,
-                "border_admixture_score": res["border_admixture_score"],
-                "border_admixture_score_ci_low": res["border_admixture_score_ci_low"],
-                "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
-                "n_neighbors": n_neighbors.loc[cid]
-            }
-        )
+        return {
+            id_key: cid,
+            "border_admixture_score": res["border_admixture_score"],
+            "border_admixture_score_ci_low": res["border_admixture_score_ci_low"],
+            "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
+            "n_neighbors": n_neighbors.loc[cid],
+        }
+
+    rows = Parallel(n_jobs=n_jobs)(
+        delayed(_process_one)(cid, seed)
+        for cid, seed in zip(common_cells, seeds, strict=False)
+    )
 
     out = pd.DataFrame(rows)
 
@@ -960,145 +824,6 @@ def border_admixture_score(
             "Try different parameters for erosion_fraction or neighborhood_radius_factor. "
             "You used erosion_fraction="
             f"{erosion_fraction} and neighborhood_radius_factor={neighborhood_radius_factor}."
-        )
-
-    if inplace:
-        merge_into_obs(
-            sdata=sdata,
-            tables_key=tables_key,
-            df_to_merge=out,
-            tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
-        )
-
-    return out
-
-def similarity_center_border(
-    sdata: sd.SpatialData,
-    tables_key: str = "table",
-    tables_cell_id_key: str = "cell_id",
-    shapes_key: str = "cell_boundaries",
-    points_key: str = "transcripts",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_gene_key: str = "feature_name",
-    erosion_fraction_of_radius: float = 0.2,
-    min_transcripts: int = 10,
-    min_genes: int = 5,
-    n_boot: int = 200,
-    ci_level: float = 0.95,
-    scale: float = 1e4,
-    random_state: int | None = None,
-    inplace: bool = True,
-) -> pd.DataFrame:
-    """
-    Compute the cosine similarity between the center and border expression
-    profiles of each cell and estimate percentile confidence intervals by
-    multinomial bootstrap.
-
-    The point estimate is computed from center and border count matrices
-    obtained via `_get_center_border_counts`, using row-wise library-size
-    normalization followed by log1p. Bootstrap replicates resample the observed
-    center and border gene count vectors independently with fixed region totals.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned
-        spatial transcriptomics data.
-    tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    shapes_key : str, default="cell_boundaries"
-        Key in `sdata.shapes` for cell boundary polygons.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for spot/transcript-level data.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript/spot to a cell.
-    points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
-    erosion_fraction_of_radius : float, default=0.2
-        Fraction of the equivalent radius used to erode each cell polygon when
-        defining the center region.
-    min_transcripts : int, default=10
-        Minimum number of transcripts required in both center and border.
-    min_genes : int, default=5
-        Minimum number of non-zero genes required across center and border.
-    n_boot : int, default=200
-        Number of bootstrap replicates per cell.
-    ci_level : float, default=0.95
-        Percentile confidence interval level.
-    scale : float, default=1e4
-        Library-size normalization scale used before log1p.
-    random_state : int | None, default=None
-        Random seed for reproducible bootstrap resampling.
-    inplace : bool, default=True
-        Whether to merge the results into `sdata.tables[tables_key].obs`.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns:
-            - cell id column
-            - `similarity_center_border`
-            - `similarity_center_border_ci_low`
-            - `similarity_center_border_ci_high`
-    """
-    id_key = sdata.shapes[shapes_key].index.name
-
-    expr_center, expr_border = _get_center_border_counts(
-        sdata=sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        erosion_fraction_of_radius=erosion_fraction_of_radius,
-    )
-
-    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
-
-    expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
-    expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
-
-    rng = np.random.default_rng(random_state)
-
-    rows = []
-    for cid in all_cells:
-        res = _bootstrap_center_border_similarity(
-            x_center=expr_center.loc[cid].to_numpy(dtype=int),
-            x_border=expr_border.loc[cid].to_numpy(dtype=int),
-            n_boot=n_boot,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            ci_level=ci_level,
-            scale=scale,
-            rng=rng,
-        )
-        res[id_key] = cid
-        rows.append(res)
-
-    out = pd.DataFrame(rows)
-
-    if out.empty:
-        raise ValueError(
-            "Could not compute center-border cosine similarities. "
-            "Try different parameters for erosion_fraction_of_radius. "
-            f"You used erosion_fraction_of_radius={erosion_fraction_of_radius}."
         )
 
     if inplace:

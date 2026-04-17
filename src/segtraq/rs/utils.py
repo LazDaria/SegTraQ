@@ -7,11 +7,9 @@ import spatialdata as sd
 from geopandas import GeoDataFrame
 from pandas import Series
 from rtree.index import Index
-from scipy.spatial import cKDTree
 from shapely.geometry.base import BaseGeometry
-from sklearn.metrics.pairwise import cosine_similarity
 
-from ..utils import _is_background, _looks_like_counts, filter_cells
+from ..utils import _is_background, filter_cells
 
 
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
@@ -31,14 +29,6 @@ def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
     if np.isnan(inter_area) or nuc_area <= 0:
         return np.nan
     return inter_area / nuc_area
-
-
-def _norm_log_df(df: pd.DataFrame, scale: float = 1e4) -> pd.DataFrame:
-    # row-wise library size normalization + log1p
-    sums = df.sum(axis=1).replace(0, np.nan)
-    df_norm = df.div(sums, axis=0) * scale
-    return np.log1p(df_norm).fillna(0.0)
-
 
 def _process_cell(
     cell_row: Series,
@@ -427,94 +417,6 @@ def _join_points_regions(
 
     return pts_joined, counts
 
-
-def _compute_ncvs_within_radius(
-    sdata: sd.SpatialData,
-    tables_key: str = "table",
-    tables_cell_id_key: str = "cell_id",
-    shapes_key: str = "cell_boundaries",
-    neighborhood_radius_factor: float = 2.0,
-) -> pd.DataFrame:
-    """
-    Compute neighborhood composition vectors (NCVs) as the average gene expression
-    of neighboring cells within a user-defined distance.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        SpatialData object with cell shapes and cell-level table.
-    tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level AnnData.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    shapes_key : str, default="cell_boundaries"
-        Key in `sdata.shapes` for cell boundary polygons.
-    neighborhood_radius_factor : float, default=2.0
-        This is multiplied by each cell's radius to define the neighborhood distance for that cell.
-
-    Returns
-    -------
-    pandas.DataFrame
-        DataFrame of NCVs: index = cell IDs, columns = genes, values = average
-        expression of neighbors within `radius` (excluding the focal cell).
-    """
-    # Get centroids for each cell shape
-    cells_gdf = sdata.shapes[shapes_key].copy()
-
-    ad = sdata.tables[tables_key]
-    X = ad.X
-
-    if _looks_like_counts(X):
-        arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in ad.layers:
-        raise ValueError(
-            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
-            "and the main matrix does not look like counts."
-        )
-    else:
-        counts = ad.layers["counts"]
-        arr = counts.toarray() if hasattr(counts, "toarray") else counts
-
-    mask = ad.obs[tables_cell_id_key].isin(cells_gdf.index)
-    expr_cells = pd.DataFrame(
-        arr[mask, :],
-        index=ad.obs[tables_cell_id_key][mask],
-        columns=ad.var_names,
-    )
-
-    # Align order between shapes and table: we assume one shape per cell
-    cells_gdf = cells_gdf.loc[expr_cells.index]
-    centroids = cells_gdf.geometry.centroid
-    coords = np.vstack([centroids.x.values, centroids.y.values]).T
-
-    areas = cells_gdf.geometry.area
-    # Avoid weird issues with tiny/empty shapes
-    areas = areas.clip(lower=1e-6)
-    radii = np.sqrt(areas / np.pi)
-    radii.reset_index(inplace=True, drop=True)
-
-    tree = cKDTree(coords)
-
-    n_cells = expr_cells.shape[0]
-    genes = expr_cells.columns
-    ncv_arr = np.zeros_like(expr_cells.values, dtype=float)
-
-    for i in range(n_cells):
-        # Query neighbors within radius (including itself)
-        idxs = tree.query_ball_point(coords[i], r=radii[i] * neighborhood_radius_factor)
-        # Remove self
-        idxs = [j for j in idxs if j != i]
-        if len(idxs) == 0:
-            # no neighbors in radius: define NCV as zeros or NaN
-            ncv_arr[i, :] = 0.0
-        else:
-            ncv_arr[i, :] = expr_cells.values[idxs, :].mean(axis=0)
-
-    expr_ncv = pd.DataFrame(ncv_arr, index=expr_cells.index, columns=genes)
-    return expr_ncv
-
-
-
 def _ensure_center_border_shapes(
     sdata,
     shapes_key: str = "cell_boundaries",
@@ -608,6 +510,42 @@ def _get_center_border_counts(
         )
 
     return expr_center, expr_border
+
+def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
+    x_norm = np.linalg.norm(x)
+    y_norm = np.linalg.norm(y)
+    if x_norm == 0.0 or y_norm == 0.0:
+        return np.nan
+    return float(np.dot(x, y) / (x_norm * y_norm))
+
+def _norm_log_vector(x: np.ndarray, scale: float = 1e4) -> np.ndarray:
+    x = np.asarray(x, dtype=float)
+    total = x.sum()
+    if total == 0:
+        return np.zeros_like(x)
+    return np.log1p((x / total) * scale)
+
+def _cosine_similarity_two_vectors(
+    x_a: np.ndarray,
+    x_b: np.ndarray,
+    min_transcripts: int,
+    min_genes: int,
+    scale: float,
+) -> float:
+    mask = (x_a != 0) | (x_b != 0)
+
+    if (
+        mask.sum() < min_genes
+        or x_a[mask].sum() < min_transcripts
+        or x_b[mask].sum() < min_transcripts
+    ):
+        return np.nan
+
+    sim = _cosine_sim(
+        _norm_log_vector(x_a[mask], scale=scale),
+        _norm_log_vector(x_b[mask], scale=scale),
+    )
+    return float(sim) if np.isfinite(sim) else np.nan
 
 
 def _get_neighborhood_counts(
@@ -1019,124 +957,4 @@ def _bootstrap_mixture_fit(
         "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
         "border_admixture_score_ci_low": float(ci_low) if np.isfinite(ci_low) else np.nan,
         "border_admixture_score_ci_high": float(ci_high) if np.isfinite(ci_high) else np.nan,
-    }
-
-def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
-    x_norm = np.linalg.norm(x)
-    y_norm = np.linalg.norm(y)
-    if x_norm == 0.0 or y_norm == 0.0:
-        return np.nan
-    return float(np.dot(x, y) / (x_norm * y_norm))
-
-def _norm_log_vector(x: np.ndarray, scale: float = 1e4) -> np.ndarray:
-    x = np.asarray(x, dtype=float)
-    total = x.sum()
-    if total == 0:
-        return np.zeros_like(x)
-    return np.log1p((x / total) * scale)
-
-def _bootstrap_center_border_similarity(
-    x_center: np.ndarray,
-    x_border: np.ndarray,
-    n_boot: int = 200,
-    min_transcripts: int = 10,
-    min_genes: int = 5,
-    ci_level: float = 0.95,
-    scale: float = 1e4,
-    rng: np.random.Generator | None = None,
-) -> dict:
-    """
-    Bootstrap the center-border cosine similarity for one cell using
-    multinomial resampling of the observed per-region gene count vectors.
-
-    Parameters
-    ----------
-    x_center, x_border : np.ndarray
-        Gene count vectors for the center and border regions.
-    n_boot : int, default=200
-        Number of bootstrap replicates.
-    min_transcripts : int, default=10
-        Minimum number of transcripts required in each region.
-    min_genes : int, default=5
-        Minimum number of non-zero genes required across the two regions combined.
-    ci_level : float, default=0.95
-        Percentile confidence interval level.
-    scale : float, default=1e4
-        Library-size normalization scale used before log1p.
-    rng : np.random.Generator | None, default=None
-        Random number generator. If None, a new generator is created.
-
-    Returns
-    -------
-    dict
-        Dictionary with:
-        - `similarity_center_border`
-        - `similarity_center_border_ci_low`
-        - `similarity_center_border_ci_high`
-    """
-    if rng is None:
-        rng = np.random.default_rng()
-
-    mask = (x_center != 0) | (x_border != 0)
-    x_center_raw = x_center[mask]
-    x_border_raw = x_border[mask]
-
-    x_center_counts = int(x_center_raw.sum())
-    x_border_counts = int(x_border_raw.sum())
-
-    if (
-        mask.sum() < min_genes
-        or x_center_counts < min_transcripts
-        or x_border_counts < min_transcripts
-    ):
-        return {
-            "similarity_center_border": np.nan,
-            "similarity_center_border_ci_low": np.nan,
-            "similarity_center_border_ci_high": np.nan,
-        }
-
-    x_center_obs = _norm_log_vector(x_center_raw, scale=scale)
-    x_border_obs = _norm_log_vector(x_border_raw, scale=scale)
-
-    sim_obs = _cosine_sim(
-        x_center_obs,
-        x_border_obs,
-    )
-
-    p_center = x_center_raw / x_center_counts
-    p_border = x_border_raw / x_border_counts
-
-    boot_scores = []
-
-    for _ in range(n_boot):
-        xb_center = rng.multinomial(x_center_counts, p_center)
-        xb_border = rng.multinomial(x_border_counts, p_border)
-
-        x_center_boot = _norm_log_vector(xb_center, scale=scale)
-        x_border_boot = _norm_log_vector(xb_border, scale=scale)
-
-        sim_boot = _cosine_sim(
-            x_center_boot,
-            x_border_boot,
-        )
-
-        if np.isfinite(sim_boot):
-            boot_scores.append(sim_boot)
-
-    boot_scores = np.asarray(boot_scores, dtype=float)
-
-    if len(boot_scores) == 0:
-        ci_low = np.nan
-        ci_high = np.nan
-    else:
-        alpha = 1.0 - ci_level
-        ci_low, ci_high = np.quantile(
-            boot_scores,
-            [alpha / 2, 1 - alpha / 2],
-        )
-
-    return {
-        "similarity_center_border": float(sim_obs) if np.isfinite(sim_obs) else np.nan,
-        "similarity_center_border_ci_low": float(ci_low) if np.isfinite(ci_low) else np.nan,
-        "similarity_center_border_ci_high": float(ci_high) if np.isfinite(ci_high) else np.nan,
     }

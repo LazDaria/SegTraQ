@@ -1,6 +1,5 @@
 from .region_similarity import (
     match_nuclei_to_cells,
-    similarity_border_neighborhood,
     similarity_nucleus_cell,
     similarity_center_border,
     similarity_nucleus_cytoplasm,
@@ -12,6 +11,5 @@ __all__ = [
     "similarity_nucleus_cell",
     "similarity_nucleus_cytoplasm",
     "similarity_center_border",
-    "similarity_border_neighborhood",
     "border_admixture_score",
 ]
