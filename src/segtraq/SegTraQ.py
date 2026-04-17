@@ -1079,10 +1079,10 @@ class _RSFacade:
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
-        metric: str = "cosine_sim",
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        scale: float = 1e4,
         inplace: bool = True,
     ):
         return rs.similarity_nucleus_cell(
@@ -1099,10 +1099,10 @@ class _RSFacade:
             points_gene_key=self._p.points_gene_key,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            metric=metric,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            scale=scale,
             inplace=inplace,
         )
 
@@ -1112,7 +1112,6 @@ class _RSFacade:
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
-        metric: str = "cosine_sim",
         scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
@@ -1133,7 +1132,6 @@ class _RSFacade:
             points_y_key=self._p.points_y_key,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            metric=metric,
             scale=scale,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
@@ -1143,16 +1141,15 @@ class _RSFacade:
 
     similarity_nucleus_cytoplasm.__doc__ = rs.similarity_nucleus_cytoplasm.__doc__
 
-    def similarity_border_neighborhood(
+    def similarity_center_border(
         self,
         erosion_fraction_of_radius: float = 0.2,
-        neighborhood_radius_factor: float = 2.0,
         min_transcripts: int = 10,
         min_genes: int = 5,
-        metric: str = "cosine_sim",
-        inplace: bool = True,
+        scale: float = 1e4,
+        inplace: bool = True
     ):
-        return rs.similarity_border_neighborhood(
+        return rs.similarity_center_border(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1166,12 +1163,11 @@ class _RSFacade:
             erosion_fraction_of_radius=erosion_fraction_of_radius,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            neighborhood_radius_factor=neighborhood_radius_factor,
-            metric=metric,
-            inplace=inplace,
+            scale=scale,
+            inplace=inplace
         )
 
-    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
+    similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
     
     def border_admixture_score(
         self,
@@ -1183,6 +1179,7 @@ class _RSFacade:
         n_boot: int = 200,
         ci_level: float = 0.95,
         random_state: int | None = None,
+        n_jobs: int = -1,
         inplace: bool = True
     ):
         return rs.border_admixture_score(
@@ -1204,45 +1201,11 @@ class _RSFacade:
             n_boot=n_boot,
             ci_level=ci_level,
             random_state=random_state,
+            n_jobs=n_jobs,
             inplace=inplace
         )
     
     border_admixture_score.__doc__ = rs.border_admixture_score.__doc__
-
-    def similarity_center_border(
-        self,
-        erosion_fraction_of_radius: float = 0.2,
-        min_transcripts: int = 10,
-        min_genes: int = 5,
-        n_boot: int = 200,
-        ci_level: float = 0.95,
-        scale: float = 1e4,
-        random_state: int | None = None,
-        inplace: bool = True
-    ):
-        return rs.similarity_center_border(
-            sdata=self._p.sdata,
-            tables_key=self._p.tables_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            shapes_key=self._p.shapes_key,
-            points_key=self._p.points_key,
-            points_cell_id_key=self._p.points_cell_id_key,
-            points_background_id=self._p.points_background_id,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            points_gene_key=self._p.points_gene_key,
-            erosion_fraction_of_radius=erosion_fraction_of_radius,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            n_boot=n_boot,
-            ci_level=ci_level,
-            scale=scale,
-            random_state=random_state,
-            inplace=inplace
-        )
-
-    similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
-
 
 class _SPFacade:
     """
