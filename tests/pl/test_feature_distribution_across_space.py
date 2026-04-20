@@ -28,3 +28,10 @@ def test_feature_distribution_across_space_invalid_feature(sdata_new):
 def test_feature_distribution_across_space_non_numeric_feature(sdata_new):
     with pytest.raises(ValueError, match="not numeric and could not be converted"):
         segtraq.pl.feature_distribution_across_space(sdata_new, features=["segmentation_method"])
+
+
+def test_feature_distribution_across_space_invalid_filter_size(sdata_new):
+    with pytest.raises(AssertionError, match="Filter size must be positive."):
+        segtraq.pl.feature_distribution_across_space(sdata_new, features=["transcript_counts"], filter_size=-5)
+    with pytest.raises(AssertionError, match="Filter size should be odd for symmetric smoothing."):
+        segtraq.pl.feature_distribution_across_space(sdata_new, features=["transcript_counts"], filter_size=20)
