@@ -418,7 +418,7 @@ def boxplot(
 def transcript_distribution_across_space(
     sdata: sd.SpatialData,
     axes: str | tuple[str] | list[str] = ("x", "y"),
-    smoothing: int = 10,
+    filter_size: int = 21,
     points_key: str = "transcripts",
 ) -> plt.Axes | list[plt.Axes]:
     """
@@ -430,8 +430,8 @@ def transcript_distribution_across_space(
         A SpatialData object containing a points element with transcript coordinates.
     axes : str or list/tuple of str, optional
         Spatial axis or axes to plot. Default is ('x', 'y').
-    smoothing : int, optional
-        Half-width (in bins) of the uniform smoothing kernel. Default is 10.
+    filter_size : int, optional
+        Size of the filter kernel. Default is 21.
     points_key : str, optional
         Key inside ``sdata.points`` that holds the transcript DataFrame.
         Default is ``'transcripts'``.
@@ -447,7 +447,7 @@ def transcript_distribution_across_space(
     ValueError
         If any of the requested axes are not present in the points DataFrame.
     """
-    # ── 0. Normalise input ───────────────────────────────────────────────────
+    # ── 0. Handle inputs ─────────────────────────────────────────────────────
     single = isinstance(axes, str)
     axes = [axes] if single else list(axes)
 
@@ -467,7 +467,8 @@ def transcript_distribution_across_space(
     ax_list = ax_list[:, 0]  # shape (n,)
 
     # ── 3. Plot each axis ────────────────────────────────────────────────────
-    kernel_size = max(1, 2 * smoothing + 1)
+    assert filter_size > 0, "Filter size must be positive."
+    assert filter_size % 2 == 1, "Filter size should be odd for symmetric smoothing."
 
     for ax, axis in zip(ax_list, axes, strict=False):
         coords = points_df[axis].compute()
@@ -476,9 +477,9 @@ def transcript_distribution_across_space(
         counts, bin_edges = np.histogram(coords, bins=n_bins)
         bin_centres = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
-        smoothed = uniform_filter1d(counts.astype(float), size=kernel_size)
+        smoothed = uniform_filter1d(counts.astype(float), size=filter_size)
 
-        ax.plot(bin_centres, smoothed, color="steelblue", linewidth=1.4, label=f"Smoothed (kernel={kernel_size})")
+        ax.plot(bin_centres, smoothed, color="steelblue", linewidth=1.4, label=f"Smoothed (filter={filter_size})")
         ax.set_xlabel(axis)
         ax.set_ylabel("Transcript count")
         ax.set_title(f"Transcript distribution along {axis}")
@@ -493,7 +494,7 @@ def feature_distribution_across_space(
     sdata: sd.SpatialData,
     features: str | tuple[str] | list[str],
     axes: tuple[str] | list[str] = ("centroid_x", "centroid_y"),
-    smoothing: int = 10,
+    filter_size: int = 21,
     tables_key: str = "table",
 ) -> list[list[plt.Axes]]:
     """
@@ -511,8 +512,8 @@ def feature_distribution_across_space(
     axes : list/tuple of str, optional
         Columns in ``adata.obs`` to use as spatial axes. Default is
         ``('centroid_x', 'centroid_y')``.
-    smoothing : int, optional
-        Half-width (in bins) of the uniform smoothing kernel. Default is 10.
+    filter_size : int, optional
+        Size of the filter kernel. Default is 21.
     tables_key : str, optional
         Key inside ``sdata.tables``. Default is ``'table'``.
 
@@ -526,7 +527,7 @@ def feature_distribution_across_space(
     ValueError
         If any requested feature or axis is not found in obs.
     """
-    # ── 0. Normalise inputs ──────────────────────────────────────────────────
+    # ── 0. Handle inputs ─────────────────────────────────────────────────────
     features = [features] if isinstance(features, str) else list(features)
     axes = list(axes)
 
@@ -584,7 +585,8 @@ def feature_distribution_across_space(
         squeeze=False,
     )
 
-    kernel_size = max(1, 2 * smoothing + 1)
+    assert filter_size > 0, "Filter size must be positive."
+    assert filter_size % 2 == 1, "Filter size should be odd for symmetric smoothing."
 
     # ── 3. Fill grid ─────────────────────────────────────────────────────────
     for row, feature in enumerate(features):
@@ -627,9 +629,9 @@ def feature_distribution_across_space(
                     bin_means[~nans],
                 )
 
-            smoothed = uniform_filter1d(bin_means, size=kernel_size)
+            smoothed = uniform_filter1d(bin_means, size=filter_size)
 
-            ax.plot(bin_centres, smoothed, color="steelblue", linewidth=1.4, label=f"Smoothed (kernel={kernel_size})")
+            ax.plot(bin_centres, smoothed, color="steelblue", linewidth=1.4, label=f"Smoothed (filter={filter_size})")
             ax.set_xlabel(axis)
             ax.set_ylabel(feature)
             ax.set_title(f"{feature} along {axis}")
