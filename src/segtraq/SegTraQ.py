@@ -5,7 +5,7 @@ import numpy as np
 import spatialdata as sd
 from anndata import AnnData
 
-from . import bl, cs, ps, rs, sp, vl
+from . import bl, cs, pl, ps, rs, sp, vl
 from .utils import _filter_control_and_low_quality_transcripts, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
@@ -164,6 +164,7 @@ class SegTraQ:
         self.vl = _VLFacade(self)
         self.sp = _SPFacade(self)
         self.ps = _PSFacade(self)
+        self.pl = _PLFacade(self)
 
     @property
     def sdata(self):
@@ -1689,3 +1690,35 @@ class _VLFacade:
         )
 
     vertical_signal_integrity_per_cell.__doc__ = vl.vertical_signal_integrity_per_cell.__doc__
+
+
+class _PLFacade:
+    """
+    Thin facade over segtraq.pl bound to a SegTraQ instance.
+    Methods use the parent's sdata and configured keys exclusively.
+    No per-call overrides are allowed.
+    """
+
+    def __init__(self, parent: "SegTraQ") -> None:
+        self._p = parent
+
+    def transcript_distribution_across_space(self, smoothing: int = 10):
+        return pl.transcript_distribution_across_space(
+            sdata=self._p.sdata,
+            axes=(self._p.points_x_key, self._p.points_y_key),
+            smoothing=smoothing,
+            points_key=self._p.points_key,
+        )
+
+    transcript_distribution_across_space.__doc__ = pl.transcript_distribution_across_space.__doc__
+
+    def feature_distribution_across_space(self, features: list[str], smoothing: int = 10):
+        return pl.feature_distribution_across_space(
+            sdata=self._p.sdata,
+            features=features,
+            axes=(self._p.tables_centroid_x_key, self._p.tables_centroid_y_key),
+            smoothing=smoothing,
+            tables_key=self._p.tables_key,
+        )
+
+    feature_distribution_across_space.__doc__ = pl.feature_distribution_across_space.__doc__

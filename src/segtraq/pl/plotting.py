@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -7,7 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import spatialdata as sd
 from matplotlib.patches import Patch
+from scipy.ndimage import uniform_filter1d
 
 from .utils import (
     build_celltype_composition_df,
@@ -410,3 +413,230 @@ def boxplot(
 
     # return the dataframe for convenience
     return box_df
+
+
+def transcript_distribution_across_space(
+    sdata: sd.SpatialData,
+    axes: str | tuple[str] | list[str] = ("x", "y"),
+    filter_size: int = 21,
+    points_key: str = "transcripts",
+) -> plt.Axes | list[plt.Axes]:
+    """
+    Plot the marginal distribution of transcripts along one or more spatial axes.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        A SpatialData object containing a points element with transcript coordinates.
+    axes : str or list/tuple of str, optional
+        Spatial axis or axes to plot. Default is ('x', 'y').
+    filter_size : int, optional
+        Size of the filter kernel. Default is 21.
+    points_key : str, optional
+        Key inside ``sdata.points`` that holds the transcript DataFrame.
+        Default is ``'transcripts'``.
+
+    Returns
+    -------
+    matplotlib.axes.Axes or list of matplotlib.axes.Axes
+        The Axes containing the plot(s). Returns a single Axes if a single
+        axis string was passed, otherwise a list.
+
+    Raises
+    ------
+    ValueError
+        If any of the requested axes are not present in the points DataFrame.
+    """
+    # ── 0. Handle inputs ─────────────────────────────────────────────────────
+    single = isinstance(axes, str)
+    axes = [axes] if single else list(axes)
+
+    # ── 1. Validate axes ─────────────────────────────────────────────────────
+    points_df = sdata.points[points_key]
+    available = list(points_df.columns)
+    missing = [a for a in axes if a not in available]
+    if missing:
+        raise ValueError(
+            f"Requested axis/axes {missing} not found in '{points_key}'. "
+            f"Available columns are: {available}. Please set the axes parameter accordingly."
+        )
+
+    # ── 2. Create subplots ───────────────────────────────────────────────────
+    n = len(axes)
+    fig, ax_list = plt.subplots(n, 1, figsize=(9, 4 * n), squeeze=False)
+    ax_list = ax_list[:, 0]  # shape (n,)
+
+    # ── 3. Plot each axis ────────────────────────────────────────────────────
+    assert filter_size > 0, "Filter size must be positive."
+    assert filter_size % 2 == 1, "Filter size should be odd for symmetric smoothing."
+
+    for ax, axis in zip(ax_list, axes, strict=False):
+        coords = points_df[axis].compute()
+
+        n_bins = int(coords.max() - coords.min()) + 1
+        counts, bin_edges = np.histogram(coords, bins=n_bins)
+        bin_centres = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+        smoothed = uniform_filter1d(counts.astype(float), size=filter_size)
+
+        ax.plot(bin_centres, smoothed, color="steelblue", linewidth=1.4, label=f"Smoothed (filter={filter_size})")
+        ax.set_xlabel(axis)
+        ax.set_ylabel("Transcript count")
+        ax.set_title(f"Transcript distribution along {axis}")
+        ax.legend(fontsize=8)
+        ax.set_xlim(bin_centres[0], bin_centres[-1])
+
+    plt.tight_layout()
+    return ax_list[0] if single else list(ax_list)
+
+
+def feature_distribution_across_space(
+    sdata: sd.SpatialData,
+    features: str | tuple[str] | list[str],
+    axes: tuple[str] | list[str] = ("centroid_x", "centroid_y"),
+    filter_size: int = 21,
+    tables_key: str = "table",
+) -> list[list[plt.Axes]]:
+    """
+    Plot the distribution of one or more obs features across spatial axes.
+
+    For each feature, one subplot per axis is shown, arranged as a grid of
+    shape (n_features, n_axes).
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        A SpatialData object containing an AnnData table.
+    features : str or list/tuple of str
+        One or more column names from ``adata.obs`` to plot.
+    axes : list/tuple of str, optional
+        Columns in ``adata.obs`` to use as spatial axes. Default is
+        ``('centroid_x', 'centroid_y')``.
+    filter_size : int, optional
+        Size of the filter kernel. Default is 21.
+    tables_key : str, optional
+        Key inside ``sdata.tables``. Default is ``'table'``.
+
+    Returns
+    -------
+    list of list of matplotlib.axes.Axes
+        Nested list of shape [n_features][n_axes].
+
+    Raises
+    ------
+    ValueError
+        If any requested feature or axis is not found in obs.
+    """
+    # ── 0. Handle inputs ─────────────────────────────────────────────────────
+    features = [features] if isinstance(features, str) else list(features)
+    axes = list(axes)
+
+    # ── 1. Validate ──────────────────────────────────────────────────────────
+    adata = sdata.tables[tables_key]
+    obs_cols = list(adata.obs.columns)
+
+    missing_axes = [a for a in axes if a not in obs_cols]
+    if missing_axes:
+        raise ValueError(
+            f"Axis column(s) {missing_axes} not found in obs. "
+            f"Available columns are: {obs_cols}. "
+            f"Please set the axes parameter accordingly."
+        )
+
+    missing_features = [f for f in features if f not in obs_cols]
+    if missing_features:
+        raise ValueError(
+            f"Feature(s) {missing_features} not found in obs. "
+            f"Available columns are: {obs_cols}. "
+            f"Please set the features parameter accordingly."
+        )
+
+    # we want to only plot numeric features,
+    # but we allow automatic conversion of non-numeric columns that can be converted to numeric
+    # (e.g. categorical columns with numeric categories, such as FOV labels '1', '2', '3' etc.)
+    non_numeric = [f for f in features if not pd.api.types.is_numeric_dtype(adata.obs[f])]
+
+    if non_numeric:
+        convertible = []
+        non_convertible = []
+        for f in non_numeric:
+            try:
+                pd.to_numeric(adata.obs[f])
+                convertible.append(f)
+            except (ValueError, TypeError):
+                non_convertible.append(f)
+
+        if non_convertible:
+            raise ValueError(
+                f"Feature(s) {non_convertible} are not numeric and could not be converted. "
+                f"Please provide only numerical features."
+            )
+        if convertible:
+            for f in convertible:
+                adata.obs[f] = pd.to_numeric(adata.obs[f])
+
+    # ── 2. Create subplot grid (n_features rows × n_axes cols) ───────────────
+    n_feat = len(features)
+    n_axes = len(axes)
+    fig, ax_grid = plt.subplots(
+        n_feat,
+        n_axes,
+        figsize=(6 * n_axes, 4 * n_feat),
+        squeeze=False,
+    )
+
+    assert filter_size > 0, "Filter size must be positive."
+    assert filter_size % 2 == 1, "Filter size should be odd for symmetric smoothing."
+
+    # ── 3. Fill grid ─────────────────────────────────────────────────────────
+    for row, feature in enumerate(features):
+        feature_vals = adata.obs[feature].to_numpy(dtype=float)
+
+        for col, axis in enumerate(axes):
+            ax = ax_grid[row, col]
+            coords = adata.obs[axis].to_numpy(dtype=float)
+
+            # Drop NaN centroids
+            valid_mask = ~np.isnan(coords)
+            n_invalid = (~valid_mask).sum()
+            if n_invalid > 0:
+                warnings.warn(
+                    f"{n_invalid}/{len(coords)} cells have NaN coordinates in "
+                    f"'{axis}' and will be excluded from plotting.",
+                    stacklevel=2,
+                )
+                coords = coords[valid_mask]
+                feature_vals_ax = feature_vals[valid_mask]
+            else:
+                feature_vals_ax = feature_vals
+
+            n_bins = int(coords.max() - coords.min()) + 1
+            bin_edges = np.linspace(coords.min(), coords.max(), n_bins + 1)
+            bin_centres = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+            bin_indices = np.clip(np.digitize(coords, bin_edges[:-1]) - 1, 0, n_bins - 1)
+            bin_sums = np.bincount(bin_indices, weights=feature_vals_ax, minlength=n_bins)
+            bin_counts = np.bincount(bin_indices, minlength=n_bins)
+
+            with np.errstate(invalid="ignore"):
+                bin_means = np.where(bin_counts > 0, bin_sums / bin_counts, np.nan)
+
+            nans = np.isnan(bin_means)
+            if nans.any():
+                bin_means[nans] = np.interp(
+                    np.flatnonzero(nans),
+                    np.flatnonzero(~nans),
+                    bin_means[~nans],
+                )
+
+            smoothed = uniform_filter1d(bin_means, size=filter_size)
+
+            ax.plot(bin_centres, smoothed, color="steelblue", linewidth=1.4, label=f"Smoothed (filter={filter_size})")
+            ax.set_xlabel(axis)
+            ax.set_ylabel(feature)
+            ax.set_title(f"{feature} along {axis}")
+            ax.legend(fontsize=8)
+            ax.set_xlim(bin_centres[0], bin_centres[-1])
+
+    plt.tight_layout()
+    return ax_grid.tolist()
