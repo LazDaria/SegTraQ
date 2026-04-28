@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
@@ -9,8 +8,9 @@ from .utils import (
     ari_pairwise,
     purity_mean,
     purity_pairwise,
-    run_leiden_clustering_on_random_subset
+    run_leiden_clustering_on_random_subset,
 )
+
 
 def cluster_connectedness(
     sdata: sd.SpatialData,

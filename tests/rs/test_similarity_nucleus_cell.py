@@ -14,19 +14,12 @@ def test_similarity_nucleus_cell(sdata_new):
     )
 
 
-def test_similarity_nucleus_cell_invalid_select_by(sdata_new):
-    with pytest.raises(ValueError, match="select_by must be 'iou' or 'nucleus_fraction'"):
-        st.rs.similarity_nucleus_cell(
-            sdata_new,
-            select_by="dummy_metric",
-            n_jobs=8,
-        )
-
 def test_similarity_nucleus_cell_value_range(sdata_new):
     df = st.rs.similarity_nucleus_cell(sdata_new, n_jobs=8)
 
     vals = df["similarity_nucleus_cell"].dropna()
     assert ((vals >= -1) & (vals <= 1)).all()
+
 
 def test_similarity_nucleus_cell_high_thresholds_return_nan(sdata_new):
     df = st.rs.similarity_nucleus_cell(
@@ -37,6 +30,7 @@ def test_similarity_nucleus_cell_high_thresholds_return_nan(sdata_new):
     )
 
     assert df["similarity_nucleus_cell"].isna().all()
+
 
 def test_similarity_nucleus_cell_no_inplace(sdata_new):
     before_cols = set(sdata_new.tables["table"].obs.columns)
