@@ -8,7 +8,7 @@ from scipy import sparse
 from scipy.stats import fisher_exact
 
 from ..utils import merge_into_obs
-from .utils import _get_count_matrix, _score_marker_detection, _score_neighbor_negative_markers
+from .utils import _get_count_matrix
 
 
 def mutually_exclusive_coexpression_rate(
@@ -434,47 +434,31 @@ def neighbor_contamination(
 
     return per_cell_df, contamination_matrix_df, contamination_binary_df
 
-
 def marker_purity(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
-    use_quantiles: bool = False,
     tables_key: str = "table",
     layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
-    weight_cont: float = 0.7,
     require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Compute per-cell marker purity using positive markers globally
-    and negative markers restricted to the focal cell's neighborhood.
+    Compute per-cell marker purity using balanced accuracy.
 
-    Positive markers:
-        - For each cell's annotated type c, use markers[c]["positive"].
-        - Compute per-cell precision/recall/F1 relative to these markers,
-          using either a quantile-based threshold or expression > 0.
+    For each cell of type c:
+        - positive markers of c are expected to be expressed.
+        - relevant negative markers are negative markers of c that are also
+          positive markers of neighboring cell types.
 
-    Negative markers (neighborhood-aware):
-        - For a cell i of type c:
-            * Find the cell types present in its spatial neighborhood,
-              using `adata.obsp[neighbors_key]`.
-            * Take c's negative markers: markers[c]["negative"].
-            * Intersect them with the union of positive markers of the
-              neighbor cell types.
-            * Consider only genes that are present in at least one neighbor
-              of the source type (if `require_neighbor_expression=True`).
-            → "relevant negatives" for this cell.
-        - Compute per-cell precision/recall/F1 for these relevant negatives.
-
-    Finally:
-        - Combine positive_F1 and negative_F1 into an overall F1_purity
-          that rewards high positive-F1 and low negative-F1. Weighting
-          factor weight_cont controls the importance of negative-F1.
+    The score combines:
+        - positive_marker_recall: sensitivity, i.e. fraction of positive markers expressed.
+        - negative_marker_avoidance: specificity, i.e. fraction of relevant negative markers avoided.
+        - marker_balanced_accuracy: mean of sensitivity and specificity.
 
     Parameters
     ----------
@@ -485,15 +469,11 @@ def marker_purity(
     markers : dict
         A dictionary mapping cell types to their positive and negative markers, in the format
         {cell_type: {"positive": list[str], "negative": list[str]}}.
-    use_quantiles : bool, optional, default=False
-        If True, define predictions by the top-|markers| fraction per cell (rank-based);
-        if False, use direct expression-based criteria (expression > 0).
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
     layer : str | None, optional
         Layer containing count data. If `None`, `adata.X` is used if it looks
         like counts, otherwise `adata.layers["counts"]` is used if available.
-        If a layer is specified, it must exist and contain count-like values.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
@@ -503,9 +483,6 @@ def marker_purity(
     require_neighbor_expression : bool, optional, default=True
         If True, contamination is only counted when the relevant gene is
         expressed in at least one neighboring cell of the source type.
-    weight_cont : float, optional, default=0.7
-        Weighting factor for negative marker F1 in the overall F1_purity.
-        Higher values give more weight to negative F1. Must be in the range [0, 1].
     neighbors_key : str, optional, default="spatial_connectivities"
         Key in `adata.obsp` containing a cell x cell adjacency / connectivity
         matrix that defines the spatial neighborhood.
@@ -517,78 +494,24 @@ def marker_purity(
     pandas.DataFrame
         Columns:
             [
-             'positive_precision', 'positive_recall', 'positive_F1',
-             'negative_precision', 'negative_recall', 'negative_F1',
-             'F1_purity']
+             'positive_marker_recall',
+             'negative_marker_avoidance',
+             'marker_balanced_accuracy'
+            ]
         indexed by cell ID.
     """
-    if not (0 <= weight_cont <= 1):
-        raise ValueError(f"weight_cont must be between 0 and 1 (inclusive), got {weight_cont}")
-
     adata = sdata.tables[tables_key]
 
-    # TODO: keep sparse if sparse
     X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
-    X_dense = X.toarray() if hasattr(X, "toarray") else X
+    X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
     genes = np.asarray(adata.var_names)
     var_index = pd.Index(genes)
+    valid_genes = set(var_index)
+
     cell_types = np.asarray(adata.obs[cell_type_key])
-    n_cells, _n_genes = X.shape
+    n_cells = X_dense.shape[0]
 
-    def _idx(lst) -> np.ndarray:
-        if lst is None or len(lst) == 0:
-            return np.empty(0, dtype=int)
-        return var_index.get_indexer_for(lst)
-
-    # Output arrays initialisation
-    pos_precision = np.full(n_cells, np.nan, dtype=float)
-    pos_recall = np.full(n_cells, np.nan, dtype=float)
-    pos_f1 = np.full(n_cells, np.nan, dtype=float)
-
-    neg_precision = np.full(n_cells, np.nan, dtype=float)
-    neg_recall = np.full(n_cells, np.nan, dtype=float)
-    neg_f1 = np.full(n_cells, np.nan, dtype=float)
-
-    purity = np.full(n_cells, np.nan, dtype=float)
-
-    # ---------------- POSITIVE markers (per type, global) -------------------
-    unique_cts = pd.unique(cell_types)
-
-    for ct in unique_cts:
-        mask_cells = cell_types == ct
-        idx_cells = np.where(mask_cells)[0]
-        if idx_cells.size == 0:
-            continue
-
-        # missing/unknown type → leave NaNs
-        if pd.isna(ct) or ct not in markers:
-            continue
-
-        m = markers[ct]
-        pos_idx = _idx(m.get("positive", []))
-        neg_idx = _idx(m.get("negative", []))
-        pos_idx = pos_idx[pos_idx >= 0]
-        neg_idx = neg_idx[neg_idx >= 0]
-        all_idx = np.unique(np.concatenate([pos_idx, neg_idx])) if neg_idx.size else pos_idx
-
-        # If no pos markers, nothing to compute
-        if pos_idx.size == 0:
-            continue
-
-        X_ct = X_dense[mask_cells]
-
-        p_precision_ct, p_recall_ct, p_f1_ct = _score_marker_detection(
-            X_ct,
-            pos_idx,
-            all_idx,
-            use_quantiles=use_quantiles,
-        )
-        pos_precision[idx_cells] = p_precision_ct
-        pos_recall[idx_cells] = p_recall_ct
-        pos_f1[idx_cells] = p_f1_ct
-
-    # ------------- NEGATIVE markers: neighborhood-aware ---------------------
     if neighbors_key not in adata.obsp:
         warnings.warn(
             f"neighbors_key='{neighbors_key}' not found in adata.obsp. "
@@ -596,13 +519,10 @@ def marker_purity(
             RuntimeWarning,
             stacklevel=2,
         )
-        sdata[tables_key].obsm["spatial"] = (
-            sdata[tables_key].obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
-        )
+        adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
 
     G = adata.obsp[neighbors_key]
-
     if sparse.issparse(G):
         G = G.tocsr()
         neighbor_indices = [G[i].indices for i in range(n_cells)]
@@ -610,39 +530,262 @@ def marker_purity(
         G = np.asarray(G)
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
-    neg_precision, neg_recall, neg_f1 = _score_neighbor_negative_markers(
-        X_dense=X_dense,
-        cell_types=cell_types,
-        markers=markers,
-        genes=genes,
-        require_neighbor_expression=require_neighbor_expression,
-        neighbor_indices=neighbor_indices,
-        use_quantiles=use_quantiles,
-    )
+    pos_sets = {ct: set(m.get("positive", [])) & valid_genes for ct, m in markers.items()}
+    neg_sets = {ct: set(m.get("negative", [])) & valid_genes for ct, m in markers.items()}
 
-    # ------------------------ F1_purity -------------------------------------
-    p_f1_all = pos_f1
-    n_f1_all = neg_f1
+    positive_recall = np.full(n_cells, np.nan, dtype=float)
+    negative_avoidance = np.full(n_cells, np.nan, dtype=float)
+    balanced_accuracy = np.full(n_cells, np.nan, dtype=float)
+    n_pos_markers = np.zeros(n_cells, dtype=int)
+    n_neg_markers = np.zeros(n_cells, dtype=int)
 
-    mask_valid = ~np.isnan(p_f1_all) & ~np.isnan(n_f1_all)
-    if np.any(mask_valid):
-        p = p_f1_all[mask_valid]
-        n = 1 - n_f1_all[mask_valid]
-        weight_id = 1 - weight_cont
-        purity_vals = weight_cont * n + weight_id * p
-        purity[mask_valid] = purity_vals
-    # cells without pos or neg markers stay NaN for purity
+    for i, ct in enumerate(cell_types):
+        if pd.isna(ct) or ct not in markers:
+            continue
 
-    # Build DataFrame
+        pos_genes = pos_sets.get(ct, set())
+        neg_all = neg_sets.get(ct, set())
+        nbs = neighbor_indices[i]
+
+        if not pos_genes or not neg_all or len(nbs) == 0:
+            continue
+
+        pos_idx = var_index.get_indexer(list(pos_genes))
+        n_pos_markers[i] = pos_idx.size
+        pos_expr = X_dense[i, pos_idx] > 0
+        positive_recall[i] = pos_expr.mean()
+
+        relevant_neg_genes = set()
+
+        for nb_ct in pd.unique(cell_types[nbs]):
+            if pd.isna(nb_ct) or nb_ct not in pos_sets:
+                continue
+
+            candidate_genes = neg_all & pos_sets[nb_ct]
+            if not candidate_genes:
+                continue
+
+            if not require_neighbor_expression:
+                relevant_neg_genes.update(candidate_genes)
+                continue
+
+            nb_idx = nbs[cell_types[nbs] == nb_ct]
+
+            for g in candidate_genes:
+                g_idx = var_index.get_loc(g)
+                if (X_dense[nb_idx, g_idx] > 0).any():
+                    relevant_neg_genes.add(g)
+
+        if not relevant_neg_genes:
+            continue
+
+        neg_idx = var_index.get_indexer(list(relevant_neg_genes))
+        n_neg_markers[i] = neg_idx.size
+
+        neg_expr = X_dense[i, neg_idx] > 0
+        negative_avoidance[i] = (~neg_expr).mean()
+        balanced_accuracy[i] = 0.5 * (positive_recall[i] + negative_avoidance[i])
+
     result = pd.DataFrame(
         {
-            "positive_precision": pos_precision,
-            "positive_recall": pos_recall,
-            "positive_F1": pos_f1,
-            "negative_precision": neg_precision,
-            "negative_recall": neg_recall,
-            "negative_F1": neg_f1,
-            "F1_purity": purity,
+            "positive_marker_recall": positive_recall,
+            "negative_marker_avoidance": negative_avoidance,
+            "marker_balanced_accuracy": balanced_accuracy,
+            "n_evaluated_positive_markers": n_pos_markers,
+            "n_evaluated_negative_markers": n_neg_markers,
+        },
+        index=adata.obs[tables_cell_id_key],
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=result,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return result
+
+
+def marker_purity(
+    sdata,
+    cell_type_key: str,
+    markers: dict[str, dict[str, list[str]]],
+    tables_key: str = "table",
+    layer: str | None = None,
+    tables_cell_id_key: str = "cell_id",
+    tables_centroid_x_key: str = "x_centroid",
+    tables_centroid_y_key: str = "y_centroid",
+    require_neighbor_expression: bool = True,
+    neighbors_key: str = "spatial_connectivities",
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute per-cell marker purity using balanced accuracy.
+
+    For each cell of type c:
+        - positive markers of c are expected to be expressed.
+        - relevant negative markers are negative markers of c that are also
+          positive markers of neighboring cell types.
+
+    The score combines:
+        - positive_marker_recall: sensitivity, i.e. fraction of positive markers expressed.
+        - negative_marker_avoidance: specificity, i.e. fraction of relevant negative markers avoided.
+        - marker_balanced_accuracy: mean of sensitivity and specificity.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
+    cell_type_key : str
+        Column in the AnnData `.obs` with cell-type labels.
+    markers : dict
+        A dictionary mapping cell types to their positive and negative markers, in the format
+        {cell_type: {"positive": list[str], "negative": list[str]}}.
+    tables_key : str, optional, default="table"
+        Key of the AnnData table in `sdata.tables`.
+    layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts, otherwise `adata.layers["counts"]` is used if available.
+    tables_cell_id_key : str, optional, default="cell_id"
+        Column in the AnnData `.obs` with unique cell IDs.
+    tables_centroid_x_key : str or None, optional, default="x_centroid"
+        Column in the cell table with the x-coordinate of the cell centroid.
+    tables_centroid_y_key : str or None, optional, default="y_centroid"
+        Column in the cell table with the y-coordinate of the cell centroid.
+    require_neighbor_expression : bool, optional, default=True
+        If True, contamination is only counted when the relevant gene is
+        expressed in at least one neighboring cell of the source type.
+    neighbors_key : str, optional, default="spatial_connectivities"
+        Key in `adata.obsp` containing a cell x cell adjacency / connectivity
+        matrix that defines the spatial neighborhood.
+    inplace : bool, optional, default=True
+        If True, store marker purity results in `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns:
+            [
+             'positive_marker_recall',
+             'negative_marker_avoidance',
+             'marker_balanced_accuracy',
+             'n_evaluated_positive_markers',
+             'n_evaluated_negative_markers'
+            ]
+        indexed by cell ID.
+    """
+    adata = sdata.tables[tables_key]
+
+    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
+
+    genes = np.asarray(adata.var_names)
+    var_index = pd.Index(genes)
+    valid_genes = set(var_index)
+
+    cell_types = np.asarray(adata.obs[cell_type_key])
+    n_cells = X_dense.shape[0]
+
+    # Compute spatial neighborhood graph if it is not already present.
+    if neighbors_key not in adata.obsp:
+        warnings.warn(
+            f"neighbors_key='{neighbors_key}' not found in adata.obsp. "
+            "A neighborhood graph based on Delaunay will be computed.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
+        sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
+
+    G = adata.obsp[neighbors_key]
+    if sparse.issparse(G):
+        G = G.tocsr()
+        neighbor_indices = [G[i].indices for i in range(n_cells)]
+    else:
+        G = np.asarray(G)
+        neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
+
+    # Keep only markers that are present in the spatial expression matrix.
+    pos_sets = {ct: set(m.get("positive", [])) & valid_genes for ct, m in markers.items()}
+    neg_sets = {ct: set(m.get("negative", [])) & valid_genes for ct, m in markers.items()}
+
+    positive_recall = np.full(n_cells, np.nan, dtype=float)
+    negative_avoidance = np.full(n_cells, np.nan, dtype=float)
+    balanced_accuracy = np.full(n_cells, np.nan, dtype=float)
+    n_pos_markers = np.zeros(n_cells, dtype=int)
+    n_neg_markers = np.zeros(n_cells, dtype=int)
+
+    for i, ct in enumerate(cell_types):
+        if pd.isna(ct) or ct not in markers:
+            continue
+
+        pos_genes = pos_sets.get(ct, set())
+        neg_all = neg_sets.get(ct, set())
+        nbs = neighbor_indices[i]
+
+        if not pos_genes:
+            continue
+
+        # Positive recall is computed globally for the focal cell type,
+        # independent of the cell's neighborhood.
+        pos_idx = var_index.get_indexer(list(pos_genes))
+        pos_idx = pos_idx[pos_idx >= 0]
+
+        n_pos_markers[i] = pos_idx.size
+        pos_expr = X_dense[i, pos_idx] > 0
+        positive_recall[i] = pos_expr.mean()
+
+        # Negative avoidance is neighborhood-aware.
+        if not neg_all or len(nbs) == 0:
+            continue
+
+        relevant_neg_genes = set()
+
+        for nb_ct in pd.unique(cell_types[nbs]):
+            if pd.isna(nb_ct) or nb_ct not in pos_sets:
+                continue
+
+            # Relevant negatives are focal negatives that are positive markers
+            # of at least one neighboring cell type.
+            candidate_genes = neg_all & pos_sets[nb_ct]
+            if not candidate_genes:
+                continue
+
+            if not require_neighbor_expression:
+                relevant_neg_genes.update(candidate_genes)
+                continue
+
+            nb_idx = nbs[cell_types[nbs] == nb_ct]
+
+            # Optionally require the candidate gene to be expressed
+            # in at least one neighbor of the corresponding source type.
+            for g in candidate_genes:
+                g_idx = var_index.get_loc(g)
+                if (X_dense[nb_idx, g_idx] > 0).any():
+                    relevant_neg_genes.add(g)
+
+        if not relevant_neg_genes:
+            continue
+
+        neg_idx = var_index.get_indexer(list(relevant_neg_genes))
+        neg_idx = neg_idx[neg_idx >= 0]
+
+        n_neg_markers[i] = neg_idx.size
+        neg_expr = X_dense[i, neg_idx] > 0
+
+        negative_avoidance[i] = (~neg_expr).mean()
+        balanced_accuracy[i] = 0.5 * (positive_recall[i] + negative_avoidance[i])
+
+    result = pd.DataFrame(
+        {
+            "positive_marker_recall": positive_recall,
+            "negative_marker_avoidance": negative_avoidance,
+            "marker_balanced_accuracy": balanced_accuracy,
+            "n_evaluated_positive_markers": n_pos_markers,
+            "n_evaluated_negative_markers": n_neg_markers,
         },
         index=adata.obs[tables_cell_id_key],
     )

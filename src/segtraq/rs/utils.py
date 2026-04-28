@@ -50,6 +50,7 @@ def _process_cell(
     cell_geom = cell_row.geometry
     cell_id = cell_row.name
 
+    # candidate nuclei based on bounding-box overlap (fast prefilter)
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
 
     # if there are no nuclei intersecting with our cell
@@ -135,73 +136,92 @@ def _process_cell(
         "nucleus_fraction": best["nucleus_fraction"],
     }
 
-
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
-    erosion_fraction_of_radius: float = 0.3,
+    border_fraction_of_radius: float = 0.2,
+    buffer_fraction_of_radius: float = 0.1,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """
-    Create eroded 'center' and 'border' shapes for each cell by shrinking the
-    original cell polygons and taking the difference.
+    Create center and border shapes with a buffer gap between them.
 
+    Border is the outer ring:
+        cell - cell eroded by border_fraction_of_radius
+
+    Center is the inner polygon:
+        cell eroded by border_fraction_of_radius + buffer_fraction_of_radius
+
+    The region between border and center is ignored.
     Parameters
     ----------
     sdata : SpatialData
         SpatialData object with cell boundary polygons in `sdata.shapes[shapes_key]`.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
-    erosion_fraction_of_radius : float, default=0.3
-        Fraction of the equivalent radius to use as erosion
-        Example: 0.3 means erode by 30% of the radius.
+    border_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to define the thickness of the
+        border region (outer ring).
+    buffer_fraction_of_radius : float, default=0.1
+        Additional fraction of the equivalent radius used to define the gap
+        between the border and center regions.
 
     Returns
     -------
     center_gdf : GeoDataFrame
-        GeoDataFrame with eroded "center" polygons, indexed or labeled by cell_id.
+        GeoDataFrame containing inner "center" polygons, indexed by cell ID.
+
     border_gdf : GeoDataFrame
-        GeoDataFrame with "border" polygons (cell minus center), same indexing.
+        GeoDataFrame containing outer "border" polygons (rings), indexed by cell ID.
     """
     cells_gdf = sdata.shapes[shapes_key].copy()
-
     id_key = cells_gdf.index.name
+
+    if id_key is None:
+        id_key = "cell_id"
 
     center_records = []
     border_records = []
 
-    areas = cells_gdf.geometry.area
-    # Avoid weird issues with tiny/empty shapes
-    areas = areas.clip(lower=1e-6)
+    # avoid zero-area cells to prevent invalid radius computation
+    areas = cells_gdf.geometry.area.clip(lower=1e-6)
     radii = np.sqrt(areas / np.pi)
-    erosion_dists = radii * erosion_fraction_of_radius
 
-    for _, row in cells_gdf.iterrows():
-        cid = row.name
+    # distances used for successive erosions defining border and center
+    border_dists = radii * border_fraction_of_radius
+    center_dists = radii * (border_fraction_of_radius + buffer_fraction_of_radius)
+
+    for cid, row in cells_gdf.iterrows():
         geom = row.geometry
 
-        # Erosion can't be done on invalid shapes
-        if not geom.is_valid:
-            center_geom = None
-            border_geom = None
+        if geom is None or geom.is_empty or not geom.is_valid:
             continue
 
-        # Erode polygon to get center
-        d = erosion_dists.loc[cid]
-        center_geom = geom.buffer(-d)
+        border_dist = border_dists.loc[cid]
+        center_dist = center_dists.loc[cid]
 
-        if not center_geom.is_valid:  # erosion can lead to invalid shapes
-            center_geom = None
-            border_geom = None
-        elif center_geom.is_empty:
-            center_geom = None
-            border_geom = geom
-        else:
-            border_geom = geom.difference(center_geom)
+        # Inner boundary of the border
+        inner_after_border = geom.buffer(-border_dist)
 
-        # geom.difference can lead to invalid shapes
-        if not border_geom.is_valid:
-            border_geom = None
+        # Center after border + buffer erosion
+        center_geom = geom.buffer(-center_dist)
+
+        if inner_after_border.is_empty:
+            continue
+
+        # Border = outer cell minus inner eroded polygon
+        border_geom = geom.difference(inner_after_border)
+
+        if center_geom.is_empty:
             center_geom = None
+
+        if border_geom.is_empty:
+            border_geom = None
+
+        if center_geom is not None and not center_geom.is_valid:
+            center_geom = None
+
+        if border_geom is not None and not border_geom.is_valid:
+            border_geom = None
 
         center_records.append({id_key: cid, "geometry": center_geom})
         border_records.append({id_key: cid, "geometry": border_geom})
@@ -212,8 +232,10 @@ def _get_center_and_border_shapes(
     center_gdf.set_index(id_key, drop=True, inplace=True)
     border_gdf.set_index(id_key, drop=True, inplace=True)
 
-    return center_gdf[center_gdf.geometry.notna()], border_gdf[border_gdf.geometry.notna()]
-
+    return (
+        center_gdf[center_gdf.geometry.notna()],
+        border_gdf[border_gdf.geometry.notna()],
+    )
 
 def _get_filtered_points_df(
     sdata: sd.SpatialData,
@@ -364,7 +386,9 @@ def _join_points_regions(
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
     transcripts = transcripts[cols]
 
-    transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
+    # drop unused gene categories to keep count matrix compact
+    if isinstance(transcripts[points_gene_key].dtype, pd.CategoricalDtype):
+        transcripts[points_gene_key] = transcripts[points_gene_key].cat.remove_unused_categories()
 
     # ensure we have a clean, unique point index for deduplication after sjoin
     # Dask indices are often non-unique (each partition starts at 0) - after.compute() duplicate indices persist
@@ -420,7 +444,8 @@ def _join_points_regions(
 def _ensure_center_border_shapes(
     sdata,
     shapes_key: str = "cell_boundaries",
-    erosion_fraction_of_radius: float = 0.3,
+    border_fraction_of_radius: float = 0.2,
+    buffer_fraction_of_radius: float = 0.1,
 ) -> None:
     """
     Ensure that `cell_centers` and `cell_borders` exist in `sdata.shapes`.
@@ -428,13 +453,23 @@ def _ensure_center_border_shapes(
     If either layer is missing, both are recomputed from `shapes_key` using
     `_get_center_and_border_shapes` and stored in `sdata.shapes`.
     """
+    params = {
+        "shapes_key": shapes_key,
+        "border_fraction_of_radius": border_fraction_of_radius,
+        "buffer_fraction_of_radius": buffer_fraction_of_radius,
+    }
+
     if "cell_centers" in sdata.shapes and "cell_borders" in sdata.shapes:
-        return
+        # check whether existing shapes were computed with the same parameters
+        old_params = sdata.shapes["cell_centers"].attrs.get("segtraq_center_border_params")
+        if old_params == params:
+            return
 
     center_gdf, border_gdf = _get_center_and_border_shapes(
         sdata=sdata,
         shapes_key=shapes_key,
-        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        border_fraction_of_radius=border_fraction_of_radius,
+        buffer_fraction_of_radius=buffer_fraction_of_radius
     )
 
     cell_shape_transformation = sdata.shapes[shapes_key].attrs["transform"]
@@ -448,6 +483,8 @@ def _ensure_center_border_shapes(
         transformations=cell_shape_transformation,
     )
 
+    sdata.shapes["cell_centers"].attrs["segtraq_center_border_params"] = params
+    sdata.shapes["cell_borders"].attrs["segtraq_center_border_params"] = params
 
 def _get_center_border_counts(
     sdata,
@@ -460,12 +497,14 @@ def _get_center_border_counts(
     points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
-    erosion_fraction_of_radius: float = 0.3,
+    border_fraction_of_radius: float = 0.2,
+    buffer_fraction_of_radius: float = 0.1,
 ):
     _ensure_center_border_shapes(
         sdata=sdata,
         shapes_key=shapes_key,
-        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        border_fraction_of_radius=border_fraction_of_radius,
+        buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
 
     tx_assigned_to_center, expr_center = _join_points_regions(
@@ -588,6 +627,7 @@ def _get_neighborhood_counts(
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
     all_genes = pd.Index(sdata.tables[tables_key].var_names)
 
+    # base cell-level expression used to aggregate neighborhoods
     counts_cells = (
         pts[[points_cell_id_key, points_gene_key]]
         .groupby([points_cell_id_key, points_gene_key], observed=True)
@@ -634,7 +674,7 @@ def _find_neighbors_by_distance(
     A cell `j` is considered a neighbor of focal cell `i` if the minimum
     Euclidean distance between their geometries is less than or equal to:
 
-        radius_factor * median(equivalent_radius)
+        radius_factor * median equivalent radius across cells
 
     where equivalent radius is computed from the area of a cell.
 
@@ -649,8 +689,8 @@ def _find_neighbors_by_distance(
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` containing cell polygons.
     radius_factor : float, default=1.0
-        Distance threshold expressed as a multiple of the focal cell's
-        equivalent radius.
+        Distance threshold expressed as a multiple of the median equivalent
+        cell radius.
 
     Returns
     -------
@@ -669,6 +709,7 @@ def _find_neighbors_by_distance(
     
     areas = cells_gdf.geometry.area.clip(lower=1e-6)
     radii = np.sqrt(areas / np.pi)
+    # global distance threshold based on median cell size
     max_dist = float(np.median(radii)) * radius_factor
 
     sindex = cells_gdf.sindex
@@ -811,6 +852,7 @@ def _score_one_cell(
     x_border = np.rint(np.asarray(x_border)).astype(int)
     x_neighborhood = np.rint(np.asarray(x_neighborhood)).astype(int)
 
+    # restrict to genes observed in at least one region
     mask = (x_center + x_border + x_neighborhood) > 0
     x_center = x_center[mask]
     x_border = x_border[mask]
@@ -925,6 +967,7 @@ def _bootstrap_mixture_fit(
     boot_scores = []
 
     for _ in range(n_boot):
+        # resample counts under multinomial model preserving library size
         xb_center = rng.multinomial(n_center, p_center)
         xb_border = rng.multinomial(n_border, p_border)
         xb_neighborhood = rng.multinomial(n_neighborhood, p_neighborhood)

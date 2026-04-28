@@ -257,75 +257,77 @@ class SegTraQ:
 
     def run_region_similarity(
         self,
-        metric: str = "cosine_sim",
         n_jobs: int = -1,
         inplace: bool = True,
         iou_kwargs: dict = None,
         similarity_nucleus_cell_kwargs: dict = None,
         similarity_nucleus_cytoplasm_kwargs: dict = None,
+        similarity_center_border_kwargs: dict = None,
         similarity_border_neighborhood_kwargs: dict = None,
+        border_admixture_score_kwargs: dict = None,
     ):
         """
         Compute region similarity metrics and optionally merge them into the cell table.
 
         This runs, in order:
-        1) IoU between each cell and its best-matching nucleus
-        2) Similarity between per-cell expression and its matched nucleus
-        3) Similarity between the cell's nucleus vs. cytoplasm expression
-        4) Similarity of gene expression in an eroded interior ("center") and
-           a thin outer shell ("border"), and (2) comparing the border with the neighborhood.
-
-        Parameters
-        ----------
-        metric : str, default="cosine_sim"
-        n_jobs : int, default=-1
-        inplace : bool, default=True
-            If True, writes results into `sdata.tables[tables_key].obs` and returns None.
-            If False, returns a dictionary of DataFrames without writing.
-        iou_kwargs : dict, optional
-            Additional keyword arguments to pass to `match_nuclei_to_cells`.
-        similarity_nucleus_cell_kwargs : dict, optional
-            Additional keyword arguments to pass to `similarity_nucleus_cell`.
-        similarity_nucleus_cytoplasm_kwargs : dict, optional
-            Additional keyword arguments to pass to `similarity_nucleus_cytoplasm`.
-        similarity_border_neighborhood_kwargs : dict, optional
-            Additional keyword arguments to pass to `similarity_border_neighborhood`.
+        1) matching between each cell and its best-matching nucleus
+        2) similarity between per-cell expression and its matched nucleus
+        3) similarity between the cell's nucleus-overlapping and cytoplasmic expression
+        4) similarity between center and border expression
+        5) similarity between border and neighborhood expression
+        6) border admixture score
 
         Returns
         -------
         None or dict
-        - If `inplace=True`: returns None after writing to `sdata`.
-        - If `inplace=False`: returns a dict with keys:
-        * "ious": pd.DataFrame
-        * "similarity_nucleus_cell": pd.DataFrame
-        * "similarity_nucleus_cytoplasm": pd.DataFrame
-        * "similarity_border_neighborhood": pd.DataFrame
-
-        Notes
-        -----
-        - Requires `self.nucleus_shapes_key` (nucleus boundaries).
+            If `inplace=True`, returns None after writing to `sdata`.
+            If `inplace=False`, returns a dictionary of DataFrames.
         """
-        ious = self.rs.match_nuclei_to_cells(n_jobs=n_jobs, inplace=inplace, **(iou_kwargs or {}))
+        ious = self.rs.match_nuclei_to_cells(
+            n_jobs=n_jobs,
+            inplace=inplace,
+            **(iou_kwargs or {}),
+        )
+
         similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
-            metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cell_kwargs or {})
+            n_jobs=n_jobs,
+            inplace=inplace,
+            **(similarity_nucleus_cell_kwargs or {}),
         )
+
         similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
-            metric=metric, n_jobs=n_jobs, inplace=inplace, **(similarity_nucleus_cytoplasm_kwargs or {})
+            n_jobs=n_jobs,
+            inplace=inplace,
+            **(similarity_nucleus_cytoplasm_kwargs or {}),
         )
+
+        similarity_center_border = self.rs.similarity_center_border(
+            inplace=inplace,
+            **(similarity_center_border_kwargs or {}),
+        )
+
         similarity_border_neighborhood = self.rs.similarity_border_neighborhood(
-            metric=metric, inplace=inplace, **(similarity_border_neighborhood_kwargs or {})
+            inplace=inplace,
+            **(similarity_border_neighborhood_kwargs or {}),
+        )
+
+        border_admixture_score = self.rs.border_admixture_score(
+            n_jobs=n_jobs,
+            inplace=inplace,
+            **(border_admixture_score_kwargs or {}),
         )
 
         if inplace:
             return None
 
-        else:
-            return {
-                "ious": ious,
-                "similarity_nucleus_cell": similarity_nucleus_cell,
-                "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
-                "similarity_border_neighborhood": similarity_border_neighborhood,
-            }
+        return {
+            "ious": ious,
+            "similarity_nucleus_cell": similarity_nucleus_cell,
+            "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
+            "similarity_center_border": similarity_center_border,
+            "similarity_border_neighborhood": similarity_border_neighborhood,
+            "border_admixture_score": border_admixture_score,
+        }
 
     def run_volume_metrics(
         self,
@@ -527,7 +529,7 @@ class SegTraQ:
 
         Convenience wrapper around supervised marker-based QC metrics. Runs, in order:
 
-        1) marker_purity (per-cell precision/recall/F1, neighborhood-aware negatives)
+        1) marker_purity (sensitivity and specificity of marker gene expression patterns)
         2) neighbor_contamination (per-cell + directed type-type matrices)
         3) mutually_exclusive_coexpression_rate (MECR)
 
@@ -550,7 +552,7 @@ class SegTraQ:
             If False, returns all results as a dict.
         purity_kwargs : dict or None, optional
             Extra args for :meth:`sp.marker_purity`.
-            (e.g. use_quantiles=..., weight_cont=..., require_neighbor_expression=..., neighbors_key=...)
+            (e.g. use_quantiles=..., require_neighbor_expression=..., neighbors_key=...)
         contamination_kwargs : dict or None, optional
             Extra args for :meth:`sp.neighbor_contamination`.
             (e.g. require_neighbor_expression=..., neighbors_key=..., uns_key=..., uns_key_binary=...)
@@ -1143,7 +1145,8 @@ class _RSFacade:
 
     def similarity_center_border(
         self,
-        erosion_fraction_of_radius: float = 0.2,
+        border_fraction_of_radius: float = 0.2,
+        buffer_fraction_of_radius: float = 0.2,
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
@@ -1160,7 +1163,8 @@ class _RSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
-            erosion_fraction_of_radius=erosion_fraction_of_radius,
+            border_fraction_of_radius=border_fraction_of_radius,
+            buffer_fraction_of_radius=buffer_fraction_of_radius,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
@@ -1168,10 +1172,43 @@ class _RSFacade:
         )
 
     similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
+
+    def similarity_border_neighborhood(
+        self,
+        border_fraction_of_radius: float = 0.2,
+        buffer_fraction_of_radius: float = 0.1,
+        neighborhood_radius_factor: float = 1.0,
+        min_transcripts: int = 10,
+        min_genes: int = 5,
+        scale: float = 1e4,
+        inplace: bool = True
+    ):
+        return rs.similarity_border_neighborhood(
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            shapes_key=self._p.shapes_key,
+            points_key=self._p.points_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_background_id=self._p.points_background_id,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            points_gene_key=self._p.points_gene_key,
+            border_fraction_of_radius=border_fraction_of_radius,
+            buffer_fraction_of_radius=buffer_fraction_of_radius,
+            neighborhood_radius_factor=neighborhood_radius_factor,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
+            inplace=inplace
+        )
+    
+    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
     
     def border_admixture_score(
         self,
-        erosion_fraction: float = 0.2,
+        border_fraction_of_radius: float = 0.2,
+        buffer_fraction_of_radius: float = 0.1,
         neighborhood_radius_factor: float = 1.0,
         min_transcripts: int = 10,
         min_genes: int = 5,
@@ -1193,7 +1230,8 @@ class _RSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
-            erosion_fraction=erosion_fraction,
+            border_fraction_of_radius=border_fraction_of_radius,
+            buffer_fraction_of_radius=buffer_fraction_of_radius,
             neighborhood_radius_factor=neighborhood_radius_factor,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
@@ -1236,32 +1274,28 @@ class _SPFacade:
     mutually_exclusive_coexpression_rate.__doc__ = sp.mutually_exclusive_coexpression_rate.__doc__
 
     def marker_purity(
-        self,
-        cell_type_key: str,
-        markers: dict[str, dict[str, list[str]]],
-        layer: str | None = None,
-        use_quantiles: bool = False,
-        require_neighbor_expression: bool = True,
-        weight_cont: float = 0.7,
-        neighbors_key: str | None = "spatial_connectivities",
-        inplace: bool = True,
+            self,
+            cell_type_key: str,
+            markers: dict[str, dict[str, list[str]]],
+            layer: str | None = None,
+            require_neighbor_expression: bool = True,
+            neighbors_key: str = "spatial_connectivities",
+            inplace: bool = True,
     ):
         return sp.marker_purity(
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
             layer=layer,
-            use_quantiles=use_quantiles,
             require_neighbor_expression=require_neighbor_expression,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_centroid_x_key=self._p.tables_centroid_x_key,
             tables_centroid_y_key=self._p.tables_centroid_y_key,
-            weight_cont=weight_cont,
             neighbors_key=neighbors_key,
             inplace=inplace,
         )
-
+    
     marker_purity.__doc__ = sp.marker_purity.__doc__
 
     def neighbor_contamination(

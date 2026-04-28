@@ -18,3 +18,31 @@ def test_similarity_nucleus_cytoplasm(sdata_new):
     assert isinstance(df, pd.DataFrame), f"similarity_nucleus_cytoplasm should return a DataFrame, got {type(df)}"
     expected_cols = {"cell_id", "nucleus_id", "iou", "similarity_nucleus_cytoplasm", "nucleus_fraction"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {set(df.columns)}"
+
+def test_similarity_nucleus_cytoplasm_value_range(sdata_new):
+    df = st.rs.similarity_nucleus_cytoplasm(sdata_new)
+
+    vals = df["similarity_nucleus_cytoplasm"].dropna()
+    assert ((vals >= -1) & (vals <= 1)).all()
+
+def test_similarity_nucleus_cytoplasm_high_thresholds_return_nan(sdata_new):
+    df = st.rs.similarity_nucleus_cytoplasm(
+        sdata_new,
+        min_transcripts=10_000,
+        min_genes=10_000,
+    )
+
+    assert df["similarity_nucleus_cytoplasm"].isna().all()
+
+def test_similarity_nucleus_cytoplasm_no_inplace(sdata_new):
+    before_cols = set(sdata_new.tables["table"].obs.columns)
+
+    df = st.rs.similarity_nucleus_cytoplasm(
+        sdata_new,
+        inplace=False,
+    )
+
+    after_cols = set(sdata_new.tables["table"].obs.columns)
+
+    assert isinstance(df, pd.DataFrame)
+    assert before_cols == after_cols
