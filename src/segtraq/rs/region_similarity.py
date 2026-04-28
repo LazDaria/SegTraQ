@@ -78,7 +78,7 @@ def match_nuclei_to_cells(
     cell_boundaries = sdata.shapes[shapes_key]
     nuc_boundaries = sdata.shapes[nucleus_shapes_key]
 
-    # Build spatial index once
+    # spatial index reused across all cells for efficiency
     nuc_sindex = nuc_boundaries.sindex
 
     # Parallel loop over cells
@@ -262,6 +262,7 @@ def similarity_nucleus_cell(
         require_points_region_ID_match=False,
     )
 
+    # ensure vectors are aligned on the same gene set
     common_genes = expr_nucleus.columns.intersection(expr_cells.columns)
     expr_nucleus = expr_nucleus[common_genes]
     expr_cells = expr_cells[common_genes]
@@ -458,10 +459,12 @@ def similarity_nucleus_cytoplasm(
         require_points_region_ID_match=False,
     )
 
+    # restrict to transcripts that belong to cells
     valid_point_ids = set(tx_cell["point_id"])
     tx = tx_nuc[tx_nuc["point_id"].isin(valid_point_ids)].copy()
 
     tx["nucleus_id"] = tx[points_cell_id_key].map(best_nuc_map)
+    # flag transcripts inside the matched nucleus
     tx["in_intersection"] = tx["region_id"].eq(tx["nucleus_id"])
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
@@ -534,7 +537,8 @@ def similarity_center_border(
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
-    erosion_fraction_of_radius: float = 0.2,
+    border_fraction_of_radius: float = 0.2,
+    buffer_fraction_of_radius: float = 0.1,
     min_transcripts: int = 10,
     min_genes: int = 5,
     scale: float = 1e4,
@@ -571,9 +575,12 @@ def similarity_center_border(
         Column for the y-coordinate of each transcript/spot.
     points_gene_key : str, default="feature_name"
         Column specifying the gene/feature name for each transcript/spot.
-    erosion_fraction_of_radius : float, default=0.2
-        Fraction of the equivalent radius used to erode each cell polygon when
-        defining the center region.
+    border_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to define the thickness of the
+        border region (outer ring).
+    buffer_fraction_of_radius : float, default=0.1
+        Additional fraction of the equivalent radius used to define the gap
+        between the border and center regions.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both center and border.
     min_genes : int, default=5
@@ -603,12 +610,14 @@ def similarity_center_border(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
-        erosion_fraction_of_radius=erosion_fraction_of_radius,
+        border_fraction_of_radius=border_fraction_of_radius,
+        buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
     all_genes = pd.Index(sdata.tables[tables_key].var_names)
 
+    # ensure all cells/genes are present even if zero counts
     expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
     expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
@@ -637,8 +646,161 @@ def similarity_center_border(
     if out.empty:
         raise ValueError(
             "Could not compute center-border cosine similarities. "
-            "Try different parameters for erosion_fraction_of_radius. "
-            f"You used erosion_fraction_of_radius={erosion_fraction_of_radius}."
+            "Try different parameters for border_fraction_of_radius. "
+            f"You used border_fraction_of_radius={border_fraction_of_radius}."
+        )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
+    return out
+
+def similarity_border_neighborhood(
+    sdata: sd.SpatialData,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    shapes_key: str = "cell_boundaries",
+    points_key: str = "transcripts",
+    points_cell_id_key: str = "cell_id",
+    points_background_id: str = "UNASSIGNED",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_gene_key: str = "feature_name",
+    border_fraction_of_radius: float = 0.2,
+    buffer_fraction_of_radius: float = 0.1,
+    neighborhood_radius_factor: float = 1.0,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    scale: float = 1e4,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Compute the cosine similarity between the border and neighborhood expression
+    profiles of each cell.
+
+    The point estimate is computed from the border count matrix obtained via
+    `_get_center_border_counts` and the neighborhood count matrix obtained via
+    `_get_neighborhood_counts`, using row-wise library-size normalization
+    followed by log1p.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        A `SpatialData` object containing segmented and transcript-assigned
+        spatial transcriptomics data.
+    tables_key : str, default="table"
+        Key in `sdata.tables` for the cell-level metadata table.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the cell table uniquely identifying each cell.
+    shapes_key : str, default="cell_boundaries"
+        Key in `sdata.shapes` for cell boundary polygons.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for spot/transcript-level data.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript/spot to a cell.
+    points_background_id : str or int, default="UNASSIGNED"
+        Identifier for transcripts not assigned to any cell.
+    points_x_key : str, default="x"
+        Column for the x-coordinate of each transcript/spot.
+    points_y_key : str, default="y"
+        Column for the y-coordinate of each transcript/spot.
+    points_gene_key : str, default="feature_name"
+        Column specifying the gene/feature name for each transcript/spot.
+    border_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to define the thickness of the
+        border region.
+    buffer_fraction_of_radius : float, default=0.1
+        Additional fraction of the equivalent radius used to define the gap
+        between the border and center regions.
+    neighborhood_radius_factor : float, default=1.0
+        Neighbor distance threshold used by `_get_neighborhood_counts`.
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in both border and neighborhood.
+    min_genes : int, default=5
+        Minimum number of non-zero genes required across border and neighborhood.
+    scale : float, default=1e4
+        Library-size normalization scale used before log1p.
+    inplace : bool, default=True
+        Whether to merge the results into `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns:
+            - cell id column
+            - `similarity_border_neighborhood`
+    """
+    id_key = sdata.shapes[shapes_key].index.name
+
+    _, expr_border = _get_center_border_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_x_key=points_x_key,
+        points_y_key=points_y_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        border_fraction_of_radius=border_fraction_of_radius,
+        buffer_fraction_of_radius=buffer_fraction_of_radius,
+    )
+
+    # neighborhood expression aggregated from nearby cells
+    expr_neighborhood, _n_neighbors = _get_neighborhood_counts(
+        sdata=sdata,
+        tables_key=tables_key,
+        tables_cell_id_key=tables_cell_id_key,
+        shapes_key=shapes_key,
+        points_key=points_key,
+        points_gene_key=points_gene_key,
+        points_cell_id_key=points_cell_id_key,
+        points_background_id=points_background_id,
+        neighborhood_radius_factor=neighborhood_radius_factor,
+    )
+
+    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
+    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+
+    expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
+    expr_neighborhood = expr_neighborhood.reindex(index=all_cells, columns=all_genes, fill_value=0)
+
+    rows = []
+    for cid in all_cells:
+        x_border = expr_border.loc[cid].to_numpy()
+        x_neighborhood = expr_neighborhood.loc[cid].to_numpy()
+
+        sim = _cosine_similarity_two_vectors(
+            x_border,
+            x_neighborhood,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
+        )
+
+        rows.append(
+            {
+                id_key: cid,
+                "similarity_border_neighborhood": sim
+            }
+        )
+
+    out = pd.DataFrame(rows)
+
+    if out.empty:
+        raise ValueError(
+            "Could not compute border-neighborhood cosine similarities. "
+            "Try different parameters for border_fraction_of_radius or "
+            "neighborhood_radius_factor. You used border_fraction_of_radius="
+            f"{border_fraction_of_radius} and neighborhood_radius_factor="
+            f"{neighborhood_radius_factor}."
         )
 
     if inplace:
@@ -663,7 +825,8 @@ def border_admixture_score(
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
-    erosion_fraction: float = 0.2,
+    border_fraction_of_radius: float = 0.2,
+    buffer_fraction_of_radius: float = 0.1,
     neighborhood_radius_factor: float = 1.0,
     min_transcripts: int = 10,
     min_genes: int = 5,
@@ -715,9 +878,12 @@ def border_admixture_score(
         Y-coordinate column in the transcript table.
     points_gene_key : str, default="feature_name"
         Column containing gene names.
-    erosion_fraction : float, default=0.2
-        Fraction of equivalent cell radius used to erode each cell polygon when
-        defining the center region.
+    border_fraction_of_radius : float, default=0.2
+        Fraction of the equivalent radius used to define the thickness of the
+        border region (outer ring).
+    buffer_fraction_of_radius : float, default=0.1
+        Additional fraction of the equivalent radius used to define the gap
+        between the border and center regions.
     neighborhood_radius_factor : float, default=1.0
         Neighbor distance threshold expressed as a multiple of the focal cell's
         equivalent radius.
@@ -760,10 +926,12 @@ def border_admixture_score(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
-        erosion_fraction_of_radius=erosion_fraction,
+        border_fraction_of_radius=border_fraction_of_radius,
+        buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
 
-    expr_neighborhood, n_neighbors = _get_neighborhood_counts(
+    # neighborhood expression aggregated from nearby cells
+    expr_neighborhood, _n_neighbors = _get_neighborhood_counts(
         sdata=sdata,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
@@ -775,12 +943,15 @@ def border_admixture_score(
         neighborhood_radius_factor=neighborhood_radius_factor,
     )
 
+    # restrict to cells with all three profiles available
     common_cells = expr_center.index.intersection(expr_border.index).intersection(expr_neighborhood.index)
     expr_center = expr_center.loc[common_cells]
     expr_border = expr_border.loc[common_cells]
     expr_neighborhood = expr_neighborhood.loc[common_cells]
 
     seed_rng = np.random.default_rng(random_state)
+
+    # independent RNG seeds per cell for reproducible parallel bootstrap
     seeds = seed_rng.integers(
         0,
         np.iinfo(np.uint32).max,
@@ -808,7 +979,6 @@ def border_admixture_score(
             "border_admixture_score": res["border_admixture_score"],
             "border_admixture_score_ci_low": res["border_admixture_score_ci_low"],
             "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
-            "n_neighbors": n_neighbors.loc[cid],
         }
 
     rows = Parallel(n_jobs=n_jobs)(
@@ -821,9 +991,9 @@ def border_admixture_score(
     if out.empty:
         raise ValueError(
             "Could not compute border admixture scores. "
-            "Try different parameters for erosion_fraction or neighborhood_radius_factor. "
-            "You used erosion_fraction="
-            f"{erosion_fraction} and neighborhood_radius_factor={neighborhood_radius_factor}."
+            "Try different parameters for border_fraction_of_radius or neighborhood_radius_factor. "
+            "You used border_fraction_of_radius="
+            f"{border_fraction_of_radius} and neighborhood_radius_factor={neighborhood_radius_factor}."
         )
 
     if inplace:
