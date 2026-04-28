@@ -6,6 +6,7 @@ import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
+
 def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
     """
     Return a view of adata excluding cells with zero total counts.
@@ -18,6 +19,7 @@ def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
 
     mask = total_counts > 0
     return adata[mask, :]
+
 
 def run_leiden_clustering_on_adata(
     adata_input,

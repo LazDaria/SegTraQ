@@ -1150,7 +1150,7 @@ class _RSFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
-        inplace: bool = True
+        inplace: bool = True,
     ):
         return rs.similarity_center_border(
             sdata=self._p.sdata,
@@ -1168,7 +1168,7 @@ class _RSFacade:
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
-            inplace=inplace
+            inplace=inplace,
         )
 
     similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
@@ -1181,7 +1181,7 @@ class _RSFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
-        inplace: bool = True
+        inplace: bool = True,
     ):
         return rs.similarity_border_neighborhood(
             sdata=self._p.sdata,
@@ -1200,11 +1200,11 @@ class _RSFacade:
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
-            inplace=inplace
+            inplace=inplace,
         )
-    
+
     similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
-    
+
     def border_admixture_score(
         self,
         border_fraction_of_radius: float = 0.2,
@@ -1217,7 +1217,7 @@ class _RSFacade:
         ci_level: float = 0.95,
         random_state: int | None = None,
         n_jobs: int = -1,
-        inplace: bool = True
+        inplace: bool = True,
     ):
         return rs.border_admixture_score(
             sdata=self._p.sdata,
@@ -1240,10 +1240,11 @@ class _RSFacade:
             ci_level=ci_level,
             random_state=random_state,
             n_jobs=n_jobs,
-            inplace=inplace
+            inplace=inplace,
         )
-    
+
     border_admixture_score.__doc__ = rs.border_admixture_score.__doc__
+
 
 class _SPFacade:
     """
@@ -1274,13 +1275,13 @@ class _SPFacade:
     mutually_exclusive_coexpression_rate.__doc__ = sp.mutually_exclusive_coexpression_rate.__doc__
 
     def marker_purity(
-            self,
-            cell_type_key: str,
-            markers: dict[str, dict[str, list[str]]],
-            layer: str | None = None,
-            require_neighbor_expression: bool = True,
-            neighbors_key: str = "spatial_connectivities",
-            inplace: bool = True,
+        self,
+        cell_type_key: str,
+        markers: dict[str, dict[str, list[str]]],
+        layer: str | None = None,
+        require_neighbor_expression: bool = True,
+        neighbors_key: str = "spatial_connectivities",
+        inplace: bool = True,
     ):
         return sp.marker_purity(
             sdata=self._p.sdata,
@@ -1295,7 +1296,7 @@ class _SPFacade:
             neighbors_key=neighbors_key,
             inplace=inplace,
         )
-    
+
     marker_purity.__doc__ = sp.marker_purity.__doc__
 
     def neighbor_contamination(

@@ -30,6 +30,7 @@ def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
         return np.nan
     return inter_area / nuc_area
 
+
 def _process_cell(
     cell_row: Series,
     nucleus_shapes: GeoDataFrame,
@@ -136,6 +137,7 @@ def _process_cell(
         "nucleus_fraction": best["nucleus_fraction"],
     }
 
+
 def _get_center_and_border_shapes(
     sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
@@ -236,6 +238,7 @@ def _get_center_and_border_shapes(
         center_gdf[center_gdf.geometry.notna()],
         border_gdf[border_gdf.geometry.notna()],
     )
+
 
 def _get_filtered_points_df(
     sdata: sd.SpatialData,
@@ -441,6 +444,7 @@ def _join_points_regions(
 
     return pts_joined, counts
 
+
 def _ensure_center_border_shapes(
     sdata,
     shapes_key: str = "cell_boundaries",
@@ -469,7 +473,7 @@ def _ensure_center_border_shapes(
         sdata=sdata,
         shapes_key=shapes_key,
         border_fraction_of_radius=border_fraction_of_radius,
-        buffer_fraction_of_radius=buffer_fraction_of_radius
+        buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
 
     cell_shape_transformation = sdata.shapes[shapes_key].attrs["transform"]
@@ -485,6 +489,7 @@ def _ensure_center_border_shapes(
 
     sdata.shapes["cell_centers"].attrs["segtraq_center_border_params"] = params
     sdata.shapes["cell_borders"].attrs["segtraq_center_border_params"] = params
+
 
 def _get_center_border_counts(
     sdata,
@@ -550,6 +555,7 @@ def _get_center_border_counts(
 
     return expr_center, expr_border
 
+
 def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
     x_norm = np.linalg.norm(x)
     y_norm = np.linalg.norm(y)
@@ -557,12 +563,14 @@ def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
         return np.nan
     return float(np.dot(x, y) / (x_norm * y_norm))
 
+
 def _norm_log_vector(x: np.ndarray, scale: float = 1e4) -> np.ndarray:
     x = np.asarray(x, dtype=float)
     total = x.sum()
     if total == 0:
         return np.zeros_like(x)
     return np.log1p((x / total) * scale)
+
 
 def _cosine_similarity_two_vectors(
     x_a: np.ndarray,
@@ -573,11 +581,7 @@ def _cosine_similarity_two_vectors(
 ) -> float:
     mask = (x_a != 0) | (x_b != 0)
 
-    if (
-        mask.sum() < min_genes
-        or x_a[mask].sum() < min_transcripts
-        or x_b[mask].sum() < min_transcripts
-    ):
+    if mask.sum() < min_genes or x_a[mask].sum() < min_transcripts or x_b[mask].sum() < min_transcripts:
         return np.nan
 
     sim = _cosine_sim(
@@ -661,6 +665,7 @@ def _get_neighborhood_counts(
 
     return expr_neighborhood, n_neighbors
 
+
 def _find_neighbors_by_distance(
     sdata,
     tables_key: str = "table",
@@ -706,7 +711,7 @@ def _find_neighbors_by_distance(
     cell_ids = pd.Index(ad.obs[tables_cell_id_key]).unique()
     cell_ids = cell_ids[cell_ids.isin(cells_gdf.index)]
     cells_gdf = cells_gdf.loc[cell_ids]
-    
+
     areas = cells_gdf.geometry.area.clip(lower=1e-6)
     radii = np.sqrt(areas / np.pi)
     # global distance threshold based on median cell size
@@ -721,9 +726,7 @@ def _find_neighbors_by_distance(
             continue
 
         minx, miny, maxx, maxy = focal_geom.bounds
-        candidate_idx = list(
-            sindex.intersection((minx - max_dist, miny - max_dist, maxx + max_dist, maxy + max_dist))
-        )
+        candidate_idx = list(sindex.intersection((minx - max_dist, miny - max_dist, maxx + max_dist, maxy + max_dist)))
         candidates = cells_gdf.iloc[candidate_idx]
 
         nbrs = []
@@ -738,6 +741,7 @@ def _find_neighbors_by_distance(
         neighbors[focal_id] = nbrs
 
     return neighbors
+
 
 def _normalize_to_proportions(
     x: np.ndarray,
@@ -873,9 +877,7 @@ def _score_one_cell(
 
     p_center = _normalize_to_proportions(x_center, pseudocount=pseudocount)
     p_border = _normalize_to_proportions(x_border, pseudocount=pseudocount)
-    p_neighborhood = _normalize_to_proportions(
-        x_neighborhood, pseudocount=pseudocount
-    )
+    p_neighborhood = _normalize_to_proportions(x_neighborhood, pseudocount=pseudocount)
 
     alpha_hat = _estimate_mixture_alpha_least_squares(
         p_border=p_border,
@@ -892,6 +894,7 @@ def _score_one_cell(
         return np.nan
 
     return float((err_center_only - err_mixture) / err_center_only)
+
 
 def _bootstrap_mixture_fit(
     x_center: np.ndarray,

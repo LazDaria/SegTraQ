@@ -6,13 +6,14 @@ from pandas import DataFrame
 
 from ..utils import _looks_like_counts, merge_into_obs
 from .utils import (
+    _bootstrap_mixture_fit,
+    _cosine_similarity_two_vectors,
     _get_center_border_counts,
     _get_neighborhood_counts,
     _join_points_regions,
-    _cosine_similarity_two_vectors,
-    _bootstrap_mixture_fit,
     _process_cell,
 )
+
 
 def match_nuclei_to_cells(
     sdata: sd.SpatialData,
@@ -423,9 +424,7 @@ def similarity_nucleus_cytoplasm(
             inplace=inplace,
         )
     else:
-        match_df = sdata.tables[tables_key].obs[
-            [id_key, "nucleus_id", "iou", "nucleus_fraction"]
-        ].copy()
+        match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
 
     best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
 
@@ -525,6 +524,7 @@ def similarity_nucleus_cytoplasm(
         )
 
     return out
+
 
 def similarity_center_border(
     sdata: sd.SpatialData,
@@ -661,6 +661,7 @@ def similarity_center_border(
 
     return out
 
+
 def similarity_border_neighborhood(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -785,12 +786,7 @@ def similarity_border_neighborhood(
             scale=scale,
         )
 
-        rows.append(
-            {
-                id_key: cid,
-                "similarity_border_neighborhood": sim
-            }
-        )
+        rows.append({id_key: cid, "similarity_border_neighborhood": sim})
 
     out = pd.DataFrame(rows)
 
@@ -813,6 +809,7 @@ def similarity_border_neighborhood(
         )
 
     return out
+
 
 def border_admixture_score(
     sdata,
@@ -982,8 +979,7 @@ def border_admixture_score(
         }
 
     rows = Parallel(n_jobs=n_jobs)(
-        delayed(_process_one)(cid, seed)
-        for cid, seed in zip(common_cells, seeds, strict=False)
+        delayed(_process_one)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
     )
 
     out = pd.DataFrame(rows)
