@@ -2020,21 +2020,22 @@ wheels = [
 
 [[package]]
 name = "ome-zarr"
-version = "0.12.2"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "dask" },
     { name = "fsspec", extra = ["s3"] },
     { name = "numpy" },
+    { name = "rangehttpserver" },
     { name = "requests" },
     { name = "scikit-image" },
     { name = "toolz" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/44/647843d872aa136609e805c06e9f9b2cdcb6e2a58ec485322311dec7b64d/ome_zarr-0.12.2.tar.gz", hash = "sha256:834e801e9aa4b870bed3dde2dc2a3ad7f388f1a13ffa6b3d7aade90691b9de64", size = 69891, upload-time = "2025-08-22T08:57:13.64Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/13/566a1a84b88aad11dea5d920b665eeea0df0885b312a4e1b706885ae50ae/ome_zarr-0.13.0.tar.gz", hash = "sha256:29c0ab52045c1b9d3037444dab691876591ec1db74c4a01e10cb0f0f4288a6e5", size = 71802, upload-time = "2026-02-06T14:00:57.619Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/21/59baa90924b815b70f88045f0b206b7eab0b68b461c0192692486b516ab7/ome_zarr-0.12.2-py3-none-any.whl", hash = "sha256:655fe1b11ca01148603f9931a5b0af31207dfc03a3a35f9b0ab8639790282bbd", size = 41410, upload-time = "2025-08-22T08:57:12.44Z" },
+    { url = "https://files.pythonhosted.org/packages/47/f8/9d2945ef9a64de619f52158b8bd27eecad971ff327139b8082796319f858/ome_zarr-0.13.0-py3-none-any.whl", hash = "sha256:895e9530bc81c487a6281644a16b2888ca8d992685ec116bb529a5386aa7d4a2", size = 42109, upload-time = "2026-02-06T14:00:56.646Z" },
 ]
 
 [[package]]
@@ -2877,6 +2878,15 @@ wheels = [
 ]
 
 [[package]]
+name = "rangehttpserver"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/36/3b/1ec139d6028c6e5eb10301f040d6eee5c5427a4b1b4d614a2f78d3bba1bd/rangehttpserver-1.4.0.tar.gz", hash = "sha256:d5ddccee219b359598e41da0c5fbf30a2579297094f5a682755e2586388a5306", size = 6993, upload-time = "2024-08-27T18:08:43.418Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/43/d7e2b9ad768c07b5473bea3ac7db9ca4d995c09399cbea3d4df1c0bd4955/rangehttpserver-1.4.0-py2.py3-none-any.whl", hash = "sha256:2a0c6926e4341de4cc19ec861292b005e4194ff497b1eefdeccb2992a5045452", size = 7773, upload-time = "2024-08-27T18:08:41.861Z" },
+]
+
+[[package]]
 name = "rasterio"
 version = "1.4.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3292,6 +3302,7 @@ dependencies = [
     { name = "anndata" },
     { name = "geopandas" },
     { name = "joblib" },
+    { name = "ome-zarr" },
     { name = "ovrlpy" },
     { name = "rasterio" },
     { name = "rtree" },
@@ -3340,6 +3351,7 @@ requires-dist = [
     { name = "leidenalg", marker = "extra == 'test'" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
+    { name = "ome-zarr", specifier = ">=0.13.0" },
     { name = "ovrlpy", specifier = ">=1.1.0" },
     { name = "pandoc", marker = "extra == 'docs'" },
     { name = "pygments", marker = "extra == 'docs'" },

@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
@@ -46,11 +45,11 @@ def cluster_connectedness(
     random_state : int, optional
         Seed for reproducibility, by default 42.
     cell_type_key : str, optional
-        If provided, compute the mean cosine distance for this clustering only.
+        If provided, compute cluster connectedness for this clustering only.
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
     inplace : bool, optional
-        Whether to store the computed mean cosine distance in sdata.uns, by default True.
+        Whether to store the computed cluster connectedness in sdata.uns, by default True.
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
@@ -72,14 +71,18 @@ def cluster_connectedness(
                 f"cell_type_key '{cell_type_key}' not found in adata.obs. Available keys: {list(adata.obs.keys())}"
             )
         labels = adata.obs[cell_type_key].values
-        # remove NaN labels
-        if len(np.unique(labels[~pd.isna(labels)])) > 1:
+        valid_labels = labels[~pd.isna(labels)]
+        if len(pd.unique(valid_labels)) > 1:
             if "connectivities" not in adata.obsp:
                 raise ValueError(
                     "Connectivities not found in adata.obsp['connectivities']. "
                     "Please compute neighbors first by running sc.pp.neighbors(adata)."
                 )
-            distance_val = _cluster_connectedness(adata.obsp["connectivities"], labels)
+            distance_val = _cluster_connectedness(
+                adata.obsp["connectivities"],
+                labels,
+                use_weights=use_weights,
+            )
             return float(distance_val)
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
@@ -103,7 +106,8 @@ def cluster_connectedness(
             leiden_kwargs=leiden_kwargs,
         )
         labels = adata.obs[key_added].values
-        if len(np.unique(labels)) > 1:
+        valid_labels = labels[~pd.isna(labels)]
+        if len(pd.unique(valid_labels)) > 1:
             distance_val = _cluster_connectedness(adata.obsp["connectivities"], labels, use_weights=use_weights)
             if distance_val > best_distance:
                 best_distance = float(distance_val)
@@ -210,9 +214,18 @@ def silhouette_score(
 
             # Compute silhouette score
             labels = adata.obs[key_added]
-            labels_nn = labels[~pd.isna(labels)]
-            if len(pd.unique(labels_nn)) > 1:  # Ensure more than one cluster exists
-                silhouette_avg = _silhouette_score(pca, labels, metric=metric)
+            valid_mask = labels.notna().values
+            labels_valid = labels[valid_mask].values
+
+            if len(pd.unique(labels_valid)) > 1:  # Ensure more than one cluster exists
+                if pca is None:
+                    raise ValueError(
+                        "PCA coordinates are required for silhouette score calculation, "
+                        "but no PCA embedding was found. "
+                        "Please compute PCA with `sc.pp.pca(adata)` and then recompute neighbors with "
+                        "`sc.pp.neighbors(adata)`."
+                    )
+                silhouette_avg = _silhouette_score(pca, labels_valid, metric=metric)
                 if silhouette_avg > best_silhouette_score:
                     best_silhouette_score = silhouette_avg
 
@@ -233,7 +246,7 @@ def purity(
     leiden_kwargs: dict | None = None,
 ) -> float:
     """
-    Compute the clustering stability using pairwise purity on random subsets of genes.
+    Compute the clustering stability using pairwise purity on random subsets of cells.
     Parameters
     ----------
     sdata : sd.SpatialData
