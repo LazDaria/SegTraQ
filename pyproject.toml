@@ -1,6 +1,6 @@
 [project]
 name = "segtraq"
-version = "0.0.3"
+version = "0.0.4"
 description = "SegTraQ - A Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data."
 readme = "README.md"
 authors = [
@@ -16,7 +16,7 @@ maintainers = [
 classifiers = [
 
 ]
-license = {text = "MIT"}
+license = "MIT"
 dependencies = [
   "typer",
   "scanpy",
