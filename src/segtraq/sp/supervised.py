@@ -457,8 +457,10 @@ def marker_purity(
           positive markers of neighboring cell types.
 
     The score combines:
-        - positive_marker_recall: sensitivity, i.e. fraction of positive markers expressed.
-        - negative_marker_avoidance: specificity, i.e. fraction of relevant negative markers avoided.
+        - positive_marker_recall: fraction of expected positive markers expressed
+                                  (analogous to recall/sensitivity at the marker-level)
+        - negative_marker_avoidance: fraction of relevant negative markers avoided.
+                                    (analogous to specificity at the marker-level)
         - marker_balanced_accuracy: mean of sensitivity and specificity.
 
     Parameters

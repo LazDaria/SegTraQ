@@ -28,7 +28,7 @@ def percentage_transcripts_in_compartments(
     points_y_key: str = "y",
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = 1,
+    n_jobs: int = -1,
     predicate: str = "intersects",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -81,8 +81,9 @@ def percentage_transcripts_in_compartments(
         Criterion to choose the best nucleus for each cell when `centroid_region="nucleus"`.
     min_intersection_area : float, default=0.0
         Minimum overlap area required to consider a nucleus a candidate for a cell.
-    n_jobs : int, default=1
-        Number of parallel jobs for cell-nucleus matching (if needed). `-1` uses all CPUs.
+    n_jobs : int, default=-1
+        Number of parallel jobs for cell-nucleus matching (if needed).
+        Default `-1` uses all available CPU cores.
     predicate : str, default="intersects"
         Geometric predicate used to assign transcripts to cell or nucleus polygons during
         spatial joins (e.g. "covers" includes boundary points, "intersects" is more permissive).
@@ -282,7 +283,7 @@ def distance_to_centroid(
     restrict_to_within_boundary: bool = False,
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = 1,
+    n_jobs: int = -1,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -336,8 +337,9 @@ def distance_to_centroid(
         Criterion to choose the best nucleus for each cell when `centroid_region="nucleus"`.
     min_intersection_area : float, default=0.0
         Minimum overlap area required to consider a nucleus a candidate for a cell.
-    n_jobs : int, default=1
-        Number of parallel jobs for cell-nucleus matching (if needed). `-1` uses all CPUs.
+    n_jobs : int, default=-1
+        Number of parallel jobs for cell-nucleus matching (if needed).
+        Default `-1` uses all available CPU cores.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -491,7 +493,7 @@ def distance_to_membrane(
     restrict_to_within_boundary: bool = False,
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = 1,
+    n_jobs: int = -1,
     signed: bool = True,
     inverse_score: bool = True,
     eps: float = 1e-6,
@@ -554,7 +556,8 @@ def distance_to_membrane(
     min_intersection_area : float, default=0.0
         Minimum overlap area required to consider a nucleus a candidate for a cell.
     n_jobs : int, default=1
-        Number of parallel jobs for cell-nucleus matching (if needed). `-1` uses all CPUs.
+        Number of parallel jobs for cell-nucleus matching (if needed).
+        Default `-1` uses all available CPU cores.
     signed : bool, default=True
         If True, returns signed distances (positive if transcript is inside/on the polygon,
         negative if outside). If False, returns unsigned distances to the boundary.

@@ -29,7 +29,7 @@ dependencies = [
   "tqdm",
   "anndata>=0.12", # to support zarr v3
   "ovrlpy>=1.1.0",
-  "ome_zarr==0.13.0",
+  "ome_zarr>=0.13.0",
   "setuptools<82.0.0"  # setuptools==82.0.0 dropped pkg_resources, which is needed by xarray and thus spatialdata
 ]
 requires-python = ">= 3.11"
