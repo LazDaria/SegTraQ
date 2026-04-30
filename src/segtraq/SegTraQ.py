@@ -1017,7 +1017,7 @@ class _BLFacade:
 
     transcripts_per_cell.__doc__ = bl.transcripts_per_cell.__doc__
 
-    def morphological_features(self, features_to_compute: list | None = None, n_jobs: int = 1, inplace: bool = True):
+    def morphological_features(self, features_to_compute: list | None = None, n_jobs: int = -1, inplace: bool = True):
         return bl.morphological_features(
             sdata=self._p.sdata,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1347,7 +1347,7 @@ class _PSFacade:
         cell_type_query: str | list[str] | None = None,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = 1,
+        n_jobs: int = -1,
         predicate: str = "intersects",
         inplace: bool = True,
     ):
@@ -1384,7 +1384,7 @@ class _PSFacade:
         restrict_to_within_boundary: bool = False,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = 1,
+        n_jobs: int = -1,
         inplace: bool = True,
     ):
         return ps.distance_to_centroid(
@@ -1422,7 +1422,7 @@ class _PSFacade:
         membrane_region: Literal["cell", "nucleus"] = "cell",
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = 1,
+        n_jobs: int = -1,
         signed: bool = True,
         inverse_score: bool = True,
         eps: float = 1e-6,

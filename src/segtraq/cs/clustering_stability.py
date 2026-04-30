@@ -220,8 +220,10 @@ def silhouette_score(
             if len(pd.unique(labels_valid)) > 1:  # Ensure more than one cluster exists
                 if pca is None:
                     raise ValueError(
-                        "No embedding available for silhouette score calculation. "
-                        "Please recompute neighbors with PCA or provide a valid representation."
+                        "PCA coordinates are required for silhouette score calculation, "
+                        "but no PCA embedding was found. "
+                        "Please compute PCA with `sc.pp.pca(adata)` and then recompute neighbors with "
+                        "`sc.pp.neighbors(adata)`."
                     )
                 silhouette_avg = _silhouette_score(pca, labels_valid, metric=metric)
                 if silhouette_avg > best_silhouette_score:

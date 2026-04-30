@@ -3351,7 +3351,7 @@ requires-dist = [
     { name = "leidenalg", marker = "extra == 'test'" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
-    { name = "ome-zarr", specifier = "==0.13.0" },
+    { name = "ome-zarr", specifier = ">=0.13.0" },
     { name = "ovrlpy", specifier = ">=1.1.0" },
     { name = "pandoc", marker = "extra == 'docs'" },
     { name = "pygments", marker = "extra == 'docs'" },

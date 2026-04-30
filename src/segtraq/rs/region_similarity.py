@@ -11,7 +11,7 @@ from .utils import (
     _get_center_border_counts,
     _get_neighborhood_counts,
     _join_points_regions,
-    _process_cell,
+    _match_nucleus_one_cell,
 )
 
 
@@ -52,10 +52,10 @@ def match_nuclei_to_cells(
         If multiple nuclei have the same score (e.g. fully inside the cell), the
         larger nucleus (by area) is selected.
     min_intersection_area : float, default=0.0
-        Minimum area(cell ∩ nucleus) required to consider a nucleus as a candidate.
+        Minimum area (cell ∩ nucleus) required to consider a nucleus as a candidate.
         Overlaps <= this threshold are ignored.
     n_jobs : int, optional
-        Number of parallel jobs. Default=-1 uses all CPUs.
+        Number of parallel jobs. Default `-1` uses all available CPU cores.
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -84,7 +84,7 @@ def match_nuclei_to_cells(
 
     # Parallel loop over cells
     results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
-        delayed(_process_cell)(
+        delayed(_match_nucleus_one_cell)(
             cell_row=cell_row,
             nucleus_shapes=nuc_boundaries,
             id_name=cell_boundaries.index.name,
@@ -184,7 +184,7 @@ def similarity_nucleus_cell(
         candidate. Overlaps <= this threshold are ignored.
     n_jobs : int, default=-1
         Number of jobs for computing cell-nucleus matches if they have not yet
-        been calculated.
+        been calculated. Default `-1` uses all available CPU cores.
     scale : float, default=1e4
         Library-size normalization scale used before log1p.
     inplace : bool, default=True
@@ -212,9 +212,9 @@ def similarity_nucleus_cell(
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
-    tbl = sdata.tables[tables_key]
+    adata = sdata.tables[tables_key]
 
-    if "nucleus_id" not in tbl.obs.columns:
+    if "nucleus_id" not in adata.obs.columns:
         match_nuclei_to_cells(
             sdata=sdata,
             tables_key=tables_key,
@@ -227,25 +227,25 @@ def similarity_nucleus_cell(
             inplace=inplace,
         )
 
-    match_df = tbl.obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
+    match_df = adata.obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
     id_key = tables_cell_id_key
 
-    X = tbl.X
+    X = adata.X
     if _looks_like_counts(X):
         arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in tbl.layers:
+    elif "counts" not in adata.layers:
         raise ValueError(
             f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
             "and the main matrix does not look like counts."
         )
     else:
-        counts = tbl.layers["counts"]
+        counts = adata.layers["counts"]
         arr = counts.toarray() if hasattr(counts, "toarray") else counts
 
     expr_cells = pd.DataFrame(
         arr,
-        index=tbl.obs[tables_cell_id_key],
-        columns=tbl.var_names,
+        index=adata.obs[tables_cell_id_key],
+        columns=adata.var_names,
     )
 
     _, expr_nucleus = _join_points_regions(
@@ -327,11 +327,11 @@ def similarity_nucleus_cytoplasm(
     scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = 1,
+    n_jobs: int = -1,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Compute the cosine similarity between nucleus-overlapping and cytoplasmic
+    Compute the cosine similarity between nuclear and cytoplasmic
     expression profiles for each cell.
 
     The point estimate is computed from count matrices for the part of the cell
@@ -365,10 +365,10 @@ def similarity_nucleus_cytoplasm(
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
     min_transcripts : int, default=10
-        Minimum number of transcripts required in both nucleus-overlapping and
+        Minimum number of transcripts required in both nuclear and
         cytoplasmic regions.
     min_genes : int, default=5
-        Minimum number of non-zero genes required across nucleus-overlapping and
+        Minimum number of non-zero genes required across nuclear and
         cytoplasmic regions.
     scale : float, default=1e4
         Library-size normalization scale used before log1p.
@@ -378,11 +378,11 @@ def similarity_nucleus_cytoplasm(
         - "nucleus_fraction": maximize area(cell ∩ nucleus) / area(nucleus).
         If multiple nuclei have the same score, the larger nucleus is selected.
     min_intersection_area : float, default=0.0
-        Minimum area(cell ∩ nucleus) required to consider a nucleus as a
+        Minimum area (cell ∩ nucleus) required to consider a nucleus as a
         candidate. Overlaps <= this threshold are ignored.
-    n_jobs : int, default=1
+    n_jobs : int, default=-1
         Number of jobs for computing cell-nucleus matches if they have not yet
-        been calculated.
+        been calculated. Default `-1` uses all available CPU cores.
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
 
@@ -647,7 +647,7 @@ def similarity_center_border(
         raise ValueError(
             "Could not compute center-border cosine similarities. "
             "Try different parameters for border_fraction_of_radius. "
-            f"You used border_fraction_of_radius={border_fraction_of_radius}."
+            f"You used {border_fraction_of_radius=}."
         )
 
     if inplace:
@@ -794,9 +794,8 @@ def similarity_border_neighborhood(
         raise ValueError(
             "Could not compute border-neighborhood cosine similarities. "
             "Try different parameters for border_fraction_of_radius or "
-            "neighborhood_radius_factor. You used border_fraction_of_radius="
-            f"{border_fraction_of_radius} and neighborhood_radius_factor="
-            f"{neighborhood_radius_factor}."
+            "neighborhood_radius_factor. You used "
+            f"{border_fraction_of_radius=} and {neighborhood_radius_factor=}."
         )
 
     if inplace:
@@ -896,8 +895,8 @@ def border_admixture_score(
         Percentile confidence interval level.
     random_state : int | None, default=None
         Random seed for reproducible bootstrap resampling.
-    n_jobs : int, default=1
-        Number of parallel jobs across cells.
+    n_jobs : int, default=-1
+        Number of parallel jobs across cells. Default `-1` uses all available CPU cores.
     inplace : bool, default=True
         If True, merge the results into `sdata.tables[tables_key].obs`.
 
@@ -956,7 +955,7 @@ def border_admixture_score(
         dtype=np.uint32,
     )
 
-    def _process_one(cid, seed):
+    def _bootstrap_mixture_fit_one_cell(cid, seed):
         rng = np.random.default_rng(int(seed))
 
         res = _bootstrap_mixture_fit(
@@ -979,7 +978,7 @@ def border_admixture_score(
         }
 
     rows = Parallel(n_jobs=n_jobs)(
-        delayed(_process_one)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
+        delayed(_bootstrap_mixture_fit_one_cell)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
     )
 
     out = pd.DataFrame(rows)
@@ -988,8 +987,8 @@ def border_admixture_score(
         raise ValueError(
             "Could not compute border admixture scores. "
             "Try different parameters for border_fraction_of_radius or neighborhood_radius_factor. "
-            "You used border_fraction_of_radius="
-            f"{border_fraction_of_radius} and neighborhood_radius_factor={neighborhood_radius_factor}."
+            "You used "
+            f"{border_fraction_of_radius=} and {neighborhood_radius_factor=}."
         )
 
     if inplace:

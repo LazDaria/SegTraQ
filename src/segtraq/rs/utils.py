@@ -31,7 +31,7 @@ def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
     return inter_area / nuc_area
 
 
-def _process_cell(
+def _match_nucleus_one_cell(
     cell_row: Series,
     nucleus_shapes: GeoDataFrame,
     id_name: str,
@@ -445,7 +445,7 @@ def _join_points_regions(
     return pts_joined, counts
 
 
-def _ensure_center_border_shapes(
+def _ensure_center_border_shapes_exists(
     sdata,
     shapes_key: str = "cell_boundaries",
     border_fraction_of_radius: float = 0.2,
@@ -505,7 +505,7 @@ def _get_center_border_counts(
     border_fraction_of_radius: float = 0.2,
     buffer_fraction_of_radius: float = 0.1,
 ):
-    _ensure_center_border_shapes(
+    _ensure_center_border_shapes_exists(
         sdata=sdata,
         shapes_key=shapes_key,
         border_fraction_of_radius=border_fraction_of_radius,
@@ -579,6 +579,12 @@ def _cosine_similarity_two_vectors(
     min_genes: int,
     scale: float,
 ) -> float:
+    """
+    Compute cosine similarity between two expression vectors after filtering,
+    masking zero entries, and applying log-normalization.
+
+    Returns NaN if minimum gene or transcript thresholds are not met.
+    """
     mask = (x_a != 0) | (x_b != 0)
 
     if mask.sum() < min_genes or x_a[mask].sum() < min_transcripts or x_b[mask].sum() < min_transcripts:
@@ -816,7 +822,7 @@ def _estimate_mixture_alpha_least_squares(
     return float(np.clip(alpha, 0.0, 1.0))
 
 
-def _score_one_cell(
+def _border_admixture_score_one_cell(
     x_center: np.ndarray,
     x_border: np.ndarray,
     x_neighborhood: np.ndarray,
@@ -845,6 +851,8 @@ def _score_one_cell(
         Minimum number of genes present across the three regions combined.
     pseudocount : float, default=0.5
         Pseudocount used when converting counts to proportions.
+        A value of 0.5 applies milder smoothing than 1, reducing bias in sparse
+        or low-count data while stabilizing estimates.
 
     Returns
     -------
@@ -943,7 +951,7 @@ def _bootstrap_mixture_fit(
     if rng is None:
         rng = np.random.default_rng()
 
-    score = _score_one_cell(
+    score = _border_admixture_score_one_cell(
         x_center=x_center,
         x_border=x_border,
         x_neighborhood=x_neighborhood,
@@ -975,7 +983,7 @@ def _bootstrap_mixture_fit(
         xb_border = rng.multinomial(n_border, p_border)
         xb_neighborhood = rng.multinomial(n_neighborhood, p_neighborhood)
 
-        boot_score = _score_one_cell(
+        boot_score = _border_admixture_score_one_cell(
             x_center=xb_center,
             x_border=xb_border,
             x_neighborhood=xb_neighborhood,
