@@ -488,7 +488,8 @@ def morphological_features(
         Available features: "centroid", "cell_area", "perimeter", "circularity", "bbox_width", "bbox_height",
         "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "num_polygons".
     n_jobs : int, optional
-        Number of parallel jobs to use for computation. -1 uses all available CPUs (default is -1).
+        Number of parallel jobs to use for computation.
+        Default `-1` uses all available CPU cores.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
