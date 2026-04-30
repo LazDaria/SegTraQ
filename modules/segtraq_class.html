@@ -644,46 +644,24 @@ If <code class="docutils literal notranslate"><span class="pre">inplace=False</s
 
 <dl class="py method">
 <dt class="sig sig-object py" id="segtraq.SegTraQ.run_region_similarity">
-<span class="sig-name descname"><span class="pre">run_region_similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cosine_sim'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iou_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cell_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cytoplasm_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_border_neighborhood_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_region_similarity" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">run_region_similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iou_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cell_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cytoplasm_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_center_border_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_border_neighborhood_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">border_admixture_score_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_region_similarity" title="Link to this definition">#</a></dt>
 <dd><p>Compute region similarity metrics and optionally merge them into the cell table.</p>
 <p>This runs, in order:
-1) IoU between each cell and its best-matching nucleus
-2) Similarity between per-cell expression and its matched nucleus
-3) Similarity between the cell’s nucleus vs. cytoplasm expression
-4) Similarity of gene expression in an eroded interior (“center”) and</p>
-<blockquote>
-<div><p>a thin outer shell (“border”), and (2) comparing the border with the neighborhood.</p>
-</div></blockquote>
+1) matching between each cell and its best-matching nucleus
+2) similarity between per-cell expression and its matched nucleus
+3) similarity between the cell’s nucleus-overlapping and cytoplasmic expression
+4) similarity between center and border expression
+5) similarity between border and neighborhood expression
+6) border admixture score</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>metric</strong> (<em>str</em><em>, </em><em>default=&quot;cosine_sim&quot;</em>)</p></li>
-<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>default=-1</em>)</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, writes results into <cite>sdata.tables[tables_key].obs</cite> and returns None.
-If False, returns a dictionary of DataFrames without writing.</p></li>
-<li><p><strong>iou_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>match_nuclei_to_cells</cite>.</p></li>
-<li><p><strong>similarity_nucleus_cell_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>similarity_nucleus_cell</cite>.</p></li>
-<li><p><strong>similarity_nucleus_cytoplasm_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>similarity_nucleus_cytoplasm</cite>.</p></li>
-<li><p><strong>similarity_border_neighborhood_kwargs</strong> (<em>dict</em><em>, </em><em>optional</em>) – Additional keyword arguments to pass to <cite>similarity_border_neighborhood</cite>.</p></li>
-</ul>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If <cite>inplace=True</cite>, returns None after writing to <cite>sdata</cite>.
+If <cite>inplace=False</cite>, returns a dictionary of DataFrames.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>None or dict</em></p></li>
-<li><p><strong>- If `inplace=True`</strong> (returns None after writing to <cite>sdata</cite>.)</p></li>
-<li><p><strong>- If `inplace=False`</strong> (<em>returns a dict with keys:</em>)</p></li>
-<li><p><strong>* “ious”</strong> (<em>pd.DataFrame</em>)</p></li>
-<li><p><strong>* “similarity_nucleus_cell”</strong> (<em>pd.DataFrame</em>)</p></li>
-<li><p><strong>* “similarity_nucleus_cytoplasm”</strong> (<em>pd.DataFrame</em>)</p></li>
-<li><p><strong>* “similarity_border_neighborhood”</strong> (<em>pd.DataFrame</em>)</p></li>
-</ul>
-</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None or dict</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<ul class="simple">
-<li><p>Requires <cite>self.nucleus_shapes_key</cite> (nucleus boundaries).</p></li>
-</ul>
 </dd></dl>
 
 <dl class="py method">
@@ -692,7 +670,7 @@ If False, returns a dictionary of DataFrames without writing.</p></li>
 <dd><p>Run supervised (sp) metrics.</p>
 <p>Convenience wrapper around supervised marker-based QC metrics. Runs, in order:</p>
 <ol class="arabic simple">
-<li><p>marker_purity (per-cell precision/recall/F1, neighborhood-aware negatives)</p></li>
+<li><p>marker_purity (sensitivity and specificity of marker gene expression patterns)</p></li>
 <li><p>neighbor_contamination (per-cell + directed type-type matrices)</p></li>
 <li><p>mutually_exclusive_coexpression_rate (MECR)</p></li>
 </ol>
@@ -710,7 +688,7 @@ If a layer is specified, it must exist and contain count-like values.</p></li>
 by the underlying functions and returns None.
 If False, returns all results as a dict.</p></li>
 <li><p><strong>purity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra args for <code class="xref py py-meth docutils literal notranslate"><span class="pre">sp.marker_purity()</span></code>.
-(e.g. use_quantiles=…, weight_cont=…, require_neighbor_expression=…, neighbors_key=…)</p></li>
+(e.g. use_quantiles=…, require_neighbor_expression=…, neighbors_key=…)</p></li>
 <li><p><strong>contamination_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra args for <code class="xref py py-meth docutils literal notranslate"><span class="pre">sp.neighbor_contamination()</span></code>.
 (e.g. require_neighbor_expression=…, neighbors_key=…, uns_key=…, uns_key_binary=…)</p></li>
 <li><p><strong>mecr_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra args for <code class="xref py py-meth docutils literal notranslate"><span class="pre">sp.mutually_exclusive_coexpression_rate()</span></code>.
