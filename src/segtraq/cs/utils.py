@@ -153,7 +153,7 @@ def run_leiden_clustering_on_random_subset(
     full_labels.loc[adata_subset.obs_names] = labels.values
     adata_full.obs[key_added] = full_labels
 
-    return key_added, pca
+    return key_added, pca, labels.values
 
 
 def ari_pairwise(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
