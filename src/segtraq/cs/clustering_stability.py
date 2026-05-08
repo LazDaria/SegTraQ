@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
@@ -94,7 +95,7 @@ def cluster_connectedness(
         )
 
     for res in resolution:
-        key_added, _ = run_leiden_clustering_on_random_subset(
+        key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
             tables_key=tables_key,
             resolution=res,
@@ -106,9 +107,18 @@ def cluster_connectedness(
             leiden_kwargs=leiden_kwargs,
         )
         labels = adata.obs[key_added].values
-        valid_labels = labels[~pd.isna(labels)]
+        valid_mask = ~pd.isna(labels)
+        valid_labels = labels[valid_mask]
+
         if len(pd.unique(valid_labels)) > 1:
-            distance_val = _cluster_connectedness(adata.obsp["connectivities"], labels, use_weights=use_weights)
+            # Slice connectivity matrix to valid cells only — both rows AND columns
+            connectivity_subset = adata.obsp["connectivities"][np.ix_(valid_mask, valid_mask)]
+
+            distance_val = _cluster_connectedness(
+                connectivity_subset,
+                valid_labels,
+                use_weights=use_weights,
+            )
             if distance_val > best_distance:
                 best_distance = float(distance_val)
 
@@ -164,9 +174,10 @@ def silhouette_score(
         The silhouette score of the clustering.
     """
     adata = sdata.tables[tables_key]
+    key = None
 
-    best_silhouette_score = -1
-    if isinstance(resolution, float):
+    best_silhouette_score = -float("inf")
+    if not isinstance(resolution, list | tuple):
         resolution = [resolution]
 
     if cell_type_key is not None:
@@ -185,6 +196,11 @@ def silhouette_score(
             silhouette_avg = _silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
             best_silhouette_score = float(silhouette_avg)
             key = "silhouette_score_labels"
+
+            # handle inplace within the branch and return early, avoiding fall-through
+            if inplace:
+                sdata.tables[tables_key].uns[key] = best_silhouette_score
+            return best_silhouette_score
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
@@ -200,7 +216,7 @@ def silhouette_score(
         key = "silhouette_score"
         for res in resolution:
             # Run clustering for each resolution
-            key_added, pca = run_leiden_clustering_on_random_subset(
+            _, pca, labels = run_leiden_clustering_on_random_subset(
                 sdata,
                 tables_key=tables_key,
                 resolution=res,
@@ -212,12 +228,7 @@ def silhouette_score(
                 leiden_kwargs=leiden_kwargs,
             )
 
-            # Compute silhouette score
-            labels = adata.obs[key_added]
-            valid_mask = labels.notna().values
-            labels_valid = labels[valid_mask].values
-
-            if len(pd.unique(labels_valid)) > 1:  # Ensure more than one cluster exists
+            if len(pd.unique(labels)) > 1:  # Ensure more than one cluster exists
                 if pca is None:
                     raise ValueError(
                         "PCA coordinates are required for silhouette score calculation, "
@@ -225,12 +236,15 @@ def silhouette_score(
                         "Please compute PCA with `sc.pp.pca(adata)` and then recompute neighbors with "
                         "`sc.pp.neighbors(adata)`."
                     )
-                silhouette_avg = _silhouette_score(pca, labels_valid, metric=metric)
-                if silhouette_avg > best_silhouette_score:
-                    best_silhouette_score = silhouette_avg
 
-    if inplace:
+                silhouette_avg = _silhouette_score(pca, labels, metric=metric)
+
+                if silhouette_avg > best_silhouette_score:
+                    best_silhouette_score = float(silhouette_avg)
+
+    if inplace and key is not None:
         sdata.tables[tables_key].uns[key] = best_silhouette_score
+
     return best_silhouette_score
 
 
@@ -281,7 +295,7 @@ def purity(
     cluster_keys = []
 
     for random_state in range(5):
-        key_added, _pca = run_leiden_clustering_on_random_subset(
+        key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
             tables_key=tables_key,
             resolution=resolution,
@@ -352,7 +366,7 @@ def adjusted_rand_index(
 
     # Run clustering on random subsets of genes
     for random_state in range(5):
-        key_added, _pca = run_leiden_clustering_on_random_subset(
+        key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
             tables_key=tables_key,
             resolution=resolution,
