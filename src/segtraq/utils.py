@@ -810,7 +810,7 @@ def _ensure_index(
 
     if gdf[id_key].duplicated().any():
         warnings.warn(
-            f"Duplicate IDs detected in column '{id_key}' for shapes '{shapes_key}'. "
+            f"Duplicate IDs detected in column '{id_key}' forq shapes '{shapes_key}'. "
             f"Instead of using {id_key} as index, resetting the current index and renaming it to `segtraq_id`.",
             UserWarning,
             stacklevel=2,
