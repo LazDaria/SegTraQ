@@ -213,22 +213,25 @@ def similarity_nucleus_cell(
     )
 
     adata = sdata.tables[tables_key]
+    cells_gdf = sdata.shapes[shapes_key]
+    shapes_cell_id_key = cells_gdf.index.name
 
-    if "nucleus_id" not in adata.obs.columns:
-        match_nuclei_to_cells(
+    if "nucleus_id" not in sdata.tables[tables_key].obs.columns:
+        match_df = match_nuclei_to_cells(
             sdata=sdata,
             tables_key=tables_key,
             tables_cell_id_key=tables_cell_id_key,
             shapes_key=shapes_key,
             nucleus_shapes_key=nucleus_shapes_key,
-            select_by=select_by,
             min_intersection_area=min_intersection_area,
+            select_by=select_by,
             n_jobs=n_jobs,
             inplace=inplace,
         )
-
-    match_df = adata.obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
-    id_key = tables_cell_id_key
+    else:
+        match_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
+        # need to rename the column to the id_key used in shapes for the join later
+        match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
 
     X = adata.X
     if _looks_like_counts(X):
@@ -270,7 +273,7 @@ def similarity_nucleus_cell(
 
     rows = []
     for _, row in match_df.iterrows():
-        cid, nid = row[id_key], row["nucleus_id"]
+        cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
 
         if pd.isna(nid):
             sim = np.nan
@@ -288,7 +291,7 @@ def similarity_nucleus_cell(
 
         rows.append(
             {
-                id_key: cid,
+                tables_cell_id_key: cid,
                 "nucleus_id": nid,
                 "iou": row.iou,
                 "nucleus_fraction": row.nucleus_fraction,
@@ -304,7 +307,7 @@ def similarity_nucleus_cell(
             tables_key=tables_key,
             df_to_merge=corr_df,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=tables_cell_id_key,
         )
 
     return corr_df
