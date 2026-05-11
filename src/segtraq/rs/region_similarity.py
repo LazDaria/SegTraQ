@@ -424,7 +424,9 @@ def similarity_nucleus_cytoplasm(
             inplace=inplace,
         )
     else:
-        match_df = sdata.tables[tables_key].obs[[id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
+        match_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
+        # need to rename the column to the id_key used in shapes for the join later
+        match_df = match_df.rename(columns={tables_cell_id_key: id_key})
 
     best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
 
