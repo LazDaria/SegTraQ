@@ -303,7 +303,7 @@ def genes_per_cell(
     df = df[~_is_background(df[points_cell_id_key], points_background_id)]
 
     # Group by cell and count unique genes
-    gene_counts = df.groupby(points_cell_id_key)[points_gene_key].nunique().reset_index()
+    gene_counts = df.groupby(points_cell_id_key, observed=True)[points_gene_key].nunique().reset_index()
     gene_counts.columns = [points_cell_id_key, "gene_count"]
     if inplace:
         merge_into_obs(
