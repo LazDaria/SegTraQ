@@ -259,6 +259,7 @@ class SegTraQ:
     def run_region_similarity(
         self,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         inplace: bool = True,
         iou_kwargs: dict = None,
         similarity_nucleus_cell_kwargs: dict = None,
@@ -286,18 +287,21 @@ class SegTraQ:
         """
         ious = self.rs.match_nuclei_to_cells(
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
             **(iou_kwargs or {}),
         )
 
         similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
             **(similarity_nucleus_cell_kwargs or {}),
         )
 
         similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
             **(similarity_nucleus_cytoplasm_kwargs or {}),
         )
@@ -314,6 +318,7 @@ class SegTraQ:
 
         border_admixture_score = self.rs.border_admixture_score(
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
             **(border_admixture_score_kwargs or {}),
         )
@@ -1017,7 +1022,13 @@ class _BLFacade:
 
     transcripts_per_cell.__doc__ = bl.transcripts_per_cell.__doc__
 
-    def morphological_features(self, features_to_compute: list | None = None, n_jobs: int = -1, inplace: bool = True):
+    def morphological_features(
+        self,
+        features_to_compute: list | None = None,
+        n_jobs: int = -1,
+        parallel_backend: str = "threading",
+        inplace: bool = True,
+    ):
         return bl.morphological_features(
             sdata=self._p.sdata,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1026,6 +1037,7 @@ class _BLFacade:
             shapes_key=self._p.shapes_key,
             features_to_compute=features_to_compute,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             tables_key=self._p.tables_key,
             inplace=inplace,
         )
@@ -1062,6 +1074,7 @@ class _RSFacade:
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         inplace: bool = True,
     ):
         return rs.match_nuclei_to_cells(
@@ -1073,6 +1086,7 @@ class _RSFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
@@ -1085,6 +1099,7 @@ class _RSFacade:
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         scale: float = 1e4,
         inplace: bool = True,
     ):
@@ -1105,6 +1120,7 @@ class _RSFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             scale=scale,
             inplace=inplace,
         )
@@ -1119,6 +1135,7 @@ class _RSFacade:
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         inplace: bool = True,
     ):
         return rs.similarity_nucleus_cytoplasm(
@@ -1139,6 +1156,7 @@ class _RSFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
@@ -1218,6 +1236,7 @@ class _RSFacade:
         ci_level: float = 0.95,
         random_state: int | None = None,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         inplace: bool = True,
     ):
         return rs.border_admixture_score(
@@ -1241,6 +1260,7 @@ class _RSFacade:
             ci_level=ci_level,
             random_state=random_state,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
@@ -1348,6 +1368,7 @@ class _PSFacade:
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         predicate: str = "intersects",
         inplace: bool = True,
     ):
@@ -1369,6 +1390,7 @@ class _PSFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             predicate=predicate,
             inplace=inplace,
         )
@@ -1385,6 +1407,7 @@ class _PSFacade:
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         inplace: bool = True,
     ):
         return ps.distance_to_centroid(
@@ -1408,6 +1431,7 @@ class _PSFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
@@ -1423,6 +1447,7 @@ class _PSFacade:
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
+        parallel_backend: str = "threading",
         signed: bool = True,
         inverse_score: bool = True,
         eps: float = 1e-6,
@@ -1449,6 +1474,7 @@ class _PSFacade:
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             signed=signed,
             inverse_score=inverse_score,
             eps=eps,
