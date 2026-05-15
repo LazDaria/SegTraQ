@@ -787,6 +787,14 @@ def _ensure_index(
 
     If the chosen IDs contain duplicates, the index is reset to a unique RangeIndex.
     """
+    if gdf.index.name is None:
+        raise ValueError(
+            f"The index of shapes '{shapes_key}' has no name. "
+            f"`{id_key_name}` must match either the shapes index name "
+            "or a column name, which will be set as the index if needed. "
+            "It must not be None. Set the index name before running SegTraQ."
+        )
+
     if gdf.index.name == id_key:
         if gdf.index.has_duplicates:
             warnings.warn(
