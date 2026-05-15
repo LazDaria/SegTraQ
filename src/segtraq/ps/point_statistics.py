@@ -29,6 +29,7 @@ def percentage_transcripts_in_compartments(
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     predicate: str = "intersects",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -84,6 +85,8 @@ def percentage_transcripts_in_compartments(
     n_jobs : int, default=-1
         Number of parallel jobs for cell-nucleus matching (if needed).
         Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     predicate : str, default="intersects"
         Geometric predicate used to assign transcripts to cell or nucleus polygons during
         spatial joins (e.g. "covers" includes boundary points, "intersects" is more permissive).
@@ -145,6 +148,7 @@ def percentage_transcripts_in_compartments(
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=True,
         )
 
@@ -284,6 +288,7 @@ def distance_to_centroid(
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -340,6 +345,8 @@ def distance_to_centroid(
     n_jobs : int, default=-1
         Number of parallel jobs for cell-nucleus matching (if needed).
         Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     inplace : bool, default=True
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -396,6 +403,7 @@ def distance_to_centroid(
         select_by=select_by,
         min_intersection_area=min_intersection_area,
         n_jobs=n_jobs,
+        parallel_backend=parallel_backend,
         inplace=inplace,
     )
 
@@ -494,6 +502,7 @@ def distance_to_membrane(
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     signed: bool = True,
     inverse_score: bool = True,
     eps: float = 1e-6,
@@ -558,6 +567,8 @@ def distance_to_membrane(
     n_jobs : int, default=1
         Number of parallel jobs for cell-nucleus matching (if needed).
         Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     signed : bool, default=True
         If True, returns signed distances (positive if transcript is inside/on the polygon,
         negative if outside). If False, returns unsigned distances to the boundary.
@@ -625,6 +636,7 @@ def distance_to_membrane(
         select_by=select_by,
         min_intersection_area=min_intersection_area,
         n_jobs=n_jobs,
+        parallel_backend=parallel_backend,
         inplace=inplace,
     )
 

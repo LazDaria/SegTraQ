@@ -24,6 +24,7 @@ def match_nuclei_to_cells(
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> DataFrame:
     """
@@ -56,6 +57,8 @@ def match_nuclei_to_cells(
         Overlaps <= this threshold are ignored.
     n_jobs : int, optional
         Number of parallel jobs. Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     inplace : bool, optional
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -83,7 +86,7 @@ def match_nuclei_to_cells(
     nuc_sindex = nuc_boundaries.sindex
 
     # Parallel loop over cells
-    results = Parallel(n_jobs=n_jobs, verbose=0, prefer="threads")(
+    results = Parallel(n_jobs=n_jobs, verbose=0, backend=parallel_backend)(
         delayed(_match_nucleus_one_cell)(
             cell_row=cell_row,
             nucleus_shapes=nuc_boundaries,
@@ -134,6 +137,7 @@ def similarity_nucleus_cell(
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     scale: float = 1e4,
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -185,6 +189,8 @@ def similarity_nucleus_cell(
     n_jobs : int, default=-1
         Number of jobs for computing cell-nucleus matches if they have not yet
         been calculated. Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     scale : float, default=1e4
         Library-size normalization scale used before log1p.
     inplace : bool, default=True
@@ -226,6 +232,7 @@ def similarity_nucleus_cell(
             min_intersection_area=min_intersection_area,
             select_by=select_by,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
     else:
@@ -331,6 +338,7 @@ def similarity_nucleus_cytoplasm(
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -386,6 +394,8 @@ def similarity_nucleus_cytoplasm(
     n_jobs : int, default=-1
         Number of jobs for computing cell-nucleus matches if they have not yet
         been calculated. Default `-1` uses all available CPU cores.
+        parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
 
@@ -424,6 +434,7 @@ def similarity_nucleus_cytoplasm(
             min_intersection_area=min_intersection_area,
             select_by=select_by,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
     else:
@@ -836,6 +847,7 @@ def border_admixture_score(
     ci_level: float = 0.95,
     random_state: int | None = None,
     n_jobs: int = -1,
+    parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -902,6 +914,8 @@ def border_admixture_score(
         Random seed for reproducible bootstrap resampling.
     n_jobs : int, default=-1
         Number of parallel jobs across cells. Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     inplace : bool, default=True
         If True, merge the results into `sdata.tables[tables_key].obs`.
 
@@ -982,7 +996,7 @@ def border_admixture_score(
             "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
         }
 
-    rows = Parallel(n_jobs=n_jobs)(
+    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_bootstrap_mixture_fit_one_cell)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
     )
 
