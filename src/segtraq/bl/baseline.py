@@ -465,6 +465,7 @@ def morphological_features(
     shapes_key: str = "cell_boundaries",
     features_to_compute: list | None = None,
     n_jobs: int = -1,  # number of parallel jobs, -1 uses all CPUs
+    parallel_backend: str = "threading",
     tables_key: str = "table",
     inplace: bool = True,
 ):
@@ -490,6 +491,8 @@ def morphological_features(
     n_jobs : int, optional
         Number of parallel jobs to use for computation.
         Default `-1` uses all available CPU cores.
+    parallel_backend : str, optional
+        Parallelization backend to use with joblib. Default is "threading".
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     inplace : bool, optional
@@ -543,9 +546,6 @@ def morphological_features(
     cells = sdata.shapes[shapes_key]
     if not isinstance(cells, gpd.GeoDataFrame):
         cells = cells.to_gdf()
-
-    # Filter valid geometries
-    cells = cells[cells.geometry.notnull() & cells.geometry.is_valid].copy()
 
     features = pd.DataFrame()
 
@@ -654,7 +654,7 @@ def morphological_features(
         return elongation, eccentricity
 
     if "elongation" in features_to_compute or "eccentricity" in features_to_compute:
-        results = Parallel(n_jobs=n_jobs)(delayed(compute_elong_ecc)(poly) for poly in geom)
+        results = Parallel(n_jobs=n_jobs, backend=parallel_backend)(delayed(compute_elong_ecc)(poly) for poly in geom)
         elongations, eccentricities = zip(*results, strict=False)
         if "elongation" in features_to_compute:
             features["elongation"] = elongations

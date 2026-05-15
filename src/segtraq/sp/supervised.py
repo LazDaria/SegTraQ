@@ -89,6 +89,9 @@ def mutually_exclusive_coexpression_rate(
     rows = []
     # go over all positive/negative gene pairs from the scRNAseq reference that were kept through the filtering
     for g1, g2 in kept_pairs:
+        # avoid requiring markers to be pre-filtered to genes present in the spatial data
+        if g1 not in var_index or g2 not in var_index:
+            continue
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
         # extract all cell types positive/negative for combination from the spatial data for the
         # mutually exclusive gene pairs found in the scRNA seq data.
