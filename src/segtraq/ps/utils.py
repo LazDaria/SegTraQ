@@ -20,6 +20,7 @@ def _get_cell_geometry_lookup(
     select_by: Literal["iou", "nucleus_fraction"],
     min_intersection_area: float,
     n_jobs: int,
+    parallel_backend: str,
     inplace: bool,
 ) -> tuple[pd.DataFrame, gpd.GeoDataFrame]:
     """
@@ -55,6 +56,7 @@ def _get_cell_geometry_lookup(
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
