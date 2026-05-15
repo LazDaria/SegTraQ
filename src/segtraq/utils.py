@@ -787,7 +787,7 @@ def _ensure_index(
 
     If the chosen IDs contain duplicates, the index is reset to a unique RangeIndex.
     """
-    if gdf.index.name is None:
+    if id_key is None:
         raise ValueError(
             f"The index of shapes '{shapes_key}' has no name. "
             f"`{id_key_name}` must match either the shapes index name "
