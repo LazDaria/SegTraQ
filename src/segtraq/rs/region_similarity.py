@@ -504,7 +504,7 @@ def similarity_nucleus_cytoplasm(
         .drop_duplicates(subset=[tables_cell_id_key], keep="first")
         .set_index(tables_cell_id_key)["nucleus_id"]
     )
-    require_cell_id_match = points_cell_id_key == id_key
+    require_points_region_id_match = points_cell_id_key == id_key
 
     tx_cell, _ = _join_points_regions(
         sdata=sdata,
@@ -518,7 +518,7 @@ def similarity_nucleus_cytoplasm(
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         predicate="within",
-        require_points_region_ID_match=require_cell_id_match,
+        require_points_region_ID_match=require_points_region_id_match,
     )
 
     tx_nuc, _ = _join_points_regions(
