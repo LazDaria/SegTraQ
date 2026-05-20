@@ -15,6 +15,38 @@ from .utils import (
 )
 
 
+def _attach_table_cell_ids(
+    match_df: pd.DataFrame,
+    *,
+    adata_obs: pd.DataFrame,
+    shapes_cell_id_key: str,
+    tables_cell_id_key: str,
+) -> pd.DataFrame:
+    if tables_cell_id_key in match_df.columns:
+        return match_df
+
+    if shapes_cell_id_key == tables_cell_id_key:
+        return match_df
+
+    if shapes_cell_id_key == adata_obs.index.name:
+        shape_to_table = pd.Series(adata_obs[tables_cell_id_key].to_numpy(), index=adata_obs.index)
+    elif shapes_cell_id_key in adata_obs.columns:
+        shape_to_table = (
+            adata_obs[[shapes_cell_id_key, tables_cell_id_key]]
+            .drop_duplicates(subset=[shapes_cell_id_key])
+            .set_index(shapes_cell_id_key)[tables_cell_id_key]
+        )
+    else:
+        raise KeyError(
+            f"Could not map shape IDs ('{shapes_cell_id_key}') to table IDs ('{tables_cell_id_key}'). "
+            f"'{shapes_cell_id_key}' must be the table index name or an obs column."
+        )
+
+    out = match_df.copy()
+    out[tables_cell_id_key] = out[shapes_cell_id_key].map(shape_to_table)
+    return out
+
+
 def match_nuclei_to_cells(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -237,8 +269,20 @@ def similarity_nucleus_cell(
         )
     else:
         match_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
-        # need to rename the column to the id_key used in shapes for the join later
-        match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
+        if shapes_cell_id_key in sdata.tables[tables_key].obs.columns:
+            match_df[shapes_cell_id_key] = sdata.tables[tables_key].obs[shapes_cell_id_key].values
+        elif sdata.tables[tables_key].obs.index.name == shapes_cell_id_key:
+            match_df[shapes_cell_id_key] = sdata.tables[tables_key].obs.index
+        else:
+            # fallback for legacy objects where only one shared key exists
+            match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
+
+    match_df = _attach_table_cell_ids(
+        match_df,
+        adata_obs=adata.obs,
+        shapes_cell_id_key=shapes_cell_id_key,
+        tables_cell_id_key=tables_cell_id_key,
+    )
 
     X = adata.X
     if _looks_like_counts(X):
@@ -280,9 +324,9 @@ def similarity_nucleus_cell(
 
     rows = []
     for _, row in match_df.iterrows():
-        cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
+        cid, nid = row[tables_cell_id_key], row["nucleus_id"]
 
-        if pd.isna(nid):
+        if pd.isna(cid) or cid not in expr_cells.index or pd.isna(nid):
             sim = np.nan
         else:
             x = expr_cells.loc[cid].to_numpy()
@@ -439,10 +483,27 @@ def similarity_nucleus_cytoplasm(
         )
     else:
         match_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
-        # need to rename the column to the id_key used in shapes for the join later
-        match_df = match_df.rename(columns={tables_cell_id_key: id_key})
+        if id_key in sdata.tables[tables_key].obs.columns:
+            match_df[id_key] = sdata.tables[tables_key].obs[id_key].values
+        elif sdata.tables[tables_key].obs.index.name == id_key:
+            match_df[id_key] = sdata.tables[tables_key].obs.index
+        else:
+            # fallback for legacy objects where only one shared key exists
+            match_df = match_df.rename(columns={tables_cell_id_key: id_key})
 
-    best_nuc_map = match_df.set_index(id_key)["nucleus_id"]
+    match_df = _attach_table_cell_ids(
+        match_df,
+        adata_obs=sdata.tables[tables_key].obs,
+        shapes_cell_id_key=id_key,
+        tables_cell_id_key=tables_cell_id_key,
+    )
+
+    best_nuc_map = (
+        match_df.dropna(subset=[tables_cell_id_key])
+        .drop_duplicates(subset=[tables_cell_id_key], keep="first")
+        .set_index(tables_cell_id_key)["nucleus_id"]
+    )
+    require_cell_id_match = points_cell_id_key == id_key
 
     tx_cell, _ = _join_points_regions(
         sdata=sdata,
@@ -456,7 +517,7 @@ def similarity_nucleus_cytoplasm(
         points_x_key=points_x_key,
         points_y_key=points_y_key,
         predicate="within",
-        require_points_region_ID_match=True,
+        require_points_region_ID_match=require_cell_id_match,
     )
 
     tx_nuc, _ = _join_points_regions(
@@ -521,14 +582,14 @@ def similarity_nucleus_cytoplasm(
 
         rows.append(
             {
-                id_key: cid,
+                tables_cell_id_key: cid,
                 "similarity_nucleus_cytoplasm": sim,
             }
         )
 
     sim_df = pd.DataFrame(rows)
 
-    out = match_df.merge(sim_df, on=id_key, how="left")
+    out = match_df.merge(sim_df, on=tables_cell_id_key, how="left")
 
     if inplace:
         merge_into_obs(
@@ -536,7 +597,7 @@ def similarity_nucleus_cytoplasm(
             tables_key=tables_key,
             df_to_merge=out,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
+            df_cell_id_key=tables_cell_id_key,
         )
 
     return out

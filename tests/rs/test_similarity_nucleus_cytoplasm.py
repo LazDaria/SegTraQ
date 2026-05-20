@@ -49,3 +49,16 @@ def test_similarity_nucleus_cytoplasm_no_inplace(sdata_new):
 
     assert isinstance(df, pd.DataFrame)
     assert before_cols == after_cols
+
+
+def test_similarity_nucleus_cytoplasm_different_table_and_shape_ids(sdata_new_table_ids):
+    df = st.rs.similarity_nucleus_cytoplasm(
+        sdata_new_table_ids,
+        tables_cell_id_key="table_cell_id",
+        points_cell_id_key="table_cell_id",
+        inplace=False,
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert "table_cell_id" in df.columns
+    assert not df["similarity_nucleus_cytoplasm"].isna().all()
