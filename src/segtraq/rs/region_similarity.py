@@ -499,6 +499,7 @@ def similarity_nucleus_cytoplasm(
         tables_cell_id_key=tables_cell_id_key,
     )
 
+    # Map using table IDs because points are linked to table IDs (which can differ from shape index IDs).
     best_nuc_map = (
         match_df.dropna(subset=[tables_cell_id_key, "nucleus_id"])
         .drop_duplicates(subset=[tables_cell_id_key], keep="first")
