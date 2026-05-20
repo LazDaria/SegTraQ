@@ -321,12 +321,13 @@ def similarity_nucleus_cell(
     common_genes = expr_nucleus.columns.intersection(expr_cells.columns)
     expr_nucleus = expr_nucleus[common_genes]
     expr_cells = expr_cells[common_genes]
+    expr_cells_ids = set(expr_cells.index)
 
     rows = []
     for _, row in match_df.iterrows():
         cid, nid = row[tables_cell_id_key], row["nucleus_id"]
 
-        if pd.isna(cid) or cid not in expr_cells.index or pd.isna(nid):
+        if pd.isna(cid) or cid not in expr_cells_ids or pd.isna(nid):
             sim = np.nan
         else:
             x = expr_cells.loc[cid].to_numpy()
