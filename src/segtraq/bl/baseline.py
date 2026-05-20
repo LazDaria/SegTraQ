@@ -467,6 +467,7 @@ def morphological_features(
     n_jobs: int = -1,  # number of parallel jobs, -1 uses all CPUs
     parallel_backend: str = "threading",
     tables_key: str = "table",
+    eps: float = 1e-6,
     inplace: bool = True,
 ):
     """
@@ -495,6 +496,8 @@ def morphological_features(
         Parallelization backend to use with joblib. Default is "threading".
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
+    eps : float, optional
+        Small constant to avoid division by zero in feature calculations. Default is 1e-6.
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
 
@@ -589,7 +592,7 @@ def morphological_features(
             areas = geom.area.values
         if perimeters is None:
             perimeters = geom.length.values
-        features["circularity"] = 4 * np.pi * areas / (perimeters**2 + 1e-6)
+        features["circularity"] = 4 * np.pi * areas / (perimeters**2 + eps)
 
     if any(f in features_to_compute for f in ["bbox_width", "bbox_height", "extent"]):
         bounds = geom.bounds
@@ -602,7 +605,7 @@ def morphological_features(
             height = (bounds["maxy"] - bounds["miny"]).values
             if areas is None:
                 areas = geom.area.values
-            features["extent"] = areas / (width * height + 1e-6)
+            features["extent"] = areas / (width * height + eps)
 
     if "solidity" in features_to_compute or "convexity" in features_to_compute:
         convex_hull = geom.convex_hull
@@ -610,12 +613,12 @@ def morphological_features(
             convex_areas = convex_hull.area.values
             if areas is None:
                 areas = geom.area.values
-            features["solidity"] = areas / (convex_areas + 1e-6)
+            features["solidity"] = areas / (convex_areas + eps)
         if "convexity" in features_to_compute:
             convex_perimeters = convex_hull.length
             if perimeters is None:
                 perimeters = geom.length.values
-            features["convexity"] = (convex_perimeters / (perimeters + 1e-6)).values
+            features["convexity"] = (convex_perimeters / (perimeters + eps)).values
 
     # Parallelized elongation and eccentricity calculation
     def compute_elong_ecc(poly):
@@ -666,7 +669,7 @@ def morphological_features(
             perimeters = geom.length.values
         if areas is None:
             areas = geom.area.values
-        features["compactness"] = (perimeters**2) / (areas + 1e-6)
+        features["compactness"] = (perimeters**2) / (areas + eps)
 
     if "num_polygons" in features_to_compute:
         features["num_polygons"] = geom.apply(count_polygons).values
