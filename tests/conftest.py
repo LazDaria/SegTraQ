@@ -127,7 +127,7 @@ def test_sdata_new_table_ids(sdata_new):
 
     table_obs = sdata.tables["table"].obs
     table_obs["table_cell_id"] = "tbl_" + table_obs["cell_id"].astype(str)
-    mapping = dict(zip(table_obs["cell_id"], table_obs["table_cell_id"], strict=False))
+    mapping = dict(zip(table_obs["cell_id"], table_obs["table_cell_id"], strict=True))
 
     transcripts = sdata.points["transcripts"]
     transcripts["table_cell_id"] = transcripts["cell_id"].map(mapping).fillna(transcripts["cell_id"])
