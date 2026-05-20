@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 
 import anndata as ad
@@ -118,3 +119,17 @@ def test_segtraq_obj(sdata_labeled):
     return st.SegTraQ(
         sdata_labeled, tables_centroid_x_key="x_centroid", tables_centroid_y_key="y_centroid", images_key="image"
     )
+
+
+@pytest.fixture(scope="session", name="sdata_new_table_ids")
+def test_sdata_new_table_ids(sdata_new):
+    sdata = copy.deepcopy(sdata_new)
+
+    table_obs = sdata.tables["table"].obs
+    table_obs["table_cell_id"] = "tbl_" + table_obs["cell_id"].astype(str)
+    mapping = dict(zip(table_obs["cell_id"], table_obs["table_cell_id"], strict=False))
+
+    transcripts = sdata.points["transcripts"]
+    transcripts["table_cell_id"] = transcripts["cell_id"].map(mapping).fillna(transcripts["cell_id"])
+
+    return sdata
