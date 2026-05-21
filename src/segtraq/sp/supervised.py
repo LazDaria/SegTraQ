@@ -393,10 +393,10 @@ def neighbor_contamination(
 
     per_cell_df = pd.DataFrame(
         {
+            tables_cell_id_key: adata.obs[tables_cell_id_key],
             "negative_marker_contamination_counts": number_cell,
             "negative_marker_contamination_fraction": contamination_fraction,
         },
-        index=adata.obs[tables_cell_id_key],
     )
 
     # ----------------------------------------------------------------------
@@ -612,13 +612,13 @@ def marker_purity(
 
     result = pd.DataFrame(
         {
+            tables_cell_id_key: adata.obs[tables_cell_id_key],
             "positive_marker_recall": positive_recall,
             "negative_marker_avoidance": negative_avoidance,
             "marker_balanced_accuracy": balanced_accuracy,
             "n_evaluated_positive_markers": n_pos_markers,
             "n_evaluated_negative_markers": n_neg_markers,
         },
-        index=adata.obs[tables_cell_id_key],
     )
 
     if inplace:
