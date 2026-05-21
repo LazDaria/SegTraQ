@@ -49,15 +49,23 @@ Ready to contribute? Here's how to set up `segtraq` for local development.
    git clone git@github.com:your_name_here/segtraq.git
    ```
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development:
-
-   ```sh
-   mkvirtualenv segtraq
+3. Install your local copy using uv:
+```sh
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    cd segtraq/
-   python setup.py develop
-   ```
+   uv venv
+   source .venv/bin/activate
+   uv pip install -e ".[test]"
+```
 
-4. Create a branch for local development:
+4. Download the test data:
+```sh
+   mkdir -p tests/data
+   curl -L https://oc.embl.de/index.php/s/J8W4ygsnsiZZ7nG/download | tar -xz --strip-components=1 -C tests/data/
+```
+   Test data is not bundled with the repository. This step is required before running the test suite locally.
+
+5. Create a branch for local development:
 
    ```sh
    git checkout -b name-of-your-bugfix-or-feature
@@ -65,18 +73,13 @@ Ready to contribute? Here's how to set up `segtraq` for local development.
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox:
-
-   ```sh
-   make lint
+6. When you're done making changes, check that your changes pass linting and tests:
+```sh
+   make qa
    make test
-   # Or
-   make test-all
-   ```
+```
 
-   To get flake8 and tox, just pip install them into your virtualenv.
-
-6. Commit your changes and push your branch to GitHub:
+7. Commit your changes and push your branch to GitHub:
 
    ```sh
    git add .
@@ -84,7 +87,7 @@ Ready to contribute? Here's how to set up `segtraq` for local development.
    git push origin name-of-your-bugfix-or-feature
    ```
 
-7. Submit a pull request through the GitHub website.
+8. Submit a pull request through the GitHub website.
 
 ## Pull Request Guidelines
 
