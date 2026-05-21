@@ -1314,14 +1314,14 @@ def validate_spatialdata(
                 f"If you want to use a different key, set the 'tables_key' parameter."
             )
             table = sdata.tables[tables_key]
+            # checking if the tables_cell_id_key is a column or an index name,
+            # and turning it into a column if it's an index
+            _resolve_obs_index_ambiguity(sdata, tables_key, tables_cell_id_key)
             assert tables_cell_id_key in table.obs.columns, (
                 f"Tables DataFrame must contain column: {tables_cell_id_key}. "
                 f"Available columns: {table.obs.columns.tolist()}. "
                 f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
-            # checking if the tables_cell_id_key is a column or an index name,
-            # and turning it into a column if it's an index
-            _resolve_obs_index_ambiguity(sdata, tables_key, tables_cell_id_key)
 
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
             "You can set them like this: \n"
