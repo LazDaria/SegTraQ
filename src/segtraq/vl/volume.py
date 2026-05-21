@@ -57,7 +57,7 @@ def vertical_signal_integrity_per_cell(
     vsi_per_cell = (
         vsi.group_by(points_cell_id_key)
         .agg(pl.col("vsi").mean())
-        .rename({points_cell_id_key: tables_cell_id_key, "vsi": "vertical_signal_integrity"})
+        .rename({"vsi": "vertical_signal_integrity"})
         .to_pandas()
     )
 
@@ -67,7 +67,7 @@ def vertical_signal_integrity_per_cell(
             tables_key=tables_key,
             df_to_merge=vsi_per_cell,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=points_cell_id_key,
         )
 
     return vsi_per_cell
