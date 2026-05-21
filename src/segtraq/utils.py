@@ -74,6 +74,65 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
 
+def _resolve_obs_index_ambiguity(
+    sdata: sd.SpatialData,
+    tables_key: str,
+    tables_cell_id_key: str,
+) -> None:
+    """
+    Ensure tables_cell_id_key exists as a plain column in adata.obs.
+
+    Three cases:
+    - Cell ID is only a column → no action needed.
+    - Cell ID is only the index name → add it as a column from the index values.
+    - Cell ID is both index name and column → verify they are identical and have
+      the same dtype, raise if not.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object to fix in place.
+    tables_key : str
+        Key for accessing the table in sdata.tables.
+    tables_cell_id_key : str
+        Column name that should exist in obs (and may also be the index name).
+    """
+    table = sdata.tables[tables_key]
+    obs = table.obs
+
+    is_column = tables_cell_id_key in obs.columns
+    is_index_name = obs.index.name == tables_cell_id_key
+
+    if is_column and not is_index_name:
+        # Perfect — nothing to do
+        return
+
+    elif is_index_name and not is_column:
+        # Add the index as a column
+        obs[tables_cell_id_key] = obs.index.values
+        table.obs = obs
+        sdata.tables[tables_key] = table
+
+    elif is_index_name and is_column:
+        # Both exist — verify they are consistent
+        index_vals = obs.index.astype(obs[tables_cell_id_key].dtype)
+        if not (index_vals == obs[tables_cell_id_key].values).all():
+            raise ValueError(
+                f"'{tables_cell_id_key}' exists as both the obs index name and a column "
+                f"in sdata.tables['{tables_key}'], but their values are not identical. "
+                "Please resolve this inconsistency before proceeding."
+            )
+        if obs.index.dtype != obs[tables_cell_id_key].dtype:
+            raise ValueError(
+                f"'{tables_cell_id_key}' exists as both the obs index name and a column "
+                f"in sdata.tables['{tables_key}'], but their dtypes differ: "
+                f"index is {obs.index.dtype}, column is {obs[tables_cell_id_key].dtype}. "
+                "Please ensure they have the same dtype before proceeding."
+            )
+        # Values and dtypes match — no action needed
+        return
+
+
 def _assign_celltype_by_pearson(
     adata: AnnData,
     ref_mean_df: pd.DataFrame,
@@ -1260,6 +1319,9 @@ def validate_spatialdata(
                 f"Available columns: {table.obs.columns.tolist()}. "
                 f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
+            # checking if the tables_cell_id_key is a column or an index name,
+            # and turning it into a column if it's an index
+            _resolve_obs_index_ambiguity(sdata, tables_key, tables_cell_id_key)
 
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
             "You can set them like this: \n"
@@ -1369,6 +1431,8 @@ def validate_spatialdata(
             f"If you want to use a different key, set the tables_key parameter."
         )
         table = sdata.tables[tables_key]
+        # checking if the tables_cell_id_key is a column or an index name, and turning it into a column if it's an index
+        _resolve_obs_index_ambiguity(sdata, tables_key, tables_cell_id_key)
         if tables_area_key is not None:
             assert tables_area_key in table.obs.columns, (
                 f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
