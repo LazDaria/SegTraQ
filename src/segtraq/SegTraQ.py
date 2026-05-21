@@ -1645,6 +1645,7 @@ class _VLFacade:
         normalization: str | None = "log",
         min_genes: int = 5,
         min_transcripts: int = 10,
+        n_pcs: int | None = 30,
         inplace: bool = True,
     ):
         return vl.similarity_top_bottom(
@@ -1666,6 +1667,7 @@ class _VLFacade:
             scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
+            n_pcs=n_pcs,
             inplace=inplace,
         )
 
