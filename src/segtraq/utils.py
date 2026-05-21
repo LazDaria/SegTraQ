@@ -385,39 +385,22 @@ def merge_into_obs(
     """
     Left-join df_to_merge into sdata.tables[tables_key].obs without resetting the index
     and without creating duplicate key columns.
-
     - Preserves obs index
-    - Uses obs[tables_cell_id_key] as the join key unless df_cell_id_key already exists in obs
-    - Drops overlapping columns on the right (or overwrites if overwrite=True)
+    - Uses obs[tables_cell_id_key] as the join key
+    - Drops overlapping columns on the right before joining
     """
-
     obs = sdata.tables[tables_key].obs
 
-    # Choose the column on the left to join on:
-    # If the right's key already exists in obs, prefer that (avoids redundant columns)
-    left_on_key = (
-        df_cell_id_key if (df_cell_id_key == obs.index.name or df_cell_id_key in obs.columns) else tables_cell_id_key
-    )
-
     # Build right indexed by the join key
-    if df_to_merge.index.name != df_cell_id_key:
-        right = df_to_merge.set_index(df_cell_id_key, drop=True)
-    else:
-        right = df_to_merge
+    right = df_to_merge.set_index(df_cell_id_key, drop=True)
 
-    # Decide which columns from right to bring over
-    right_cols = list(right.columns)
-    overlapping_cols = [c for c in right_cols if c in obs.columns and c != df_cell_id_key]
+    # Drop overlapping columns from obs to avoid duplicates
+    overlapping_cols = [c for c in right.columns if c in obs.columns]
     if overlapping_cols:
         obs = obs.drop(columns=overlapping_cols)
 
-    # Perform a left join while preserving the left index.
-    # Two cases: join using a left column (on=...) or directly on the index.
-    if obs.index.name == left_on_key:
-        # Index-on-index join (fast, preserves index)
-        joined = obs.join(right, how="left")
-    else:
-        joined = obs.join(right, on=left_on_key, how="left")
+    # Join on the cell ID column
+    joined = obs.join(right, on=tables_cell_id_key, how="left")
 
     # Fill NAs if requested
     if fillna_cols:
@@ -425,7 +408,6 @@ def merge_into_obs(
             if c in joined.columns:
                 joined[c] = joined[c].fillna(0)
 
-    # Assign back (no intermediate index reset happened)
     sdata.tables[tables_key].obs = joined
 
 
