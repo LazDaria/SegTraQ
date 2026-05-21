@@ -430,7 +430,7 @@ def transcript_density(
         each cell. Rows with missing values are dropped.
     """
     adata = sdata.tables[tables_key]
-    # this will also add the transcript counts inplace
+
     counts_df = transcripts_per_cell(
         sdata,
         points_key=points_key,
@@ -439,8 +439,12 @@ def transcript_density(
         points_cell_id_key=points_cell_id_key,
         tables_key=tables_key,
     )
-    area_df = adata.obs[[tables_cell_id_key, tables_area_key]]
 
+    area_df = adata.obs[[tables_cell_id_key, tables_area_key]].copy()
+    # it can happen that the cell_id is the index and the column
+    # pandas cannot perform merges on such a dataframe
+    # so we reset the index here to ensure that the cell_id is a column and not an index
+    area_df.index.name = None
     merged = counts_df.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
     merged["transcript_density"] = merged["transcript_count"] / merged[tables_area_key]
 
