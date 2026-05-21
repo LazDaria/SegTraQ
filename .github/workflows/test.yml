@@ -40,6 +40,7 @@ jobs:
     - name: Download test data
       if: steps.cache-test-data.outputs.cache-hit != 'true'
       run: |
+        mkdir -p tests/data/
         curl -L https://oc.embl.de/index.php/s/J8W4ygsnsiZZ7nG/download \
           | tar -xz --strip-components=1 -C tests/data/
     - name: Lint with ruff
