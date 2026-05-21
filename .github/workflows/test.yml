@@ -31,6 +31,17 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
         uv pip install -e ".[test]" --system
+    - name: Cache test data
+      id: cache-test-data
+      uses: actions/cache@v4
+      with:
+        path: tests/data/
+        key: test-data-${{ hashFiles('**/test_data_version.txt') }}
+    - name: Download test data
+      if: steps.cache-test-data.outputs.cache-hit != 'true'
+      run: |
+        curl -L https://oc.embl.de/index.php/s/J8W4ygsnsiZZ7nG/download \
+          | tar -xz --strip-components=1 -C tests/data/
     - name: Lint with ruff
       run: |
         ruff check --select=E9,F63,F7,F82
