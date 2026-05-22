@@ -2061,7 +2061,7 @@ wheels = [
 
 [[package]]
 name = "ovrlpy"
-version = "1.1.0"
+version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anndata" },
@@ -2076,9 +2076,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "umap-learn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/e8/04de3893528346f5d95846e83fa7ff9ed7f02a6a3060d294d9aad96d38e6/ovrlpy-1.1.0.tar.gz", hash = "sha256:781f794f0711bbf5ddbc9c10bafc89f38db6363102a7c157a78c9b1968721483", size = 8745822, upload-time = "2026-01-27T08:39:04.226Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/ac/def5079117e57d00974fef9d945ed7c393bdaa77e0fef24617cc0f6da573/ovrlpy-1.2.0.tar.gz", hash = "sha256:0c1ba08b9b981b8fcb714592cfc94f565a35505474ffe487b5f5524d289571f2", size = 8746212, upload-time = "2026-05-19T08:36:48.361Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/2f/2a5f21827567ac5d3e88b0dd65173571fa1e059cb730dcaaa621c29378cf/ovrlpy-1.1.0-py3-none-any.whl", hash = "sha256:5ecfd11f180b9959244fa77b80d069f78560f009159c0f21394ae293cb4c66c5", size = 28451, upload-time = "2026-01-27T08:39:02.79Z" },
+    { url = "https://files.pythonhosted.org/packages/30/2a/1b64fb895cdf11316b9a821744d9d869ad128fbe63393e6fc2eb4450e0f4/ovrlpy-1.2.0-py3-none-any.whl", hash = "sha256:0194fa420c466dd7f6d1517e54745bda3d740fc89b6018fe5cfdc2e461b13bbe", size = 28789, upload-time = "2026-05-19T08:36:46.581Z" },
 ]
 
 [[package]]
@@ -3352,7 +3352,7 @@ requires-dist = [
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
     { name = "ome-zarr", specifier = ">=0.13.0" },
-    { name = "ovrlpy", specifier = ">=1.1.0" },
+    { name = "ovrlpy", specifier = ">=1.2.0" },
     { name = "pandoc", marker = "extra == 'docs'" },
     { name = "pygments", marker = "extra == 'docs'" },
     { name = "pytest", marker = "extra == 'test'" },

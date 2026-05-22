@@ -3,6 +3,7 @@ from pathlib import Path
 import anndata as ad
 import pytest
 import scanpy as sc
+import spatialdata as sd
 from spatialdata import SpatialData
 
 import segtraq as st
@@ -114,7 +115,20 @@ def test_sdata_3D_labeled(sdata_3D, adata_ref):
 @pytest.fixture(scope="session", name="segtraq_obj")
 def test_segtraq_obj(sdata_labeled):
     """Load the SpatialData test sample once per test session."""
+    sdata = sd.deepcopy(sdata_labeled)  # to avoid modifying the original sdata_labeled in place
+    # to make this more difficult, we rename the cell column in the shapes
+    # this should flag issues from mismatching IDs between the tables and shapes
+    sdata.shapes["cell_boundaries"].index.name = "cell_id_1"
+    # we also rename the cell_id column in the tables
+    # in reality, sdata objects should rarely be this inconsistent
+    # but this allows us to test that the segtraq object can still be created as long as the correct keys are provided
+    sdata.tables["table"].obs = sdata.tables["table"].obs.rename(columns={"cell_id": "cell_id_2"})
     # creating a segtraq object
     return st.SegTraQ(
-        sdata_labeled, tables_centroid_x_key="x_centroid", tables_centroid_y_key="y_centroid", images_key="image"
+        sdata,
+        tables_centroid_x_key="x_centroid",
+        tables_centroid_y_key="y_centroid",
+        images_key="image",
+        shapes_cell_id_key="cell_id_1",
+        tables_cell_id_key="cell_id_2",
     )
