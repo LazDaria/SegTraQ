@@ -1704,11 +1704,11 @@ class _VLFacade:
     ):
         return vl.vertical_signal_integrity_per_cell(
             sdata=self._p.sdata,
+            ovrlp=ovrlp,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             points_background_id=self._p.points_background_id,
             points_cell_id_key=self._p.points_cell_id_key,
-            ovrlp=ovrlp,
             inplace=inplace,
         )
 
