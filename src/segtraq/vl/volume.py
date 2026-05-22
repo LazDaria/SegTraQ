@@ -1,7 +1,9 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import polars as pl
 import spatialdata as sd
+from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -11,15 +13,11 @@ from .utils import _correct_z_drift
 
 def vertical_signal_integrity_per_cell(
     sdata,
-    vsi_map: np.ndarray,
+    ovrlp: Ovrlp,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
-    points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
-    points_gene_key: str = "feature_name",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
     inplace: bool = True,
 ):
     """
@@ -35,96 +33,44 @@ def vertical_signal_integrity_per_cell(
     ----------
     sdata : SpatialData
         A `SpatialData` object containing transcript-assigned spatial transcriptomics data.
-    vsi_map : np.ndarray
-        2D array of VSI values. Must be indexable as `vsi_map[y, x]`, where x/y correspond
-        to transcript coordinates (after optional shift-to-origin).
+    ovrlp : ovrlpy.Ovrlp
+        Ovrlpy object with VSI already calculated.
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table. If `inplace=True`,
         results are merged into `sdata.tables[tables_key].obs`.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for transcript-level data.
     points_cell_id_key : str, default="cell_id"
         Column in the points table linking each transcript to a cell.
     points_background_id : str or int, default="UNASSIGNED"
         Identifier for transcripts not assigned to any cell (background).
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript. Used to filter
-        transcripts to features present in `sdata.tables[tables_key].var_names`.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [tables_cell_id_key, "mean_vsi"]
+        DataFrame with columns [tables_cell_id_key, "vertical_signal_integrity"]
     """
-    if vsi_map.ndim != 2:
-        raise ValueError(f"`vsi_map` must be a 2D array. Got shape {vsi_map.shape}.")
 
-    # subset points and drop rows with missing cell identifiers, genes or coordinates
-    pts = sdata.points[points_key]
-    cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key]
-
-    tx = pts[cols]
-    tx = tx.dropna(subset=cols)
-
-    # remove background transcripts
-    is_bg = _is_background(tx[points_cell_id_key], points_background_id)
-    tx = tx[~is_bg]
-
-    # subset transcripts to genes present in the anndata object
-    valid_features = pd.Index(sdata.tables[tables_key].var_names)
-    tx = tx[tx[points_gene_key].isin(valid_features)]
-
-    # convert to Pandas dataframe if Dask Array
-    tx = tx.compute() if hasattr(tx, "compute") else tx
-    tx = tx.reset_index(drop=True)
-
-    # extract coordinates
-    xs = tx[points_x_key].to_numpy(dtype=float)
-    ys = tx[points_y_key].to_numpy(dtype=float)
-
-    # shift coordinates to origin of coordinate system (0,0)
-    # for ovrlpy to index correctly - requires positive indices
-    x0 = float(np.min(xs))
-    y0 = float(np.min(ys))
-    xs = xs - x0
-    ys = ys - y0
-
-    # int floor for indexing
-    xi = np.floor(xs).astype(int)
-    yi = np.floor(ys).astype(int)
-
-    # extract vsi values at coordinates
-    vsi_vals = vsi_map[yi, xi].astype(float, copy=False)
-
-    # cast into a dataframe
-    df = pd.DataFrame(
-        {
-            tables_cell_id_key: tx[points_cell_id_key].to_numpy(),
-            "vertical_signal_integrity": vsi_vals,
-        }
+    vsi = cell_integrity_from_transcripts(ovrlp, cell_id=points_cell_id_key, unassigned=points_background_id)
+    vsi_per_cell = (
+        vsi.group_by(points_cell_id_key)
+        .agg(pl.col("vsi").mean())
+        .rename({"vsi": "vertical_signal_integrity"})
+        .to_pandas()
     )
-
-    # compute the cell wise mean of the vsi
-    out = df.groupby(tables_cell_id_key, observed=True)["vertical_signal_integrity"].mean().reset_index()
 
     if inplace:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=out,
+            df_to_merge=vsi_per_cell,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=points_cell_id_key,
         )
 
-    return out
+    return vsi_per_cell
 
 
 def similarity_top_bottom(
