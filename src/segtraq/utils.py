@@ -74,6 +74,63 @@ def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[st
     return {ct: [g for g in gl if g not in drop_genes] for ct, gl in marker_dict.items()}
 
 
+def _resolve_obs_index_ambiguity(
+    sdata: sd.SpatialData,
+    tables_key: str,
+    tables_cell_id_key: str,
+) -> None:
+    """
+    Ensure tables_cell_id_key exists as a plain column in adata.obs.
+
+    Three cases:
+    - Cell ID is only a column → no action needed.
+    - Cell ID is only the index name → add it as a column from the index values.
+    - Cell ID is both index name and column → verify they are identical and have
+      the same dtype, raise if not.
+
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object to fix in place.
+    tables_key : str
+        Key for accessing the table in sdata.tables.
+    tables_cell_id_key : str
+        Column name that should exist in obs (and may also be the index name).
+    """
+    table = sdata.tables[tables_key]
+    obs = table.obs
+
+    is_column = tables_cell_id_key in obs.columns
+    is_index_name = obs.index.name == tables_cell_id_key
+
+    if is_column and not is_index_name:
+        # Perfect — nothing to do
+        return
+
+    elif is_index_name and not is_column:
+        # Add the index as a column
+        obs[tables_cell_id_key] = obs.index.values
+
+    elif is_index_name and is_column:
+        # Both exist — verify they are consistent
+        index_vals = obs.index.astype(obs[tables_cell_id_key].dtype)
+        if not (index_vals == obs[tables_cell_id_key].values).all():
+            raise ValueError(
+                f"'{tables_cell_id_key}' exists as both the obs index name and a column "
+                f"in sdata.tables['{tables_key}'], but their values are not identical. "
+                "Please resolve this inconsistency before proceeding."
+            )
+        if obs.index.dtype != obs[tables_cell_id_key].dtype:
+            raise ValueError(
+                f"'{tables_cell_id_key}' exists as both the obs index name and a column "
+                f"in sdata.tables['{tables_key}'], but their dtypes differ: "
+                f"index is {obs.index.dtype}, column is {obs[tables_cell_id_key].dtype}. "
+                "Please ensure they have the same dtype before proceeding."
+            )
+        # Values and dtypes match — no action needed
+        return
+
+
 def _assign_celltype_by_pearson(
     adata: AnnData,
     ref_mean_df: pd.DataFrame,
@@ -326,39 +383,29 @@ def merge_into_obs(
     """
     Left-join df_to_merge into sdata.tables[tables_key].obs without resetting the index
     and without creating duplicate key columns.
-
     - Preserves obs index
-    - Uses obs[tables_cell_id_key] as the join key unless df_cell_id_key already exists in obs
-    - Drops overlapping columns on the right (or overwrites if overwrite=True)
+    - Uses obs[tables_cell_id_key] as the join key
+    - Drops overlapping columns on the right before joining
     """
-
     obs = sdata.tables[tables_key].obs
 
-    # Choose the column on the left to join on:
-    # If the right's key already exists in obs, prefer that (avoids redundant columns)
-    left_on_key = (
-        df_cell_id_key if (df_cell_id_key == obs.index.name or df_cell_id_key in obs.columns) else tables_cell_id_key
-    )
+    # Temporarily clear the index name to avoid pandas ambiguity when
+    # tables_cell_id_key is both a column and the index name
+    original_index_name = obs.index.name
+    obs.index.name = None
 
     # Build right indexed by the join key
-    if df_to_merge.index.name != df_cell_id_key:
-        right = df_to_merge.set_index(df_cell_id_key, drop=True)
-    else:
-        right = df_to_merge
+    right = df_to_merge.set_index(df_cell_id_key, drop=True)
 
-    # Decide which columns from right to bring over
-    right_cols = list(right.columns)
-    overlapping_cols = [c for c in right_cols if c in obs.columns and c != df_cell_id_key]
+    # Drop overlapping columns from obs to avoid duplicates
+    overlapping_cols = [c for c in right.columns if c in obs.columns]
     if overlapping_cols:
         obs = obs.drop(columns=overlapping_cols)
 
-    # Perform a left join while preserving the left index.
-    # Two cases: join using a left column (on=...) or directly on the index.
-    if obs.index.name == left_on_key:
-        # Index-on-index join (fast, preserves index)
-        joined = obs.join(right, how="left")
-    else:
-        joined = obs.join(right, on=left_on_key, how="left")
+    joined = obs.join(right, on=tables_cell_id_key, how="left")
+
+    # Restore the original index name
+    joined.index.name = original_index_name
 
     # Fill NAs if requested
     if fillna_cols:
@@ -366,7 +413,6 @@ def merge_into_obs(
             if c in joined.columns:
                 joined[c] = joined[c].fillna(0)
 
-    # Assign back (no intermediate index reset happened)
     sdata.tables[tables_key].obs = joined
 
 
@@ -1180,6 +1226,7 @@ def validate_spatialdata(
             )
             shapes = sdata.shapes[shapes_key]
 
+            # this ensures that the index of the shapes df is always the cell ID
             shapes = _ensure_index(
                 shapes, shapes_key=shapes_key, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key"
             )
@@ -1255,6 +1302,9 @@ def validate_spatialdata(
                 f"If you want to use a different key, set the 'tables_key' parameter."
             )
             table = sdata.tables[tables_key]
+            # checking if the tables_cell_id_key is a column or an index name,
+            # and turning it into a column if it's an index
+            _resolve_obs_index_ambiguity(sdata, tables_key, tables_cell_id_key)
             assert tables_cell_id_key in table.obs.columns, (
                 f"Tables DataFrame must contain column: {tables_cell_id_key}. "
                 f"Available columns: {table.obs.columns.tolist()}. "
@@ -1337,6 +1387,62 @@ def validate_spatialdata(
                     f"Genes in points: {list(genes_in_points)[:5]}..., "
                     f"Genes in tables: {list(genes_in_table)[:5]}..."
                 )
+
+            if tables_area_key is not None:
+                assert tables_area_key in table.obs.columns, (
+                    f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
+                    f"Available columns: {table.obs.columns.tolist()}. "
+                    f"You can set this with the 'tables_area_key' argument (set to None if you do not have this)."
+                )
+            if tables_area_key is None:
+                warnings.warn(
+                    "No area column specified for tables. Area will be automatically computed from shapes.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                bl.morphological_features(
+                    sdata,
+                    features_to_compute=["cell_area"],
+                    tables_cell_id_key=tables_cell_id_key,
+                    tables_centroid_x_key=tables_centroid_x_key,
+                    tables_centroid_y_key=tables_centroid_y_key,
+                    shapes_key=shapes_key,
+                    tables_key=tables_key,
+                    inplace=True,
+                )
+
+            if tables_centroid_x_key is not None:
+                assert tables_centroid_x_key in table.obs.columns, (
+                    f"Tables DataFrame must contain x coordinate column '{tables_centroid_x_key}'. "
+                    f"Available columns: {table.obs.columns.tolist()}. "
+                    f"You can set this with the 'tables_centroid_x_key' argument (set to None if you do not have this)."
+                )
+
+            if tables_centroid_y_key is not None:
+                assert tables_centroid_y_key in table.obs.columns, (
+                    f"Tables DataFrame must contain y coordinate column '{tables_centroid_y_key}'. "
+                    f"Available columns: {table.obs.columns.tolist()}. "
+                    f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
+                )
+
+            if tables_centroid_x_key is None or tables_centroid_y_key is None:
+                warnings.warn(
+                    "No centroids specified for tables. Centroids will be automatically computed from shapes.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                bl.morphological_features(
+                    sdata,
+                    tables_cell_id_key=tables_cell_id_key,
+                    tables_centroid_x_key=tables_centroid_x_key,
+                    tables_centroid_y_key=tables_centroid_y_key,
+                    shapes_key=shapes_key,
+                    features_to_compute=["centroid"],
+                    tables_key=tables_key,
+                    inplace=True,
+                )
+        else:
+            raise ValueError("SpatialData object must contain a table.")
     else:
         raise ValueError("SpatialData object must contain shapes.")
 
@@ -1361,69 +1467,6 @@ def validate_spatialdata(
         # or other morphological features later on
         nucleus_shapes = nucleus_shapes.set_crs(None, allow_override=True)
         sdata.shapes[nucleus_shapes_key] = nucleus_shapes
-
-    if contains_tables:
-        assert tables_key in sdata.tables, (
-            f"Tables DataFrame must contain key: {tables_key}. "
-            f"Available keys: {list(sdata.tables.keys())}. "
-            f"If you want to use a different key, set the tables_key parameter."
-        )
-        table = sdata.tables[tables_key]
-        if tables_area_key is not None:
-            assert tables_area_key in table.obs.columns, (
-                f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_area_key' argument (set to None if you do not have this)."
-            )
-        if tables_area_key is None:
-            warnings.warn(
-                "No area column specified for tables. Area will be automatically computed from shapes.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            bl.morphological_features(
-                sdata,
-                features_to_compute=["cell_area"],
-                tables_cell_id_key=tables_cell_id_key,
-                tables_centroid_x_key=tables_centroid_x_key,
-                tables_centroid_y_key=tables_centroid_y_key,
-                shapes_key=shapes_key,
-                tables_key=tables_key,
-                inplace=True,
-            )
-
-        if tables_centroid_x_key is not None:
-            assert tables_centroid_x_key in table.obs.columns, (
-                f"Tables DataFrame must contain x coordinate column '{tables_centroid_x_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_centroid_x_key' argument (set to None if you do not have this)."
-            )
-
-        if tables_centroid_y_key is not None:
-            assert tables_centroid_y_key in table.obs.columns, (
-                f"Tables DataFrame must contain y coordinate column '{tables_centroid_y_key}'. "
-                f"Available columns: {table.obs.columns.tolist()}. "
-                f"You can set this with the 'tables_centroid_y_key' argument (set to None if you do not have this)."
-            )
-
-        if tables_centroid_x_key is None or tables_centroid_y_key is None:
-            warnings.warn(
-                "No centroids specified for tables. Centroids will be automatically computed from shapes.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-            bl.morphological_features(
-                sdata,
-                tables_cell_id_key=tables_cell_id_key,
-                tables_centroid_x_key=tables_centroid_x_key,
-                tables_centroid_y_key=tables_centroid_y_key,
-                shapes_key=shapes_key,
-                features_to_compute=["centroid"],
-                tables_key=tables_key,
-                inplace=True,
-            )
-    else:
-        raise ValueError("SpatialData object must contain tables.")
 
     return True
 

@@ -430,8 +430,10 @@ def transcript_density(
         each cell. Rows with missing values are dropped.
     """
     adata = sdata.tables[tables_key]
-    # this will also add the transcript counts inplace
-    counts_df = transcripts_per_cell(
+
+    # this adds the transcript counts inplace
+    # required to compute the density later on
+    _ = transcripts_per_cell(
         sdata,
         points_key=points_key,
         tables_cell_id_key=tables_cell_id_key,
@@ -439,22 +441,21 @@ def transcript_density(
         points_cell_id_key=points_cell_id_key,
         tables_key=tables_key,
     )
-    area_df = adata.obs[[tables_cell_id_key, tables_area_key]]
 
-    merged = counts_df.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
-    merged["transcript_density"] = merged["transcript_count"] / merged[tables_area_key]
+    df = adata.obs[[tables_cell_id_key, tables_area_key, "transcript_count"]].copy()
+    df["transcript_density"] = df["transcript_count"] / df[tables_area_key]
 
     if inplace:
         merge_into_obs(
             sdata,
             tables_key,
-            merged[[tables_cell_id_key, "transcript_density"]],
+            df[[tables_cell_id_key, "transcript_density"]],
             tables_cell_id_key,
             tables_cell_id_key,
             fillna_cols=["transcript_density"],
         )
 
-    return merged[[tables_cell_id_key, "transcript_density"]].dropna()
+    return df[[tables_cell_id_key, "transcript_density"]].dropna()
 
 
 def morphological_features(
@@ -552,6 +553,7 @@ def morphological_features(
 
     features = pd.DataFrame()
 
+    # in validate_spatialdata(), we ensure that the index of the shapes table is the cell_id
     features[cells.index.name] = cells.index.values
 
     geom = cells.geometry
@@ -675,6 +677,11 @@ def morphological_features(
         features["num_polygons"] = geom.apply(count_polygons).values
 
     if inplace:
-        merge_into_obs(sdata, tables_key, features, tables_cell_id_key, cells.index.name)
-
+        merge_into_obs(
+            sdata,
+            tables_key=tables_key,
+            df_to_merge=features,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=cells.index.name,
+        )
     return features
