@@ -110,8 +110,6 @@ def _resolve_obs_index_ambiguity(
     elif is_index_name and not is_column:
         # Add the index as a column
         obs[tables_cell_id_key] = obs.index.values
-        table.obs = obs
-        sdata.tables[tables_key] = table
 
     elif is_index_name and is_column:
         # Both exist — verify they are consistent
@@ -391,6 +389,11 @@ def merge_into_obs(
     """
     obs = sdata.tables[tables_key].obs
 
+    # Temporarily clear the index name to avoid pandas ambiguity when
+    # tables_cell_id_key is both a column and the index name
+    original_index_name = obs.index.name
+    obs.index.name = None
+
     # Build right indexed by the join key
     right = df_to_merge.set_index(df_cell_id_key, drop=True)
 
@@ -399,8 +402,10 @@ def merge_into_obs(
     if overlapping_cols:
         obs = obs.drop(columns=overlapping_cols)
 
-    # Join on the cell ID column
     joined = obs.join(right, on=tables_cell_id_key, how="left")
+
+    # Restore the original index name
+    joined.index.name = original_index_name
 
     # Fill NAs if requested
     if fillna_cols:
@@ -1221,6 +1226,7 @@ def validate_spatialdata(
             )
             shapes = sdata.shapes[shapes_key]
 
+            # this ensures that the index of the shapes df is always the cell ID
             shapes = _ensure_index(
                 shapes, shapes_key=shapes_key, id_key=shapes_cell_id_key, id_key_name="shapes_cell_id_key"
             )
@@ -1413,8 +1419,6 @@ def validate_spatialdata(
             f"If you want to use a different key, set the tables_key parameter."
         )
         table = sdata.tables[tables_key]
-        # checking if the tables_cell_id_key is a column or an index name, and turning it into a column if it's an index
-        _resolve_obs_index_ambiguity(sdata, tables_key, tables_cell_id_key)
         if tables_area_key is not None:
             assert tables_area_key in table.obs.columns, (
                 f"Tables DataFrame must contain area/volume column '{tables_area_key}'. "
