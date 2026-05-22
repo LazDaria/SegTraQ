@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Literal
 
 import numpy as np
+import ovrlpy
 import spatialdata as sd
 from anndata import AnnData
 
@@ -338,7 +339,7 @@ class SegTraQ:
     def run_volume_metrics(
         self,
         *,
-        vsi_map: np.ndarray | None = None,
+        ovrlp: ovrlpy.Ovrlp | None = None,
         inplace: bool = True,
         similarity_kwargs: dict | None = None,
         heterotypic_overlap_kwargs: dict | None = None,
@@ -352,12 +353,12 @@ class SegTraQ:
 
         1) similarity_top_bottom
         2) fraction_heterotypic_overlap
-        3) vertical_signal_integrity_per_cell (only if `vsi_map` is provided)
+        3) vertical_signal_integrity_per_cell (only if `ovrlp` is provided)
 
         Parameters
         ----------
-        vsi_map : np.ndarray or None, optional
-            Precomputed 2D VSI map required for `vertical_signal_integrity_per_cell`.
+        ovrlp : ovrlpy.Ovrlp or None, optional
+            Ovrlpy object with VSI map computed for `vertical_signal_integrity_per_cell`.
             If None, VSI will be skipped.
         inplace : bool, default=True
             If True, metrics are written into `sdata.tables[tables_key].obs` by the
@@ -379,7 +380,7 @@ class SegTraQ:
 
             - "similarity_top_bottom": pd.DataFrame
             - "fraction_heterotypic_overlap": pd.DataFrame
-            - "vertical_signal_integrity_per_cell": pd.DataFrame   (only if vsi_map is not None)
+            - "vertical_signal_integrity_per_cell": pd.DataFrame   (only if `ovrlp` is not None)
         """
         assert self.points_z_key is not None, (
             "Cannot run volume metrics for 2D data: `points_z_key` is None. "
@@ -397,9 +398,9 @@ class SegTraQ:
         )
 
         vsi = None
-        if vsi_map is not None:
+        if ovrlp is not None:
             vsi = self.vl.vertical_signal_integrity_per_cell(
-                vsi_map=vsi_map,
+                ovrlp=ovrlp,
                 inplace=inplace,
                 **(vsi_kwargs or {}),
             )
@@ -411,7 +412,7 @@ class SegTraQ:
             "similarity_top_bottom": sim,
             "fraction_heterotypic_overlap": het,
         }
-        if vsi_map is not None:
+        if vsi is not None:
             out["vertical_signal_integrity_per_cell"] = vsi
 
         return out
@@ -1700,20 +1701,16 @@ class _VLFacade:
 
     def vertical_signal_integrity_per_cell(
         self,
-        vsi_map: np.ndarray,
+        ovrlp: ovrlpy.Ovrlp,
         inplace: bool = True,
     ):
         return vl.vertical_signal_integrity_per_cell(
             sdata=self._p.sdata,
+            ovrlp=ovrlp,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
-            points_key=self._p.points_key,
             points_background_id=self._p.points_background_id,
             points_cell_id_key=self._p.points_cell_id_key,
-            points_gene_key=self._p.points_gene_key,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            vsi_map=vsi_map,
             inplace=inplace,
         )
 
