@@ -114,7 +114,16 @@ def test_sdata_3D_labeled(sdata_3D, adata_ref):
 @pytest.fixture(scope="session", name="segtraq_obj")
 def test_segtraq_obj(sdata_labeled):
     """Load the SpatialData test sample once per test session."""
+    # to make this more difficult, we rename the cell column in the shapes
+    # this should flag issues from mismatching IDs between the tables and shapes
+    sdata_labeled.shapes["cell_boundaries"] = sdata_labeled.shapes["cell_boundaries"].rename(
+        columns={"cell_id": "cell"}
+    )
     # creating a segtraq object
     return st.SegTraQ(
-        sdata_labeled, tables_centroid_x_key="x_centroid", tables_centroid_y_key="y_centroid", images_key="image"
+        sdata_labeled,
+        tables_centroid_x_key="x_centroid",
+        tables_centroid_y_key="y_centroid",
+        images_key="image",
+        shapes_cell_id_key="cell",
     )
