@@ -11,6 +11,21 @@ from .utils import _filter_control_and_low_quality_transcripts, validate_spatial
 from .utils import filter_cells as _filter_cells
 from .utils import run_label_transfer as _run_label_transfer
 
+DEFAULT_FILTER_KWARGS = {
+    "min_qv": 20,
+    "control_prefixes": (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+    ),
+    "control_genes": (),
+}
+
 
 class SegTraQ:
     def __init__(
@@ -33,10 +48,14 @@ class SegTraQ:
         shapes_cell_id_key: str = "cell_id",
         nucleus_shapes_key: str | None = "nucleus_boundaries",
         nucleus_shapes_cell_id_key: str = "cell_id",
+        filter_low_quality_transcripts: bool = True,
+        filter_kwargs: dict | None = None,  # setting this to None avoids having mutable default arguments
     ):
         """
         Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
         Defaults target 10x Genomics Xenium; override keys for other technologies.
+        By default, this removes low-quality and control transcripts that would otherwise skew metrics,
+        but this can be configured via the ``filter_low_quality_transcripts`` and ``filter_kwargs`` arguments.
 
         Parameters
         ----------
@@ -105,6 +124,16 @@ class SegTraQ:
             Cell ID key for `sdata.shapes[nucleus_shapes_key]`. Must match either the shapes
             index name or a column name (which will be set as the index if needed).
 
+
+        filter_low_quality_transcripts : bool, default=True
+            Whether to filter out low-quality and control transcripts that would otherwise skew metrics.
+
+        filter_kwargs : dict or None, optional
+            If `filter_low_quality_transcripts` is True, these keyword arguments are forwarded
+            to the filtering function.
+            Possible keys are: `min_qv`, `control_genes`, `control_prefixes`.
+            Please refer to the function `_filter_control_and_low_quality_transcripts` for details.
+
         Notes
         -----
         After initializing a SegTraQ instance, all SegTraQ modules can be run
@@ -135,7 +164,28 @@ class SegTraQ:
             nucleus_shapes_cell_id_key=nucleus_shapes_cell_id_key,
         )
 
-        self.sdata = sdata
+        # optionally filter out low-quality and control transcripts that would otherwise skew metrics
+        if filter_low_quality_transcripts:
+            resolved_kwargs = {**DEFAULT_FILTER_KWARGS, **(filter_kwargs or {})}
+            # note that this is not inplace to avoid modifying the original data
+            sdata_new = _filter_control_and_low_quality_transcripts(
+                sdata,
+                min_qv=resolved_kwargs["min_qv"],
+                control_genes=resolved_kwargs["control_genes"],
+                control_prefixes=resolved_kwargs["control_prefixes"],
+                points_key=points_key,
+                points_gene_key=points_gene_key,
+                points_cell_id_key=points_cell_id_key,
+                points_background_id=points_background_id,
+                tables_key=tables_key,
+                tables_cell_id_key=tables_cell_id_key,
+                recompute_expression=True,
+                inplace=False,
+            )
+        else:
+            sdata_new = sdata
+
+        self.sdata = sdata_new
 
         self.images_key = images_key
 
