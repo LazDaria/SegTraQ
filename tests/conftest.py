@@ -123,6 +123,7 @@ def test_segtraq_obj(sdata_labeled):
     # in reality, sdata objects should rarely be this inconsistent
     # but this allows us to test that the segtraq object can still be created as long as the correct keys are provided
     sdata.tables["table"].obs = sdata.tables["table"].obs.rename(columns={"cell_id": "cell_id_2"})
+    sdata.tables["table"].uns["spatialdata_attrs"]["instance_key"] = "cell_id_2"
     # creating a segtraq object
     return st.SegTraQ(
         sdata,
