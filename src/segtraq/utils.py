@@ -63,6 +63,54 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
 
+def _compute_pca_and_neighbors(
+    adata: AnnData,
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
+) -> AnnData:
+    """
+    Compute PCA and neighbors for `adata` if not already present,
+    with a check for whether `adata.X` looks like raw counts to decide whether to
+    normalize/log-transform first.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Input data. PCA and neighbors will be computed in-place if not already present.
+    n_neighbors : int
+        Number of neighbors for neighbor graph (default: 15).
+    n_pcs : int
+        Number of principal components for PCA (default: 50).
+    target_sum : float or None
+        If not None, target sum for normalization (default: None).
+        See `scanpy.pp.normalize_total()` for details.
+
+    Returns
+    -------
+    AnnData
+        The input `adata` with PCA and neighbors computed if they were not already present.
+    """
+    if not _looks_like_counts(adata.X):
+        # this means that the data is already normalized/log-transformed,
+        # so we can proceed directly to PCA and neighbors
+        pass
+    else:
+        # if the data looks like raw counts, we will normalize and log-transform it before computing PCA and neighbors
+        adata = adata.copy()
+        adata.layers["counts"] = adata.X.copy()
+        sc.pp.normalize_total(adata, target_sum=target_sum, inplace=True)
+        sc.pp.log1p(adata)
+
+    if "X_pca" not in adata.obsm:
+        sc.pp.pca(adata, n_comps=n_pcs)
+
+    if "neighbors" not in adata.uns:
+        sc.pp.neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs)
+
+    return adata
+
+
 def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[str, list[str]]:
     all_genes = [g for gl in marker_dict.values() for g in gl]
     if not all_genes:
