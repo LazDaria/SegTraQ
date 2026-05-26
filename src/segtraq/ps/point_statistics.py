@@ -243,6 +243,8 @@ def percentage_transcripts_in_compartments(
         ]
     ]
 
+    # writing the cell ID (currently index) into its own column
+    out[points_cell_id_key] = out.index.values
     out = out.rename(
         columns={
             "num_total": f"num_total_{feature}",
