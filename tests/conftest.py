@@ -2,7 +2,6 @@ from pathlib import Path
 
 import anndata as ad
 import pytest
-import scanpy as sc
 import spatialdata as sd
 from spatialdata import SpatialData
 
@@ -31,18 +30,6 @@ def test_sdata_new():
         max_coordinate=[bb_xmax, bb_ymax],
         target_coordinate_system="global",
     )
-
-    # adding raw counts etc.
-    adata = sdata_new.tables["table"]
-    adata.layers["counts"] = adata.X.copy()
-    # normalizing and log-transforming the counts
-    sc.pp.normalize_total(adata, inplace=True)
-    sc.pp.log1p(adata)
-    # computing a PCA and neighbors
-    sc.pp.pca(adata)
-    sc.pp.neighbors(adata)
-    # computing UMAP
-    sc.tl.umap(adata)
 
     # this is important, because the test object initially contains some duplicate nucleus_ids
     # by calling validate_spatialdata,
