@@ -834,12 +834,20 @@ def _ensure_index(
     If the chosen IDs contain duplicates, the index is reset to a unique RangeIndex.
     """
     if id_key is None:
-        raise ValueError(
-            f"The index of shapes '{shapes_key}' has no name. "
-            f"`{id_key_name}` must match either the shapes index name "
-            "or a column name, which will be set as the index if needed. "
-            "It must not be None. Set the index name before running SegTraQ."
-        )
+        # if the ID key is None, we set the index name to "segtraq_id" (if not already set) and use the index as IDs
+        if gdf.index.name is not None:
+            raise ValueError(
+                f"You set {id_key_name} to None, but the index of shapes '{shapes_key}' has a name '{gdf.index.name}'. "
+                f"Please set {id_key_name}='{gdf.index.name}' instead."
+            )
+        else:
+            warnings.warn(
+                f"The dataframe for shapes '{shapes_key}' has no index name. Setting index name to 'segtraq_id'.",
+                UserWarning,
+                stacklevel=2,
+            )
+            gdf.index.name = "segtraq_id"
+            id_key = gdf.index.name
 
     if gdf.index.name == id_key:
         if gdf.index.has_duplicates:
@@ -859,7 +867,8 @@ def _ensure_index(
         raise KeyError(
             f"'{id_key}' not found in shapes '{shapes_key}'. "
             f"Available columns: {gdf.columns.tolist()}. "
-            f"Provide a valid {id_key_name}, or set it to the current index name if IDs are in the index."
+            f"Provide a valid {id_key_name}, or set it to the current "
+            f"index name ({gdf.index.name}) if IDs are in the index."
         )
 
     if gdf[id_key].duplicated().any():
