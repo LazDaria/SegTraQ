@@ -1141,6 +1141,8 @@ def validate_spatialdata(
     shapes_cell_id_key : str, optional, default="cell_id"
         Cell ID key for `sdata.shapes[shapes_key]`. Must match either the shapes index name
         or a column name (which will be set as the index if needed).
+        If `None`, the index is assumed to contain cell IDs and
+        renamed to "segtraq_cell_id".
     nucleus_shapes_key : str or None, optional, default="nucleus_boundaries"
         Key in `sdata.shapes` for nucleus boundary polygons, if available.
         If None, a nucleus mask can be obtained via `segtraq.run_cellpose`.
