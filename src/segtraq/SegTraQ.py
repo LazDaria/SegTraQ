@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import ovrlpy
@@ -391,73 +391,168 @@ class SegTraQ:
             "border_admixture_score": border_admixture_score,
         }
 
-    def run_volume_metrics(
+    def run_volume(
         self,
         *,
-        ovrlp: ovrlpy.Ovrlp | None = None,
+        adata_ref: AnnData | None = None,
+        ref_cell_type: str | None = None,
+        cell_type_key: str | None = None,
         inplace: bool = True,
-        similarity_kwargs: dict | None = None,
-        heterotypic_overlap_kwargs: dict | None = None,
-        vsi_kwargs: dict | None = None,
+        label_transfer_kwargs: dict[str, Any] | None = None,
+        similarity_kwargs: dict[str, Any] | None = None,
+        heterotypic_overlap_kwargs: dict[str, Any] | None = None,
+        vsi_kwargs: dict[str, Any] | None = None,
     ):
         """
         Run volume-layer (vl) metrics.
 
         Convenience wrapper around segtraq.vl functions via the instance facade `self.vl`.
+
+        If `cell_type_key` is provided, it is used for cell-type-aware metrics and to infer
+        the number of ovrlpy components from `sdata.tables[tables_key].obs[cell_type_key]`.
+
+        If `cell_type_key` is `None` and `adata_ref` is provided, label transfer is run first
+        via `self.run_label_transfer()` using `adata_ref` and `ref_cell_type`. The resulting
+        labels are stored under `"transferred_cell_type"`.
+
+        If neither `cell_type_key` nor `adata_ref` is provided, cell-type-aware metrics are
+        skipped and ovrlpy is run with its default number of components.
+
+        A precomputed `ovrlpy.Ovrlp` object can be passed via `vsi_kwargs={"ovrlp": ovrlp}`.
+        In that case, ovrlpy is not run internally and `n_components` is not inferred.
+
         Runs, in order:
 
         1) similarity_top_bottom
-        2) fraction_heterotypic_overlap
-        3) vertical_signal_integrity_per_cell (only if `ovrlp` is provided)
+        2) label transfer, if needed and possible
+        3) vertical_signal_integrity_per_cell
+        4) fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available
 
         Parameters
         ----------
-        ovrlp : ovrlpy.Ovrlp or None, optional
-            Ovrlpy object with VSI map computed for `vertical_signal_integrity_per_cell`.
-            If None, VSI will be skipped.
+        adata_ref : AnnData or None, default=None
+            Reference AnnData object used for label transfer and/or to infer the number of
+            ovrlpy components from reference cell-type labels.
+        ref_cell_type : str or None, default=None
+            Column in `adata_ref.obs` containing reference cell-type labels. Required if
+            `cell_type_key=None` and label transfer should be run, or if `adata_ref` is used
+            to infer `n_components`.
+        cell_type_key : str or None, default=None
+            Column in `sdata.tables[tables_key].obs` containing cell-type labels. If provided,
+            this column is used for `fraction_heterotypic_overlap` and to infer ovrlpy
+            `n_components`. If `None` and `adata_ref` is provided, label transfer is run first
+            and labels are stored under `"transferred_cell_type"`.
         inplace : bool, default=True
-            If True, metrics are written into `sdata.tables[tables_key].obs` by the
-            underlying methods and this function returns None.
-            If False, returns a dict of result DataFrames.
+            If `True`, writes results into `sdata.tables[tables_key].obs` as implemented by
+            the underlying functions and returns `None`. If `False`, returns all results as
+            a dictionary.
+        label_transfer_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `self.run_label_transfer()`. Do not include
+            `adata_ref` or `ref_cell_type` here; pass them directly to `run_volume`.
         similarity_kwargs : dict or None, optional
-            Additional keyword arguments forwarded to :meth:`vl.similarity_top_bottom`.
+            Extra keyword arguments forwarded to `vl.similarity_top_bottom`.
         heterotypic_overlap_kwargs : dict or None, optional
-            Additional keyword arguments forwarded to :meth:`vl.fraction_heterotypic_overlap`.
+            Extra keyword arguments forwarded to `vl.fraction_heterotypic_overlap`.
         vsi_kwargs : dict or None, optional
-            Additional keyword arguments forwarded to :meth:`vl.vertical_signal_integrity_per_cell`.
+            Extra keyword arguments forwarded to `vl.vertical_signal_integrity_per_cell`.
+            To use a precomputed ovrlpy object, pass it here as `{"ovrlp": ovrlp}`.
 
         Returns
         -------
         None or dict[str, object]
-            If `inplace=True`, returns None.
+            If `inplace=True`, returns `None`.
 
-            If `inplace=False`, returns a dict with keys:
-
-            - "similarity_top_bottom": pd.DataFrame
-            - "fraction_heterotypic_overlap": pd.DataFrame
-            - "vertical_signal_integrity_per_cell": pd.DataFrame   (only if `ovrlp` is not None)
+            If `inplace=False`, returns a dictionary with available metric results.
         """
+
         assert self.points_z_key is not None, (
             "Cannot run volume metrics for 2D data: `points_z_key` is None. "
             "If available, define the column for z-coordinate of transcripts when initializing SegTraQ."
         )
 
+        label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
+        similarity_kwargs = {} if similarity_kwargs is None else dict(similarity_kwargs)
+        heterotypic_overlap_kwargs = {} if heterotypic_overlap_kwargs is None else dict(heterotypic_overlap_kwargs)
+        vsi_kwargs = {} if vsi_kwargs is None else dict(vsi_kwargs)
+
+        # similarity_top_bottom
         sim = self.vl.similarity_top_bottom(
             inplace=inplace,
-            **(similarity_kwargs or {}),
+            **similarity_kwargs,
         )
 
-        het = self.vl.fraction_heterotypic_overlap(
+        # label transfer, if needed and possible
+        label_transfer_result = None
+
+        if cell_type_key is None and adata_ref is not None:
+            cell_type_key = "transferred_cell_type"
+
+            label_transfer_kwargs["cell_type_key"] = cell_type_key
+            label_transfer_kwargs["inplace"] = True
+
+            label_transfer_result = self.run_label_transfer(
+                adata_ref=adata_ref,
+                ref_cell_type=ref_cell_type,
+                **label_transfer_kwargs,
+            )
+
+        # vertical_signal_integrity_per_cell
+        ovrlp = vsi_kwargs.get("ovrlp")
+
+        ovrlpy_init_kwargs = dict(vsi_kwargs.get("ovrlpy_init_kwargs") or {})
+
+        if ovrlp is None and "n_components" not in ovrlpy_init_kwargs:
+            if cell_type_key is not None:
+                if cell_type_key not in self.sdata.tables[self.tables_key].obs:
+                    raise KeyError(
+                        f"cell type key {cell_type_key!r} not found in sdata.tables[{self.tables_key!r}].obs"
+                    )
+
+                ovrlpy_init_kwargs["n_components"] = (
+                    self.sdata.tables[self.tables_key].obs[cell_type_key].dropna().nunique()
+                )
+
+            elif adata_ref is not None:
+                if ref_cell_type is None:
+                    raise ValueError(
+                        "`ref_cell_type` is required when `adata_ref` is provided to infer `n_components`."
+                    )
+
+                if ref_cell_type not in adata_ref.obs:
+                    raise KeyError(f"ref cell type key {ref_cell_type!r} not found in `adata_ref.obs`.")
+
+                ovrlpy_init_kwargs["n_components"] = adata_ref.obs[ref_cell_type].dropna().nunique()
+
+        if ovrlpy_init_kwargs:
+            vsi_kwargs["ovrlpy_init_kwargs"] = ovrlpy_init_kwargs
+
+        vsi = self.vl.vertical_signal_integrity_per_cell(
             inplace=inplace,
-            **(heterotypic_overlap_kwargs or {}),
+            **vsi_kwargs,
         )
 
-        vsi = None
-        if ovrlp is not None:
-            vsi = self.vl.vertical_signal_integrity_per_cell(
-                ovrlp=ovrlp,
+        # fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available
+        het = None
+
+        shapes_key_list = heterotypic_overlap_kwargs.pop("shapes_key_list", None)
+
+        can_run_heterotypic_overlap = (
+            cell_type_key is not None and shapes_key_list is not None and len(shapes_key_list) > 0
+        )
+
+        if can_run_heterotypic_overlap:
+            if cell_type_key not in self.sdata.tables[self.tables_key].obs:
+                raise KeyError(f"cell type key {cell_type_key!r} not found in sdata.tables[{self.tables_key!r}].obs")
+
+            for skey in shapes_key_list:
+                if skey not in self.sdata.shapes:
+                    raise KeyError(f"shapes key {skey!r} not found in sdata.shapes")
+
+            het = self.vl.fraction_heterotypic_overlap(
+                cell_type_key=cell_type_key,
+                shapes_key_list=shapes_key_list,
                 inplace=inplace,
-                **(vsi_kwargs or {}),
+                **heterotypic_overlap_kwargs,
             )
 
         if inplace:
@@ -465,10 +560,14 @@ class SegTraQ:
 
         out = {
             "similarity_top_bottom": sim,
-            "fraction_heterotypic_overlap": het,
+            "vertical_signal_integrity_per_cell": vsi,
         }
-        if vsi is not None:
-            out["vertical_signal_integrity_per_cell"] = vsi
+
+        if label_transfer_result is not None:
+            out["label_transfer"] = label_transfer_result
+
+        if het is not None:
+            out["fraction_heterotypic_overlap"] = het
 
         return out
 
@@ -673,8 +772,8 @@ class SegTraQ:
         if cell_type_key is None:
             cell_type_key = "transferred_cell_type"
 
-            label_transfer_kwargs.setdefault("cell_type_key", cell_type_key)
-            label_transfer_kwargs.setdefault("inplace", True)
+            label_transfer_kwargs["cell_type_key"] = cell_type_key
+            label_transfer_kwargs["inplace"] = True
 
             label_transfer_result = self.run_label_transfer(
                 adata_ref=adata_ref,
@@ -1818,24 +1917,19 @@ class _VLFacade:
 
     def fraction_heterotypic_overlap(
         self,
+        shapes_key_list: list[str] | None,
         cell_type_key: str = "transferred_cell_type",
-        shapes_key_list: list[str] = (
-            "cell_boundaries_z0",
-            "cell_boundaries_z1",
-            "cell_boundaries_z2",
-            "cell_boundaries_z3",
-        ),
         unknown_label: str = "Unknown",
         unknown_policy: str = "treat_as_label",
         inplace: bool = True,
     ):
         return vl.fraction_heterotypic_overlap(
             sdata=self._p.sdata,
+            shapes_key_list=shapes_key_list,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             shapes_cell_id_key=self._p.shapes_cell_id_key,
             cell_type_key=cell_type_key,
-            shapes_key_list=shapes_key_list,
             unknown_label=unknown_label,
             unknown_policy=unknown_policy,
             inplace=inplace,
@@ -1845,16 +1939,29 @@ class _VLFacade:
 
     def vertical_signal_integrity_per_cell(
         self,
-        ovrlp: ovrlpy.Ovrlp,
+        ovrlp: ovrlpy.Ovrlp | None = None,
+        n_workers: int = 1,
+        random_state: int = 123,
+        ovrlpy_init_kwargs: dict[str, Any] | None = None,
+        ovrlpy_analyse_kwargs: dict[str, Any] | None = None,
         inplace: bool = True,
     ):
         return vl.vertical_signal_integrity_per_cell(
             sdata=self._p.sdata,
             ovrlp=ovrlp,
+            points_key=self._p.points_key,
+            points_gene_key=self._p.points_gene_key,
+            points_cell_id_key=self._p.points_cell_id_key,
+            points_x_key=self._p.points_x_key,
+            points_y_key=self._p.points_y_key,
+            points_z_key=self._p.points_z_key,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             points_background_id=self._p.points_background_id,
-            points_cell_id_key=self._p.points_cell_id_key,
+            n_workers=n_workers,
+            random_state=random_state,
+            ovrlpy_init_kwargs=ovrlpy_init_kwargs,
+            ovrlpy_analyse_kwargs=ovrlpy_analyse_kwargs,
             inplace=inplace,
         )
 
