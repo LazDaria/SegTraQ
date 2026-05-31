@@ -1,3 +1,5 @@
+from typing import Any
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -8,52 +10,103 @@ from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
 from ..utils import _ensure_index, _get_genes, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
-from .utils import _correct_z_drift
+from .utils import _correct_z_drift, _run_ovrlpy
 
 
 def vertical_signal_integrity_per_cell(
     sdata,
-    ovrlp: Ovrlp,
+    ovrlp: Ovrlp | None = None,
+    points_key: str = "transcripts",
+    points_gene_key: str = "feature_name",
+    points_cell_id_key: str = "cell_id",
+    points_x_key: str = "x",
+    points_y_key: str = "y",
+    points_z_key: str = "z",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
-    points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
+    n_workers: int = 1,
+    random_state: int = 123,
+    ovrlpy_init_kwargs: dict[str, Any] | None = None,
+    ovrlpy_analyse_kwargs: dict[str, Any] | None = None,
     inplace: bool = True,
-):
+) -> pd.DataFrame:
     """
     Compute per-cell mean VSI by sampling a precomputed VSI map at transcript locations.
 
     This metric assumes `vsi_map` is defined on the same coordinate system and scaling
     as the transcript coordinates in `sdata.points[points_key]`, i.e. VSI values are
-    indexed directly by integer x/y coordinates (after optional shift-to-origin).
-    For each transcript, the VSI value is read from `vsi_map[y_int, x_int]` and then
-    averaged across transcripts belonging to each cell.
+    indexed directly by integer x/y coordinates after optional shift-to-origin.
+
+    If `ovrlp` is provided, the existing `ovrlpy.Ovrlp` object is used directly. If
+    `ovrlp=None`, ovrlpy is run internally. For each transcript, the
+    VSI value is read from the ovrlpy object and then averaged across transcripts
+    belonging to each cell.
 
     Parameters
     ----------
     sdata : SpatialData
-        A `SpatialData` object containing transcript-assigned spatial transcriptomics data.
-    ovrlp : ovrlpy.Ovrlp
-        Ovrlpy object with VSI already calculated.
+        A `SpatialData` object.
+    ovrlp : ovrlpy.Ovrlp or None, default=None
+        Precomputed ovrlpy object with VSI already calculated. If `None`, ovrlpy is run
+        internally using `n_comp`.
+    points_key : str, default="transcripts"
+        Key in `sdata.points` for the transcript-level points table.
+    points_gene_key : str, default="feature_name"
+        Column in the points table containing gene names.
+    points_cell_id_key : str, default="cell_id"
+        Column in the points table linking each transcript to a cell.
+    points_x_key : str, default="x"
+        Column in the points table containing transcript x-coordinates.
+    points_y_key : str, default="y"
+        Column in the points table containing transcript y-coordinates.
+    points_z_key : str, default="z"
+        Column in the points table containing transcript z-coordinates.
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table. If `inplace=True`,
         results are merged into `sdata.tables[tables_key].obs`.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript to a cell.
     points_background_id : str or int, default="UNASSIGNED"
         Identifier for transcripts not assigned to any cell (background).
+    n_workers : int, default=-1
+        Number of workers passed to `ovrlpy.Ovrlp` if `ovrlp=None`.
+    random_state : int, default=42
+        Random seed passed to `ovrlpy.Ovrlp` if `ovrlp=None`.
+    ovrlpy_init_kwargs : dict or None, default=None
+        Additional keyword arguments passed to `ovrlpy.Ovrlp` if `ovrlp=None`.
+    ovrlpy_analyse_kwargs : dict or None, default=None
+        Additional keyword arguments passed to `ovrlpy.Ovrlp.analyse` if `ovrlp=None`.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [tables_cell_id_key, "vertical_signal_integrity"]
+        DataFrame with columns [tables_cell_id_key, "vertical_signal_integrity"].
     """
 
-    vsi = cell_integrity_from_transcripts(ovrlp, cell_id=points_cell_id_key, unassigned=points_background_id)
+    if ovrlp is None:
+        ovrlp = _run_ovrlpy(
+            sdata=sdata,
+            points_key=points_key,
+            points_gene_key=points_gene_key,
+            points_cell_id_key=points_cell_id_key,
+            points_x_key=points_x_key,
+            points_y_key=points_y_key,
+            points_z_key=points_z_key,
+            n_workers=n_workers,
+            random_state=random_state,
+            ovrlpy_init_kwargs=ovrlpy_init_kwargs,
+            ovrlpy_analyse_kwargs=ovrlpy_analyse_kwargs,
+        )
+
+    vsi = cell_integrity_from_transcripts(
+        ovrlp,
+        cell_id=points_cell_id_key,
+        unassigned=points_background_id,
+    )
+
     vsi_per_cell = (
         vsi.group_by(points_cell_id_key)
         .agg(pl.col("vsi").mean())
@@ -312,15 +365,10 @@ def similarity_top_bottom(
 
 def fraction_heterotypic_overlap(
     sdata: sd.SpatialData,
+    shapes_key_list: list[str] | None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     cell_type_key: str = "transferred_cell_type",
-    shapes_key_list: list[str] = (
-        "cell_boundaries_z0",
-        "cell_boundaries_z1",
-        "cell_boundaries_z2",
-        "cell_boundaries_z3",
-    ),
     shapes_cell_id_key: str = "cell_id",
     unknown_label: str = "Unknown",
     unknown_policy: str = "treat_as_label",
@@ -348,15 +396,15 @@ def fraction_heterotypic_overlap(
     sdata : SpatialData
         A `SpatialData` object containing cell boundary polygons in multiple z layers and a
         cell table with transferred cell type labels.
+    shapes_key_list : list[str]
+        Keys in `sdata.shapes` for per-z-layer cell boundary polygons
+        (e.g. ["cell_boundaries_z0", ..., "cell_boundaries_z3"]).
     tables_key : str, default="table"
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     cell_type_key : str, default="transferred_cell_type"
         Column in the cell table containing cell-type labels (e.g. transferred from scRNA-seq).
-    shapes_key_list : list[str] or tuple[str, ...]
-        Keys in `sdata.shapes` for per-z-layer cell boundary polygons
-        (e.g. ["cell_boundaries_z0", ..., "cell_boundaries_z3"]).
     shapes_cell_id_key : str, optional, default="cell_id"
         Index name of shapes GeoDataFrame linking polygons to cell IDs.
     unknown_label : str, default="Unknown"
