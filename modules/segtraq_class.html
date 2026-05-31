@@ -325,7 +325,7 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume_metrics()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -830,37 +830,52 @@ dictionary with keys <cite>“label_transfer”</cite>, <cite>“markers”</cit
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="segtraq.SegTraQ.run_volume_metrics">
-<span class="sig-name descname"><span class="pre">run_volume_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">ovrlp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Ovrlp</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">heterotypic_overlap_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vsi_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_volume_metrics" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_volume">
+<span class="sig-name descname"><span class="pre">run_volume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_transfer_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">heterotypic_overlap_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vsi_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_volume" title="Link to this definition">#</a></dt>
 <dd><p>Run volume-layer (vl) metrics.</p>
-<p>Convenience wrapper around segtraq.vl functions via the instance facade <cite>self.vl</cite>.
-Runs, in order:</p>
+<p>Convenience wrapper around segtraq.vl functions via the instance facade <cite>self.vl</cite>.</p>
+<p>If <cite>cell_type_key</cite> is provided, it is used for cell-type-aware metrics and to infer
+the number of ovrlpy components from <cite>sdata.tables[tables_key].obs[cell_type_key]</cite>.</p>
+<p>If <cite>cell_type_key</cite> is <cite>None</cite> and <cite>adata_ref</cite> is provided, label transfer is run first
+via <cite>self.run_label_transfer()</cite> using <cite>adata_ref</cite> and <cite>ref_cell_type</cite>. The resulting
+labels are stored under <cite>“transferred_cell_type”</cite>.</p>
+<p>If neither <cite>cell_type_key</cite> nor <cite>adata_ref</cite> is provided, cell-type-aware metrics are
+skipped and ovrlpy is run with its default number of components.</p>
+<p>A precomputed <cite>ovrlpy.Ovrlp</cite> object can be passed via <cite>vsi_kwargs={“ovrlp”: ovrlp}</cite>.
+In that case, ovrlpy is not run internally and <cite>n_components</cite> is not inferred.</p>
+<p>Runs, in order:</p>
 <ol class="arabic simple">
 <li><p>similarity_top_bottom</p></li>
-<li><p>fraction_heterotypic_overlap</p></li>
-<li><p>vertical_signal_integrity_per_cell (only if <cite>ovrlp</cite> is provided)</p></li>
+<li><p>label transfer, if needed and possible</p></li>
+<li><p>vertical_signal_integrity_per_cell</p></li>
+<li><p>fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available</p></li>
 </ol>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ovrlp</strong> (<em>ovrlpy.Ovrlp</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Ovrlpy object with VSI map computed for <cite>vertical_signal_integrity_per_cell</cite>.
-If None, VSI will be skipped.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, metrics are written into <cite>sdata.tables[tables_key].obs</cite> by the
-underlying methods and this function returns None.
-If False, returns a dict of result DataFrames.</p></li>
-<li><p><strong>similarity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">vl.similarity_top_bottom()</span></code>.</p></li>
-<li><p><strong>heterotypic_overlap_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">vl.fraction_heterotypic_overlap()</span></code>.</p></li>
-<li><p><strong>vsi_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">vl.vertical_signal_integrity_per_cell()</span></code>.</p></li>
+<li><p><strong>adata_ref</strong> (<em>AnnData</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Reference AnnData object used for label transfer and/or to infer the number of
+ovrlpy components from reference cell-type labels.</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.obs</cite> containing reference cell-type labels. Required if
+<cite>cell_type_key=None</cite> and label transfer should be run, or if <cite>adata_ref</cite> is used
+to infer <cite>n_components</cite>.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].obs</cite> containing cell-type labels. If provided,
+this column is used for <cite>fraction_heterotypic_overlap</cite> and to infer ovrlpy
+<cite>n_components</cite>. If <cite>None</cite> and <cite>adata_ref</cite> is provided, label transfer is run first
+and labels are stored under <cite>“transferred_cell_type”</cite>.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If <cite>True</cite>, writes results into <cite>sdata.tables[tables_key].obs</cite> as implemented by
+the underlying functions and returns <cite>None</cite>. If <cite>False</cite>, returns all results as
+a dictionary.</p></li>
+<li><p><strong>label_transfer_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>self.run_label_transfer()</cite>. Do not include
+<cite>adata_ref</cite> or <cite>ref_cell_type</cite> here; pass them directly to <cite>run_volume</cite>.</p></li>
+<li><p><strong>similarity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>vl.similarity_top_bottom</cite>.</p></li>
+<li><p><strong>heterotypic_overlap_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>vl.fraction_heterotypic_overlap</cite>.</p></li>
+<li><p><strong>vsi_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>vl.vertical_signal_integrity_per_cell</cite>.
+To use a precomputed ovrlpy object, pass it here as <cite>{“ovrlp”: ovrlp}</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>If <cite>inplace=True</cite>, returns None.</p>
-<p>If <cite>inplace=False</cite>, returns a dict with keys:</p>
-<ul class="simple">
-<li><p>”similarity_top_bottom”: pd.DataFrame</p></li>
-<li><p>”fraction_heterotypic_overlap”: pd.DataFrame</p></li>
-<li><p>”vertical_signal_integrity_per_cell”: pd.DataFrame   (only if <cite>ovrlp</cite> is not None)</p></li>
-</ul>
+<dd class="field-even"><p><p>If <cite>inplace=True</cite>, returns <cite>None</cite>.</p>
+<p>If <cite>inplace=False</cite>, returns a dictionary with available metric results.</p>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -930,7 +945,7 @@ If False, returns a dict of result DataFrames.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume_metrics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume_metrics()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
 </ul>
 </li>
 </ul>
