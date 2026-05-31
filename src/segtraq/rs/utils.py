@@ -9,7 +9,7 @@ from pandas import Series
 from rtree.index import Index
 from shapely.geometry.base import BaseGeometry
 
-from ..utils import _is_background, filter_cells
+from ..utils import _get_genes, _is_background, filter_cells
 
 
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
@@ -242,6 +242,7 @@ def _get_center_and_border_shapes(
 
 def _get_filtered_points_df(
     sdata: sd.SpatialData,
+    tables_gene_key: str | None,
     genes: str | list[str] | None,
     cell_type_key: str | None,
     cell_type_query: str | list[str] | None,
@@ -256,7 +257,10 @@ def _get_filtered_points_df(
     pts = sdata.points[points_key]
 
     # subset to genes present in the table
-    all_genes = pd.Index(tbl.var_names)
+    all_genes = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
     pts = pts.dropna(subset=[points_gene_key])
     pts = pts[pts[points_gene_key].isin(all_genes)]
 
@@ -303,6 +307,7 @@ def _join_points_regions(
     points_x_key: str = "x",
     points_y_key: str = "y",
     genes: str | list[str] | None = None,
+    tables_gene_key: str | None = None,
     cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     predicate: str = "intersects",
@@ -316,7 +321,7 @@ def _join_points_regions(
     This can be applied for nuclei, cell centers, cell borders, etc.
 
     The function:
-      - filters background points and genes not present in `sdata.tables[tables_key].var_names`
+      - filters background points and genes not present in `sdata.tables[tables_key]`
       - converts points to a GeoDataFrame
       - performs a spatial join against `sdata.shapes[region_key]`
       - deduplicates points that intersect multiple polygons by keeping the first match
@@ -347,6 +352,9 @@ def _join_points_regions(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
         If None, all genes are used.
@@ -375,6 +383,7 @@ def _join_points_regions(
 
     transcripts = _get_filtered_points_df(
         sdata=sdata,
+        tables_gene_key=tables_gene_key,
         genes=genes,
         cell_type_key=cell_type_key,
         cell_type_query=cell_type_query,
@@ -432,7 +441,10 @@ def _join_points_regions(
         pts_joined = pts_joined[pts_joined["region_id"] == pts_joined[points_cell_id_key]]
 
     # aggregate into region x gene counts
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+    all_genes = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
 
     counts = (
         pts_joined[["region_id", points_gene_key]]
@@ -502,6 +514,7 @@ def _get_center_border_counts(
     points_y_key: str = "y",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
+    tables_gene_key: str | None = None,
     border_fraction_of_radius: float = 0.2,
     buffer_fraction_of_radius: float = 0.1,
 ):
@@ -523,6 +536,7 @@ def _get_center_border_counts(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         predicate="within",
     )
 
@@ -537,6 +551,7 @@ def _get_center_border_counts(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         predicate="within",
     )
 
@@ -607,6 +622,7 @@ def _get_neighborhood_counts(
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
     neighborhood_radius_factor: float = 1.0,
+    tables_gene_key: str | None = None,
 ):
     """
     Compute neighborhood transcript count vectors for each focal cell.
@@ -624,6 +640,7 @@ def _get_neighborhood_counts(
     pts = _get_filtered_points_df(
         sdata=sdata,
         genes=None,
+        tables_gene_key=tables_gene_key,
         cell_type_key=None,
         cell_type_query=None,
         tables_key=tables_key,
@@ -635,7 +652,10 @@ def _get_neighborhood_counts(
     )
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+    all_genes = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
 
     # base cell-level expression used to aggregate neighborhoods
     counts_cells = (

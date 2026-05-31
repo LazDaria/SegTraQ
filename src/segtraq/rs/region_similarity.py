@@ -4,7 +4,7 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
 
-from ..utils import _looks_like_counts, merge_into_obs
+from ..utils import _get_count_matrix, _get_genes, merge_into_obs
 from .utils import (
     _bootstrap_mixture_fit,
     _cosine_similarity_two_vectors,
@@ -37,9 +37,7 @@ def match_nuclei_to_cells(
         A `SpatialData` object containing segmented and transcript-assigned spatial
         transcriptomics data (images, tables, points, shapes and optional labels).
     tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table. Gene names in
-        `sdata.tables[tables_key].var.index` should match the gene field in
-        `sdata.points[points_key]` (see `points_gene_key`).
+        Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
     shapes_key : str, default="cell_boundaries"
@@ -124,6 +122,7 @@ def similarity_nucleus_cell(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
@@ -132,6 +131,7 @@ def similarity_nucleus_cell(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
+    tables_raw_counts_layer: str | None = None,
     min_transcripts: int = 10,
     min_genes: int = 5,
     select_by: str = "nucleus_fraction",
@@ -158,6 +158,9 @@ def similarity_nucleus_cell(
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
     nucleus_shapes_key : str, default="nucleus_boundaries"
@@ -174,6 +177,10 @@ def similarity_nucleus_cell(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
+    tables_raw_counts_layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts.
+        If a layer is specified, it must exist and contain count-like values.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both cell and nucleus.
     min_genes : int, default=5
@@ -240,17 +247,8 @@ def similarity_nucleus_cell(
         # need to rename the column to the id_key used in shapes for the join later
         match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
 
-    X = adata.X
-    if _looks_like_counts(X):
-        arr = X.toarray() if hasattr(X, "toarray") else X
-    elif "counts" not in adata.layers:
-        raise ValueError(
-            f"'counts' layer does not exist in sdata.tables['{tables_key}'], "
-            "and the main matrix does not look like counts."
-        )
-    else:
-        counts = adata.layers["counts"]
-        arr = counts.toarray() if hasattr(counts, "toarray") else counts
+    counts = _get_count_matrix(adata, layer=tables_raw_counts_layer)
+    arr = counts.toarray() if hasattr(counts, "toarray") else counts
 
     expr_cells = pd.DataFrame(
         arr,
@@ -269,6 +267,7 @@ def similarity_nucleus_cell(
         points_gene_key=points_gene_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         predicate="intersects",
         require_points_region_ID_match=False,
     )
@@ -324,6 +323,7 @@ def similarity_nucleus_cytoplasm(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
@@ -359,6 +359,9 @@ def similarity_nucleus_cytoplasm(
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
     nucleus_shapes_key : str, default="nucleus_boundaries"
@@ -455,6 +458,7 @@ def similarity_nucleus_cytoplasm(
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
+        tables_gene_key=tables_gene_key,
         predicate="within",
         require_points_region_ID_match=True,
     )
@@ -470,6 +474,7 @@ def similarity_nucleus_cytoplasm(
         points_gene_key=points_gene_key,
         points_x_key=points_x_key,
         points_y_key=points_y_key,
+        tables_gene_key=tables_gene_key,
         predicate="within",
         require_points_region_ID_match=False,
     )
@@ -483,7 +488,10 @@ def similarity_nucleus_cytoplasm(
     tx["in_intersection"] = tx["region_id"].eq(tx["nucleus_id"])
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+    all_genes = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
 
     counts_intersection = (
         tx[tx["in_intersection"]]
@@ -546,6 +554,7 @@ def similarity_center_border(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -577,6 +586,9 @@ def similarity_center_border(
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
     points_key : str, default="transcripts"
@@ -626,12 +638,16 @@ def similarity_center_border(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         border_fraction_of_radius=border_fraction_of_radius,
         buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+    all_genes = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
 
     # ensure all cells/genes are present even if zero counts
     expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
@@ -682,6 +698,7 @@ def similarity_border_neighborhood(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -715,6 +732,9 @@ def similarity_border_neighborhood(
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` for cell boundary polygons.
     points_key : str, default="transcripts"
@@ -766,6 +786,7 @@ def similarity_border_neighborhood(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         border_fraction_of_radius=border_fraction_of_radius,
         buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
@@ -780,11 +801,15 @@ def similarity_border_neighborhood(
         points_gene_key=points_gene_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         neighborhood_radius_factor=neighborhood_radius_factor,
     )
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = pd.Index(sdata.tables[tables_key].var_names)
+    all_genes = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
 
     expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
     expr_neighborhood = expr_neighborhood.reindex(index=all_cells, columns=all_genes, fill_value=0)
@@ -830,6 +855,7 @@ def border_admixture_score(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -877,6 +903,9 @@ def border_admixture_score(
         Key in `sdata.tables` for the cell table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table containing cell ids.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     shapes_key : str, default="cell_boundaries"
         Key in `sdata.shapes` containing cell polygons.
     points_key : str, default="transcripts"
@@ -941,6 +970,7 @@ def border_admixture_score(
         points_y_key=points_y_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         border_fraction_of_radius=border_fraction_of_radius,
         buffer_fraction_of_radius=buffer_fraction_of_radius,
     )
@@ -955,6 +985,7 @@ def border_admixture_score(
         points_gene_key=points_gene_key,
         points_cell_id_key=points_cell_id_key,
         points_background_id=points_background_id,
+        tables_gene_key=tables_gene_key,
         neighborhood_radius_factor=neighborhood_radius_factor,
     )
 

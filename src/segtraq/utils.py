@@ -134,36 +134,44 @@ def _resolve_obs_index_ambiguity(
 def _assign_celltype_by_pearson(
     adata: AnnData,
     ref_mean_df: pd.DataFrame,
-    q_ensemble_key: str = None,
+    tables_gene_key: str | None = None,
     tables_cell_id_key: str = "cell_id",
     genes_to_use: set[str] | None = None,
 ) -> pd.DataFrame:
     """
-    Assign cell types to cells in `adata` via Pearson correlation with reference means.
+    Assign cell types to query cells by Pearson correlation to reference mean profiles.
 
     Parameters
     ----------
     adata : AnnData
-        Query dataset (log-normalized) with genes in `adata.var_names`.
-    ref_mean_df : pd.DataFrame
-        Reference matrix (cell_types x genes), log-normalized.
-    query_ensemble_key: str or None, default="gene_ids"
-        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
-        If None, `self.sdata.tables[self.tables_key].var_names` will be used.
+        Query dataset after normalization and log1p transformation.
+    ref_mean_df : pandas.DataFrame
+        Reference mean expression profiles with cell types as rows and genes as columns.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     tables_cell_id_key : str, default="cell_id"
-        Column in the query cell table uniquely identifying each cell.
-    genes_to_use: set[str] or None, optional
-        Optional subset of genes to restrict to.
+        Column in `adata.obs` containing unique cell identifiers.
+    genes_to_use : set of str or None, default=None
+        Optional subset of genes to use for Pearson correlation.
 
     Returns
     -------
-    pd.DataFrame
-        DataFrame with columns: ['cell_id', 'celltype', 'pearson_corr'].
+    pandas.DataFrame
+        DataFrame with columns `tables_cell_id_key`, `"transferred_cell_type"`,
+        and `"pearson_score"`.
     """
-    genes = adata.var_names if q_ensemble_key is None else adata.var[q_ensemble_key]
+    if tables_cell_id_key not in adata.obs.columns:
+        raise KeyError(f"'{tables_cell_id_key}' not found in `adata.obs`.")
+
+    genes = _get_genes(
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
+
     X_query = pd.DataFrame(
         _to_ndarray(adata.X),
-        index=adata.obs[tables_cell_id_key],
+        index=adata.obs[tables_cell_id_key].values,
         columns=genes,
     )
 
@@ -178,13 +186,6 @@ def _assign_celltype_by_pearson(
     X_query = X_query[common_genes]
     X_ref = ref_mean_df[common_genes]
 
-    if len(common_genes) == 0:
-        raise ValueError("No common genes found between query and reference.")
-
-    X_query = X_query[common_genes]
-    X_ref = ref_mean_df[common_genes]
-
-    # correlation distance = 1 - Pearson correlation
     cor_mat = 1.0 - cdist(X_query.values, X_ref.values, metric="correlation")
     cor_df = pd.DataFrame(cor_mat, index=X_query.index, columns=X_ref.index)
 
@@ -200,12 +201,81 @@ def _assign_celltype_by_pearson(
     )
 
 
+def _get_count_matrix(adata, layer: str | None = None):
+    """Return raw count matrix from `adata.layers[layer]` or `adata.X`.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing count data.
+    layer : str or None, default=None
+        Layer containing raw counts. If `None`, counts are expected in `adata.X`.
+
+    Returns
+    -------
+    scipy.sparse matrix or numpy.ndarray
+        Raw count matrix.
+    """
+    if layer is not None:
+        if layer not in adata.layers:
+            raise KeyError(f"Layer {layer!r} not found in `adata.layers`.")
+        X = adata.layers[layer]
+        source = f"adata.layers[{layer!r}]"
+    else:
+        X = adata.X
+        source = "adata.X"
+
+    if not _looks_like_counts(X):
+        raise ValueError(
+            f"Expected raw count data in `{source}`, but the selected matrix "
+            "does not look like non-negative integer counts."
+        )
+
+    return X
+
+
+def _get_genes(
+    adata: AnnData,
+    gene_key: str | None = None,
+) -> pd.Index:
+    """
+    Return gene identifiers from an AnnData object.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object`.
+    gene_key : str or None, default=None
+        Column in `adata.var` containing gene identifiers. If `None`,
+        `adata.var_names` are used.
+
+    Returns
+    -------
+    pandas.Index
+        Gene identifiers from `adata.var_names` or `adata.var[gene_key]`.
+    """
+    if gene_key is None:
+        genes = pd.Index(adata.var_names)
+    else:
+        if gene_key not in adata.var.columns:
+            raise KeyError(f"'{gene_key}' not found in `adata.var`.")
+        genes = pd.Index(adata.var[gene_key].values)
+
+    if genes.duplicated().any():
+        raise ValueError("Gene identifiers are not unique.")
+
+    return genes
+
+
 def run_label_transfer(
     sdata,
     adata_ref: AnnData,
     ref_cell_type: str,
+    tables_raw_counts_layer: str | None = None,
+    ref_raw_counts_layer: str | None = "raw",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
@@ -214,84 +284,86 @@ def run_label_transfer(
     gn_min: float = 5.0,
     gn_max: float = np.inf,
     cell_type_key: str = "transferred_cell_type",
-    ref_ensemble_key: str | None = None,
-    query_ensemble_key: str | None = "gene_ids",
+    ref_gene_key: str | None = None,
     use_hvg: bool = False,
+    exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
-    Transfer cell labels from a reference AnnData to `sdata.tables[tables_key]` by
-    Pearson correlation to reference mean profiles.
+    Transfer cell type labels from a reference AnnData object to cells in a
+    SpatialData table using Pearson correlation to reference mean expression profiles.
+
+    Raw counts are selected first, normalized with `sc.pp.normalize_total`,
+    log-transformed with `sc.pp.log1p`, and then used for label transfer. If a
+    raw-count layer is provided, it is used preferentially. Otherwise, `.X` is
+    expected to contain raw counts.
 
     Parameters
     ----------
-    sdata : SpatialData-like
-        Container with `.tables[tables_key]` as AnnData, and points needed for QC if absent.
-        `sdata.tables[tables_key].X` values are ideally normalized and log1p transformed.
-        Otherwise transformation will be performed before running label transfer.
+    sdata : SpatialData
+        SpatialData object containing the query dataset. Cell-level expression
+        data are expected in `sdata.tables[tables_key]`.
     adata_ref : AnnData
-        Reference dataset (ideally normalized & log1p).
-        Otherwise transformation will be performed before running label transfer.
+        Reference AnnData object containing annotated cells.
     ref_cell_type : str
-        Column in `adata_ref.obs` with reference cell types.
-    tables_key : str
-        Key of the AnnData table in `sdata.tables`.
+        Column in `adata_ref.obs` containing the reference cell type labels.
+    tables_raw_counts_layer : str or None, default=None
+        Layer in `sdata.tables[tables_key].layers` containing raw counts for
+        the query data. If `None`, raw counts are expected in
+        `sdata.tables[tables_key].X`.
+    ref_raw_counts_layer : str or None, default=None
+        Layer in `adata_ref.layers` containing raw counts for the reference
+        data. If `None`, raw counts are expected in `adata_ref.X`.
+    tables_key : str, default="table"
+        Key identifying the cell-level AnnData table in `sdata.tables`.
     tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    points_key : str, optional
-        The key to access the transcript data within `sdata.points` (default is "transcripts").
-    points_cell_id_key : str, optional
-        The column name in the transcript data representing cell identifiers (default is "cell_id").
-    points_gene_key : str, optional
-        The column name in the transcript data representing gene names (default is "feature_name").
-    tx_min, tx_max : float
-        Min/max transcripts per cell for pre-filtering.
-    gn_min, gn_max : float
-        Min/max genes per cell for pre-filtering.
-    cell_type_key : str
-        Column name to store transferred labels in `.obs` when `inplace=True`.
-    ref_ensemble_key: str or None, default=None
-        Column name in `adata_ref.var` that contains unique gene/ensemble IDs.
-        If None, `adata_ref.var_names` will be used.
-    query_ensemble_key: str or None, default="gene_ids"
-        Column name in `self.sdata.tables[self.tables_key].var` that contains unique gene/ensemble IDs.
-        If None, `self.sdata.tables[self.tables_key].var_names` will be used.
-    use_hvg: bool, optional
-        Whether to use highly variable genes (HVGs) for PCA. By default False.
-    inplace : bool
-        If True, writes labels into `sdata.tables[tables_key].obs` and returns None.
-        If False, returns a DataFrame with ['cell_id', 'transferred_cell_type', 'pearson_score'].
+        Column in `sdata.tables[tables_key].obs` containing unique cell identifiers.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
+    points_key : str, default="transcripts"
+        Key identifying the transcript-level points element in `sdata.points`.
+    points_cell_id_key : str, default="cell_id"
+        Column in the transcript points table containing cell identifiers.
+    points_gene_key : str, default="feature_name"
+        Column in the transcript points table containing gene names.
+    tx_min : float, default=10.0
+        Minimum number of detected transcripts required for a cell to be retained.
+    tx_max : float, default=2000.0
+        Maximum number of detected transcripts allowed for a cell to be retained.
+    gn_min : float, default=5.0
+        Minimum number of detected genes required for a cell to be retained.
+    gn_max : float, default=np.inf
+        Maximum number of detected genes allowed for a cell to be retained.
+    cell_type_key : str, default="transferred_cell_type"
+        Column name used to store transferred labels in the query table's `.obs`.
+    ref_gene_key : str or None, default=None
+        Column in `adata_ref.var` containing gene identifiers.
+        If `None`, `adata_ref.var_names` are used.
+    use_hvg : bool, default=False
+        If `True`, restrict label transfer to highly variable genes computed
+        from the reference dataset.
+    exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
+        Gene prefixes to exclude from the HVG set before label transfer. Set to
+        an empty tuple to disable this filtering.
+    inplace : bool, default=True
+        If `True`, write transferred labels to
+        `sdata.tables[tables_key].obs[cell_type_key]` and return `None`.
+        If `False`, return a DataFrame with transferred labels and Pearson
+        correlation scores.
 
     Returns
     -------
-    None or pd.DataFrame
-        None when `inplace=True`; otherwise a DataFrame of assignments.
+    pandas.DataFrame or None
+        If `inplace=False`, returns a DataFrame with columns including
+        `tables_cell_id_key`, `cell_type_key`, and `"pearson_score"`.
+        If `inplace=True`, modifies `sdata` in place and returns `None`.
     """
-
     if ref_cell_type not in adata_ref.obs.columns:
-        raise KeyError(f"'{ref_cell_type}' not found in adata_ref.obs.")
-
-    if _looks_like_counts(adata_ref.X):
-        warnings.warn(
-            "Reference adata_ref does not appear log-normalized."
-            "Counts will be log1p-transformed before running label transfer."
-            "Raw counts will be stored in `adata_ref.layers['counts']`.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        adata_ref.layers["counts"] = adata_ref.X.copy()
-        sc.pp.normalize_total(adata_ref, target_sum=1e4)
-        sc.pp.log1p(adata_ref)
-
-    counts = _to_ndarray(adata_ref.X)
-    celltypes = adata_ref.obs[ref_cell_type]
-    genes = adata_ref.var_names if ref_ensemble_key is None else adata_ref.var[ref_ensemble_key].values
-    counts_df = pd.DataFrame(counts, columns=genes)
-    counts_df["celltype"] = celltypes.values
-    ref_mean_df = counts_df.groupby("celltype").mean()
+        raise KeyError(f"'{ref_cell_type}' not found in `adata_ref.obs`.")
 
     tbl = sdata.tables[tables_key]
-    # Ensure QC columns exist; compute if missing
+
     need_tx = "transcript_count" not in tbl.obs.columns
     need_gn = "gene_count" not in tbl.obs.columns
 
@@ -312,58 +384,80 @@ def run_label_transfer(
             tables_key=tables_key,
         )
 
-    # QC filter
-    qc_range = {"transcript_count": (tx_min, tx_max), "gene_count": (gn_min, gn_max)}
+    qc_range = {
+        "transcript_count": (tx_min, tx_max),
+        "gene_count": (gn_min, gn_max),
+    }
+
     mask = np.ones(tbl.n_obs, dtype=bool)
+
     for key, (low, high) in qc_range.items():
         if key not in tbl.obs.columns:
-            raise KeyError(f"QC column '{key}' not found in table.obs.")
-        mask &= (tbl.obs[key].to_numpy() >= low) & (tbl.obs[key].to_numpy() <= high)
+            raise KeyError(f"QC column '{key}' not found in table `.obs`.")
+
+        values = tbl.obs[key].to_numpy()
+        mask &= (values >= low) & (values <= high)
 
     adata_q = tbl[mask].copy()
 
-    # Normalize & log1p (query)
-    if _looks_like_counts(adata_q.X):
-        warnings.warn(
-            "Spatialdata table appears to contain raw counts. "
-            "Counts will be log1p-transformed before running label transfer."
-            'Raw counts will be stored in `adata_q.layers["counts"]`.',
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        adata_q.layers["counts"] = adata_q.X.copy()
-        sc.pp.normalize_total(adata_q)
-        sc.pp.log1p(adata_q)
+    ref_counts = _get_count_matrix(adata_ref, layer=ref_raw_counts_layer)
 
-    # HVGs
+    adata_ref = adata_ref.copy()
+    adata_ref.X = ref_counts.copy()
+
+    sc.pp.normalize_total(adata_ref, target_sum=1e4)
+    sc.pp.log1p(adata_ref)
+
+    query_counts = _get_count_matrix(adata_q, layer=tables_raw_counts_layer)
+
+    adata_q = adata_q.copy()
+    adata_q.X = query_counts.copy()
+
+    sc.pp.normalize_total(adata_q, target_sum=1e4)
+    sc.pp.log1p(adata_q)
+
+    genes = _get_genes(adata_ref, ref_gene_key)
+
+    counts = _to_ndarray(adata_ref.X)
+    celltypes = adata_ref.obs[ref_cell_type]
+
+    counts_df = pd.DataFrame(counts, columns=genes)
+    counts_df["celltype"] = celltypes.values
+    ref_mean_df = counts_df.groupby("celltype").mean()
+
     genes_to_use = None
+
     if use_hvg:
-        if "highly_variable" not in adata_ref.var.columns:
-            sc.pp.highly_variable_genes(
-                adata_ref,
-                flavor="seurat",
-                n_top_genes=2000,
-                inplace=True,
-            )
+        sc.pp.highly_variable_genes(
+            adata_ref,
+            flavor="seurat",
+            n_top_genes=2000,
+            inplace=True,
+        )
 
         ref_hvg_mask = adata_ref.var["highly_variable"].to_numpy()
         hvgs = set(genes[ref_hvg_mask])
 
-        # remove mit and other genes
-        def _keep(g: str) -> bool:
-            g = str(g).upper()
-            return not any(g.startswith(p) for p in ("MT-", "RPL", "RPS"))
+        if exclude_gene_prefixes:
+            hvgs = {
+                g
+                for g in hvgs
+                if not any(str(g).upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes)
+            }
 
-        genes_to_use = {g for g in hvgs if _keep(g)}
+        genes_to_use = hvgs
 
-    # Assign labels
     ct_corr = _assign_celltype_by_pearson(
-        adata_q, ref_mean_df, query_ensemble_key, tables_cell_id_key, genes_to_use=genes_to_use
+        adata=adata_q,
+        ref_mean_df=ref_mean_df,
+        tables_gene_key=tables_gene_key,
+        tables_cell_id_key=tables_cell_id_key,
+        genes_to_use=genes_to_use,
     )
 
+    out = ct_corr.rename(columns={"transferred_cell_type": cell_type_key})
+
     if inplace:
-        # Write back only to the filtered subset cells
-        out = ct_corr.rename(columns={"celltype": cell_type_key})
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
@@ -373,8 +467,8 @@ def run_label_transfer(
         )
         tbl.obs[cell_type_key] = tbl.obs[cell_type_key].astype("category")
         return None
-    else:
-        return out
+
+    return out
 
 
 def merge_into_obs(
@@ -431,8 +525,9 @@ def merge_into_var(sdata, tables_key, df_to_merge):
 
 def _pairwise_auc(
     adata: AnnData,
+    gene_key: str | None,
     ctypes: pd.Categorical,
-    cell_type_key: str,
+    ref_cell_type: str,
     ct_a: str,
     ct_b: str,
     max_fpr: float | None,
@@ -456,8 +551,10 @@ def _pairwise_auc(
     else:
         X_pair = np.asarray(X_pair)  # (n_cells_pair, n_genes)
 
-    genes = np.asarray(ad_pair.var_names)
-    labels = (ad_pair.obs[cell_type_key].values == ct_a).astype(int)
+    genes = _get_genes(ad_pair, gene_key)
+    genes = np.asarray(genes)
+
+    labels = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
     if labels.sum() == 0 or labels.sum() == labels.size:
         # Only one class present -> skip
         return (ct_a, ct_b, [], False)
@@ -499,7 +596,7 @@ def _pairwise_auc(
 def _pairwise_de(
     adata: AnnData,
     ctypes: pd.Categorical,
-    cell_type_key: str,
+    ref_cell_type: str,
     ct_a: str,
     ct_b: str,
     method: str,
@@ -520,7 +617,7 @@ def _pairwise_de(
     # DE: ct_a vs ct_b
     sc.tl.rank_genes_groups(
         ad_pair,
-        groupby=cell_type_key,
+        groupby=ref_cell_type,
         groups=[ct_a],
         reference=ct_b,
         method=method,
@@ -537,7 +634,9 @@ def _pairwise_de(
 
 def markers_from_reference(
     adata: AnnData,
-    cell_type_key: str,
+    ref_cell_type: str,
+    ref_gene_key: str | None = None,
+    ref_raw_counts_layer: str | None = "raw",
     mode: str = "de",
     max_fpr: float | None = None,
     auc_pos_thresh: float = 0.9,
@@ -578,8 +677,14 @@ def markers_from_reference(
     ----------
     adata : AnnData
         Reference single-cell dataset (cells x genes).
-    cell_type_key : str
+    ref_cell_type : str
         Column in `adata.obs` containing cell type labels.
+    ref_gene_key : str or None, default=None
+        Column in `adata_ref.var` containing gene identifiers.
+        If `None`, `adata_ref.var_names` are used.
+    ref_raw_counts_layer : str or None, default=None
+        Layer containing raw counts. If `None`, raw counts are expected in
+        `adata.X`.
     mode : {"auc", "de"}, optional (default: "de")
         - "auc": compute markers using pairwise AUC/pAUC.
         - "de" : compute markers using pairwise DE.
@@ -629,22 +734,20 @@ def markers_from_reference(
     """
     adata = adata.copy()
 
-    # Normalize/log if this looks like raw counts
-    if _looks_like_counts(adata.X):
-        warnings.warn(
-            "Reference adata_ref does not appear log-normalized. "
-            "normalize_total + log1p will be applied to a copy for marker computation."
-            "Raw counts will be stored in `adata_ref.layers['counts']`.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-        adata.layers["counts"] = adata.X.copy()
-        sc.pp.normalize_total(adata, target_sum=1e4)
-        sc.pp.log1p(adata)
+    # getting gene names and mapping to indices for later use
+    var_names = _get_genes(adata, ref_gene_key)
+    gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
-    adata.var_names_make_unique()
+    # Select raw counts, then normalize/log1p for marker computation.
+    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer)
 
-    ctypes = pd.Categorical(adata.obs[cell_type_key])
+    adata = adata.copy()
+    adata.X = counts.copy()
+
+    sc.pp.normalize_total(adata, target_sum=1e4)
+    sc.pp.log1p(adata)
+
+    ctypes = pd.Categorical(adata.obs[ref_cell_type])
     types = list(ctypes.categories)
     if len(types) < 2:
         raise ValueError("Need at least two cell types to compute markers.")
@@ -662,15 +765,11 @@ def markers_from_reference(
     # ordered cell type pairs (a, b), a != b
     celltype_pairs = [(ct_a, ct_b) for ct_a in usable_celltypes for ct_b in usable_celltypes if ct_a != ct_b]
 
-    # getting gene names and mapping to indices for later use
-    var_names = np.asarray(adata.var_names)
-    gene_to_idx = {g: i for i, g in enumerate(var_names)}
-
     # Precompute fraction of cells with counts > 0 per type
     # This dictionary maps cell type to an array of shape (n_genes,)
     # with the fraction of cells of that type expressing each gene.
     expr_frac: dict[str, np.ndarray] = {}
-    X = adata.X
+    X = counts
     for ct in usable_celltypes:
         mask_ct = ctypes == ct
         X_ct = X[mask_ct]
@@ -688,7 +787,8 @@ def markers_from_reference(
             return _pairwise_auc(
                 adata=adata,
                 ctypes=ctypes,
-                cell_type_key=cell_type_key,
+                gene_key=ref_gene_key,
+                ref_cell_type=ref_cell_type,
                 ct_a=ct_a,
                 ct_b=ct_b,
                 max_fpr=max_fpr,
@@ -702,7 +802,7 @@ def markers_from_reference(
             return _pairwise_de(
                 adata=adata,
                 ctypes=ctypes,
-                cell_type_key=cell_type_key,
+                ref_cell_type=ref_cell_type,
                 ct_a=ct_a,
                 ct_b=ct_b,
                 method=method,
@@ -897,6 +997,7 @@ def bins_to_transcripts(
     sdata: sd.SpatialData,
     tables_key: str,
     cell_shapes_key: str,
+    tables_gene_key: str | None = None,
     bins_shapes_key: str | None = None,
     coordinate_system: str | None = None,
     bins_points_key: str | None = None,
@@ -913,6 +1014,9 @@ def bins_to_transcripts(
         SpatialData object containing tables, shapes and/or points layers.
     tables_key : str
         Key in `sdata.tables` containing the per-bin or per-spot count matrix
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     cell_shapes_key : str
         Key in `sdata.shapes` containing cell segmentation polygons used to
         assign each bin/spot to a `cell_id`.
@@ -944,7 +1048,7 @@ def bins_to_transcripts(
 
     Requirements
     ------------
-    - sdata.tables[table_key] is AnnData-like with X = counts (n_bins x n_genes), var_names = genes.
+    - sdata.tables[table_key] is AnnData-like with X = counts (n_bins x n_genes).
     - You can provide either:
         (A) bins_shapes_key (+ coordinate_system) to compute centroids, OR
         (B) bins_points_key containing x/y for each bin/spot.
@@ -954,13 +1058,14 @@ def bins_to_transcripts(
     if (bins_shapes_key is None) == (bins_points_key is None):
         raise ValueError("Provide exactly one of bins_shapes_key or bins_points_key.")
 
-    tbl = sdata.tables[tables_key]
-    if not sparse.issparse(tbl.X):
-        X = sparse.csr_matrix(tbl.X)
+    adata = sdata.tables[tables_key]
+    if not sparse.issparse(adata.X):
+        X = sparse.csr_matrix(adata.X)
     else:
-        X = tbl.X.tocsr()
+        X = adata.X.tocsr()
 
-    gene_names = np.asarray(tbl.var_names)
+    genes = _get_genes(adata, tables_gene_key)
+    gene_names = np.asarray(genes)
 
     # build centroid points for bins/spots
     if bins_points_key is None:
@@ -984,10 +1089,10 @@ def bins_to_transcripts(
     cent_pd = cent[["x", "y"]].compute()
 
     # ensure same order
-    if "location_id" in tbl.obs.columns:
-        cent_pd = cent_pd.reindex(tbl.obs["location_id"].to_numpy())
+    if "location_id" in adata.obs.columns:
+        cent_pd = cent_pd.reindex(adata.obs["location_id"].to_numpy())
     else:
-        cent_pd = cent_pd.reindex(tbl.obs_names)
+        cent_pd = cent_pd.reindex(adata.obs_names)
 
     if cent_pd[["x", "y"]].isna().any().any():
         raise ValueError(
@@ -1092,6 +1197,8 @@ def validate_spatialdata(
     tables_area_key: str | None = "cell_area",
     tables_centroid_x_key: str | None = "x_centroid",
     tables_centroid_y_key: str | None = "y_centroid",
+    tables_gene_key: str | None = None,
+    tables_raw_counts_layer: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str = "UNASSIGNED",
@@ -1129,6 +1236,13 @@ def validate_spatialdata(
         Column in the cell table with the x-coordinate of the cell centroid.
     tables_centroid_y_key : str or None, optional, default="y_centroid"
         Column in the cell table with the y-coordinate of the cell centroid.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
+    tables_raw_counts_layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts.
+        If a layer is specified, it must exist and contain count-like values.
     points_key : str, optional
         Key for accessing points (e.g., transcripts) in the SpatialData. Default is "transcripts".
     points_cell_id_key : str, optional
@@ -1322,6 +1436,8 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
 
+            _check_if_raw = _get_count_matrix(sdata.tables[tables_key], tables_raw_counts_layer)
+
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
             "You can set them like this: \n"
             "sdata.tables['table'].obs['region'] = 'cell_boundaries'\n"
@@ -1389,7 +1505,7 @@ def validate_spatialdata(
 
             # check that gene names in the table are compatible with those in the points
             genes_in_points = set(points_df[points_gene_key].unique())  # faster
-            genes_in_table = set(table.var_names)
+            genes_in_table = set(_get_genes(table, tables_gene_key))
             common_genes = genes_in_points & genes_in_table
             if len(common_genes) == 0:
                 raise ValueError(
@@ -1829,6 +1945,7 @@ def _recompute_expression_matrix(
     points_key: str = "transcripts",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     points_gene_key: str = "feature_name",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int | None = "UNASSIGNED",
@@ -1845,10 +1962,11 @@ def _recompute_expression_matrix(
 
     # Align the new expression matrix with the existing one in tables
     adata = sdata.tables[tables_key]
+    genes = _get_genes(adata, tables_gene_key)
     # Ensure the new matrix has the same index and columns as the existing one
     expression_matrix_from_transcripts = expression_matrix_from_transcripts.reindex(
         index=adata.obs[tables_cell_id_key],
-        columns=adata.var_names,
+        columns=genes,
         fill_value=0,
     )
     return expression_matrix_from_transcripts
@@ -1874,6 +1992,7 @@ def _filter_control_and_low_quality_transcripts(
     points_background_id: str | int | None = "UNASSIGNED",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     recompute_expression: bool = True,
     inplace: bool = True,
 ) -> sd.SpatialData:
@@ -1918,6 +2037,9 @@ def _filter_control_and_low_quality_transcripts(
         The key in the SpatialData tables attribute that contains the expression table.
     tables_cell_id_key : str, default="cell_id"
         The column name in the tables DataFrame that contains cell IDs.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     recompute_expression : bool, default=True
         Whether to recompute the expression matrix after filtering.
         Note that this can be computationally expensive for large datasets.
@@ -1979,18 +2101,17 @@ def _filter_control_and_low_quality_transcripts(
     # on the anndata object, we remove genes that are control genes
     # filtering by quality does not make sense here, as we do not have per-gene quality values
     # again, we need to make a distinction between control prefixes (prefix match) and gene masks (exact match)
+    genes_names = _get_genes(adata, tables_gene_key)
     prefix_mask = (
-        adata.var_names.str.startswith(tuple(control_prefixes))
-        if control_prefixes
-        else pd.Series(False, index=adata.var_names)
+        genes_names.str.startswith(tuple(control_prefixes)) if control_prefixes else pd.Series(False, index=genes_names)
     )
-    gene_mask = adata.var_names.isin(control_genes) if control_genes else pd.Series(False, index=adata.var_names)
+    gene_mask = genes_names.isin(control_genes) if control_genes else pd.Series(False, index=genes_names)
     adata = adata[:, ~(prefix_mask | gene_mask)]
     sdata.tables[tables_key] = adata
 
     # check if any of the gene names of the removed transcripts appear in the anndata object
     # if so, that means we might need to recompute the expression matrix
-    filtered_genes_in_adata = set(removed_genes) & set(adata.var_names)
+    filtered_genes_in_adata = set(removed_genes) & set(genes_names)
     if len(filtered_genes_in_adata) > 0:
         if not recompute_expression:
             warnings.warn(

@@ -4,18 +4,15 @@ import segtraq as st
 
 
 def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref):
-    assert "celltype_major" in adata_ref.obs.columns
-    n_types = adata_ref.obs["celltype_major"].nunique()
+    assert "celltype" in adata_ref.obs.columns
+    n_types = adata_ref.obs["celltype"].nunique()
     assert n_types >= 2, "Need >= 2 types for differential markers"
 
-    markers = st.markers_from_reference(
-        adata_ref.copy(),
-        cell_type_key="celltype_major",
-    )
+    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype")
 
     # Basic structure
     assert isinstance(markers, dict)
-    assert set(markers.keys()) == set(pd.Categorical(adata_ref.obs["celltype_major"]).categories)
+    assert set(markers.keys()) == set(pd.Categorical(adata_ref.obs["celltype"]).categories)
     for _ct, d in markers.items():
         assert set(d.keys()) == {"positive", "negative"}
         assert isinstance(d["positive"], list)
@@ -38,10 +35,10 @@ def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref):
 
 
 def test_overlap_filter_effect_without_internals(adata_ref):
-    markers_loose = st.markers_from_reference(adata_ref.copy(), cell_type_key="celltype_major", t_pos=0.5)
-    markers_strict = st.markers_from_reference(adata_ref.copy(), cell_type_key="celltype_major", t_pos=0.1)
+    markers_loose = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", t_pos=0.5)
+    markers_strict = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", t_pos=0.1)
 
-    n_types = adata_ref.obs["celltype_major"].nunique()
+    n_types = adata_ref.obs["celltype"].nunique()
 
     def count_across_types(marker_dict, key="positive"):
         all_genes = [g for ct in marker_dict for g in marker_dict[ct][key]]
