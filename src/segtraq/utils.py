@@ -1864,6 +1864,7 @@ def _filter_control_and_low_quality_transcripts(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     recompute_expression: bool = True,
+    inplace: bool = True,
 ) -> sd.SpatialData:
     """
     Filter control and low-quality transcripts from the SpatialData object.
@@ -1909,20 +1910,23 @@ def _filter_control_and_low_quality_transcripts(
     recompute_expression : bool, default=True
         Whether to recompute the expression matrix after filtering.
         Note that this can be computationally expensive for large datasets.
+    inplace: bool, default=True
+        Whether to modify the SpatialData object in place. Defaults to True.
 
     Returns
     -------
     sd.SpatialData
         The updated SpatialData object with invalid transcripts marked (in an extra column).
     """
-    # there used to be the option of not doing this in-place
-    # however, spatialdata's deepcopy function introduces issues with the points,
-    # hence we now only support in-place filtering
-    warnings.warn(
-        "Filtering control and low-quality transcripts from the SpatialData object in-place.",
-        UserWarning,
-        stacklevel=2,
-    )
+    if inplace:
+        warnings.warn(
+            "Filtering control and low-quality transcripts from the SpatialData object in-place. "
+            "Set filter_kwargs={'inplace': False} to avoid modifying the original object.",
+            UserWarning,
+            stacklevel=2,
+        )
+    else:
+        sdata = sd.deepcopy(sdata)
 
     pts = sdata.points[points_key]
     adata = sdata.tables[tables_key]
