@@ -10,7 +10,6 @@ def test_filter_control_genes(sdata_new):
         tables_key="table",
         points_gene_key="feature_name",
         recompute_expression=False,
-        inplace=False,
     )
 
     # check that the control genes have been removed in transcripts
@@ -44,7 +43,6 @@ def test_filter_control_genes_recompute_expression_matrix(sdata_new):
         points_key="transcripts",
         tables_key="table",
         points_gene_key="feature_name",
-        inplace=False,
     )
 
     # check that the control genes have been removed in transcripts
@@ -72,7 +70,6 @@ def test_filter_control_genes_no_filtering(sdata_new):
         tables_key="table",
         points_gene_key="feature_name",
         recompute_expression=True,
-        inplace=False,
     )
 
     # check that no transcripts have been removed
@@ -99,7 +96,6 @@ def test_filter_control_genes_no_transcripts_remain(sdata_new):
         tables_key="table",
         points_gene_key="feature_name",
         recompute_expression=False,
-        inplace=False,
     )
 
     # check that no transcripts remain
@@ -120,7 +116,6 @@ def test_filter_control_genes_no_transcripts_remain_with_recompute(sdata_new):
         points_key="transcripts",
         tables_key="table",
         points_gene_key="feature_name",
-        inplace=False,
     )
 
     # check that no transcripts remain
