@@ -180,7 +180,6 @@ class SegTraQ:
                 tables_key=tables_key,
                 tables_cell_id_key=tables_cell_id_key,
                 recompute_expression=True,
-                inplace=False,
             )
         else:
             sdata_new = sdata
