@@ -68,6 +68,7 @@ def test_sdata_3D():
         shapes_cell_id_key="cell",
         tables_centroid_x_key="centroid_x",
         tables_centroid_y_key="centroid_y",
+        filter_kwargs={"inplace": False},
     )
 
     return sdata_3D
@@ -132,4 +133,5 @@ def test_segtraq_obj(sdata_labeled):
         images_key="image",
         shapes_cell_id_key="cell_id_1",
         tables_cell_id_key="cell_id_2",
+        filter_kwargs={"inplace": False},
     )

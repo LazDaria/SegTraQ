@@ -24,6 +24,7 @@ DEFAULT_FILTER_KWARGS = {
         "UnassignedCodeword_",
     ),
     "control_genes": (),
+    "inplace": True,
 }
 
 
@@ -133,7 +134,7 @@ class SegTraQ:
         filter_kwargs : dict or None, optional
             If `filter_low_quality_transcripts` is True, these keyword arguments are forwarded
             to the filtering function.
-            Possible keys are: `min_qv`, `control_genes`, `control_prefixes`.
+            Possible keys are: `min_qv`, `control_genes`, `control_prefixes`, `inplace`.
             Please refer to the function `_filter_control_and_low_quality_transcripts` for details.
 
         Notes
@@ -169,7 +170,8 @@ class SegTraQ:
         # optionally filter out low-quality and control transcripts that would otherwise skew metrics
         if filter_low_quality_transcripts:
             resolved_kwargs = {**DEFAULT_FILTER_KWARGS, **(filter_kwargs or {})}
-            # note that this is not inplace to avoid modifying the original data
+            # by default, this modifies the input SpatialData object in-place and 
+            # issues a warning about this
             sdata_new = _filter_control_and_low_quality_transcripts(
                 sdata,
                 min_qv=resolved_kwargs["min_qv"],
@@ -182,7 +184,7 @@ class SegTraQ:
                 tables_key=tables_key,
                 tables_cell_id_key=tables_cell_id_key,
                 recompute_expression=True,
-                inplace=False,
+                inplace=resolved_kwargs["inplace"],
             )
         else:
             sdata_new = sdata
