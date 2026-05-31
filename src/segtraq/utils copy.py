@@ -272,7 +272,7 @@ def run_label_transfer(
     adata_ref: AnnData,
     ref_cell_type: str,
     tables_raw_counts_layer: str | None = None,
-    ref_raw_counts_layer: str | None = "raw",
+    ref_raw_counts_layer: str | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_gene_key: str | None = None,
@@ -636,7 +636,7 @@ def markers_from_reference(
     adata: AnnData,
     ref_cell_type: str,
     ref_gene_key: str | None = None,
-    ref_raw_counts_layer: str | None = "raw",
+    layer: str | None = None,
     mode: str = "de",
     max_fpr: float | None = None,
     auc_pos_thresh: float = 0.9,
@@ -682,7 +682,7 @@ def markers_from_reference(
     ref_gene_key : str or None, default=None
         Column in `adata_ref.var` containing gene identifiers.
         If `None`, `adata_ref.var_names` are used.
-    ref_raw_counts_layer : str or None, default=None
+    layer : str or None, default=None
         Layer containing raw counts. If `None`, raw counts are expected in
         `adata.X`.
     mode : {"auc", "de"}, optional (default: "de")
@@ -739,7 +739,7 @@ def markers_from_reference(
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # Select raw counts, then normalize/log1p for marker computation.
-    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer)
+    counts = _get_count_matrix(adata, layer=layer)
 
     adata = adata.copy()
     adata.X = counts.copy()

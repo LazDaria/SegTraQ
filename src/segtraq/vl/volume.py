@@ -7,7 +7,7 @@ from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
 from sklearn.metrics.pairwise import cosine_similarity
 
-from ..utils import _ensure_index, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
+from ..utils import _ensure_index, _get_genes, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
 from .utils import _correct_z_drift
 
 
@@ -77,6 +77,7 @@ def similarity_top_bottom(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
@@ -121,6 +122,9 @@ def similarity_top_bottom(
         Key in `sdata.tables` for the cell-level metadata table.
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     points_key : str, default="transcripts"
         Key in `sdata.points` for transcript-level data.
     points_cell_id_key : str, default="cell_id"
@@ -176,7 +180,11 @@ def similarity_top_bottom(
     tx = tx[~is_bg]
 
     # ensure genes match table var_names from the anndata object
-    valid_features = pd.Index(sdata.tables[tables_key].var_names)
+    valid_features = _get_genes(
+        adata=sdata.tables[tables_key],
+        gene_key=tables_gene_key,
+    )
+
     tx = tx[tx[points_gene_key].isin(valid_features)]
 
     # cast into pandas Dataframe if Dask Array

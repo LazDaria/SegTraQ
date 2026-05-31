@@ -29,7 +29,7 @@ def _pick_cell_type(sdata, tables_key="table", cell_type_key="transferred_cell_t
     vals = obs[cell_type_key].dropna().astype(str)
     if vals.empty:
         pytest.skip(f"No non-null values in {cell_type_key}.")
-    return vals.iloc[0]
+    return vals.iloc[1]
 
 
 def test_percentage_transcripts_in_compartments_invariants(sdata_new):
