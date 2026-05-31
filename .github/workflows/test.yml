@@ -40,9 +40,14 @@ jobs:
     - name: Download test data
       if: steps.cache-test-data.outputs.cache-hit != 'true'
       run: |
-        mkdir -p tests/data/
-        curl -L https://zenodo.org/records/20473778/files/segtraq_test_data_v1.tar.gz?download=1 \
-          | tar -xz -C tests/data/
+        rm -rf tests/data
+        mkdir -p tests/data
+
+        curl -L --fail --retry 3 \
+          -o test_data.tar.gz \
+          "https://zenodo.org/records/20474382/files/segtraq_test_data_v2.tar.gz?download=1"
+
+        tar -xzf test_data.tar.gz -C tests/data
     - name: Verify test data
       run: |
         test -d tests/data/xenium.zarr
