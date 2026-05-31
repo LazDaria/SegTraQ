@@ -43,6 +43,11 @@ jobs:
         mkdir -p tests/data/
         curl -L https://zenodo.org/records/20473778/files/segtraq_test_data_v1.tar.gz?download=1 \
           | tar -xz -C tests/data/
+    - name: Verify test data
+      run: |
+        test -d tests/data/xenium.zarr
+        test -d tests/data/proseg2.zarr
+        test -f tests/data/scRNAseq_ref_subset.h5ad
     - name: Lint with ruff
       run: |
         ruff check --select=E9,F63,F7,F82
