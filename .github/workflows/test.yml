@@ -41,8 +41,8 @@ jobs:
       if: steps.cache-test-data.outputs.cache-hit != 'true'
       run: |
         mkdir -p tests/data/
-        curl -L https://oc.embl.de/index.php/s/J8W4ygsnsiZZ7nG/download \
-          | tar -xz --strip-components=1 -C tests/data/
+        curl -L https://zenodo.org/records/20473778/files/segtraq_test_data_v1.tar.gz?download=1 \
+          | tar -xz -C tests/data/
     - name: Lint with ruff
       run: |
         ruff check --select=E9,F63,F7,F82
