@@ -320,7 +320,7 @@ def _get_norm_log(
         The key of the normalized+log layer (`NORM_LOG_LAYER`).
     """
     if NORM_LOG_LAYER in adata.layers:
-        return NORM_LOG_LAYER
+        return adata
 
     if adata.is_view:
         adata = adata.copy()
