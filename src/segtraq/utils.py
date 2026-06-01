@@ -100,7 +100,7 @@ def _get_pca_and_neighbors(
         The same object (modified in place), returned for convenience.
     """
     # Step 1: ensure norm_log layer exists
-    _get_norm_log(adata, layer=raw_layer, target_sum=target_sum)
+    adata = _get_norm_log(adata, layer=raw_layer, target_sum=target_sum)
 
     # Step 2: PCA on norm_log if not already done by this pipeline
     if PCA_KEY not in adata.obsm:
@@ -322,6 +322,9 @@ def _get_norm_log(
     if NORM_LOG_LAYER in adata.layers:
         return NORM_LOG_LAYER
 
+    if adata.is_view:
+        adata = adata.copy()
+
     raw = _get_count_matrix(adata, layer=layer)  # validates integer counts
 
     # Work on a temporary AnnData so sc.pp.* don't touch .X in place
@@ -330,7 +333,7 @@ def _get_norm_log(
     sc.pp.log1p(tmp)
 
     adata.layers[NORM_LOG_LAYER] = tmp.X
-    return NORM_LOG_LAYER
+    return adata
 
 
 def _get_genes(
@@ -503,8 +506,8 @@ def run_label_transfer(
 
     # getting the normalized and log-transformed data into adata_ref and adata_q,
     # stored in a namespaced layer to avoid conflicts
-    _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
-    _get_norm_log(adata_q, layer=tables_raw_counts_layer)
+    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
+    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer)
 
     genes = _get_genes(adata_ref, ref_gene_key)
 
@@ -836,7 +839,7 @@ def markers_from_reference(
 
     # applying normalization and log1p to get data ready for DE/AUC
     # stored in X directly, since adata was copied previously
-    _get_norm_log(adata, layer=ref_raw_counts_layer)
+    adata = _get_norm_log(adata, layer=ref_raw_counts_layer)
     adata.X = adata.layers[NORM_LOG_LAYER]
 
     ctypes = pd.Categorical(adata.obs[ref_cell_type])

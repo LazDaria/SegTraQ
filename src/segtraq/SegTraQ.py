@@ -1982,22 +1982,22 @@ class _PLFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def transcript_distribution_across_space(self, smoothing: int = 10):
+    def transcript_distribution_across_space(self, filter_size: int = 21):
         return pl.transcript_distribution_across_space(
             sdata=self._p.sdata,
             axes=(self._p.points_x_key, self._p.points_y_key),
-            smoothing=smoothing,
+            filter_size=filter_size,
             points_key=self._p.points_key,
         )
 
     transcript_distribution_across_space.__doc__ = pl.transcript_distribution_across_space.__doc__
 
-    def feature_distribution_across_space(self, features: list[str], smoothing: int = 10):
+    def feature_distribution_across_space(self, features: list[str], filter_size: int = 21):
         return pl.feature_distribution_across_space(
             sdata=self._p.sdata,
             features=features,
             axes=(self._p.tables_centroid_x_key, self._p.tables_centroid_y_key),
-            smoothing=smoothing,
+            filter_size=filter_size,
             tables_key=self._p.tables_key,
         )
 
