@@ -3,7 +3,8 @@ import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
-from ..utils import _compute_pca_and_neighbors
+from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
+from ..utils import _get_pca_and_neighbors
 from .utils import (
     _cluster_connectedness,
     ari_mean,
@@ -85,11 +86,11 @@ def cluster_connectedness(
         labels = adata.obs[cell_type_key].values
         valid_labels = labels[~pd.isna(labels)]
         if len(pd.unique(valid_labels)) > 1:
-            if "connectivities" not in adata.obsp:
-                adata = _compute_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+            if CONNECTIVITIES_KEY not in adata.obsp:
+                adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
                 sdata.tables[tables_key] = adata
             distance_val = _cluster_connectedness(
-                adata.obsp["connectivities"],
+                adata.obsp[CONNECTIVITIES_KEY],
                 labels,
                 use_weights=use_weights,
             )
@@ -97,8 +98,8 @@ def cluster_connectedness(
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
-    if "neighbors" not in adata.uns:
-        adata = _compute_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+    if NEIGHBORS_KEY not in adata.uns:
+        adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
         sdata.tables[tables_key] = adata
 
     for res in resolution:
@@ -119,7 +120,7 @@ def cluster_connectedness(
 
         if len(pd.unique(valid_labels)) > 1:
             # Slice connectivity matrix to valid cells only — both rows AND columns
-            connectivity_subset = adata.obsp["connectivities"][np.ix_(valid_mask, valid_mask)]
+            connectivity_subset = adata.obsp[CONNECTIVITIES_KEY][np.ix_(valid_mask, valid_mask)]
 
             distance_val = _cluster_connectedness(
                 connectivity_subset,
@@ -205,13 +206,13 @@ def silhouette_score(
 
         labels_nn = adata.obs[cell_type_key].dropna()
         if labels_nn.nunique() > 1:  # Ensure more than one cluster exists
-            if "X_pca" not in adata.obsm:
-                adata = _compute_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+            if PCA_KEY not in adata.obsm:
+                adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
                 sdata.tables[tables_key] = adata
             # remove NaN labels
             adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
             labels = adata_subset.obs[cell_type_key].values
-            silhouette_avg = _silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
+            silhouette_avg = _silhouette_score(adata_subset.obsm[PCA_KEY], labels, metric=metric)
             best_silhouette_score = float(silhouette_avg)
             key = "silhouette_score_labels"
 
@@ -225,8 +226,8 @@ def silhouette_score(
     else:
         # ensure that we already have neighbors computed
         # this way we avoid recomputing neighbors multiple times (for the different resolutions)
-        if "neighbors" not in adata.uns:
-            adata = _compute_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+        if NEIGHBORS_KEY not in adata.uns:
+            adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
             sdata.tables[tables_key] = adata
 
         key = "silhouette_score"
@@ -246,11 +247,9 @@ def silhouette_score(
 
             if len(pd.unique(labels)) > 1:  # Ensure more than one cluster exists
                 if pca is None:
-                    adata = _compute_pca_and_neighbors(
-                        adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum
-                    )
+                    adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
                     sdata.tables[tables_key] = adata
-                    pca = adata.obsm["X_pca"]
+                    pca = adata.obsm[PCA_KEY]
 
                 silhouette_avg = _silhouette_score(pca, labels, metric=metric)
 

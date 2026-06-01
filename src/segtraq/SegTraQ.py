@@ -182,7 +182,7 @@ class SegTraQ:
         # optionally filter out low-quality and control transcripts that would otherwise skew metrics
         if filter_low_quality_transcripts:
             resolved_kwargs = {**DEFAULT_FILTER_KWARGS, **(filter_kwargs or {})}
-            # by default, this modifies the input SpatialData object in-place and 
+            # by default, this modifies the input SpatialData object in-place and
             # issues a warning about this
             sdata_new = _filter_control_and_low_quality_transcripts(
                 sdata,
