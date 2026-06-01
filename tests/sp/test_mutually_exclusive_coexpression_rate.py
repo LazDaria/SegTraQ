@@ -12,7 +12,7 @@ def test_mecr_realdata_runs_and_stores_in_uns(sdata_3D_labeled, adata_ref):
     # markers from your existing reference fixture
     markers = segtraq.markers_from_reference(
         adata_ref.copy(),
-        cell_type_key="celltype_major",
+        ref_cell_type="celltype",
         pval_adj_thresh=1.0,  # default: 0.05
         logfc_pos_thresh=0.0,  # default: 1.0
         vote_fraction_pos=0.0,  # default: 0.5

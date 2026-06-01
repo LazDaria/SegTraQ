@@ -55,6 +55,7 @@ def test_sdata_3D():
         shapes_cell_id_key="cell",
         tables_centroid_x_key="centroid_x",
         tables_centroid_y_key="centroid_y",
+        filter_kwargs={"inplace": False},
     )
 
     return sdata_3D
@@ -75,8 +76,7 @@ def test_sdata_labeled(sdata_new, adata_ref):
     st.run_label_transfer(
         sdata=sdata_new,
         adata_ref=adata_ref,
-        ref_cell_type="celltype_major",
-        query_ensemble_key=None,
+        ref_cell_type="celltype",
         inplace=True,
     )
     return sdata_new
@@ -88,12 +88,11 @@ def test_sdata_3D_labeled(sdata_3D, adata_ref):
     st.run_label_transfer(
         sdata=sdata_3D,
         adata_ref=adata_ref,
-        ref_cell_type="celltype_major",
+        ref_cell_type="celltype",
         tables_cell_id_key="cell",
         points_key="transcripts",
         points_cell_id_key="assignment",
         points_gene_key="gene",
-        query_ensemble_key=None,
         inplace=True,
     )
     return sdata_3D
@@ -119,4 +118,5 @@ def test_segtraq_obj(sdata_labeled):
         images_key="image",
         shapes_cell_id_key="cell_id_1",
         tables_cell_id_key="cell_id_2",
+        filter_kwargs={"inplace": False},
     )
