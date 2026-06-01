@@ -6,7 +6,7 @@ import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
-from ..constants import PCA_KEY
+from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
 
 
 def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
@@ -67,12 +67,19 @@ def run_leiden_clustering_on_adata(
         otherwise.
     """
     adata = adata_input.copy()
+
     if recompute_neighbors:
         if representation is None:
             sc.pp.pca(adata, mask_var="highly_variable" if use_hvg else None)
             sc.pp.neighbors(adata)
         else:
             sc.pp.neighbors(adata, use_rep=representation)
+    else:
+        if NEIGHBORS_KEY in adata.uns and CONNECTIVITIES_KEY in adata.obsp:
+            # since we copied the anndata object,
+            # we can set the neighbors and connectivities without modifying the original adata
+            adata.uns["neighbors"] = adata.uns[NEIGHBORS_KEY]
+            adata.obsp["connectivities"] = adata.obsp[CONNECTIVITIES_KEY]
 
     sc.tl.leiden(
         adata,
