@@ -18,6 +18,7 @@ def percentage_transcripts_in_compartments(
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
@@ -62,6 +63,9 @@ def percentage_transcripts_in_compartments(
         The key to access the AnnData table from `sdata.tables`. Default is "table".
     tables_cell_id_key : str, default="cell_id"
         Column in the cell table uniquely identifying each cell.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     shapes_key : str, default="cell_boundaries"
         The key in `sdata.shapes` specifying the geometry column. Default is "cell_boundaries".
     nucleus_shapes_key : str | None, default="nucleus_boundaries"
@@ -114,6 +118,7 @@ def percentage_transcripts_in_compartments(
         sdata=sdata,
         region_key=shapes_key,
         tables_key=tables_key,
+        tables_gene_key=tables_gene_key,
         tables_cell_id_key=tables_cell_id_key,
         points_key=points_key,
         points_gene_key=points_gene_key,
@@ -243,6 +248,8 @@ def percentage_transcripts_in_compartments(
         ]
     ]
 
+    # writing the cell ID (currently index) into its own column
+    out[points_cell_id_key] = out.index.values
     out = out.rename(
         columns={
             "num_total": f"num_total_{feature}",
@@ -275,6 +282,7 @@ def distance_to_centroid(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_area_key: str = "cell_area",
+    tables_gene_key: str | None = None,
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -317,6 +325,9 @@ def distance_to_centroid(
         Column in the cell table uniquely identifying each cell.
     tables_area_key : str, default="cell_area"
         Column in the table with cell area (used for normalization).
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     points_gene_key : str, default="feature_name"
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, default="transcripts"
@@ -385,6 +396,7 @@ def distance_to_centroid(
         cell_type_query=cell_type_query,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
+        tables_gene_key=tables_gene_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_gene_key=points_gene_key,
@@ -489,6 +501,7 @@ def distance_to_membrane(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_area_key: str = "cell_area",
+    tables_gene_key: str | None = None,
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -539,6 +552,9 @@ def distance_to_membrane(
         Column in the cell table uniquely identifying each cell.
     tables_area_key : str, default="cell_area"
         Column in the table with cell area (used for normalization).
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     points_gene_key : str, default="feature_name"
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, default="transcripts"
@@ -617,6 +633,7 @@ def distance_to_membrane(
         cell_type_query=cell_type_query,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
+        tables_gene_key=tables_gene_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_gene_key=points_gene_key,
@@ -758,6 +775,7 @@ def membrane_distance_skewness(
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str = None,
     points_gene_key: str = "feature_name",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -794,6 +812,9 @@ def membrane_distance_skewness(
         Column in the cell table uniquely identifying each cell.
     tables_area_key : str, default="cell_area"
         Column in the table with cell area (used for normalization).
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     points_gene_key : str, default="feature_name"
         The key to access gene names within the transcript data. Default is "feature_name".
     points_key : str, default="transcripts"
@@ -846,6 +867,7 @@ def membrane_distance_skewness(
         cell_type_query=cell_type_query,
         tables_key=tables_key,
         tables_cell_id_key=tables_cell_id_key,
+        tables_gene_key=tables_gene_key,
         points_key=points_key,
         points_cell_id_key=points_cell_id_key,
         points_gene_key=points_gene_key,

@@ -7,15 +7,15 @@ import squidpy as sq
 from scipy import sparse
 from scipy.stats import fisher_exact
 
-from ..utils import merge_into_obs
-from .utils import _get_count_matrix
+from ..utils import _get_count_matrix, _get_genes, merge_into_obs
 
 
 def mutually_exclusive_coexpression_rate(
     sdata,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
-    layer: str | None = None,
+    tables_gene_key: str | None = None,
+    tables_raw_counts_layer: str | None = None,
     pseudocount: float = 0.5,
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -32,9 +32,12 @@ def mutually_exclusive_coexpression_rate(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
-    layer : str | None, optional
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
+    tables_raw_counts_layer : str | None, optional
         Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts, otherwise `adata.layers["counts"]` is used if available.
+        like counts.
         If a layer is specified, it must exist and contain count-like values.
     pseudocount : float, optional, default=0.5
         Pseudocount added to all cells of the contingency table to avoid
@@ -52,10 +55,14 @@ def mutually_exclusive_coexpression_rate(
     """
     adata = sdata.tables[tables_key]
 
-    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
     X_dense = X.toarray() if hasattr(X, "toarray") else X
 
-    var_index = pd.Index(adata.var_names)
+    var_index = _get_genes(
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
+
     n_cells = X_dense.shape[0]
     pseudocount = float(pseudocount)
 
@@ -141,14 +148,15 @@ def neighbor_contamination(
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
-    layer: str | None = None,
+    tables_raw_counts_layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
+    tables_gene_key: str | None = None,
     require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
-    uns_key: str = "negative_marker_contamination",
-    uns_key_binary: str = "negative_marker_contamination_binary",
+    uns_key: str = "contamination_counts_matrix",
+    uns_key_binary: str = "contamination_fraction_matrix",
     inplace: bool = True,
 ):
     """
@@ -156,11 +164,11 @@ def neighbor_contamination(
     contamination summaries.
 
     Per-cell outputs (written to .obs):
-        - negative_marker_contamination_counts:
+        - contamination_counts:
             Total transcripts in the focal cell that belong to genes that are
             (i) negative markers of the focal cell type and
             (ii) positive markers of at least one neighboring cell type.
-        - negative_marker_contamination_fraction:
+        - contamination_fraction:
             For each such gene g, compute x_i(g) / (x_i(g) + mean_neighbor(g)),
             averaged across genes (neighbors pooled across all neighbor types).
 
@@ -186,9 +194,9 @@ def neighbor_contamination(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
-    layer : str | None, optional
+    tables_raw_counts_layer : str | None, optional
         Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts, otherwise `adata.layers["counts"]` is used if available.
+        like counts.
         If a layer is specified, it must exist and contain count-like values.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
@@ -196,16 +204,19 @@ def neighbor_contamination(
         Column in the cell table with the x-coordinate of the cell centroid.
     tables_centroid_y_key : str or None, optional, default="y_centroid"
         Column in the cell table with the y-coordinate of the cell centroid.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     require_neighbor_expression : bool, optional, default=True
         If True, contamination is only counted when the relevant gene is
         expressed in at least one neighboring cell of the source type.
     neighbors_key : str, optional, default="spatial_connectivities"
         Key in `adata.obsp` containing a cell x cell adjacency / connectivity
         matrix that defines the spatial neighborhood.
-    uns_key : str, optional, default="negative_marker_contamination"
+    uns_key : str, optional, default="contamination_counts_matrix"
         Key in `.uns` under which the directed source → target mean contamination
         fraction matrix is stored.
-    uns_key_binary : str, optional, default="negative_marker_contamination_binary"
+    uns_key_binary : str, optional, default="contamination_fraction_matrix"
         Key in `.uns` under which the directed source → target binary contamination
         proportion matrix is stored.
     inplace : bool, optional, default=True
@@ -228,11 +239,14 @@ def neighbor_contamination(
     # Setup
     # ----------------------------------------------------------------------
     adata = sdata.tables[tables_key]
-    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
     X_dense = X.toarray() if hasattr(X, "toarray") else X
 
-    genes = np.asarray(adata.var_names)
-    var_index = pd.Index(genes)
+    var_index = _get_genes(
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
+
     cell_types = np.asarray(adata.obs[cell_type_key])
     n_cells = X.shape[0]
 
@@ -394,8 +408,8 @@ def neighbor_contamination(
     per_cell_df = pd.DataFrame(
         {
             tables_cell_id_key: adata.obs[tables_cell_id_key],
-            "negative_marker_contamination_counts": number_cell,
-            "negative_marker_contamination_fraction": contamination_fraction,
+            "contamination_counts": number_cell,
+            "contamination_fraction": contamination_fraction,
         },
     )
 
@@ -443,10 +457,11 @@ def marker_purity(
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]],
     tables_key: str = "table",
-    layer: str | None = None,
+    tables_raw_counts_layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
     tables_centroid_x_key: str = "x_centroid",
     tables_centroid_y_key: str = "y_centroid",
+    tables_gene_key: str | None = None,
     require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
     inplace: bool = True,
@@ -477,15 +492,19 @@ def marker_purity(
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
-    layer : str | None, optional
+    tables_raw_counts_layer : str | None, optional
         Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts, otherwise `adata.layers["counts"]` is used if available.
+        like counts.
+        If a layer is specified, it must exist and contain count-like values.
     tables_cell_id_key : str, optional, default="cell_id"
         Column in the AnnData `.obs` with unique cell IDs.
     tables_centroid_x_key : str or None, optional, default="x_centroid"
         Column in the cell table with the x-coordinate of the cell centroid.
     tables_centroid_y_key : str or None, optional, default="y_centroid"
         Column in the cell table with the y-coordinate of the cell centroid.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     require_neighbor_expression : bool, optional, default=True
         If True, contamination is only counted when the relevant gene is
         expressed in at least one neighboring cell of the source type.
@@ -510,12 +529,13 @@ def marker_purity(
     """
     adata = sdata.tables[tables_key]
 
-    X = _get_count_matrix(adata, layer=layer, tables_key=tables_key)
+    X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
     X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
-    genes = np.asarray(adata.var_names)
-    var_index = pd.Index(genes)
-    valid_genes = set(var_index)
+    var_index = _get_genes(
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
 
     cell_types = np.asarray(adata.obs[cell_type_key])
     n_cells = X_dense.shape[0]
@@ -540,8 +560,8 @@ def marker_purity(
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
     # Keep only markers that are present in the spatial expression matrix.
-    pos_sets = {ct: set(m.get("positive", [])) & valid_genes for ct, m in markers.items()}
-    neg_sets = {ct: set(m.get("negative", [])) & valid_genes for ct, m in markers.items()}
+    pos_sets = {ct: set(m.get("positive", [])) & set(var_index) for ct, m in markers.items()}
+    neg_sets = {ct: set(m.get("negative", [])) & set(var_index) for ct, m in markers.items()}
 
     positive_recall = np.full(n_cells, np.nan, dtype=float)
     negative_avoidance = np.full(n_cells, np.nan, dtype=float)

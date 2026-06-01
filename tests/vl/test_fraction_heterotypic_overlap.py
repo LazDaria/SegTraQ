@@ -25,10 +25,12 @@ def _pick_two_cells_with_different_types(obs: pd.DataFrame, cell_key="cell", cel
 
 
 def test_fraction_heterotypic_overlap_runs_and_returns_expected_columns(sdata_3D_labeled):
+    shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
     df = st.vl.fraction_heterotypic_overlap(
         sdata_3D_labeled,
         tables_cell_id_key="cell",
         shapes_cell_id_key="cell",
+        shapes_key_list=shapes_key_list,
         inplace=False,
     )
     assert isinstance(df, pd.DataFrame)
@@ -45,7 +47,10 @@ def test_fraction_heterotypic_overlap_inplace_writes_to_obs(sdata_3D_labeled):
             obs = obs.drop(columns=[col])
     sdata.tables["table"].obs = obs
 
-    st.vl.fraction_heterotypic_overlap(sdata, tables_cell_id_key="cell", shapes_cell_id_key="cell", inplace=True)
+    shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
+    st.vl.fraction_heterotypic_overlap(
+        sdata, tables_cell_id_key="cell", shapes_cell_id_key="cell", shapes_key_list=shapes_key_list, inplace=True
+    )
 
     obs2 = sdata.tables["table"].obs
     assert "heterotypic_overlap_area" in obs2.columns

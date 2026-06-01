@@ -40,9 +40,19 @@ jobs:
     - name: Download test data
       if: steps.cache-test-data.outputs.cache-hit != 'true'
       run: |
-        mkdir -p tests/data/
-        curl -L https://oc.embl.de/index.php/s/J8W4ygsnsiZZ7nG/download \
-          | tar -xz --strip-components=1 -C tests/data/
+        rm -rf tests/data
+        mkdir -p tests/data
+
+        curl -L --fail --retry 3 \
+          -o test_data.tar.gz \
+          "https://zenodo.org/records/20474382/files/segtraq_test_data_v2.tar.gz?download=1"
+
+        tar -xzf test_data.tar.gz -C tests/data
+    - name: Verify test data
+      run: |
+        test -d tests/data/xenium.zarr
+        test -d tests/data/proseg2.zarr
+        test -f tests/data/scRNAseq_ref_subset.h5ad
     - name: Lint with ruff
       run: |
         ruff check --select=E9,F63,F7,F82
