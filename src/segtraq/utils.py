@@ -935,7 +935,7 @@ def _ensure_index(
     """
     if id_key is None:
         # if the ID key is None, we set the index name to "segtraq_id" (if not already set) and use the index as IDs
-        if gdf.index.name is not None:
+        if gdf.index.name not in [None, "segtraq_id"]:
             raise ValueError(
                 f"You set {id_key_name} to None, but the index of shapes '{shapes_key}' has a name '{gdf.index.name}'. "
                 f"Please set {id_key_name}='{gdf.index.name}' instead."
