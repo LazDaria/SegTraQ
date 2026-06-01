@@ -32,6 +32,7 @@ from spatialdata.transformations import (
 )
 
 from .bl import baseline as bl
+from .constants import CONNECTIVITIES_KEY, DISTANCES_KEY, NEIGHBORS_KEY, NORM_LOG_LAYER, PCA_KEY
 
 
 def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
@@ -63,50 +64,60 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
 
-def _compute_pca_and_neighbors(
+def _get_pca_and_neighbors(
     adata: AnnData,
+    raw_layer: str | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
 ) -> AnnData:
     """
-    Compute PCA and neighbors for `adata` if not already present,
-    with a check for whether `adata.X` looks like raw counts to decide whether to
-    normalize/log-transform first.
+    Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
+
+    All results are stored under namespaced keys so they can be
+    distinguished from any externally-computed PCA/neighbors:
+    - adata.layers[NORM_LOG_LAYER]
+    - adata.obsm[PCA_KEY]
+    - adata.uns[NEIGHBORS_KEY]
+    - adata.obsp[CONNECTIVITIES_KEY], adata.obsp[DISTANCES_KEY]
 
     Parameters
     ----------
     adata : AnnData
-        Input data. PCA and neighbors will be computed in-place if not already present.
-    n_neighbors : int
-        Number of neighbors for neighbor graph (default: 15).
-    n_pcs : int
-        Number of principal components for PCA (default: 50).
-    target_sum : float or None
-        If not None, target sum for normalization (default: None).
-        See `scanpy.pp.normalize_total()` for details.
+    raw_layer : str or None
+        Layer with raw counts. None → use `.X`.
+    n_neighbors: int
+        Number of neighbors for `sc.pp.neighbors`.
+    n_pcs: int
+        Number of PCs for `sc.pp.pca` and `sc.pp.neighbors`.
+    target_sum: float or None
+        If not None, passed as `target_sum` to `sc.pp.normalize_total` when
+        computing the norm_log layer. Ignored if the norm_log layer already exists.
 
     Returns
     -------
     AnnData
-        The input `adata` with PCA and neighbors computed if they were not already present.
+        The same object (modified in place), returned for convenience.
     """
-    if not _looks_like_counts(adata.X):
-        # this means that the data is already normalized/log-transformed,
-        # so we can proceed directly to PCA and neighbors
-        pass
-    else:
-        # if the data looks like raw counts, we will normalize and log-transform it before computing PCA and neighbors
-        adata = adata.copy()
-        adata.layers["counts"] = adata.X.copy()
-        sc.pp.normalize_total(adata, target_sum=target_sum, inplace=True)
-        sc.pp.log1p(adata)
+    # Step 1: ensure norm_log layer exists
+    _get_norm_log(adata, layer=raw_layer, target_sum=target_sum)
 
-    if "X_pca" not in adata.obsm:
-        sc.pp.pca(adata, n_comps=n_pcs)
+    # Step 2: PCA on norm_log if not already done by this pipeline
+    if PCA_KEY not in adata.obsm:
+        tmp = AnnData(X=adata.layers[NORM_LOG_LAYER].copy())
+        sc.pp.pca(tmp, n_comps=n_pcs)
+        adata.obsm[PCA_KEY] = tmp.obsm["X_pca"]
 
-    if "neighbors" not in adata.uns:
-        sc.pp.neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs)
+    # Step 3: neighbor graph on pipeline PCA if not already done
+    if NEIGHBORS_KEY not in adata.uns:
+        tmp = AnnData(X=adata.layers[NORM_LOG_LAYER].copy())
+        tmp.obsm["X_pca"] = adata.obsm[PCA_KEY]
+        sc.pp.neighbors(tmp, n_neighbors=n_neighbors, n_pcs=n_pcs)
+
+        # Store under namespaced keys
+        adata.uns[NEIGHBORS_KEY] = tmp.uns["neighbors"]
+        adata.obsp[CONNECTIVITIES_KEY] = tmp.obsp["connectivities"]
+        adata.obsp[DISTANCES_KEY] = tmp.obsp["distances"]
 
     return adata
 
@@ -282,6 +293,46 @@ def _get_count_matrix(adata, layer: str | None = None):
     return X
 
 
+def _get_norm_log(
+    adata: AnnData,
+    layer: str | None = None,
+    target_sum: float = 1e4,
+) -> str:
+    """
+    Ensure `adata.layers[NORM_LOG_LAYER]` exists and return its key.
+
+    If the layer already exists it is returned immediately (no recomputation).
+    Otherwise, raw counts are taken from `layer` (or `.X` if None),
+    normalized with `sc.pp.normalize_total`, log-transformed with
+    `sc.pp.log1p`, and stored in `adata.layers[NORM_LOG_LAYER]`.
+
+    Parameters
+    ----------
+    adata : AnnData
+    layer : str or None
+        Source of raw counts. None → use `.X`.
+    target_sum : float
+        Passed to `sc.pp.normalize_total`.
+
+    Returns
+    -------
+    str
+        The key of the normalized+log layer (`NORM_LOG_LAYER`).
+    """
+    if NORM_LOG_LAYER in adata.layers:
+        return NORM_LOG_LAYER
+
+    raw = _get_count_matrix(adata, layer=layer)  # validates integer counts
+
+    # Work on a temporary AnnData so sc.pp.* don't touch .X in place
+    tmp = AnnData(X=raw.copy())
+    sc.pp.normalize_total(tmp, target_sum=target_sum)
+    sc.pp.log1p(tmp)
+
+    adata.layers[NORM_LOG_LAYER] = tmp.X
+    return NORM_LOG_LAYER
+
+
 def _get_genes(
     adata: AnnData,
     gene_key: str | None = None,
@@ -410,6 +461,8 @@ def run_label_transfer(
     if ref_cell_type not in adata_ref.obs.columns:
         raise KeyError(f"'{ref_cell_type}' not found in `adata_ref.obs`.")
 
+    adata_ref = adata_ref.copy()
+
     tbl = sdata.tables[tables_key]
 
     need_tx = "transcript_count" not in tbl.obs.columns
@@ -448,30 +501,19 @@ def run_label_transfer(
 
     adata_q = tbl[mask].copy()
 
-    ref_counts = _get_count_matrix(adata_ref, layer=ref_raw_counts_layer)
-
-    adata_ref = adata_ref.copy()
-    adata_ref.X = ref_counts.copy()
-
-    sc.pp.normalize_total(adata_ref, target_sum=1e4)
-    sc.pp.log1p(adata_ref)
-
-    query_counts = _get_count_matrix(adata_q, layer=tables_raw_counts_layer)
-
-    adata_q = adata_q.copy()
-    adata_q.X = query_counts.copy()
-
-    sc.pp.normalize_total(adata_q, target_sum=1e4)
-    sc.pp.log1p(adata_q)
+    # getting the normalized and log-transformed data into adata_ref and adata_q,
+    # stored in a namespaced layer to avoid conflicts
+    _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
+    _get_norm_log(adata_q, layer=tables_raw_counts_layer)
 
     genes = _get_genes(adata_ref, ref_gene_key)
 
-    counts = _to_ndarray(adata_ref.X)
+    norm_log_counts = _to_ndarray(adata_ref.layers[NORM_LOG_LAYER])
     celltypes = adata_ref.obs[ref_cell_type]
 
-    counts_df = pd.DataFrame(counts, columns=genes)
-    counts_df["celltype"] = celltypes.values
-    ref_mean_df = counts_df.groupby("celltype").mean()
+    norm_log_counts_df = pd.DataFrame(norm_log_counts, columns=genes)
+    norm_log_counts_df["celltype"] = celltypes.values
+    ref_mean_df = norm_log_counts_df.groupby("celltype").mean()
 
     genes_to_use = None
 
@@ -480,6 +522,7 @@ def run_label_transfer(
             adata_ref,
             flavor="seurat",
             n_top_genes=2000,
+            layer=NORM_LOG_LAYER,
             inplace=True,
         )
 
@@ -495,6 +538,8 @@ def run_label_transfer(
 
         genes_to_use = hvgs
 
+    # using the normalized and log-transformed data for label transfer
+    adata_q.X = adata_q.layers[NORM_LOG_LAYER]
     ct_corr = _assign_celltype_by_pearson(
         adata=adata_q,
         ref_mean_df=ref_mean_df,
@@ -786,14 +831,13 @@ def markers_from_reference(
     var_names = _get_genes(adata, ref_gene_key)
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
-    # Select raw counts, then normalize/log1p for marker computation.
+    # raw counts for expression fraction computation (must be before normalization)
     counts = _get_count_matrix(adata, layer=ref_raw_counts_layer)
 
-    adata = adata.copy()
-    adata.X = counts.copy()
-
-    sc.pp.normalize_total(adata, target_sum=1e4)
-    sc.pp.log1p(adata)
+    # applying normalization and log1p to get data ready for DE/AUC
+    # stored in X directly, since adata was copied previously
+    _get_norm_log(adata, layer=ref_raw_counts_layer)
+    adata.X = adata.layers[NORM_LOG_LAYER]
 
     ctypes = pd.Categorical(adata.obs[ref_cell_type])
     types = list(ctypes.categories)
@@ -817,10 +861,9 @@ def markers_from_reference(
     # This dictionary maps cell type to an array of shape (n_genes,)
     # with the fraction of cells of that type expressing each gene.
     expr_frac: dict[str, np.ndarray] = {}
-    X = counts
     for ct in usable_celltypes:
         mask_ct = ctypes == ct
-        X_ct = X[mask_ct]
+        X_ct = counts[mask_ct]
         if sparse.issparse(X_ct):
             frac = X_ct.getnnz(axis=0) / X_ct.shape[0]
         else:

@@ -6,6 +6,8 @@ import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
+from ..constants import PCA_KEY
+
 
 def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
     """
@@ -82,8 +84,8 @@ def run_leiden_clustering_on_adata(
 
     if representation is not None:
         embedding = adata.obsm[representation]
-    elif "X_pca" in adata.obsm:
-        embedding = adata.obsm["X_pca"]
+    elif PCA_KEY in adata.obsm:
+        embedding = adata.obsm[PCA_KEY]
     else:
         embedding = None
 
