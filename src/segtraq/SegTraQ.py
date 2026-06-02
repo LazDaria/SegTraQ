@@ -998,6 +998,7 @@ class SegTraQ:
         self,
         adata_ref: AnnData,
         ref_cell_type: str,
+        ref_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = "raw",
         tx_min: float = 10.0,
         tx_max: float = 2000.0,
@@ -1018,6 +1019,7 @@ class SegTraQ:
             adata_ref=adata_ref,
             ref_cell_type=ref_cell_type,
             ref_raw_counts_layer=ref_raw_counts_layer,
+            ref_gene_key=ref_gene_key,
             tables_key=self.tables_key,
             tables_cell_id_key=self.tables_cell_id_key,
             tables_gene_key=self.tables_gene_key,
@@ -1697,8 +1699,6 @@ class _PSFacade:
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         signed: bool = True,
-        inverse_score: bool = True,
-        eps: float = 1e-6,
         inplace: bool = True,
     ):
         return ps.distance_to_membrane(
@@ -1725,8 +1725,6 @@ class _PSFacade:
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             signed=signed,
-            inverse_score=inverse_score,
-            eps=eps,
             inplace=inplace,
         )
 
@@ -1886,7 +1884,6 @@ class _VLFacade:
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
-        normalization: str | None = "log",
         min_genes: int = 5,
         min_transcripts: int = 10,
         inplace: bool = True,
@@ -1907,7 +1904,6 @@ class _VLFacade:
             max_points=max_points,
             seed=seed,
             q=q,
-            normalization=normalization,
             scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
