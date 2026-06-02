@@ -7,9 +7,9 @@ import polars as pl
 import spatialdata as sd
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
-from sklearn.metrics.pairwise import cosine_similarity
 
-from ..utils import _ensure_index, _get_genes, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
+from ..rs.utils import _cosine_similarity_two_vectors
+from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs
 from .utils import _correct_z_drift, _run_ovrlpy
 
 
@@ -142,30 +142,27 @@ def similarity_top_bottom(
     max_points: int = 1_000_000,
     seed: int | None = 0,
     q: float = 0.30,
-    normalization: str | None = None,
     scale: float = 1e4,
     min_genes: int = 5,
     min_transcripts: int = 10,
     inplace: bool = True,
 ):
     """
-    Compute cosine similarity between gene expression profiles of the bottom and top
-    z-quantiles of transcripts within each cell.
+    Compute the cosine similarity between the bottom and top expression
+    profiles of each cell along the z-axis.
 
-    Optionally, a global z-drift correction is applied before computing within-cell
-    quantiles (default: True). This is useful when raw z coordinates show tilt/warping
-    across the field of view (e.g. slide not even in z).
+    Optionally, a global z-drift correction is applied before computing
+    within-cell z quantiles. This is useful when raw z coordinates exhibit
+    global tilt or warping across the field of view.
 
     For each cell, transcripts are split into:
-      - bottom part: z <= q-quantile within that cell
-      - top part:    z >= (1-q)-quantile within that cell
+        - bottom: transcripts with z <= q-quantile
+        - top: transcripts with z >= (1 - q)-quantile
 
-    Gene counts normalized Analytic Pearson residuals (Lause et al. (2021)) for all
-    counts together and work with the normalized residuals which are later taken apart
-
-    Cells are filtered / set to NaN if either part is too sparse:
-      - at least `min_transcripts` transcripts in BOTH bottom and top parts
-      - at least `min_genes` genes with nonzero counts across (bottom OR top)
+    The point estimate is computed from bottom and top count matrices
+    using `_cosine_similarity_two_vectors`, which applies transcript/gene
+    filtering, library-size normalization, log1p transformation, and
+    cosine similarity calculation.
 
     Parameters
     ----------
@@ -201,9 +198,6 @@ def similarity_top_bottom(
         Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.
     q : float, default=0.30
         Quantile defining bottom and top parts. bottom = q, top = 1-q.
-    normalization: str, default="pearson"
-        Normalization to be applied to the data. Either Pearson residuals ("pearson"),
-        scaled log-transform ("log") or raw counts ("raw" or None).
     scale : float, default=1e4
         Scale for within-cell library size normalization (bottom+top).
     min_genes : int, default=5
@@ -216,7 +210,7 @@ def similarity_top_bottom(
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [tables_cell_id_key, "cosine_sim_top_bottom_z"].
+        DataFrame with columns [tables_cell_id_key, "similarity_top_bottom"].
     """
     if not (0.0 < q < 0.5):
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
@@ -233,12 +227,12 @@ def similarity_top_bottom(
     tx = tx[~is_bg]
 
     # ensure genes match table var_names from the anndata object
-    valid_features = _get_genes(
+    all_genes = _get_genes(
         adata=sdata.tables[tables_key],
         gene_key=tables_gene_key,
     )
 
-    tx = tx[tx[points_gene_key].isin(valid_features)]
+    tx = tx[tx[points_gene_key].isin(all_genes)]
 
     # cast into pandas Dataframe if Dask Array
     tx = tx.compute() if hasattr(tx, "compute") else tx
@@ -275,81 +269,36 @@ def similarity_top_bottom(
         tx[tx["_is_top"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
     )
 
-    # align top and bottom cells/genes
-    common_cells = counts_bottom.index.intersection(counts_top.index)
-    common_genes = counts_bottom.columns.intersection(counts_top.columns)
+    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
 
-    # counts of the common cells per bottom/top
-    counts_bottom_raw = counts_bottom.loc[common_cells, common_genes]
-    counts_top_raw = counts_top.loc[common_cells, common_genes]
-
-    # total number of transcripts per bottom/top
-    n_tx_bottom = counts_bottom_raw.sum(axis=1)
-    n_tx_top = counts_top_raw.sum(axis=1)
-
-    if normalization == "pearson":
-        # aggregate the counts to total counts
-        X = np.vstack([counts_bottom_raw.to_numpy(), counts_top_raw.to_numpy()])
-        # estimate the overdispersion parameter from the counts per region according to the
-        # variance of a negative binomial; var = mu + mu^2 / theta - solve for theta
-        theta = estimate_theta_simple(X)
-        # normalize the total counts data with analytical pearson residuals
-        R = pearson_residuals(X, theta=theta, clip=None)
-        # take them apart again
-        n = counts_bottom_raw.shape[0]
-        bottom_norm = R[:n, :]
-        top_norm = R[n:, :]
-    elif normalization == "log":
-        # within-cell normalization using (bottom + top)
-        total_counts = (counts_bottom_raw + counts_top_raw).sum(axis=1).replace(0, np.nan)
-        bottom_norm = counts_bottom_raw.div(total_counts, axis=0) * scale
-        top_norm = counts_top_raw.div(total_counts, axis=0) * scale
-        bottom_norm = np.log1p(bottom_norm).fillna(0.0)
-        top_norm = np.log1p(top_norm).fillna(0.0)
-    elif normalization == "raw":
-        bottom_norm = counts_bottom_raw
-        top_norm = counts_top_raw
-    else:
-        bottom_norm = counts_bottom_raw
-        top_norm = counts_top_raw
-
-    # cast into dataframe
-    bottom_norm = pd.DataFrame(bottom_norm, columns=counts_bottom_raw.columns, index=counts_bottom_raw.index)
-    top_norm = pd.DataFrame(top_norm, columns=counts_top_raw.columns, index=counts_top_raw.index)
+    # ensure all cells/genes from table are evaluated
+    counts_bottom = counts_bottom.reindex(index=all_cells, columns=all_genes, fill_value=0)
+    counts_top = counts_top.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
     rows = []
-    for cid in common_cells:
-        # get the raw counts for the common cell ID
-        x_raw = counts_bottom_raw.loc[cid].to_numpy(dtype=float)
-        y_raw = counts_top_raw.loc[cid].to_numpy(dtype=float)
+    for cid in all_cells:
+        x_bottom = counts_bottom.loc[cid].to_numpy()
+        x_top = counts_top.loc[cid].to_numpy()
 
-        # genes nonzero in at least one part
-        mask = (x_raw != 0) | (y_raw != 0)
-        n_genes_kept = int(mask.sum())
+        sim = _cosine_similarity_two_vectors(
+            x_bottom,
+            x_top,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
+        )
 
-        # thresholds
-        if n_tx_bottom.loc[cid] < min_transcripts or n_tx_top.loc[cid] < min_transcripts or n_genes_kept < min_genes:
-            sim = np.nan
-        else:
-            # extract only normalized expression per matching cells for
-            # non zero count genes
-            x = bottom_norm.loc[cid].to_numpy(dtype=float)[mask]
-            y = top_norm.loc[cid].to_numpy(dtype=float)[mask]
+        rows.append(
+            {
+                tables_cell_id_key: cid,
+                "similarity_top_bottom": sim,
+            }
+        )
 
-            if np.all(x == 0) or np.all(y == 0):
-                sim = np.nan
-            else:
-                sim = cosine_similarity(x.reshape(1, -1), y.reshape(1, -1))[0, 0]
+    out = pd.DataFrame(rows)
 
-        rows.append((cid, sim))
-
-    out = pd.DataFrame(
-        rows,
-        columns=[
-            tables_cell_id_key,
-            "cosine_sim_top_bottom_z",
-        ],
-    )
+    if out.empty:
+        raise ValueError(f"Could not compute top-bottom cosine similarities. Try a different quantile. You used q={q}.")
 
     if inplace:
         merge_into_obs(

@@ -364,10 +364,48 @@ def _get_genes(
         genes = pd.Index(adata.var[gene_key].values)
 
     if genes.duplicated().any():
-        raise ValueError("Gene identifiers are not unique.")
+        raise ValueError(f"Gene identifiers in are not unique.")
 
     return genes
 
+def _make_ref_genes_unique(
+    adata_ref: AnnData,
+    ref_gene_key: str | None = None,
+) -> AnnData:
+    """
+    Ensure gene identifiers are unique in the AnnData object.
+
+    If `ref_gene_key is None`, makes `adata_ref.var_names` unique in place.
+    If `ref_gene_key` is provided, drops duplicated genes, keeping the first.
+    """
+    adata_ref = adata_ref.copy()
+
+    if ref_gene_key is None:
+        if not adata_ref.var_names.is_unique:
+            warnings.warn(
+                "`adata_ref.var_names` are not unique. Making them unique with "
+                "`adata_ref.var_names_make_unique()`.",
+                UserWarning,
+            )
+            adata_ref.var_names_make_unique()
+        return adata_ref
+
+    if ref_gene_key not in adata_ref.var.columns:
+        raise KeyError(f"'{ref_gene_key}' not found in `adata_ref.var`.")
+
+    genes = pd.Index(adata_ref.var[ref_gene_key].values)
+
+    if genes.duplicated().any():
+        n_dup = genes.duplicated().sum()
+        warnings.warn(
+            f"`adata_ref.var[{ref_gene_key!r}]` contains {n_dup} duplicated entries. "
+            "Dropping duplicate genes, keeping the first occurrence.",
+            UserWarning,
+        )
+        keep = ~genes.duplicated()
+        adata_ref = adata_ref[:, keep].copy()
+
+    return adata_ref
 
 def run_label_transfer(
     sdata,
@@ -461,6 +499,8 @@ def run_label_transfer(
         `tables_cell_id_key`, `cell_type_key`, and `"pearson_score"`.
         If `inplace=True`, modifies `sdata` in place and returns `None`.
     """
+    adata_ref = _make_ref_genes_unique(adata_ref, ref_gene_key=ref_gene_key)
+
     if ref_cell_type not in adata_ref.obs.columns:
         raise KeyError(f"'{ref_cell_type}' not found in `adata_ref.obs`.")
 
@@ -828,7 +868,7 @@ def markers_from_reference(
         A dictionary mapping each cell type to its positive and negative markers:
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
-    adata = adata.copy()
+    adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
 
     # getting gene names and mapping to indices for later use
     var_names = _get_genes(adata, ref_gene_key)

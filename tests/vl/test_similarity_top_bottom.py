@@ -8,14 +8,14 @@ def test_similarity_top_bottom_type(sdata_new):
     df = st.vl.similarity_top_bottom(sdata_new)
 
     assert isinstance(df, pd.DataFrame), f"compute_sim_top_bottom_z should return a DataFrame, got {type(df)}"
-    expected_cols = {"cell_id", "cosine_sim_top_bottom_z"}
+    expected_cols = {"cell_id", "similarity_top_bottom"}
     assert set(df.columns) == expected_cols, f"Expected columns {expected_cols}, but got {df.columns}"
 
 
 def test_similarity_top_bottom_values(sdata_new):
     df = st.vl.similarity_top_bottom(sdata_new)
 
-    assert df["cosine_sim_top_bottom_z"].dropna().between(-1, 1).all()
+    assert df["similarity_top_bottom"].dropna().between(-1, 1).all()
 
 
 @pytest.mark.parametrize("q", [0.0, 0.5, -0.1, 0.9])
@@ -30,12 +30,12 @@ def test_similarity_top_bottom_correct_z_drift_toggle_runs(sdata_new):
 
     assert isinstance(df1, pd.DataFrame)
     assert isinstance(df2, pd.DataFrame)
-    assert set(df1.columns) == {"cell_id", "cosine_sim_top_bottom_z"}
-    assert set(df2.columns) == {"cell_id", "cosine_sim_top_bottom_z"}
+    assert set(df1.columns) == {"cell_id", "similarity_top_bottom"}
+    assert set(df2.columns) == {"cell_id", "similarity_top_bottom"}
 
 
 def test_similarity_top_bottom_inplace_writes_to_obs(sdata_new):
-    key = "cosine_sim_top_bottom_z"
+    key = "similarity_top_bottom"
     obs = sdata_new.tables["table"].obs
     if key in obs.columns:
         obs = obs.drop(columns=[key])
@@ -47,4 +47,4 @@ def test_similarity_top_bottom_inplace_writes_to_obs(sdata_new):
 
 def test_similarity_top_bottom_threshold_forces_nan(sdata_new):
     df = st.vl.similarity_top_bottom(sdata_new, min_transcripts=10**9)
-    assert df["cosine_sim_top_bottom_z"].isna().all()
+    assert df["similarity_top_bottom"].isna().all()
