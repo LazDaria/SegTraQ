@@ -8,7 +8,7 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from .constants import SEGTRAQ_CELL_ID_KEY
-from .utils import _filter_control_and_low_quality_transcripts, _get_genes, validate_spatialdata
+from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer
@@ -958,6 +958,7 @@ class SegTraQ:
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=self.tables_gene_key)
 
+        _make_ref_genes_unique(adata=adata, gene_key=ref_gene_key)
         sc_genes = _get_genes(adata=adata, gene_key=ref_gene_key)
 
         mask = sc_genes.isin(sp_genes)

@@ -364,9 +364,10 @@ def _get_genes(
         genes = pd.Index(adata.var[gene_key].values)
 
     if genes.duplicated().any():
-        raise ValueError(f"Gene identifiers in are not unique.")
+        raise ValueError("Gene identifiers in are not unique.")
 
     return genes
+
 
 def _make_ref_genes_unique(
     adata_ref: AnnData,
@@ -383,9 +384,9 @@ def _make_ref_genes_unique(
     if ref_gene_key is None:
         if not adata_ref.var_names.is_unique:
             warnings.warn(
-                "`adata_ref.var_names` are not unique. Making them unique with "
-                "`adata_ref.var_names_make_unique()`.",
+                "`adata_ref.var_names` are not unique. Making them unique with `adata_ref.var_names_make_unique()`.",
                 UserWarning,
+                stacklevel=2,
             )
             adata_ref.var_names_make_unique()
         return adata_ref
@@ -401,11 +402,13 @@ def _make_ref_genes_unique(
             f"`adata_ref.var[{ref_gene_key!r}]` contains {n_dup} duplicated entries. "
             "Dropping duplicate genes, keeping the first occurrence.",
             UserWarning,
+            stacklevel=2,
         )
         keep = ~genes.duplicated()
         adata_ref = adata_ref[:, keep].copy()
 
     return adata_ref
+
 
 def run_label_transfer(
     sdata,
