@@ -9,9 +9,8 @@ def test_morphological_features(sdata_new):
     assert not morphological_features.empty, "Morphological features DataFrame should not be empty"
     assert "cell_id" in morphological_features.columns, "DataFrame should contain 'cell_id' column"
 
-    # TODO: reactivate once the test data is updated
-    # num_cells = st.bl.num_cells(sdata_new)
-    # assert morphological_features.shape[0] == num_cells, "Number of rows in DataFrame should match number of cells"
+    num_cells = st.bl.num_cells(sdata_new)
+    assert morphological_features.shape[0] == num_cells, "Number of rows in DataFrame should match number of cells"
 
     all_features = [
         "cell_area",

@@ -3,6 +3,8 @@ import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
+from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
+from ..utils import _get_pca_and_neighbors
 from .utils import (
     _cluster_connectedness,
     ari_mean,
@@ -22,6 +24,9 @@ def cluster_connectedness(
     random_state: int = 42,
     cell_type_key: str | None = None,
     use_hvg: bool = False,
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -49,6 +54,13 @@ def cluster_connectedness(
         If provided, compute cluster connectedness for this clustering only.
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
+    n_neighbors: int, optional
+        Number of neighbors to use for computing the connectivity matrix. Default is 15.
+    n_pcs: int, optional
+        Number of principal components to compute for PCA. Default is 50.
+    target_sum: float | None, optional
+        Target sum for normalization in `scanpy.pp.normalize_total()` before PCA.
+        Default is None.
     inplace : bool, optional
         Whether to store the computed cluster connectedness in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -74,13 +86,11 @@ def cluster_connectedness(
         labels = adata.obs[cell_type_key].values
         valid_labels = labels[~pd.isna(labels)]
         if len(pd.unique(valid_labels)) > 1:
-            if "connectivities" not in adata.obsp:
-                raise ValueError(
-                    "Connectivities not found in adata.obsp['connectivities']. "
-                    "Please compute neighbors first by running sc.pp.neighbors(adata)."
-                )
+            if CONNECTIVITIES_KEY not in adata.obsp:
+                adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+                sdata.tables[tables_key] = adata
             distance_val = _cluster_connectedness(
-                adata.obsp["connectivities"],
+                adata.obsp[CONNECTIVITIES_KEY],
                 labels,
                 use_weights=use_weights,
             )
@@ -88,11 +98,9 @@ def cluster_connectedness(
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
-    if "neighbors" not in adata.uns:
-        raise ValueError(
-            f"Neighbors not found in adata. Please use scanpy to compute neighbors:\n"
-            f"adata=st_obj.sdata.tables['{tables_key}']; sc.pp.neighbors(adata)."
-        )
+    if NEIGHBORS_KEY not in adata.uns:
+        adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+        sdata.tables[tables_key] = adata
 
     for res in resolution:
         key_added, _, _ = run_leiden_clustering_on_random_subset(
@@ -112,7 +120,7 @@ def cluster_connectedness(
 
         if len(pd.unique(valid_labels)) > 1:
             # Slice connectivity matrix to valid cells only — both rows AND columns
-            connectivity_subset = adata.obsp["connectivities"][np.ix_(valid_mask, valid_mask)]
+            connectivity_subset = adata.obsp[CONNECTIVITIES_KEY][np.ix_(valid_mask, valid_mask)]
 
             distance_val = _cluster_connectedness(
                 connectivity_subset,
@@ -137,6 +145,9 @@ def silhouette_score(
     random_state: int = 42,
     cell_type_key: str | None = None,
     use_hvg: bool = False,
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -162,6 +173,13 @@ def silhouette_score(
         If provided, compute the silhouette score for provided labels.
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
+    n_neighbors: int, optional
+        Number of neighbors to use for computing the connectivity matrix. Default is 15.
+    n_pcs: int, optional
+        Number of principal components to compute for PCA. Default is 50.
+    target_sum: float | None, optional
+        Target sum for normalization in `scanpy.pp.normalize_total()` before PCA.
+        Default is None.
     inplace : bool, optional
         Whether to store the computed silhouette score in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -188,12 +206,13 @@ def silhouette_score(
 
         labels_nn = adata.obs[cell_type_key].dropna()
         if labels_nn.nunique() > 1:  # Ensure more than one cluster exists
-            if "X_pca" not in adata.obsm:
-                raise ValueError("PCA coordinates not found in adata.obsm['X_pca']. Please run PCA first.")
+            if PCA_KEY not in adata.obsm:
+                adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+                sdata.tables[tables_key] = adata
             # remove NaN labels
             adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
             labels = adata_subset.obs[cell_type_key].values
-            silhouette_avg = _silhouette_score(adata_subset.obsm["X_pca"], labels, metric=metric)
+            silhouette_avg = _silhouette_score(adata_subset.obsm[PCA_KEY], labels, metric=metric)
             best_silhouette_score = float(silhouette_avg)
             key = "silhouette_score_labels"
 
@@ -207,11 +226,9 @@ def silhouette_score(
     else:
         # ensure that we already have neighbors computed
         # this way we avoid recomputing neighbors multiple times (for the different resolutions)
-        if "neighbors" not in adata.uns:
-            raise ValueError(
-                f"Neighbors not found in adata. Please use scanpy to compute neighbors:\n"
-                f"adata=st_obj.sdata.tables['{tables_key}']; sc.pp.neighbors(adata)."
-            )
+        if NEIGHBORS_KEY not in adata.uns:
+            adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+            sdata.tables[tables_key] = adata
 
         key = "silhouette_score"
         for res in resolution:
@@ -230,12 +247,9 @@ def silhouette_score(
 
             if len(pd.unique(labels)) > 1:  # Ensure more than one cluster exists
                 if pca is None:
-                    raise ValueError(
-                        "PCA coordinates are required for silhouette score calculation, "
-                        "but no PCA embedding was found. "
-                        "Please compute PCA with `sc.pp.pca(adata)` and then recompute neighbors with "
-                        "`sc.pp.neighbors(adata)`."
-                    )
+                    adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
+                    sdata.tables[tables_key] = adata
+                    pca = adata.obsm[PCA_KEY]
 
                 silhouette_avg = _silhouette_score(pca, labels, metric=metric)
 
@@ -255,7 +269,6 @@ def purity(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool = False,
-    representation: str | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -275,11 +288,6 @@ def purity(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
-    representation : str | None, optional
-        Key in `adata.obsm` specifying the feature representation used to compute
-        the k-nearest neighbor graph before clustering. This is passed to
-        `scanpy.pp.neighbors(..., use_rep=representation)`.
-        If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -303,7 +311,6 @@ def purity(
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             random_state=random_state,
-            representation=representation,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
@@ -324,7 +331,6 @@ def adjusted_rand_index(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool = False,
-    representation: str | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -345,11 +351,6 @@ def adjusted_rand_index(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
-    representation : str | None, optional
-        Key in `adata.obsm` specifying the feature representation used to compute
-        the k-nearest neighbor graph before clustering. This is passed to
-        `scanpy.pp.neighbors(..., use_rep=representation)`.
-        If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -374,7 +375,6 @@ def adjusted_rand_index(
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             random_state=random_state,
-            representation=representation,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
