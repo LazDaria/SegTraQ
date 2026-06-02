@@ -958,7 +958,7 @@ class SegTraQ:
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=self.tables_gene_key)
 
-        _make_ref_genes_unique(adata=adata, gene_key=ref_gene_key)
+        adata = _make_ref_genes_unique(adata=adata, gene_key=ref_gene_key)
         sc_genes = _get_genes(adata=adata, gene_key=ref_gene_key)
 
         mask = sc_genes.isin(sp_genes)

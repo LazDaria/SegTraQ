@@ -364,7 +364,7 @@ def _get_genes(
         genes = pd.Index(adata.var[gene_key].values)
 
     if genes.duplicated().any():
-        raise ValueError("Gene identifiers in are not unique.")
+        raise ValueError("Gene identifiers are not unique.")
 
     return genes
 
