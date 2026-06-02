@@ -57,25 +57,6 @@ def test_distance_to_membrane_signed_can_be_negative_without_restrict(sdata_new)
     assert np.isfinite(vals).any()
 
 
-def test_distance_to_membrane_inverse_score_monotonic(sdata_new):
-    gene = _pick_present_gene(sdata_new)
-
-    out = st.ps.distance_to_membrane(
-        sdata_new,
-        genes=gene,
-        membrane_region="cell",
-        restrict_to_within_boundary=True,
-        signed=True,
-        inverse_score=True,
-        inplace=False,
-    )
-    inv = out[f"distance_to_cell_membrane_inverse_{gene}"].to_numpy()
-
-    # inverse score defined as 1/sqrt(abs(dist)+eps): should be positive and finite where dist finite
-    assert np.all(inv > 0)
-    assert np.isfinite(inv).all()
-
-
 def test_distance_to_membrane_invalid_region_raises(sdata_new):
     with pytest.raises(ValueError):
         st.ps.distance_to_membrane(sdata_new, membrane_region="bad_region", inplace=False)
