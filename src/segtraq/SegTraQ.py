@@ -7,6 +7,7 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
+from .constants import SEGTRAQ_CELL_ID_KEY
 from .utils import _filter_control_and_low_quality_transcripts, _get_genes, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
@@ -127,7 +128,7 @@ class SegTraQ:
             Cell ID key for `sdata.shapes[shapes_key]`. Must match either the shapes index name
             or a column name (which will be set as the index if needed).
             If `None`, the index is assumed to contain cell IDs and
-            renamed to "segtraq_cell_id".
+            renamed to "segtraq_id".
 
         nucleus_shapes_key : str or None, optional, default="nucleus_boundaries"
             Key in `sdata.shapes` for nucleus boundary polygons, if available.
@@ -226,8 +227,8 @@ class SegTraQ:
         self.points_gene_key = points_gene_key
 
         self.shapes_key = shapes_key
-        self.shapes_cell_id_key = shapes_cell_id_key
-        self.nucleus_shapes_key = nucleus_shapes_key
+        self.shapes_cell_id_key = shapes_cell_id_key if shapes_cell_id_key is not None else SEGTRAQ_CELL_ID_KEY
+        self.nucleus_shapes_key = nucleus_shapes_key if nucleus_shapes_key is not None else SEGTRAQ_CELL_ID_KEY
 
         self.bl = _BLFacade(self)
         self.rs = _RSFacade(self)
