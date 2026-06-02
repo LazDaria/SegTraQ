@@ -8,9 +8,9 @@ import spatialdata as sd
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
 
-from ..utils import _ensure_index, _get_genes, _is_background, estimate_theta_simple, merge_into_obs, pearson_residuals
-from .utils import _correct_z_drift, _run_ovrlpy
 from ..rs.utils import _cosine_similarity_two_vectors
+from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs
+from .utils import _correct_z_drift, _run_ovrlpy
 
 
 def vertical_signal_integrity_per_cell(
@@ -298,10 +298,7 @@ def similarity_top_bottom(
     out = pd.DataFrame(rows)
 
     if out.empty:
-        raise ValueError(
-            "Could not compute top-bottom cosine similarities. "
-            f"Try a different quantile. You used q={q}."
-        )
+        raise ValueError(f"Could not compute top-bottom cosine similarities. Try a different quantile. You used q={q}.")
 
     if inplace:
         merge_into_obs(
