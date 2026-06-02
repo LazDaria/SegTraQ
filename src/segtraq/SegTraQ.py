@@ -1804,7 +1804,6 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool = False,
-        representation: str | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1815,7 +1814,6 @@ class _CSFacade:
             tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             use_hvg=use_hvg,
-            representation=representation,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )
@@ -1828,7 +1826,6 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool = False,
-        representation: str | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1839,7 +1836,6 @@ class _CSFacade:
             key_prefix=key_prefix,
             tables_key=self._p.tables_key,
             use_hvg=use_hvg,
-            representation=representation,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )

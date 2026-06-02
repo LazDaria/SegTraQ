@@ -28,7 +28,6 @@ def run_leiden_clustering_on_adata(
     resolution: float = 1.0,
     key_added: str = "leiden",
     use_hvg: bool = False,
-    representation: str | None = None,
     recompute_neighbors: bool = True,
     leiden_kwargs: dict | None = None,
 ):
@@ -45,12 +44,6 @@ def run_leiden_clustering_on_adata(
         Key under which to store clustering result in `.obs`.
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
-    representation : str | None, optional
-        Key in `adata.obsm` specifying the feature representation used to compute
-        the k-nearest neighbor graph before clustering. This is passed to
-        `scanpy.pp.neighbors(..., use_rep=representation)`.
-        If `None`, a PCA ('X_pca') embedding is computed internally when
-        neighbors are recomputed.
     recompute_neighbors : bool
         Whether to recompute neighbors before clustering.
     leiden_kwargs : dict, optional
@@ -61,25 +54,28 @@ def run_leiden_clustering_on_adata(
     -------
     labels : pd.Series
         The Leiden cluster labels.
-    embedding : np.ndarray | None
-        The embedding used downstream for evaluation. This is `adata.obsm[representation]`
-        if `representation` is provided, `adata.obsm['X_pca']` if available, and `None`
-        otherwise.
+    embedding : np.ndarray or None
+        The PCA embedding used for clustering, or None if not available.
     """
     adata = adata_input.copy()
 
     if recompute_neighbors:
-        if representation is None:
-            sc.pp.pca(adata, mask_var="highly_variable" if use_hvg else None)
-            sc.pp.neighbors(adata)
-        else:
-            sc.pp.neighbors(adata, use_rep=representation)
+        # we do not use _compute_pca_and_neighbors() here since we want to allow using HVGs for PCA if desired
+        # in this case, we explicitly do not want to use and cached results
+        sc.pp.pca(adata, mask_var="highly_variable" if use_hvg else None)
+        sc.pp.neighbors(adata)
     else:
-        if NEIGHBORS_KEY in adata.uns and CONNECTIVITIES_KEY in adata.obsp:
+        if PCA_KEY in adata.obsm and NEIGHBORS_KEY in adata.uns and CONNECTIVITIES_KEY in adata.obsp:
             # since we copied the anndata object,
             # we can set the neighbors and connectivities without modifying the original adata
+            adata.obsm["X_pca"] = adata.obsm[PCA_KEY]
             adata.uns["neighbors"] = adata.uns[NEIGHBORS_KEY]
             adata.obsp["connectivities"] = adata.obsp[CONNECTIVITIES_KEY]
+        else:
+            raise ValueError(
+                "Cannot reuse neighbors and PCA from adata because required keys are missing. "
+                "Please set recompute_neighbors=True or ensure the required keys are present."
+            )
 
     sc.tl.leiden(
         adata,
@@ -89,12 +85,10 @@ def run_leiden_clustering_on_adata(
         **(leiden_kwargs or {}),
     )
 
-    if representation is not None:
-        embedding = adata.obsm[representation]
-    elif PCA_KEY in adata.obsm:
-        embedding = adata.obsm[PCA_KEY]
-    else:
+    if "X_pca" not in adata.obsm:
         embedding = None
+    else:
+        embedding = adata.obsm["X_pca"]
 
     return adata.obs[key_added].copy(), embedding
 
@@ -130,7 +124,6 @@ def run_leiden_clustering_on_random_subset(
     random_state: int = 42,
     use_hvg: bool = False,
     recompute_neighbors: bool = True,
-    representation: str | None = None,
     leiden_kwargs: dict | None = None,
 ):
     adata_full = sdata.tables[tables_key]
@@ -152,7 +145,6 @@ def run_leiden_clustering_on_random_subset(
         key_added=key_added,
         use_hvg=use_hvg,
         recompute_neighbors=recompute_neighbors,
-        representation=representation,
         leiden_kwargs=leiden_kwargs,
     )
 

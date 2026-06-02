@@ -269,7 +269,6 @@ def purity(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool = False,
-    representation: str | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -289,11 +288,6 @@ def purity(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
-    representation : str | None, optional
-        Key in `adata.obsm` specifying the feature representation used to compute
-        the k-nearest neighbor graph before clustering. This is passed to
-        `scanpy.pp.neighbors(..., use_rep=representation)`.
-        If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -317,7 +311,6 @@ def purity(
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             random_state=random_state,
-            representation=representation,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
@@ -338,7 +331,6 @@ def adjusted_rand_index(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool = False,
-    representation: str | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -359,11 +351,6 @@ def adjusted_rand_index(
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
     use_hvg: bool, optional
         Whether to use highly variable genes (HVGs) for PCA. By default False.
-    representation : str | None, optional
-        Key in `adata.obsm` specifying the feature representation used to compute
-        the k-nearest neighbor graph before clustering. This is passed to
-        `scanpy.pp.neighbors(..., use_rep=representation)`.
-        If `None`, a PCA ('X_pca') embedding is computed internally.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -388,7 +375,6 @@ def adjusted_rand_index(
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             random_state=random_state,
-            representation=representation,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
