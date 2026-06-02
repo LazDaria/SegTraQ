@@ -517,8 +517,6 @@ def distance_to_membrane(
     n_jobs: int = -1,
     parallel_backend: str = "threading",
     signed: bool = True,
-    inverse_score: bool = True,
-    eps: float = 1e-6,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
@@ -588,11 +586,6 @@ def distance_to_membrane(
     signed : bool, default=True
         If True, returns signed distances (positive if transcript is inside/on the polygon,
         negative if outside). If False, returns unsigned distances to the boundary.
-    inverse_score : bool, default=True
-        If True, also computes an inverse-style score that is high when distance is small:
-        `1 / sqrt(abs(distance) + eps)`.
-    eps : float, default=1e-6
-        Small constant for numerical stability in `inverse_score`.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables`. Default is True.
 
@@ -601,7 +594,6 @@ def distance_to_membrane(
     pd.DataFrame
         If `inplace=False`, returns a DataFrame with per-cell mean distance columns:
         - `distance_to_{membrane_region}_membrane_norm_<feature>`
-        - optionally `distance_to_{membrane_region}_membrane_inverse_<feature>`
         If `inplace=True`, returns the DataFrame that was merged into `.obs`.
     """
     # validate inputs
@@ -742,17 +734,10 @@ def distance_to_membrane(
         f"distance_to_{membrane_region}_membrane_{feature}"
     ] / np.sqrt(mean_df[tables_area_key])
 
-    if inverse_score:
-        mean_df[f"distance_to_{membrane_region}_membrane_inverse_{feature}"] = 1.0 / np.sqrt(
-            np.abs(mean_df[f"distance_to_{membrane_region}_membrane_{feature}"]) + eps
-        )
-
     mean_df = mean_df.reset_index(drop=True)
 
     if inplace:
         cols = [tables_cell_id_key, f"distance_to_{membrane_region}_membrane_norm_{feature}"]
-        if inverse_score:
-            cols.append(f"distance_to_{membrane_region}_membrane_inverse_{feature}")
 
         out = mean_df[cols].copy()
 

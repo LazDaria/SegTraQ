@@ -1696,8 +1696,6 @@ class _PSFacade:
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         signed: bool = True,
-        inverse_score: bool = True,
-        eps: float = 1e-6,
         inplace: bool = True,
     ):
         return ps.distance_to_membrane(
@@ -1724,8 +1722,6 @@ class _PSFacade:
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             signed=signed,
-            inverse_score=inverse_score,
-            eps=eps,
             inplace=inplace,
         )
 
@@ -1889,7 +1885,6 @@ class _VLFacade:
         seed: int | None = 0,
         q: float = 0.30,
         scale: float = 1e4,
-        normalization: str | None = "log",
         min_genes: int = 5,
         min_transcripts: int = 10,
         inplace: bool = True,
@@ -1910,7 +1905,6 @@ class _VLFacade:
             max_points=max_points,
             seed=seed,
             q=q,
-            normalization=normalization,
             scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
