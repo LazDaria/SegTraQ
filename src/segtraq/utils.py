@@ -32,7 +32,7 @@ from spatialdata.transformations import (
 )
 
 from .bl import baseline as bl
-from .constants import CONNECTIVITIES_KEY, DISTANCES_KEY, NEIGHBORS_KEY, NORM_LOG_LAYER, PCA_KEY
+from .constants import CONNECTIVITIES_KEY, DISTANCES_KEY, NEIGHBORS_KEY, NORM_LOG_LAYER, PCA_KEY, SEGTRAQ_CELL_ID_KEY
 
 
 def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
@@ -69,7 +69,7 @@ def _get_pca_and_neighbors(
     raw_layer: str | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
-    target_sum: float | None = None,
+    target_sum: float | None = 1e4,
 ) -> AnnData:
     """
     Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
@@ -1036,25 +1036,26 @@ def _ensure_index(
             )
         else:
             warnings.warn(
-                f"The dataframe for shapes '{shapes_key}' has no index name. Setting index name to 'segtraq_id'.",
+                f"The dataframe for shapes '{shapes_key}' has no index name. "
+                f"Setting index name to {SEGTRAQ_CELL_ID_KEY}.",
                 UserWarning,
                 stacklevel=2,
             )
-            gdf.index.name = "segtraq_id"
+            gdf.index.name = SEGTRAQ_CELL_ID_KEY
             id_key = gdf.index.name
 
     if gdf.index.name == id_key:
         if gdf.index.has_duplicates:
             warnings.warn(
                 f"Duplicate IDs detected in index '{id_key}' for shapes '{shapes_key}'. "
-                "Resetting and renaming index to `segtraq_id` to ensure uniqueness.",
+                f"Resetting and renaming index to `{SEGTRAQ_CELL_ID_KEY}` to ensure uniqueness.",
                 UserWarning,
                 stacklevel=2,
             )
             if gdf.index.name in gdf.columns:
                 gdf = gdf.drop(columns=[gdf.index.name])
             gdf = gdf.reset_index(drop=False)
-            gdf.index.name = "segtraq_id"
+            gdf.index.name = SEGTRAQ_CELL_ID_KEY
         return gdf
 
     if id_key not in gdf.columns:
@@ -1068,14 +1069,15 @@ def _ensure_index(
     if gdf[id_key].duplicated().any():
         warnings.warn(
             f"Duplicate IDs detected in column '{id_key}' for shapes '{shapes_key}'. "
-            f"Instead of using {id_key} as index, resetting the current index and renaming it to `segtraq_id`.",
+            f"Instead of using {id_key} as index, resetting the current index and "
+            f"renaming it to `{SEGTRAQ_CELL_ID_KEY}`.",
             UserWarning,
             stacklevel=2,
         )
         if gdf.index.name in gdf.columns:
             gdf = gdf.drop(columns=[gdf.index.name])
         gdf = gdf.reset_index(drop=False)
-        gdf.index.name = "segtraq_id"
+        gdf.index.name = SEGTRAQ_CELL_ID_KEY
         return gdf
 
     warnings.warn(
