@@ -381,7 +381,7 @@ If a layer is specified, it must exist and contain count-like values.</p></li>
 <li><p><strong>shapes_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Cell ID key for <cite>sdata.shapes[shapes_key]</cite>. Must match either the shapes index name
 or a column name (which will be set as the index if needed).
 If <cite>None</cite>, the index is assumed to contain cell IDs and
-renamed to “segtraq_cell_id”.</p></li>
+renamed to “segtraq_id”.</p></li>
 <li><p><strong>nucleus_shapes_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;nucleus_boundaries&quot;</em>) – Key in <cite>sdata.shapes</cite> for nucleus boundary polygons, if available.
 If None, a nucleus mask can be obtained via <cite>segtraq.run_cellpose</cite>.</p></li>
 <li><p><strong>nucleus_shapes_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Cell ID key for <cite>sdata.shapes[nucleus_shapes_key]</cite>. Must match either the shapes
