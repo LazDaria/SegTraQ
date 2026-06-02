@@ -7,6 +7,7 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
+from .constants import SEGTRAQ_CELL_ID_KEY
 from .utils import _filter_control_and_low_quality_transcripts, _get_genes, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
@@ -127,7 +128,7 @@ class SegTraQ:
             Cell ID key for `sdata.shapes[shapes_key]`. Must match either the shapes index name
             or a column name (which will be set as the index if needed).
             If `None`, the index is assumed to contain cell IDs and
-            renamed to "segtraq_cell_id".
+            renamed to "segtraq_id".
 
         nucleus_shapes_key : str or None, optional, default="nucleus_boundaries"
             Key in `sdata.shapes` for nucleus boundary polygons, if available.
@@ -226,8 +227,8 @@ class SegTraQ:
         self.points_gene_key = points_gene_key
 
         self.shapes_key = shapes_key
-        self.shapes_cell_id_key = shapes_cell_id_key
-        self.nucleus_shapes_key = nucleus_shapes_key
+        self.shapes_cell_id_key = shapes_cell_id_key if shapes_cell_id_key is not None else SEGTRAQ_CELL_ID_KEY
+        self.nucleus_shapes_key = nucleus_shapes_key if nucleus_shapes_key is not None else SEGTRAQ_CELL_ID_KEY
 
         self.bl = _BLFacade(self)
         self.rs = _RSFacade(self)
@@ -1803,7 +1804,6 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool = False,
-        representation: str | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1814,7 +1814,6 @@ class _CSFacade:
             tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             use_hvg=use_hvg,
-            representation=representation,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )
@@ -1827,7 +1826,6 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool = False,
-        representation: str | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1838,7 +1836,6 @@ class _CSFacade:
             key_prefix=key_prefix,
             tables_key=self._p.tables_key,
             use_hvg=use_hvg,
-            representation=representation,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )
@@ -1982,22 +1979,22 @@ class _PLFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def transcript_distribution_across_space(self, smoothing: int = 10):
+    def transcript_distribution_across_space(self, filter_size: int = 21):
         return pl.transcript_distribution_across_space(
             sdata=self._p.sdata,
             axes=(self._p.points_x_key, self._p.points_y_key),
-            smoothing=smoothing,
+            filter_size=filter_size,
             points_key=self._p.points_key,
         )
 
     transcript_distribution_across_space.__doc__ = pl.transcript_distribution_across_space.__doc__
 
-    def feature_distribution_across_space(self, features: list[str], smoothing: int = 10):
+    def feature_distribution_across_space(self, features: list[str], filter_size: int = 21):
         return pl.feature_distribution_across_space(
             sdata=self._p.sdata,
             features=features,
             axes=(self._p.tables_centroid_x_key, self._p.tables_centroid_y_key),
-            smoothing=smoothing,
+            filter_size=filter_size,
             tables_key=self._p.tables_key,
         )
 

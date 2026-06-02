@@ -141,7 +141,7 @@ def umap(
     fig, axes = plt.subplots(rows, cols, figsize=figsize, squeeze=False)
 
     # determine feature type
-    is_categorical = umap_df[color].dtype == "object" or pd.api.types.is_categorical_dtype(umap_df[color])
+    is_categorical = umap_df[color].dtype == "object" or isinstance(umap_df[color].dtype, pd.CategoricalDtype)
 
     # categorical palette handling
     if is_categorical:
