@@ -8,7 +8,7 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from .constants import SEGTRAQ_CELL_ID_KEY
-from .utils import _filter_control_and_low_quality_transcripts, _get_genes, validate_spatialdata
+from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer
@@ -401,6 +401,8 @@ class SegTraQ:
         *,
         adata_ref: AnnData | None = None,
         ref_cell_type: str | None = None,
+        ref_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
         cell_type_key: str | None = None,
         inplace: bool = True,
         label_transfer_kwargs: dict[str, Any] | None = None,
@@ -442,6 +444,12 @@ class SegTraQ:
             Column in `adata_ref.obs` containing reference cell-type labels. Required if
             `cell_type_key=None` and label transfer should be run, or if `adata_ref` is used
             to infer `n_components`.
+        ref_gene_key : str or None, default=None
+            Column in `adata_ref.var` containing gene identifiers.
+            If `None`, `adata_ref.var_names` are used.
+        ref_raw_counts_layer : str or None, default=None
+            Layer containing raw counts. If `None`, raw counts are expected in
+            `adata.X`.
         cell_type_key : str or None, default=None
             Column in `sdata.tables[tables_key].obs` containing cell-type labels. If provided,
             this column is used for `fraction_heterotypic_overlap` and to infer ovrlpy
@@ -498,6 +506,8 @@ class SegTraQ:
             label_transfer_result = self.run_label_transfer(
                 adata_ref=adata_ref,
                 ref_cell_type=ref_cell_type,
+                ref_gene_key=ref_gene_key,
+                ref_raw_counts_layer=ref_raw_counts_layer,
                 **label_transfer_kwargs,
             )
 
@@ -683,6 +693,8 @@ class SegTraQ:
         *,
         adata_ref: AnnData | None = None,
         ref_cell_type: str | None = None,
+        ref_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
         markers: dict[str, dict[str, list[str]]] | None = None,
         cell_type_key: str | None = None,
         inplace: bool = True,
@@ -718,6 +730,12 @@ class SegTraQ:
         ref_cell_type : str or None, default=None
             Column in `adata_ref.obs` containing reference cell-type labels.
             Required if `cell_type_key=None` or `markers=None`.
+        ref_gene_key : str or None, default=None
+            Column in `adata_ref.var` containing gene identifiers.
+            If `None`, `adata_ref.var_names` are used.
+        ref_raw_counts_layer : str or None, default=None
+            Layer containing raw counts. If `None`, raw counts are expected in
+            `adata.X`.
         markers : dict or None, default=None
             Dictionary of marker genes in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
@@ -755,12 +773,17 @@ class SegTraQ:
             `"marker_purity"`, `"neighbor_contamination"`, and
             `"mutually_exclusive_coexpression_rate"`.
         """
-        label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
+        label_transfer_kwargs = (
+            {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
+        )
         markers_from_reference_kwargs = (
-            {} if markers_from_reference_kwargs is None else dict(markers_from_reference_kwargs)
+            {} if markers_from_reference_kwargs is None
+            else dict(markers_from_reference_kwargs)
         )
         purity_kwargs = {} if purity_kwargs is None else dict(purity_kwargs)
-        contamination_kwargs = {} if contamination_kwargs is None else dict(contamination_kwargs)
+        contamination_kwargs = (
+            {} if contamination_kwargs is None else dict(contamination_kwargs)
+        )
         mecr_kwargs = {} if mecr_kwargs is None else dict(mecr_kwargs)
 
         label_transfer_result = None
@@ -769,10 +792,16 @@ class SegTraQ:
 
         if needs_reference:
             if adata_ref is None:
-                raise ValueError("`adata_ref` is required when `cell_type_key=None` or `markers=None`.")
+                raise ValueError(
+                    "`adata_ref` is required when "
+                    "`cell_type_key=None` or `markers=None`."
+                )
 
             if ref_cell_type is None:
-                raise ValueError("`ref_cell_type` is required when `cell_type_key=None` or `markers=None`.")
+                raise ValueError(
+                    "`ref_cell_type` is required when "
+                    "`cell_type_key=None` or `markers=None`."
+                )
 
         if cell_type_key is None:
             cell_type_key = "transferred_cell_type"
@@ -783,6 +812,8 @@ class SegTraQ:
             label_transfer_result = self.run_label_transfer(
                 adata_ref=adata_ref,
                 ref_cell_type=ref_cell_type,
+                ref_gene_key=ref_gene_key,
+                ref_raw_counts_layer=ref_raw_counts_layer,
                 **label_transfer_kwargs,
             )
 
@@ -790,6 +821,8 @@ class SegTraQ:
             markers = self.markers_from_reference(
                 adata=adata_ref,
                 ref_cell_type=ref_cell_type,
+                ref_gene_key=ref_gene_key,
+                ref_raw_counts_layer=ref_raw_counts_layer,
                 **markers_from_reference_kwargs,
             )
 
@@ -804,11 +837,13 @@ class SegTraQ:
             **purity_kwargs,
         )
 
-        per_cell_cont_df, cont_mat_df, cont_bin_df = self.sp.neighbor_contamination(
-            cell_type_key=cell_type_key,
-            markers=markers,
-            inplace=cont_inplace,
-            **contamination_kwargs,
+        per_cell_cont_df, cont_frac_df, cont_count_df = (
+            self.sp.neighbor_contamination(
+                cell_type_key=cell_type_key,
+                markers=markers,
+                inplace=cont_inplace,
+                **contamination_kwargs,
+            )
         )
 
         mecr_df = self.sp.mutually_exclusive_coexpression_rate(
@@ -826,11 +861,12 @@ class SegTraQ:
             "marker_purity": purity_df,
             "neighbor_contamination": {
                 "per_cell": per_cell_cont_df,
-                "matrix": cont_mat_df,
-                "binary_matrix": cont_bin_df,
+                "fraction_mat": cont_frac_df,
+                "count_mat": cont_count_df,
             },
             "mutually_exclusive_coexpression_rate": mecr_df,
         }
+
 
     def run_point_statistics(
         self,
@@ -958,7 +994,9 @@ class SegTraQ:
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=self.tables_gene_key)
 
-        sc_genes = _get_genes(adata=adata, gene_key=ref_gene_key)
+        # copies gene identifiers into var_names and makes them unique (if needed) 
+        adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
+        sc_genes = adata.var_names
 
         mask = sc_genes.isin(sp_genes)
         if mask.sum() == 0:

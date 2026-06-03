@@ -364,7 +364,7 @@ def _get_genes(
         genes = pd.Index(adata.var[gene_key].values)
 
     if genes.duplicated().any():
-        raise ValueError(f"Gene identifiers in are not unique.")
+        raise ValueError("Gene identifiers are not unique.")
 
     return genes
 
@@ -373,37 +373,28 @@ def _make_ref_genes_unique(
     ref_gene_key: str | None = None,
 ) -> AnnData:
     """
-    Ensure gene identifiers are unique in the AnnData object.
+    Ensure gene identifiers used as var_names are unique.
 
-    If `ref_gene_key is None`, makes `adata_ref.var_names` unique in place.
-    If `ref_gene_key` is provided, drops duplicated genes, keeping the first.
+    If `ref_gene_key` is provided, use `adata_ref.var[ref_gene_key]`
+    as `var_names`. Duplicate identifiers are made unique using
+    `var_names_make_unique()`.
     """
     adata_ref = adata_ref.copy()
 
-    if ref_gene_key is None:
-        if not adata_ref.var_names.is_unique:
-            warnings.warn(
-                "`adata_ref.var_names` are not unique. Making them unique with "
-                "`adata_ref.var_names_make_unique()`.",
-                UserWarning,
-            )
-            adata_ref.var_names_make_unique()
-        return adata_ref
+    if ref_gene_key is not None:
+        if ref_gene_key not in adata_ref.var.columns:
+            raise KeyError(f"'{ref_gene_key}' not found in `adata_ref.var`.")
 
-    if ref_gene_key not in adata_ref.var.columns:
-        raise KeyError(f"'{ref_gene_key}' not found in `adata_ref.var`.")
+        adata_ref.var_names = adata_ref.var[ref_gene_key].astype(str)
 
-    genes = pd.Index(adata_ref.var[ref_gene_key].values)
-
-    if genes.duplicated().any():
-        n_dup = genes.duplicated().sum()
+    if not adata_ref.var_names.is_unique:
         warnings.warn(
-            f"`adata_ref.var[{ref_gene_key!r}]` contains {n_dup} duplicated entries. "
-            "Dropping duplicate genes, keeping the first occurrence.",
+            "Gene identifiers are not unique. Making them unique with "
+            "`adata_ref.var_names_make_unique()`.",
             UserWarning,
+            stacklevel=2,
         )
-        keep = ~genes.duplicated()
-        adata_ref = adata_ref[:, keep].copy()
+        adata_ref.var_names_make_unique()
 
     return adata_ref
 
@@ -499,6 +490,7 @@ def run_label_transfer(
         `tables_cell_id_key`, `cell_type_key`, and `"pearson_score"`.
         If `inplace=True`, modifies `sdata` in place and returns `None`.
     """
+    # copies gene identifiers into var_names and makes them unique (if needed)
     adata_ref = _make_ref_genes_unique(adata_ref, ref_gene_key=ref_gene_key)
 
     if ref_cell_type not in adata_ref.obs.columns:
@@ -549,7 +541,7 @@ def run_label_transfer(
     adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
     adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer)
 
-    genes = _get_genes(adata_ref, ref_gene_key)
+    genes = adata_ref.var_names
 
     norm_log_counts = _to_ndarray(adata_ref.layers[NORM_LOG_LAYER])
     celltypes = adata_ref.obs[ref_cell_type]
@@ -868,10 +860,11 @@ def markers_from_reference(
         A dictionary mapping each cell type to its positive and negative markers:
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
+    # copies gene identifiers into var_names and makes them unique (if needed)
     adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
 
     # getting gene names and mapping to indices for later use
-    var_names = _get_genes(adata, ref_gene_key)
+    var_names = adata.var_names
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # raw counts for expression fraction computation (must be before normalization)
@@ -889,6 +882,7 @@ def markers_from_reference(
 
     # Cell counts per type -> filter rare cell types from pairwise contrasts
     cell_counts = ctypes.value_counts().to_dict()
+
     usable_celltypes = [ct for ct in types if cell_counts.get(ct, 0) >= min_cells_per_celltype]
     n_celltypes = len(usable_celltypes)
     if n_celltypes < 2:
@@ -907,6 +901,7 @@ def markers_from_reference(
     for ct in usable_celltypes:
         mask_ct = ctypes == ct
         X_ct = counts[mask_ct]
+
         if sparse.issparse(X_ct):
             frac = X_ct.getnnz(axis=0) / X_ct.shape[0]
         else:
