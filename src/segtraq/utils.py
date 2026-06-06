@@ -368,6 +368,7 @@ def _get_genes(
 
     return genes
 
+
 def _make_ref_genes_unique(
     adata_ref: AnnData,
     ref_gene_key: str | None = None,
@@ -389,14 +390,14 @@ def _make_ref_genes_unique(
 
     if not adata_ref.var_names.is_unique:
         warnings.warn(
-            "Gene identifiers are not unique. Making them unique with "
-            "`adata_ref.var_names_make_unique()`.",
+            "Gene identifiers are not unique. Making them unique with `adata_ref.var_names_make_unique()`.",
             UserWarning,
             stacklevel=2,
         )
         adata_ref.var_names_make_unique()
 
     return adata_ref
+
 
 def run_label_transfer(
     sdata,
