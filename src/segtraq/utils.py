@@ -260,7 +260,7 @@ def _assign_celltype_by_pearson(
     )
 
 
-def _get_count_matrix(adata, layer: str | None = None):
+def _get_count_matrix(adata, layer: str | None = None, layer_arg: str | None = None):
     """Return raw count matrix from `adata.layers[layer]` or `adata.X`.
 
     Parameters
@@ -269,12 +269,15 @@ def _get_count_matrix(adata, layer: str | None = None):
         AnnData object containing count data.
     layer : str or None, default=None
         Layer containing raw counts. If `None`, counts are expected in `adata.X`.
+    layer_arg : str or None, default=None
+        Name of the parameter used to specify the layer (for error messages). If `None`, defaults to "raw_layer".
 
     Returns
     -------
     scipy.sparse matrix or numpy.ndarray
         Raw count matrix.
     """
+    layer_arg = "raw_layer" if layer_arg is None else layer_arg
     if layer is not None:
         if layer not in adata.layers:
             raise KeyError(f"Layer {layer!r} not found in `adata.layers`.")
@@ -287,7 +290,9 @@ def _get_count_matrix(adata, layer: str | None = None):
     if not _looks_like_counts(X):
         raise ValueError(
             f"Expected raw count data in `{source}`, but the selected matrix "
-            "does not look like non-negative integer counts."
+            "does not look like non-negative integer counts. "
+            f"You can set the layer containing raw counts with the `{layer_arg}` parameter "
+            f"(available layers: {list(adata.layers.keys())})."
         )
 
     return X
@@ -297,6 +302,7 @@ def _get_norm_log(
     adata: AnnData,
     layer: str | None = None,
     target_sum: float = 1e4,
+    layer_arg: str | None = None,
 ) -> str:
     """
     Ensure `adata.layers[NORM_LOG_LAYER]` exists and return its key.
@@ -313,6 +319,8 @@ def _get_norm_log(
         Source of raw counts. None → use `.X`.
     target_sum : float
         Passed to `sc.pp.normalize_total`.
+    layer_arg : str or None
+        Name of the parameter used to specify the layer (for error messages). If `None`, defaults to "raw_layer".
 
     Returns
     -------
@@ -325,7 +333,7 @@ def _get_norm_log(
     if adata.is_view:
         adata = adata.copy()
 
-    raw = _get_count_matrix(adata, layer=layer)  # validates integer counts
+    raw = _get_count_matrix(adata, layer=layer, layer_arg=layer_arg)  # validates integer counts
 
     # Work on a temporary AnnData so sc.pp.* don't touch .X in place
     tmp = AnnData(X=raw.copy())
@@ -539,8 +547,8 @@ def run_label_transfer(
 
     # getting the normalized and log-transformed data into adata_ref and adata_q,
     # stored in a namespaced layer to avoid conflicts
-    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
-    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer)
+    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
+    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer, layer_arg="tables_raw_counts_layer")
 
     genes = adata_ref.var_names
 
@@ -869,11 +877,11 @@ def markers_from_reference(
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # raw counts for expression fraction computation (must be before normalization)
-    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer)
+    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
 
     # applying normalization and log1p to get data ready for DE/AUC
     # stored in X directly, since adata was copied previously
-    adata = _get_norm_log(adata, layer=ref_raw_counts_layer)
+    adata = _get_norm_log(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
     adata.X = adata.layers[NORM_LOG_LAYER]
 
     ctypes = pd.Categorical(adata.obs[ref_cell_type])
@@ -1568,7 +1576,9 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
 
-            _check_if_raw = _get_count_matrix(sdata.tables[tables_key], tables_raw_counts_layer)
+            _check_if_raw = _get_count_matrix(
+                sdata.tables[tables_key], tables_raw_counts_layer, layer_arg="tables_raw_counts_layer"
+            )
 
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
             "You can set them like this: \n"
