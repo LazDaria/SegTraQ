@@ -1645,7 +1645,7 @@ def validate_spatialdata(
                 )
 
             # check that gene names in the table are compatible with those in the points
-            genes_in_points = set(points_df[points_gene_key].unique())  # faster
+            genes_in_points = set(points_df[points_gene_key].unique())
             genes_in_table = set(_get_genes(table, tables_gene_key))
             common_genes = genes_in_points & genes_in_table
             if len(common_genes) == 0:
