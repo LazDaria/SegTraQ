@@ -24,6 +24,7 @@ DEFAULT_FILTER_KWARGS = {
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     ),
     "control_genes": (),
     "inplace": True,
