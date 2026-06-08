@@ -4,7 +4,7 @@ import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
 from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
-from ..utils import _get_pca_and_neighbors
+from ..utils import _get_pca_and_neighbors, merge_into_uns
 from .utils import (
     _cluster_connectedness,
     ari_mean,
@@ -131,7 +131,7 @@ def cluster_connectedness(
                 best_distance = float(distance_val)
 
     if inplace:
-        sdata.tables[tables_key].uns["cluster_connectedness"] = best_distance
+        merge_into_uns(sdata, tables_key=tables_key, updates={"cluster_connectedness": best_distance})
 
     return best_distance
 
@@ -218,7 +218,7 @@ def silhouette_score(
 
             # handle inplace within the branch and return early, avoiding fall-through
             if inplace:
-                sdata.tables[tables_key].uns[key] = best_silhouette_score
+                merge_into_uns(sdata, tables_key=tables_key, updates={key: best_silhouette_score})
             return best_silhouette_score
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
@@ -257,7 +257,7 @@ def silhouette_score(
                     best_silhouette_score = float(silhouette_avg)
 
     if inplace and key is not None:
-        sdata.tables[tables_key].uns[key] = best_silhouette_score
+        merge_into_uns(sdata, tables_key=tables_key, updates={key: best_silhouette_score})
 
     return best_silhouette_score
 
@@ -319,7 +319,7 @@ def purity(
     mean_purity = float(purity_mean(purity_matrix))
 
     if inplace:
-        sdata.tables[tables_key].uns["mean_purity"] = mean_purity
+        merge_into_uns(sdata, tables_key=tables_key, updates={"mean_purity": mean_purity})
 
     return mean_purity
 
@@ -382,6 +382,6 @@ def adjusted_rand_index(
     mean_ari = float(ari_mean(pairwise_aris))
 
     if inplace:
-        sdata.tables[tables_key].uns["mean_ari"] = mean_ari
+        merge_into_uns(sdata, tables_key=tables_key, updates={"mean_ari": mean_ari})
 
     return mean_ari
