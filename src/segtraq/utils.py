@@ -2157,6 +2157,7 @@ def _filter_control_and_low_quality_transcripts(
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     )
         Control prefixes to identify control probes in gene names.
         Transcripts with gene names starting with any of these prefixes will be considered
