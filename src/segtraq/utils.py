@@ -527,6 +527,8 @@ def run_label_transfer(
             points_gene_key=points_gene_key,
             tables_key=tables_key,
         )
+        # refetching the table after modification
+        tbl = sdata.tables[tables_key]
 
     qc_range = {
         "transcript_count": (tx_min, tx_max),
@@ -556,7 +558,7 @@ def run_label_transfer(
 
     norm_log_counts_df = pd.DataFrame(norm_log_counts, columns=genes)
     norm_log_counts_df["celltype"] = celltypes.values
-    ref_mean_df = norm_log_counts_df.groupby("celltype").mean()
+    ref_mean_df = norm_log_counts_df.groupby("celltype", observed=True).mean()
 
     genes_to_use = None
 
@@ -592,6 +594,7 @@ def run_label_transfer(
     )
 
     out = ct_corr.rename(columns={"transferred_cell_type": cell_type_key})
+    out[cell_type_key] = out[cell_type_key].astype("category")
 
     if inplace:
         merge_into_obs(
@@ -601,15 +604,19 @@ def run_label_transfer(
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
-        tbl.obs[cell_type_key] = tbl.obs[cell_type_key].astype("category")
         return None
 
     return out
 
 
 def merge_into_obs(
-    sdata, tables_key, df_to_merge: pd.DataFrame, tables_cell_id_key: str, df_cell_id_key: str, fillna_cols=None
-):
+    sdata,
+    tables_key: str,
+    df_to_merge: pd.DataFrame,
+    tables_cell_id_key: str,
+    df_cell_id_key: str,
+    fillna_cols=None,
+) -> None:
     """
     Left-join df_to_merge into sdata.tables[tables_key].obs without resetting the index
     and without creating duplicate key columns.
@@ -617,7 +624,8 @@ def merge_into_obs(
     - Uses obs[tables_cell_id_key] as the join key
     - Drops overlapping columns on the right before joining
     """
-    obs = sdata.tables[tables_key].obs
+    table = sdata.tables[tables_key].copy()
+    obs = table.obs
 
     # Temporarily clear the index name to avoid pandas ambiguity when
     # tables_cell_id_key is both a column and the index name
@@ -626,14 +634,12 @@ def merge_into_obs(
 
     # Build right indexed by the join key
     right = df_to_merge.set_index(df_cell_id_key, drop=True)
-
     # Drop overlapping columns from obs to avoid duplicates
     overlapping_cols = [c for c in right.columns if c in obs.columns]
     if overlapping_cols:
         obs = obs.drop(columns=overlapping_cols)
 
     joined = obs.join(right, on=tables_cell_id_key, how="left")
-
     # Restore the original index name
     joined.index.name = original_index_name
 
@@ -643,20 +649,55 @@ def merge_into_obs(
             if c in joined.columns:
                 joined[c] = joined[c].fillna(0)
 
-    sdata.tables[tables_key].obs = joined
+    table.obs = joined
+    sdata.tables[tables_key] = table
 
 
-def merge_into_var(sdata, tables_key, df_to_merge):
-    var = sdata.tables[tables_key].var
+def merge_into_var(
+    sdata,
+    tables_key: str,
+    df_to_merge: pd.DataFrame,
+) -> None:
+    """
+    Left-join df_to_merge into sdata.tables[tables_key].var by index.
+    Drops overlapping columns before joining to avoid duplicates.
+    """
+    table = sdata.tables[tables_key].copy()
+    var = table.var
 
     overlapping = [c for c in df_to_merge.columns if c in var.columns]
-
     if overlapping:
         var = var.drop(columns=overlapping)
 
-    df = var.merge(df_to_merge, left_index=True, right_index=True, how="left")
+    table.var = var.merge(df_to_merge, left_index=True, right_index=True, how="left")
+    sdata.tables[tables_key] = table
 
-    sdata.tables[tables_key].var = df
+
+def merge_into_uns(
+    sdata,
+    tables_key: str,
+    updates: dict,
+    overwrite: bool = True,
+) -> None:
+    """
+    Merge a dict of key-value pairs into sdata.tables[tables_key].uns.
+
+    Parameters
+    ----------
+    updates : dict
+        Key-value pairs to write into uns.
+    overwrite : bool
+        If False, existing keys are left untouched. Default is True.
+    """
+    table = sdata.tables[tables_key].copy()
+
+    if overwrite:
+        table.uns.update(updates)
+    else:
+        for k, v in updates.items():
+            table.uns.setdefault(k, v)
+
+    sdata.tables[tables_key] = table
 
 
 def _pairwise_auc(
