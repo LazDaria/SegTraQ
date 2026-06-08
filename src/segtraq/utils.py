@@ -260,7 +260,7 @@ def _assign_celltype_by_pearson(
     )
 
 
-def _get_count_matrix(adata, layer: str | None = None):
+def _get_count_matrix(adata, layer: str | None = None, layer_arg: str = "raw_layer"):
     """Return raw count matrix from `adata.layers[layer]` or `adata.X`.
 
     Parameters
@@ -269,6 +269,8 @@ def _get_count_matrix(adata, layer: str | None = None):
         AnnData object containing count data.
     layer : str or None, default=None
         Layer containing raw counts. If `None`, counts are expected in `adata.X`.
+    layer_arg : str, default="raw_layer"
+        Name of the parameter used to specify the layer (for error messages).
 
     Returns
     -------
@@ -287,7 +289,9 @@ def _get_count_matrix(adata, layer: str | None = None):
     if not _looks_like_counts(X):
         raise ValueError(
             f"Expected raw count data in `{source}`, but the selected matrix "
-            "does not look like non-negative integer counts."
+            "does not look like non-negative integer counts. "
+            f"You can set the layer containing raw counts with the `{layer_arg}` parameter "
+            f"(available layers: {list(adata.layers.keys())})."
         )
 
     return X
@@ -297,6 +301,7 @@ def _get_norm_log(
     adata: AnnData,
     layer: str | None = None,
     target_sum: float = 1e4,
+    layer_arg: str = "raw_layer",
 ) -> str:
     """
     Ensure `adata.layers[NORM_LOG_LAYER]` exists and return its key.
@@ -313,6 +318,8 @@ def _get_norm_log(
         Source of raw counts. None → use `.X`.
     target_sum : float
         Passed to `sc.pp.normalize_total`.
+    layer_arg : str
+        Name of the parameter used to specify the layer (for error messages).
 
     Returns
     -------
@@ -325,7 +332,7 @@ def _get_norm_log(
     if adata.is_view:
         adata = adata.copy()
 
-    raw = _get_count_matrix(adata, layer=layer)  # validates integer counts
+    raw = _get_count_matrix(adata, layer=layer, layer_arg=layer_arg)  # validates integer counts
 
     # Work on a temporary AnnData so sc.pp.* don't touch .X in place
     tmp = AnnData(X=raw.copy())
@@ -368,6 +375,7 @@ def _get_genes(
 
     return genes
 
+
 def _make_ref_genes_unique(
     adata_ref: AnnData,
     ref_gene_key: str | None = None,
@@ -389,14 +397,14 @@ def _make_ref_genes_unique(
 
     if not adata_ref.var_names.is_unique:
         warnings.warn(
-            "Gene identifiers are not unique. Making them unique with "
-            "`adata_ref.var_names_make_unique()`.",
+            "Gene identifiers are not unique. Making them unique with `adata_ref.var_names_make_unique()`.",
             UserWarning,
             stacklevel=2,
         )
         adata_ref.var_names_make_unique()
 
     return adata_ref
+
 
 def run_label_transfer(
     sdata,
@@ -538,8 +546,8 @@ def run_label_transfer(
 
     # getting the normalized and log-transformed data into adata_ref and adata_q,
     # stored in a namespaced layer to avoid conflicts
-    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
-    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer)
+    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
+    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer, layer_arg="tables_raw_counts_layer")
 
     genes = adata_ref.var_names
 
@@ -868,11 +876,11 @@ def markers_from_reference(
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # raw counts for expression fraction computation (must be before normalization)
-    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer)
+    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
 
     # applying normalization and log1p to get data ready for DE/AUC
     # stored in X directly, since adata was copied previously
-    adata = _get_norm_log(adata, layer=ref_raw_counts_layer)
+    adata = _get_norm_log(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
     adata.X = adata.layers[NORM_LOG_LAYER]
 
     ctypes = pd.Categorical(adata.obs[ref_cell_type])
@@ -1567,7 +1575,9 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
 
-            _check_if_raw = _get_count_matrix(sdata.tables[tables_key], tables_raw_counts_layer)
+            _check_if_raw = _get_count_matrix(
+                sdata.tables[tables_key], tables_raw_counts_layer, layer_arg="tables_raw_counts_layer"
+            )
 
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
             "You can set them like this: \n"
@@ -1635,7 +1645,7 @@ def validate_spatialdata(
                 )
 
             # check that gene names in the table are compatible with those in the points
-            genes_in_points = set(points_df[points_gene_key].unique())  # faster
+            genes_in_points = set(points_df[points_gene_key].unique())
             genes_in_table = set(_get_genes(table, tables_gene_key))
             common_genes = genes_in_points & genes_in_table
             if len(common_genes) == 0:
@@ -2147,6 +2157,7 @@ def _filter_control_and_low_quality_transcripts(
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     )
         Control prefixes to identify control probes in gene names.
         Transcripts with gene names starting with any of these prefixes will be considered

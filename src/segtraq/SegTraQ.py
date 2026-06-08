@@ -24,6 +24,7 @@ DEFAULT_FILTER_KWARGS = {
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     ),
     "control_genes": (),
     "inplace": True,
@@ -773,17 +774,12 @@ class SegTraQ:
             `"marker_purity"`, `"neighbor_contamination"`, and
             `"mutually_exclusive_coexpression_rate"`.
         """
-        label_transfer_kwargs = (
-            {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
-        )
+        label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
         markers_from_reference_kwargs = (
-            {} if markers_from_reference_kwargs is None
-            else dict(markers_from_reference_kwargs)
+            {} if markers_from_reference_kwargs is None else dict(markers_from_reference_kwargs)
         )
         purity_kwargs = {} if purity_kwargs is None else dict(purity_kwargs)
-        contamination_kwargs = (
-            {} if contamination_kwargs is None else dict(contamination_kwargs)
-        )
+        contamination_kwargs = {} if contamination_kwargs is None else dict(contamination_kwargs)
         mecr_kwargs = {} if mecr_kwargs is None else dict(mecr_kwargs)
 
         label_transfer_result = None
@@ -792,16 +788,10 @@ class SegTraQ:
 
         if needs_reference:
             if adata_ref is None:
-                raise ValueError(
-                    "`adata_ref` is required when "
-                    "`cell_type_key=None` or `markers=None`."
-                )
+                raise ValueError("`adata_ref` is required when `cell_type_key=None` or `markers=None`.")
 
             if ref_cell_type is None:
-                raise ValueError(
-                    "`ref_cell_type` is required when "
-                    "`cell_type_key=None` or `markers=None`."
-                )
+                raise ValueError("`ref_cell_type` is required when `cell_type_key=None` or `markers=None`.")
 
         if cell_type_key is None:
             cell_type_key = "transferred_cell_type"
@@ -837,13 +827,11 @@ class SegTraQ:
             **purity_kwargs,
         )
 
-        per_cell_cont_df, cont_frac_df, cont_count_df = (
-            self.sp.neighbor_contamination(
-                cell_type_key=cell_type_key,
-                markers=markers,
-                inplace=cont_inplace,
-                **contamination_kwargs,
-            )
+        per_cell_cont_df, cont_frac_df, cont_count_df = self.sp.neighbor_contamination(
+            cell_type_key=cell_type_key,
+            markers=markers,
+            inplace=cont_inplace,
+            **contamination_kwargs,
         )
 
         mecr_df = self.sp.mutually_exclusive_coexpression_rate(
@@ -866,7 +854,6 @@ class SegTraQ:
             },
             "mutually_exclusive_coexpression_rate": mecr_df,
         }
-
 
     def run_point_statistics(
         self,
@@ -994,7 +981,7 @@ class SegTraQ:
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=self.tables_gene_key)
 
-        # copies gene identifiers into var_names and makes them unique (if needed) 
+        # copies gene identifiers into var_names and makes them unique (if needed)
         adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
         sc_genes = adata.var_names
 

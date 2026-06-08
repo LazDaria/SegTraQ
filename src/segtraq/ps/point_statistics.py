@@ -196,7 +196,7 @@ def percentage_transcripts_in_compartments(
 
     # annotate best nucleus id per point (based on its assigned cell)
     pts = pts.merge(
-        cell_to_nuc.rename(columns={tables_cell_id_key: points_cell_id_key}),
+        cell_to_nuc.rename(columns={tables_cell_id_key: points_cell_id_key}).reset_index(drop=True),
         on=points_cell_id_key,
         how="left",
     )
@@ -471,7 +471,7 @@ def distance_to_centroid(
     df_total[f"distance_to_{centroid_region}_centroid_{feature}"] = np.sqrt((dxy * dxy).sum(axis=1))
 
     # add cell area + normalize
-    area_df = tbl.obs[[tables_cell_id_key, tables_area_key]]
+    area_df = tbl.obs[[tables_cell_id_key, tables_area_key]].reset_index(drop=True)
     df_total = df_total.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
 
     df_total[f"distance_to_{centroid_region}_centroid_norm_{feature}"] = df_total[
@@ -727,7 +727,7 @@ def distance_to_membrane(
     )
 
     # add cell area and normalize by cell length scale sqrt(cell_area), independent of membrane_region
-    area_df = tbl.obs[[tables_cell_id_key, tables_area_key]]
+    area_df = tbl.obs[[tables_cell_id_key, tables_area_key]].reset_index(drop=True)
     mean_df = mean_df.merge(area_df, left_on=points_cell_id_key, right_on=tables_cell_id_key, how="left")
 
     mean_df[f"distance_to_{membrane_region}_membrane_norm_{feature}"] = mean_df[
