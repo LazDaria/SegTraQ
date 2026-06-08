@@ -535,7 +535,7 @@ def similarity_nucleus_cytoplasm(
         )
 
     sim_df = pd.DataFrame(rows)
-
+    match_df = match_df.reset_index(drop=True)
     out = match_df.merge(sim_df, on=id_key, how="left")
 
     if inplace:
