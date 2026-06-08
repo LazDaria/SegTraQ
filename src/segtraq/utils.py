@@ -260,7 +260,7 @@ def _assign_celltype_by_pearson(
     )
 
 
-def _get_count_matrix(adata, layer: str | None = None, layer_arg: str | None = None):
+def _get_count_matrix(adata, layer: str | None = None, layer_arg: str = "raw_layer"):
     """Return raw count matrix from `adata.layers[layer]` or `adata.X`.
 
     Parameters
@@ -269,15 +269,14 @@ def _get_count_matrix(adata, layer: str | None = None, layer_arg: str | None = N
         AnnData object containing count data.
     layer : str or None, default=None
         Layer containing raw counts. If `None`, counts are expected in `adata.X`.
-    layer_arg : str or None, default=None
-        Name of the parameter used to specify the layer (for error messages). If `None`, defaults to "raw_layer".
+    layer_arg : str, default="raw_layer"
+        Name of the parameter used to specify the layer (for error messages).
 
     Returns
     -------
     scipy.sparse matrix or numpy.ndarray
         Raw count matrix.
     """
-    layer_arg = "raw_layer" if layer_arg is None else layer_arg
     if layer is not None:
         if layer not in adata.layers:
             raise KeyError(f"Layer {layer!r} not found in `adata.layers`.")
@@ -302,7 +301,7 @@ def _get_norm_log(
     adata: AnnData,
     layer: str | None = None,
     target_sum: float = 1e4,
-    layer_arg: str | None = None,
+    layer_arg: str = "raw_layer",
 ) -> str:
     """
     Ensure `adata.layers[NORM_LOG_LAYER]` exists and return its key.
@@ -319,8 +318,8 @@ def _get_norm_log(
         Source of raw counts. None → use `.X`.
     target_sum : float
         Passed to `sc.pp.normalize_total`.
-    layer_arg : str or None
-        Name of the parameter used to specify the layer (for error messages). If `None`, defaults to "raw_layer".
+    layer_arg : str
+        Name of the parameter used to specify the layer (for error messages).
 
     Returns
     -------
