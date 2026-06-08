@@ -157,6 +157,9 @@ def percentage_transcripts_in_compartments(
             inplace=True,
         )
 
+    # refetching the table after modification
+    tbl = sdata.tables[tables_key]
+
     # map each cell_id to its best nucleus id
     cell_to_nuc = tbl.obs[[tables_cell_id_key, "nucleus_id"]].copy()
     cell_to_nuc = cell_to_nuc.dropna(subset=["nucleus_id"])
