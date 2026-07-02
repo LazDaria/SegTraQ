@@ -155,102 +155,76 @@ def neighbor_contamination(
     tables_gene_key: str | None = None,
     require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
-    uns_key: str = "contamination_counts_matrix",
-    uns_key_binary: str = "contamination_fraction_matrix",
     inplace: bool = True,
 ):
     """
-    Compute per-cell negative-marker contamination and directed c_src→c_tgt
-    contamination summaries.
+    Compute local negative-marker contamination per cell and per source-target
+    cell-type pair.
 
-    Per-cell outputs (written to .obs):
+    A gene is considered a locally relevant contamination marker for a target
+    cell if it is:
+        1. a negative marker of the target cell type, and
+        2. a positive marker of at least one neighboring source cell type.
+
+    If `require_neighbor_expression=True`, the gene must additionally be detected
+    in at least one neighboring cell of the corresponding source cell type.
+
+    Per-cell outputs (written to `adata.obs`):
         - contamination_counts:
-            Total transcripts in the focal cell that belong to genes that are
-            (i) negative markers of the focal cell type and
-            (ii) positive markers of at least one neighboring cell type.
-        - contamination_fraction:
-            For each such gene g, compute x_i(g) / (x_i(g) + mean_neighbor(g)),
-            averaged across genes (neighbors pooled across all neighbor types).
+            Total counts of locally relevant negative-marker genes in the focal cell.
 
-    Type x type outputs (written to .uns):
-        - uns_key:
-            A directed matrix with entries = mean over genes of
-            x_i(g) / (x_i(g) + mean_src(g)), aggregated across all contributing
-            (cell, gene) observations for (c_src, c_tgt).
-        - uns_key_binary:
-            A directed matrix with entries =
-            (# target cells of type c_tgt contaminated by c_src) / (# target cells of type c_tgt).
-            Here “contaminated by c_src” is binary per target cell: at least one
-            relevant gene (negative in target, positive in source) is detected in the
-            target cell and detected in at least one neighbor of type c_src.
+        - contamination_strength:
+            contamination_counts divided by the total transcript counts of the focal cell.
+            This estimates the fraction of assigned transcripts that correspond to
+            plausible local contamination.
 
-    Parameters
-    ----------
-    sdata : SpatialData-like
-        Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
-    cell_type_key : str
-        Column in the AnnData `.obs` with cell-type labels.
-    markers : dict
-        {cell_type: {"positive": list[str], "negative": list[str]}}.
-    tables_key : str, optional, default="table"
-        Key of the AnnData table in `sdata.tables`.
-    tables_raw_counts_layer : str | None, optional
-        Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts.
-        If a layer is specified, it must exist and contain count-like values.
-    tables_cell_id_key : str, optional, default="cell_id"
-        Column in the AnnData `.obs` with unique cell IDs.
-    tables_centroid_x_key : str or None, optional, default="x_centroid"
-        Column in the cell table with the x-coordinate of the cell centroid.
-    tables_centroid_y_key : str or None, optional, default="y_centroid"
-        Column in the cell table with the y-coordinate of the cell centroid.
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
-    require_neighbor_expression : bool, optional, default=True
-        If True, contamination is only counted when the relevant gene is
-        expressed in at least one neighboring cell of the source type.
-    neighbors_key : str, optional, default="spatial_connectivities"
-        Key in `adata.obsp` containing a cell x cell adjacency / connectivity
-        matrix that defines the spatial neighborhood.
-    uns_key : str, optional, default="contamination_counts_matrix"
-        Key in `.uns` under which the directed source → target mean contamination
-        fraction matrix is stored.
-    uns_key_binary : str, optional, default="contamination_fraction_matrix"
-        Key in `.uns` under which the directed source → target binary contamination
-        proportion matrix is stored.
-    inplace : bool, optional, default=True
-        If True, store per-cell contamination metrics in
-        `sdata.tables[tables_key].obs` and type-level matrices in `.uns`.
+    Source-target summaries (written to `adata.uns`):
+        - contamination_matrix:
+            Directed source-to-target matrix. Entry (c_src, c_tgt) is the fraction
+            of evaluable target cells of type c_tgt that contain at least one locally
+            relevant negative marker associated with source type c_src.
+
+        - contamination_strength_matrix:
+            Directed source-to-target matrix. Entry (c_src, c_tgt) is the mean
+            source-specific contamination strength across evaluable target cells
+            of type c_tgt with nonzero total counts.
+
+        - contamination_evaluable_cells_matrix:
+            Directed source-to-target matrix. Entry (c_src, c_tgt) is the number
+            of target cells for which contamination from source type c_src could
+            be evaluated.
 
     Returns
     -------
-    per_cell_df : pd.DataFrame
-        Per-cell contamination metrics, indexed by cell ID.
-    contamination_matrix_df : pd.DataFrame
-        Directed type x type mean contamination fraction matrix (c_src rows, c_tgt columns).
-        This matrix report the average strength of contamination from one cell type into another.
-    contamination_binary_df : pd.DataFrame
-        Directed type x type binary contamination proportion matrix (c_src rows, c_tgt columns).
-        This matrix reports what percentage of cells of a target type is contaminated by each source type.
+    per_cell_df : pandas.DataFrame
+        Per-cell contamination counts and contamination strength.
+
+    contamination_matrix_df : pandas.DataFrame
+        Source-target matrix with the fraction of evaluable target cells contaminated
+        by each source cell type.
+
+    contamination_strength_matrix_df : pandas.DataFrame
+        Source-target matrix with mean source-specific contamination strength.
+
+    contamination_evaluable_cells_matrix_df : pandas.DataFrame
+        Source-target matrix with the number of evaluable target cells per pair.
     """
+    contamination_matrix_key = "contamination_matrix"
+    contamination_strength_matrix_key = "contamination_strength_matrix"
+    contamination_evaluable_cells_matrix_key = "contamination_evaluable_cells_matrix"
 
-    # ----------------------------------------------------------------------
-    # Setup
-    # ----------------------------------------------------------------------
+    # load expression matrix and metadata
     adata = sdata.tables[tables_key]
+
     X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
-    X_dense = X.toarray() if hasattr(X, "toarray") else X
+    X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
-    var_index = _get_genes(
-        adata=adata,
-        gene_key=tables_gene_key,
-    )
-
+    var_index = _get_genes(adata=adata, gene_key=tables_gene_key)
     cell_types = np.asarray(adata.obs[cell_type_key])
-    n_cells = X.shape[0]
+    n_cells = X_dense.shape[0]
+    total_counts = np.asarray(X_dense.sum(axis=1)).ravel()
 
-    # Checking if neighborhood graph is present, else compute Delaunay triangulation
+    # compute neighborhood graph if missing
     if neighbors_key not in adata.obsp:
         warnings.warn(
             f"neighbors_key={neighbors_key} missing; computing Delaunay neighbors.",
@@ -258,9 +232,9 @@ def neighbor_contamination(
             stacklevel=2,
         )
         adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
-
         sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
-    # extract indices from the neighborhood graph
+
+    # extract neighbor indices
     G = adata.obsp[neighbors_key]
     if sparse.issparse(G):
         G = G.tocsr()
@@ -269,54 +243,45 @@ def neighbor_contamination(
         G = np.asarray(G)
         neighbor_indices = [np.where(G[i] > 0)[0] for i in range(n_cells)]
 
-    # Marker sets
+    # marker sets
     positive_sets = {ct: set(m.get("positive", [])) for ct, m in markers.items()}
     negative_sets = {ct: set(m.get("negative", [])) for ct, m in markers.items()}
 
-    # get the set of all cell types present in the anndata object
     all_cts = sorted({ct for ct in cell_types if not pd.isna(ct)})
 
-    # count the occurences of the cell types
-    tgt_totals = {ct: int(np.sum(cell_types == ct)) for ct in all_cts}
-
-    # ----------------------------------------------------------------------
-    # Precompute for each (c_src, c_tgt): negative(c_tgt) ∩ positive(c_src)
-    # ----------------------------------------------------------------------
+    # precompute relevant genes for each directed source-target pair:
+    # genes that are negative in the target and positive in the source
     type_pair_genes: dict[tuple[str, str], np.ndarray] = {}
 
     for c_tgt in all_cts:
         neg = negative_sets.get(c_tgt, set())
-        if not neg:
-            continue
+
         for c_src in all_cts:
-            pos = positive_sets.get(c_src, set())
-            genes_inter = list(neg & pos)
-            if not genes_inter:
+            genes = list(neg & positive_sets.get(c_src, set()))
+            if not genes:
                 continue
-            idx = var_index.get_indexer(genes_inter)
+
+            idx = var_index.get_indexer(genes)
             idx = idx[idx >= 0]
+
             if idx.size:
                 type_pair_genes[(c_src, c_tgt)] = idx
 
-    # ----------------------------------------------------------------------
-    # Accumulators
-    # ----------------------------------------------------------------------
-    number_cell = np.full(n_cells, np.nan, dtype=float)
-    sum_cell_frac = np.zeros(n_cells, dtype=float)
-    count_cell_genes = np.zeros(n_cells, dtype=int)
-    evaluable_cell = np.zeros(n_cells, dtype=bool)
+    # per-cell outputs
+    contamination_counts = np.full(n_cells, np.nan, dtype=float)
+    contamination_strength = np.full(n_cells, np.nan, dtype=float)
 
-    sum_pair = defaultdict(float)  # mean fraction numerator per (c_src, c_tgt)
-    count_pair = defaultdict(int)  # gene contributions per (c_src, c_tgt)
+    # source-target accumulators
+    pair_hit_cells = defaultdict(int)
+    pair_evaluable_cells = defaultdict(int)
+    pair_strength_sum = defaultdict(float)
 
-    contam_cells_hit = defaultdict(int)  # target cells hit by source (binary)
-
-    # ----------------------------------------------------------------------
-    # Loop over cells
-    # ----------------------------------------------------------------------
-    for i in range(n_cells):
-        c_tgt = cell_types[i]
+    # iterate over target cells.
+    for i, c_tgt in enumerate(cell_types):
         if pd.isna(c_tgt) or c_tgt not in negative_sets:
+            continue
+
+        if total_counts[i] == 0:
             continue
 
         nbs = neighbor_indices[i]
@@ -324,120 +289,107 @@ def neighbor_contamination(
             continue
 
         x_i = X_dense[i, :]
-        # get cells around the target cell
         nb_cts = cell_types[nbs]
 
-        # track per-cell genes already counted (per-cell metrics)
-        used_genes = set()
+        used_genes_cell = set()
+        pair_counts_this_cell = defaultdict(float)
 
-        # track which source types contaminate this target cell at least once
-        contaminated_by_src = set()
-
-        # mark cell as evaluable if at least one relevant local negative marker exists
-        cell_has_relevant_gene = False
-
+        # evaluate contamination separately for each neighboring source type
         for c_src in {ct for ct in nb_cts if not pd.isna(ct)}:
             pair = (c_src, c_tgt)
-            if pair not in type_pair_genes:
-                continue
-            # get gene indices for cell type pair
-            gene_idx = type_pair_genes[pair]
+            gene_idx = type_pair_genes.get(pair)
 
-            # neighbors of this source type
-            nb_src = nbs[nb_cts == c_src]
-            if len(nb_src) == 0:
+            if gene_idx is None:
                 continue
-            # get gene expression for the neighbours
+
+            nb_src = nbs[nb_cts == c_src]
             X_nb_src = X_dense[np.ix_(nb_src, gene_idx)]
 
-            # loop genes
+            valid_gene_idx = []
             for k, g_idx in enumerate(gene_idx):
-                x_nb_g = X_nb_src[:, k]
-                if require_neighbor_expression:
-                    mask_pos = x_nb_g > 0
-                    if not mask_pos.any():
-                        continue
-                    mean_src = x_nb_g[mask_pos].mean()
-                else:
-                    mean_src = x_nb_g.mean()
-
-                if not np.isfinite(mean_src) or mean_src <= 0:
+                # optionally require expression in at least one neighboring
+                # source cell
+                if require_neighbor_expression and not (X_nb_src[:, k] > 0).any():
                     continue
+                valid_gene_idx.append(g_idx)
 
-                # at least one valid local negative marker exists for this cell
-                cell_has_relevant_gene = True
+            if not valid_gene_idx:
+                continue
 
+            # at least one locally relevant marker exists, so the cell is evaluable
+            if np.isnan(contamination_counts[i]):
+                contamination_counts[i] = 0.0
+
+            for g_idx in valid_gene_idx:
                 x_i_g = x_i[g_idx]
-                denom_all = x_i_g + mean_src
-                if denom_all <= 0:
-                    continue
-                frac_g = x_i_g / denom_all
 
-                # pair stats: always update for evaluable genes, including clean zeros
-                sum_pair[pair] += frac_g
-                count_pair[pair] += 1
+                # source-specific counts are accumulated per source-target pair
+                pair_counts_this_cell[pair] += x_i_g
 
-                # per-cell stats: update once per gene per cell
-                if g_idx not in used_genes:
-                    number_cell[i] = 0.0 if np.isnan(number_cell[i]) else number_cell[i]
-                    number_cell[i] += x_i_g
-                    sum_cell_frac[i] += frac_g
-                    count_cell_genes[i] += 1
-                    used_genes.add(g_idx)
+                # per-cell counts should count each gene only once, even if the
+                # gene is relevant for multiple neighboring source types
+                if g_idx not in used_genes_cell:
+                    contamination_counts[i] += x_i_g
+                    used_genes_cell.add(g_idx)
 
-                # binary “this target cell is contaminated by this source type”
-                if x_i_g > 0:
-                    contaminated_by_src.add(c_src)
+        # per-cell contamination strength
+        if not np.isnan(contamination_counts[i]):
+            contamination_strength[i] = contamination_counts[i] / total_counts[i]
 
-        evaluable_cell[i] = cell_has_relevant_gene
-        if evaluable_cell[i] and np.isnan(number_cell[i]):
-            number_cell[i] = 0.0
+        # source-target summaries for this target cell
+        for pair, counts in pair_counts_this_cell.items():
+            pair_evaluable_cells[pair] += 1
 
-        # update per-(c_src, c_tgt) binary hit counts once per cell
-        for c_src in contaminated_by_src:
-            contam_cells_hit[(c_src, c_tgt)] += 1
+            if counts > 0:
+                pair_hit_cells[pair] += 1
 
-    # ----------------------------------------------------------------------
-    # Build per-cell output
-    # ----------------------------------------------------------------------
-    contamination_fraction = np.full(n_cells, np.nan, dtype=float)
-    mask_eval = evaluable_cell & (count_cell_genes > 0)
-    contamination_fraction[mask_eval] = sum_cell_frac[mask_eval] / count_cell_genes[mask_eval]
-    contamination_fraction[evaluable_cell & (count_cell_genes == 0)] = 0.0
+            source_strength = counts / total_counts[i]
+            pair_strength_sum[pair] += source_strength
 
     per_cell_df = pd.DataFrame(
         {
             tables_cell_id_key: adata.obs[tables_cell_id_key],
-            "contamination_counts": number_cell,
-            "contamination_fraction": contamination_fraction,
-        },
+            "contamination_counts": contamination_counts,
+            "contamination_strength": contamination_strength,
+        }
     )
 
-    # ----------------------------------------------------------------------
-    # Build contamination matrices contamination_matrix_df, contamination_binary_df
-    # ----------------------------------------------------------------------
-    ct_list = all_cts
-    idxmap = {ct: j for j, ct in enumerate(ct_list)}
+    # build source-target matrices
+    idxmap = {ct: i for i, ct in enumerate(all_cts)}
 
-    contamination_mat = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)
-    for (c_src, c_tgt), total in sum_pair.items():
-        n = count_pair[(c_src, c_tgt)]
-        if n > 0:
-            contamination_mat[idxmap[c_src], idxmap[c_tgt]] = total / n
+    contamination_mat = np.full((len(all_cts), len(all_cts)), np.nan, dtype=float)
+    strength_mat = np.full((len(all_cts), len(all_cts)), np.nan, dtype=float)
+    evaluable_mat = np.full((len(all_cts), len(all_cts)), np.nan, dtype=float)
 
-    contamination_matrix_df = pd.DataFrame(contamination_mat, index=ct_list, columns=ct_list)
+    for (c_src, c_tgt), n_eval in pair_evaluable_cells.items():
+        row = idxmap[c_src]
+        col = idxmap[c_tgt]
 
-    # binary target-normalized matrix
-    contam_bin = np.full((len(ct_list), len(ct_list)), np.nan, dtype=float)
-    for (c_src, c_tgt), hits in contam_cells_hit.items():
-        denom = tgt_totals.get(c_tgt, 0)
-        if denom > 0:
-            contam_bin[idxmap[c_src], idxmap[c_tgt]] = hits / denom
-    contamination_binary_df = pd.DataFrame(contam_bin, index=ct_list, columns=ct_list)
+        evaluable_mat[row, col] = n_eval
+        contamination_mat[row, col] = pair_hit_cells[(c_src, c_tgt)] / n_eval
 
-    # ----------------------------------------------------------------------
-    # Write to .obs and .uns
-    # ----------------------------------------------------------------------
+    for (c_src, c_tgt), total_strength in pair_strength_sum.items():
+        n = pair_evaluable_cells[(c_src, c_tgt)]
+        strength_mat[idxmap[c_src], idxmap[c_tgt]] = total_strength / n
+
+    contamination_matrix_df = pd.DataFrame(
+        contamination_mat,
+        index=all_cts,
+        columns=all_cts,
+    )
+
+    contamination_strength_matrix_df = pd.DataFrame(
+        strength_mat,
+        index=all_cts,
+        columns=all_cts,
+    )
+
+    contamination_evaluable_cells_matrix_df = pd.DataFrame(
+        evaluable_mat,
+        index=all_cts,
+        columns=all_cts,
+    )
+
     if inplace:
         merge_into_obs(
             sdata=sdata,
@@ -446,10 +398,17 @@ def neighbor_contamination(
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
-        sdata.tables[tables_key].uns[uns_key] = contamination_matrix_df
-        sdata.tables[tables_key].uns[uns_key_binary] = contamination_binary_df
 
-    return per_cell_df, contamination_matrix_df, contamination_binary_df
+        adata.uns[contamination_matrix_key] = contamination_matrix_df
+        adata.uns[contamination_strength_matrix_key] = contamination_strength_matrix_df
+        adata.uns[contamination_evaluable_cells_matrix_key] = contamination_evaluable_cells_matrix_df
+
+    return (
+        per_cell_df,
+        contamination_matrix_df,
+        contamination_strength_matrix_df,
+        contamination_evaluable_cells_matrix_df,
+    )
 
 
 def marker_purity(

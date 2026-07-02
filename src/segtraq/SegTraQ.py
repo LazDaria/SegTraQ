@@ -804,7 +804,7 @@ class SegTraQ:
             **purity_kwargs,
         )
 
-        per_cell_cont_df, cont_mat_df, cont_bin_df = self.sp.neighbor_contamination(
+        per_cell_cont_df, cont_strength_mat, cont_mat, cont_n = self.sp.neighbor_contamination(
             cell_type_key=cell_type_key,
             markers=markers,
             inplace=cont_inplace,
@@ -826,8 +826,9 @@ class SegTraQ:
             "marker_purity": purity_df,
             "neighbor_contamination": {
                 "per_cell": per_cell_cont_df,
-                "matrix": cont_mat_df,
-                "binary_matrix": cont_bin_df,
+                "contamination_strength_matrix": cont_strength_mat,
+                "contamination_matrix": cont_mat,
+                "contamination_evaluable_cells_matrix": cont_n,
             },
             "mutually_exclusive_coexpression_rate": mecr_df,
         }
@@ -1001,7 +1002,7 @@ class SegTraQ:
         ref_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = "raw",
         tx_min: float = 10.0,
-        tx_max: float = 2000.0,
+        tx_max: float = float("inf"),
         gn_min: float = 5.0,
         gn_max: float = np.inf,
         cell_type_key: str = "transferred_cell_type",
@@ -1574,8 +1575,6 @@ class _SPFacade:
         markers: dict[str, dict[str, list[str]]],
         require_neighbor_expression: bool = True,
         neighbors_key: str | None = "spatial_connectivities",
-        uns_key: str = "contamination_counts_matrix",
-        uns_key_binary: str = "contamination_fraction_matrix",
         inplace: bool = True,
     ):
         return sp.neighbor_contamination(
@@ -1590,8 +1589,6 @@ class _SPFacade:
             tables_raw_counts_layer=self._p.tables_raw_counts_layer,
             require_neighbor_expression=require_neighbor_expression,
             neighbors_key=neighbors_key,
-            uns_key=uns_key,
-            uns_key_binary=uns_key_binary,
             inplace=inplace,
         )
 
