@@ -6,7 +6,12 @@ import segtraq as st
 def test_neighbor_contamination_realdata_inplace_outputs(sdata_labeled, adata_ref):
     markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype")
 
-    per_cell_df, mat_df, str_df, n_eval_df,  = st.sp.neighbor_contamination(
+    (
+        per_cell_df,
+        mat_df,
+        str_df,
+        n_eval_df,
+    ) = st.sp.neighbor_contamination(
         sdata=sdata_labeled,
         cell_type_key="transferred_cell_type",
         markers=markers,

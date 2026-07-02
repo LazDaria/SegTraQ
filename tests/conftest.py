@@ -31,6 +31,10 @@ def test_sdata_new():
         target_coordinate_system="global",
     )
 
+    # to catch issues in any merging code, we have the index and a column contain the cell IDs
+    sdata_new.tables["table"].obs.index = sdata_new.tables["table"].obs["cell_id"].values
+    sdata_new.tables["table"].obs.index.name = "cell_id"
+
     # this is important, because the test object initially contains some duplicate nucleus_ids
     # by calling validate_spatialdata,
     # we ensure that these get resolved before continuing with the tests
@@ -109,6 +113,9 @@ def test_segtraq_obj(sdata_labeled):
     # in reality, sdata objects should rarely be this inconsistent
     # but this allows us to test that the segtraq object can still be created as long as the correct keys are provided
     sdata.tables["table"].obs = sdata.tables["table"].obs.rename(columns={"cell_id": "cell_id_2"})
+    # to catch issues in any merging code, we also make the index of the obs contain the cell IDs
+    sdata.tables["table"].obs.index = sdata.tables["table"].obs["cell_id_2"].values
+    sdata.tables["table"].obs.index.name = "cell_id_2"
     sdata.tables["table"].uns["spatialdata_attrs"]["instance_key"] = "cell_id_2"
     # creating a segtraq object
     return st.SegTraQ(

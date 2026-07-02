@@ -7,7 +7,7 @@ import squidpy as sq
 from scipy import sparse
 from scipy.stats import fisher_exact
 
-from ..utils import _get_count_matrix, _get_genes, merge_into_obs
+from ..utils import _get_count_matrix, _get_genes, merge_into_obs, merge_into_uns
 
 
 def mutually_exclusive_coexpression_rate(
@@ -398,10 +398,15 @@ def neighbor_contamination(
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
-
-        adata.uns[contamination_matrix_key] = contamination_matrix_df
-        adata.uns[contamination_strength_matrix_key] = contamination_strength_matrix_df
-        adata.uns[contamination_evaluable_cells_matrix_key] = contamination_evaluable_cells_matrix_df
+        merge_into_uns(
+            sdata,
+            tables_key=tables_key,
+            updates={
+                contamination_matrix_key: contamination_matrix_df,
+                contamination_strength_matrix_key: contamination_strength_matrix_df,
+                contamination_evaluable_cells_matrix_key: contamination_evaluable_cells_matrix_df,
+            },
+        )
 
     return (
         per_cell_df,

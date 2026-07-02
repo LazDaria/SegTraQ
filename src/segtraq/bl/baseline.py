@@ -1,3 +1,5 @@
+import warnings
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -5,7 +7,7 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from shapely.geometry import MultiPolygon, Polygon
 
-from ..utils import _is_background, merge_into_obs, merge_into_var
+from ..utils import _get_genes, _is_background, merge_into_obs, merge_into_uns, merge_into_var
 from .utils import count_polygons
 
 
@@ -30,7 +32,7 @@ def num_cells(sdata: sd.SpatialData, tables_key: str = "table", inplace: bool = 
     """
     num_cells = len(sdata.tables[tables_key])
     if inplace:
-        sdata.tables[tables_key].uns["num_cells"] = num_cells
+        merge_into_uns(sdata, tables_key=tables_key, updates={"num_cells": num_cells})
     return num_cells
 
 
@@ -60,7 +62,7 @@ def num_transcripts(
     points = points.compute() if hasattr(points, "compute") else points
     num_transcripts = len(points)
     if inplace:
-        sdata.tables[tables_key].uns["num_transcripts"] = num_transcripts
+        merge_into_uns(sdata, tables_key=tables_key, updates={"num_transcripts": num_transcripts})
 
     return num_transcripts
 
@@ -74,6 +76,8 @@ def num_genes(
 ) -> int:
     """
     Counts the number of unique genes in the given SpatialData object.
+    This checks both the `points` and `tables` attributes of the SpatialData object to
+    ensure that the gene information is consistent across both.
 
     Parameters
     ----------
@@ -93,13 +97,34 @@ def num_genes(
     int
         The number of unique genes found in the specified SpatialData object.
     """
+    # === in the points ===
     # converting from np.int64 to int for consistency
     points = sdata.points[points_key]
     points = points.compute() if hasattr(points, "compute") else points
-    num_genes = int(points[points_gene_key].nunique())
+    num_genes_points = int(points[points_gene_key].nunique())
+
+    # === in the tables ===
+    genes_adata = _get_genes(sdata.tables[tables_key])
+    num_genes_adata = len(genes_adata)
+
+    # check for consistency between layers
+    if num_genes_points != num_genes_adata:
+        genes_not_in_points = set(genes_adata) - set(points[points_gene_key].unique())
+        genes_not_in_adata = set(points[points_gene_key].unique()) - set(genes_adata)
+        genes_not_in_both = list(genes_not_in_points.union(genes_not_in_adata))
+        warnings.warn(
+            f"The number of genes differs between points ({num_genes_points}) and tables ({num_genes_adata}). "
+            f"Example genes that are missed: {genes_not_in_both[: min(5, len(genes_not_in_both))]}. "
+            f"If these are control probes, please make sure to include them in the SegTraQ constructor. "
+            "For example: SegTraQ(filter_kwargs={'control_prefixes': [...], 'control_genes': [...]}). "
+            f"Storing the number of genes from the points layer.",
+            stacklevel=2,
+        )
+
     if inplace:
-        sdata.tables[tables_key].uns["num_genes"] = num_genes
-    return num_genes
+        merge_into_uns(sdata, tables_key=tables_key, updates={"num_genes": num_genes_points})
+
+    return num_genes_points
 
 
 def perc_unassigned_transcripts(
@@ -141,7 +166,9 @@ def perc_unassigned_transcripts(
     perc_unassigned_transcripts = is_background.mean() * 100
 
     if inplace:
-        sdata.tables[tables_key].uns["perc_unassigned_transcripts"] = perc_unassigned_transcripts
+        merge_into_uns(
+            sdata, tables_key=tables_key, updates={"perc_unassigned_transcripts": perc_unassigned_transcripts}
+        )
 
     # converting from np.float to float
     return float(perc_unassigned_transcripts)

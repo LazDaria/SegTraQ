@@ -260,7 +260,7 @@ def _assign_celltype_by_pearson(
     )
 
 
-def _get_count_matrix(adata, layer: str | None = None):
+def _get_count_matrix(adata, layer: str | None = None, layer_arg: str = "raw_layer"):
     """Return raw count matrix from `adata.layers[layer]` or `adata.X`.
 
     Parameters
@@ -269,6 +269,8 @@ def _get_count_matrix(adata, layer: str | None = None):
         AnnData object containing count data.
     layer : str or None, default=None
         Layer containing raw counts. If `None`, counts are expected in `adata.X`.
+    layer_arg : str, default="raw_layer"
+        Name of the parameter used to specify the layer (for error messages).
 
     Returns
     -------
@@ -287,7 +289,9 @@ def _get_count_matrix(adata, layer: str | None = None):
     if not _looks_like_counts(X):
         raise ValueError(
             f"Expected raw count data in `{source}`, but the selected matrix "
-            "does not look like non-negative integer counts."
+            "does not look like non-negative integer counts. "
+            f"You can set the layer containing raw counts with the `{layer_arg}` parameter "
+            f"(available layers: {list(adata.layers.keys())})."
         )
 
     return X
@@ -297,6 +301,7 @@ def _get_norm_log(
     adata: AnnData,
     layer: str | None = None,
     target_sum: float = 1e4,
+    layer_arg: str = "raw_layer",
 ) -> str:
     """
     Ensure `adata.layers[NORM_LOG_LAYER]` exists and return its key.
@@ -313,6 +318,8 @@ def _get_norm_log(
         Source of raw counts. None → use `.X`.
     target_sum : float
         Passed to `sc.pp.normalize_total`.
+    layer_arg : str
+        Name of the parameter used to specify the layer (for error messages).
 
     Returns
     -------
@@ -325,7 +332,7 @@ def _get_norm_log(
     if adata.is_view:
         adata = adata.copy()
 
-    raw = _get_count_matrix(adata, layer=layer)  # validates integer counts
+    raw = _get_count_matrix(adata, layer=layer, layer_arg=layer_arg)  # validates integer counts
 
     # Work on a temporary AnnData so sc.pp.* don't touch .X in place
     tmp = AnnData(X=raw.copy())
@@ -364,7 +371,7 @@ def _get_genes(
         genes = pd.Index(adata.var[gene_key].values)
 
     if genes.duplicated().any():
-        raise ValueError("Gene identifiers in are not unique.")
+        raise ValueError("Gene identifiers are not unique.")
 
     return genes
 
@@ -374,38 +381,27 @@ def _make_ref_genes_unique(
     ref_gene_key: str | None = None,
 ) -> AnnData:
     """
-    Ensure gene identifiers are unique in the AnnData object.
+    Ensure gene identifiers used as var_names are unique.
 
-    If `ref_gene_key is None`, makes `adata_ref.var_names` unique in place.
-    If `ref_gene_key` is provided, drops duplicated genes, keeping the first.
+    If `ref_gene_key` is provided, use `adata_ref.var[ref_gene_key]`
+    as `var_names`. Duplicate identifiers are made unique using
+    `var_names_make_unique()`.
     """
     adata_ref = adata_ref.copy()
 
-    if ref_gene_key is None:
-        if not adata_ref.var_names.is_unique:
-            warnings.warn(
-                "`adata_ref.var_names` are not unique. Making them unique with `adata_ref.var_names_make_unique()`.",
-                UserWarning,
-                stacklevel=2,
-            )
-            adata_ref.var_names_make_unique()
-        return adata_ref
+    if ref_gene_key is not None:
+        if ref_gene_key not in adata_ref.var.columns:
+            raise KeyError(f"'{ref_gene_key}' not found in `adata_ref.var`.")
 
-    if ref_gene_key not in adata_ref.var.columns:
-        raise KeyError(f"'{ref_gene_key}' not found in `adata_ref.var`.")
+        adata_ref.var_names = adata_ref.var[ref_gene_key].astype(str)
 
-    genes = pd.Index(adata_ref.var[ref_gene_key].values)
-
-    if genes.duplicated().any():
-        n_dup = genes.duplicated().sum()
+    if not adata_ref.var_names.is_unique:
         warnings.warn(
-            f"`adata_ref.var[{ref_gene_key!r}]` contains {n_dup} duplicated entries. "
-            "Dropping duplicate genes, keeping the first occurrence.",
+            "Gene identifiers are not unique. Making them unique with `adata_ref.var_names_make_unique()`.",
             UserWarning,
             stacklevel=2,
         )
-        keep = ~genes.duplicated()
-        adata_ref = adata_ref[:, keep].copy()
+        adata_ref.var_names_make_unique()
 
     return adata_ref
 
@@ -502,6 +498,7 @@ def run_label_transfer(
         `tables_cell_id_key`, `cell_type_key`, and `"pearson_score"`.
         If `inplace=True`, modifies `sdata` in place and returns `None`.
     """
+    # copies gene identifiers into var_names and makes them unique (if needed)
     adata_ref = _make_ref_genes_unique(adata_ref, ref_gene_key=ref_gene_key)
 
     if ref_cell_type not in adata_ref.obs.columns:
@@ -530,6 +527,8 @@ def run_label_transfer(
             points_gene_key=points_gene_key,
             tables_key=tables_key,
         )
+        # refetching the table after modification
+        tbl = sdata.tables[tables_key]
 
     qc_range = {
         "transcript_count": (tx_min, tx_max),
@@ -549,17 +548,17 @@ def run_label_transfer(
 
     # getting the normalized and log-transformed data into adata_ref and adata_q,
     # stored in a namespaced layer to avoid conflicts
-    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer)
-    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer)
+    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
+    adata_q = _get_norm_log(adata_q, layer=tables_raw_counts_layer, layer_arg="tables_raw_counts_layer")
 
-    genes = _get_genes(adata_ref, ref_gene_key)
+    genes = adata_ref.var_names
 
     norm_log_counts = _to_ndarray(adata_ref.layers[NORM_LOG_LAYER])
     celltypes = adata_ref.obs[ref_cell_type]
 
     norm_log_counts_df = pd.DataFrame(norm_log_counts, columns=genes)
     norm_log_counts_df["celltype"] = celltypes.values
-    ref_mean_df = norm_log_counts_df.groupby("celltype").mean()
+    ref_mean_df = norm_log_counts_df.groupby("celltype", observed=True).mean()
 
     genes_to_use = None
 
@@ -595,6 +594,7 @@ def run_label_transfer(
     )
 
     out = ct_corr.rename(columns={"transferred_cell_type": cell_type_key})
+    out[cell_type_key] = out[cell_type_key].astype("category")
 
     if inplace:
         merge_into_obs(
@@ -604,15 +604,19 @@ def run_label_transfer(
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
-        tbl.obs[cell_type_key] = tbl.obs[cell_type_key].astype("category")
         return None
 
     return out
 
 
 def merge_into_obs(
-    sdata, tables_key, df_to_merge: pd.DataFrame, tables_cell_id_key: str, df_cell_id_key: str, fillna_cols=None
-):
+    sdata,
+    tables_key: str,
+    df_to_merge: pd.DataFrame,
+    tables_cell_id_key: str,
+    df_cell_id_key: str,
+    fillna_cols=None,
+) -> None:
     """
     Left-join df_to_merge into sdata.tables[tables_key].obs without resetting the index
     and without creating duplicate key columns.
@@ -620,7 +624,8 @@ def merge_into_obs(
     - Uses obs[tables_cell_id_key] as the join key
     - Drops overlapping columns on the right before joining
     """
-    obs = sdata.tables[tables_key].obs
+    table = sdata.tables[tables_key].copy()
+    obs = table.obs
 
     # Temporarily clear the index name to avoid pandas ambiguity when
     # tables_cell_id_key is both a column and the index name
@@ -629,14 +634,12 @@ def merge_into_obs(
 
     # Build right indexed by the join key
     right = df_to_merge.set_index(df_cell_id_key, drop=True)
-
     # Drop overlapping columns from obs to avoid duplicates
     overlapping_cols = [c for c in right.columns if c in obs.columns]
     if overlapping_cols:
         obs = obs.drop(columns=overlapping_cols)
 
     joined = obs.join(right, on=tables_cell_id_key, how="left")
-
     # Restore the original index name
     joined.index.name = original_index_name
 
@@ -646,20 +649,55 @@ def merge_into_obs(
             if c in joined.columns:
                 joined[c] = joined[c].fillna(0)
 
-    sdata.tables[tables_key].obs = joined
+    table.obs = joined
+    sdata.tables[tables_key] = table
 
 
-def merge_into_var(sdata, tables_key, df_to_merge):
-    var = sdata.tables[tables_key].var
+def merge_into_var(
+    sdata,
+    tables_key: str,
+    df_to_merge: pd.DataFrame,
+) -> None:
+    """
+    Left-join df_to_merge into sdata.tables[tables_key].var by index.
+    Drops overlapping columns before joining to avoid duplicates.
+    """
+    table = sdata.tables[tables_key].copy()
+    var = table.var
 
     overlapping = [c for c in df_to_merge.columns if c in var.columns]
-
     if overlapping:
         var = var.drop(columns=overlapping)
 
-    df = var.merge(df_to_merge, left_index=True, right_index=True, how="left")
+    table.var = var.merge(df_to_merge, left_index=True, right_index=True, how="left")
+    sdata.tables[tables_key] = table
 
-    sdata.tables[tables_key].var = df
+
+def merge_into_uns(
+    sdata,
+    tables_key: str,
+    updates: dict,
+    overwrite: bool = True,
+) -> None:
+    """
+    Merge a dict of key-value pairs into sdata.tables[tables_key].uns.
+
+    Parameters
+    ----------
+    updates : dict
+        Key-value pairs to write into uns.
+    overwrite : bool
+        If False, existing keys are left untouched. Default is True.
+    """
+    table = sdata.tables[tables_key].copy()
+
+    if overwrite:
+        table.uns.update(updates)
+    else:
+        for k, v in updates.items():
+            table.uns.setdefault(k, v)
+
+    sdata.tables[tables_key] = table
 
 
 def _pairwise_auc(
@@ -871,18 +909,19 @@ def markers_from_reference(
         A dictionary mapping each cell type to its positive and negative markers:
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
+    # copies gene identifiers into var_names and makes them unique (if needed)
     adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
 
     # getting gene names and mapping to indices for later use
-    var_names = _get_genes(adata, ref_gene_key)
+    var_names = adata.var_names
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # raw counts for expression fraction computation (must be before normalization)
-    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer)
+    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
 
     # applying normalization and log1p to get data ready for DE/AUC
     # stored in X directly, since adata was copied previously
-    adata = _get_norm_log(adata, layer=ref_raw_counts_layer)
+    adata = _get_norm_log(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
     adata.X = adata.layers[NORM_LOG_LAYER]
 
     ctypes = pd.Categorical(adata.obs[ref_cell_type])
@@ -892,6 +931,7 @@ def markers_from_reference(
 
     # Cell counts per type -> filter rare cell types from pairwise contrasts
     cell_counts = ctypes.value_counts().to_dict()
+
     usable_celltypes = [ct for ct in types if cell_counts.get(ct, 0) >= min_cells_per_celltype]
     n_celltypes = len(usable_celltypes)
     if n_celltypes < 2:
@@ -910,6 +950,7 @@ def markers_from_reference(
     for ct in usable_celltypes:
         mask_ct = ctypes == ct
         X_ct = counts[mask_ct]
+
         if sparse.issparse(X_ct):
             frac = X_ct.getnnz(axis=0) / X_ct.shape[0]
         else:
@@ -1575,7 +1616,9 @@ def validate_spatialdata(
                 f"If you want to use a different column, set the 'tables_cell_id_key' parameter."
             )
 
-            _check_if_raw = _get_count_matrix(sdata.tables[tables_key], tables_raw_counts_layer)
+            _check_if_raw = _get_count_matrix(
+                sdata.tables[tables_key], tables_raw_counts_layer, layer_arg="tables_raw_counts_layer"
+            )
 
             assert "spatialdata_attrs" in table.uns, "Could not find 'spatialdata_attrs' in table.uns. "
             "You can set them like this: \n"
@@ -1643,7 +1686,7 @@ def validate_spatialdata(
                 )
 
             # check that gene names in the table are compatible with those in the points
-            genes_in_points = set(points_df[points_gene_key].unique())  # faster
+            genes_in_points = set(points_df[points_gene_key].unique())
             genes_in_table = set(_get_genes(table, tables_gene_key))
             common_genes = genes_in_points & genes_in_table
             if len(common_genes) == 0:
@@ -2155,6 +2198,7 @@ def _filter_control_and_low_quality_transcripts(
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     )
         Control prefixes to identify control probes in gene names.
         Transcripts with gene names starting with any of these prefixes will be considered

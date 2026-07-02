@@ -8,7 +8,7 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from .constants import SEGTRAQ_CELL_ID_KEY
-from .utils import _filter_control_and_low_quality_transcripts, _get_genes, validate_spatialdata
+from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer
@@ -24,6 +24,7 @@ DEFAULT_FILTER_KWARGS = {
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     ),
     "control_genes": (),
     "inplace": True,
@@ -401,6 +402,8 @@ class SegTraQ:
         *,
         adata_ref: AnnData | None = None,
         ref_cell_type: str | None = None,
+        ref_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
         cell_type_key: str | None = None,
         inplace: bool = True,
         label_transfer_kwargs: dict[str, Any] | None = None,
@@ -442,6 +445,12 @@ class SegTraQ:
             Column in `adata_ref.obs` containing reference cell-type labels. Required if
             `cell_type_key=None` and label transfer should be run, or if `adata_ref` is used
             to infer `n_components`.
+        ref_gene_key : str or None, default=None
+            Column in `adata_ref.var` containing gene identifiers.
+            If `None`, `adata_ref.var_names` are used.
+        ref_raw_counts_layer : str or None, default=None
+            Layer containing raw counts. If `None`, raw counts are expected in
+            `adata.X`.
         cell_type_key : str or None, default=None
             Column in `sdata.tables[tables_key].obs` containing cell-type labels. If provided,
             this column is used for `fraction_heterotypic_overlap` and to infer ovrlpy
@@ -498,6 +507,8 @@ class SegTraQ:
             label_transfer_result = self.run_label_transfer(
                 adata_ref=adata_ref,
                 ref_cell_type=ref_cell_type,
+                ref_gene_key=ref_gene_key,
+                ref_raw_counts_layer=ref_raw_counts_layer,
                 **label_transfer_kwargs,
             )
 
@@ -683,6 +694,8 @@ class SegTraQ:
         *,
         adata_ref: AnnData | None = None,
         ref_cell_type: str | None = None,
+        ref_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
         markers: dict[str, dict[str, list[str]]] | None = None,
         cell_type_key: str | None = None,
         inplace: bool = True,
@@ -718,6 +731,12 @@ class SegTraQ:
         ref_cell_type : str or None, default=None
             Column in `adata_ref.obs` containing reference cell-type labels.
             Required if `cell_type_key=None` or `markers=None`.
+        ref_gene_key : str or None, default=None
+            Column in `adata_ref.var` containing gene identifiers.
+            If `None`, `adata_ref.var_names` are used.
+        ref_raw_counts_layer : str or None, default=None
+            Layer containing raw counts. If `None`, raw counts are expected in
+            `adata.X`.
         markers : dict or None, default=None
             Dictionary of marker genes in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
@@ -783,6 +802,8 @@ class SegTraQ:
             label_transfer_result = self.run_label_transfer(
                 adata_ref=adata_ref,
                 ref_cell_type=ref_cell_type,
+                ref_gene_key=ref_gene_key,
+                ref_raw_counts_layer=ref_raw_counts_layer,
                 **label_transfer_kwargs,
             )
 
@@ -790,6 +811,8 @@ class SegTraQ:
             markers = self.markers_from_reference(
                 adata=adata_ref,
                 ref_cell_type=ref_cell_type,
+                ref_gene_key=ref_gene_key,
+                ref_raw_counts_layer=ref_raw_counts_layer,
                 **markers_from_reference_kwargs,
             )
 
@@ -959,7 +982,9 @@ class SegTraQ:
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=self.tables_gene_key)
 
-        sc_genes = _get_genes(adata=adata, gene_key=ref_gene_key)
+        # copies gene identifiers into var_names and makes them unique (if needed)
+        adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
+        sc_genes = adata.var_names
 
         mask = sc_genes.isin(sp_genes)
         if mask.sum() == 0:
