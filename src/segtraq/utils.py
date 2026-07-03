@@ -419,7 +419,7 @@ def run_label_transfer(
     points_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
     tx_min: float = 10.0,
-    tx_max: float = 2000.0,
+    tx_max: float = float("inf"),
     gn_min: float = 5.0,
     gn_max: float = np.inf,
     cell_type_key: str = "transferred_cell_type",
@@ -468,7 +468,7 @@ def run_label_transfer(
         Column in the transcript points table containing gene names.
     tx_min : float, default=10.0
         Minimum number of detected transcripts required for a cell to be retained.
-    tx_max : float, default=2000.0
+    tx_max : float, default=float("inf")
         Maximum number of detected transcripts allowed for a cell to be retained.
     gn_min : float, default=5.0
         Minimum number of detected genes required for a cell to be retained.
