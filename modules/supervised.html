@@ -442,40 +442,54 @@ This is equivalent to the Haldane-Anscombe correction, see <a class="reference e
 
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.neighbor_contamination">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">neighbor_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uns_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'contamination_counts_matrix'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uns_key_binary</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'contamination_fraction_matrix'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.neighbor_contamination" title="Link to this definition">#</a></dt>
-<dd><p>Compute per-cell negative-marker contamination and directed c_src→c_tgt
-contamination summaries.</p>
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">neighbor_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.neighbor_contamination" title="Link to this definition">#</a></dt>
+<dd><p>Compute local negative-marker contamination per cell and per source-target
+cell-type pair.</p>
+<p>A gene is considered a locally relevant contamination marker for a target
+cell if it is:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>a negative marker of the target cell type, and</p></li>
+<li><p>a positive marker of at least one neighboring source cell type.</p></li>
+</ol>
+</div></blockquote>
+<p>If <cite>require_neighbor_expression=True</cite>, the gene must additionally be detected
+in at least one neighboring cell of the corresponding source cell type.</p>
 <dl class="simple">
-<dt>Per-cell outputs (written to .obs):</dt><dd><ul class="simple">
+<dt>Per-cell outputs (written to <cite>adata.obs</cite>):</dt><dd><ul class="simple">
 <li><dl class="simple">
-<dt>contamination_counts:</dt><dd><p>Total transcripts in the focal cell that belong to genes that are
-(i) negative markers of the focal cell type and
-(ii) positive markers of at least one neighboring cell type.</p>
+<dt>contamination_counts:</dt><dd><p>Total counts of locally relevant negative-marker genes in the focal cell.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt>contamination_fraction:</dt><dd><p>For each such gene g, compute x_i(g) / (x_i(g) + mean_neighbor(g)),
-averaged across genes (neighbors pooled across all neighbor types).</p>
+<dt>contamination_strength:</dt><dd><p>contamination_counts divided by the total transcript counts of the focal cell.
+This estimates the fraction of assigned transcripts that correspond to
+plausible local contamination.</p>
 </dd>
 </dl>
 </li>
 </ul>
 </dd>
-<dt>Type x type outputs (written to .uns):</dt><dd><ul class="simple">
+<dt>Source-target summaries (written to <cite>adata.uns</cite>):</dt><dd><ul class="simple">
 <li><dl class="simple">
-<dt>uns_key:</dt><dd><p>A directed matrix with entries = mean over genes of
-x_i(g) / (x_i(g) + mean_src(g)), aggregated across all contributing
-(cell, gene) observations for (c_src, c_tgt).</p>
+<dt>contamination_matrix:</dt><dd><p>Directed source-to-target matrix. Entry (c_src, c_tgt) is the fraction
+of evaluable target cells of type c_tgt that contain at least one locally
+relevant negative marker associated with source type c_src.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt>uns_key_binary:</dt><dd><p>A directed matrix with entries =
-(# target cells of type c_tgt contaminated by c_src) / (# target cells of type c_tgt).
-Here “contaminated by c_src” is binary per target cell: at least one
-relevant gene (negative in target, positive in source) is detected in the
-target cell and detected in at least one neighbor of type c_src.</p>
+<dt>contamination_strength_matrix:</dt><dd><p>Directed source-to-target matrix. Entry (c_src, c_tgt) is the mean
+source-specific contamination strength across evaluable target cells
+of type c_tgt with nonzero total counts.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>contamination_evaluable_cells_matrix:</dt><dd><p>Directed source-to-target matrix. Entry (c_src, c_tgt) is the number
+of target cells for which contamination from source type c_src could
+be evaluated.</p>
 </dd>
 </dl>
 </li>
@@ -483,39 +497,13 @@ target cell and detected in at least one neighbor of type c_src.</p>
 </dd>
 </dl>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
-<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;table&quot;</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_raw_counts_layer</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Layer containing count data. If <cite>None</cite>, <cite>adata.X</cite> is used if it looks
-like counts.
-If a layer is specified, it must exist and contain count-like values.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
-<li><p><strong>tables_centroid_x_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;x_centroid&quot;</em>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_centroid_y_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;y_centroid&quot;</em>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers.
-If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
-<li><p><strong>require_neighbor_expression</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, contamination is only counted when the relevant gene is
-expressed in at least one neighboring cell of the source type.</p></li>
-<li><p><strong>neighbors_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;spatial_connectivities&quot;</em>) – Key in <cite>adata.obsp</cite> containing a cell x cell adjacency / connectivity
-matrix that defines the spatial neighborhood.</p></li>
-<li><p><strong>uns_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;contamination_counts_matrix&quot;</em>) – Key in <cite>.uns</cite> under which the directed source → target mean contamination
-fraction matrix is stored.</p></li>
-<li><p><strong>uns_key_binary</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;contamination_fraction_matrix&quot;</em>) – Key in <cite>.uns</cite> under which the directed source → target binary contamination
-proportion matrix is stored.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, store per-cell contamination metrics in
-<cite>sdata.tables[tables_key].obs</cite> and type-level matrices in <cite>.uns</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><strong>per_cell_df</strong> (<em>pd.DataFrame</em>) – Per-cell contamination metrics, indexed by cell ID.</p></li>
-<li><p><strong>contamination_matrix_df</strong> (<em>pd.DataFrame</em>) – Directed type x type mean contamination fraction matrix (c_src rows, c_tgt columns).
-This matrix report the average strength of contamination from one cell type into another.</p></li>
-<li><p><strong>contamination_binary_df</strong> (<em>pd.DataFrame</em>) – Directed type x type binary contamination proportion matrix (c_src rows, c_tgt columns).
-This matrix reports what percentage of cells of a target type is contaminated by each source type.</p></li>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>per_cell_df</strong> (<em>pandas.DataFrame</em>) – Per-cell contamination counts and contamination strength.</p></li>
+<li><p><strong>contamination_matrix_df</strong> (<em>pandas.DataFrame</em>) – Source-target matrix with the fraction of evaluable target cells contaminated
+by each source cell type.</p></li>
+<li><p><strong>contamination_strength_matrix_df</strong> (<em>pandas.DataFrame</em>) – Source-target matrix with mean source-specific contamination strength.</p></li>
+<li><p><strong>contamination_evaluable_cells_matrix_df</strong> (<em>pandas.DataFrame</em>) – Source-target matrix with the number of evaluable target cells per pair.</p></li>
 </ul>
 </p>
 </dd>
