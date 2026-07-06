@@ -414,7 +414,7 @@ def run_label_transfer(
     ref_raw_counts_layer: str | None = "raw",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
-    tables_gene_key: str | None = None,
+    query_gene_key: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
     points_gene_key: str = "feature_name",
@@ -457,9 +457,9 @@ def run_label_transfer(
         Key identifying the cell-level AnnData table in `sdata.tables`.
     tables_cell_id_key : str, default="cell_id"
         Column in `sdata.tables[tables_key].obs` containing unique cell identifiers.
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
+    query_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers matching
+        `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
     points_key : str, default="transcripts"
         Key identifying the transcript-level points element in `sdata.points`.
     points_cell_id_key : str, default="cell_id"
@@ -588,7 +588,7 @@ def run_label_transfer(
     ct_corr = _assign_celltype_by_pearson(
         adata=adata_q,
         ref_mean_df=ref_mean_df,
-        tables_gene_key=tables_gene_key,
+        tables_gene_key=query_gene_key,
         tables_cell_id_key=tables_cell_id_key,
         genes_to_use=genes_to_use,
     )

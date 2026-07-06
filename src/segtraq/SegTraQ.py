@@ -403,6 +403,7 @@ class SegTraQ:
         adata_ref: AnnData | None = None,
         ref_cell_type: str | None = None,
         ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = None,
         cell_type_key: str | None = None,
         inplace: bool = True,
@@ -448,6 +449,9 @@ class SegTraQ:
         ref_gene_key : str or None, default=None
             Column in `adata_ref.var` containing gene identifiers.
             If `None`, `adata_ref.var_names` are used.
+        query_gene_key : str or None, default=None
+            Column in `sdata.tables[tables_key].var` containing gene identifiers matching
+            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
@@ -508,6 +512,7 @@ class SegTraQ:
                 adata_ref=adata_ref,
                 ref_cell_type=ref_cell_type,
                 ref_gene_key=ref_gene_key,
+                query_gene_key=query_gene_key,
                 ref_raw_counts_layer=ref_raw_counts_layer,
                 **label_transfer_kwargs,
             )
@@ -695,6 +700,7 @@ class SegTraQ:
         adata_ref: AnnData | None = None,
         ref_cell_type: str | None = None,
         ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = None,
         markers: dict[str, dict[str, list[str]]] | None = None,
         cell_type_key: str | None = None,
@@ -734,6 +740,9 @@ class SegTraQ:
         ref_gene_key : str or None, default=None
             Column in `adata_ref.var` containing gene identifiers.
             If `None`, `adata_ref.var_names` are used.
+        query_gene_key : str or None, default=None
+            Column in `sdata.tables[tables_key].var` containing gene identifiers matching
+            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
@@ -803,6 +812,7 @@ class SegTraQ:
                 adata_ref=adata_ref,
                 ref_cell_type=ref_cell_type,
                 ref_gene_key=ref_gene_key,
+                query_gene_key=query_gene_key,
                 ref_raw_counts_layer=ref_raw_counts_layer,
                 **label_transfer_kwargs,
             )
@@ -1025,6 +1035,7 @@ class SegTraQ:
         adata_ref: AnnData,
         ref_cell_type: str,
         ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = "raw",
         tx_min: float = 10.0,
         tx_max: float = float("inf"),
@@ -1046,9 +1057,9 @@ class SegTraQ:
             ref_cell_type=ref_cell_type,
             ref_raw_counts_layer=ref_raw_counts_layer,
             ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
             tables_key=self.tables_key,
             tables_cell_id_key=self.tables_cell_id_key,
-            tables_gene_key=self.tables_gene_key,
             tables_raw_counts_layer=self.tables_raw_counts_layer,
             points_key=self.points_key,
             points_cell_id_key=self.points_cell_id_key,
