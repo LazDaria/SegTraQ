@@ -93,7 +93,8 @@ class SegTraQ:
             Column in the cell table with the y-coordinate of the cell centroid.
 
         tables_gene_key : str or None, default=None
-            Column in `sdata.tables[tables_key].var` containing gene identifiers.
+            Column in `sdata.tables[tables_key].var` containing gene identifiers
+            matching those in `sdata.points[points_key][points_gene_key]`.
             If `None`, `sdata.tables[tables_key].var_names` are used.
 
         tables_raw_counts_layer : str | None, optional
@@ -822,6 +823,7 @@ class SegTraQ:
                 adata=adata_ref,
                 ref_cell_type=ref_cell_type,
                 ref_gene_key=ref_gene_key,
+                query_gene_key=query_gene_key,
                 ref_raw_counts_layer=ref_raw_counts_layer,
                 **markers_from_reference_kwargs,
             )
@@ -975,6 +977,7 @@ class SegTraQ:
         adata: AnnData,
         ref_cell_type: str,
         ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = "raw",
         mode: str = "de",
         max_fpr: float | None = None,
@@ -990,7 +993,7 @@ class SegTraQ:
         min_cells_per_celltype: int = 10,
         n_jobs: int = 1,
     ):
-        sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=self.tables_gene_key)
+        sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
 
         # copies gene identifiers into var_names and makes them unique (if needed)
         adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
@@ -1028,7 +1031,20 @@ class SegTraQ:
 
         return markers
 
-    markers_from_reference.__doc__ = _markers_from_reference.__doc__
+    markers_from_reference.__doc__ = (
+        _markers_from_reference.__doc__
+        + """
+
+    Notes
+    -----
+    query_gene_key : str | None
+        Addtional parameter only used when ``markers_from_reference`` is called
+        as a method of a `SegTraQ` instance. Specifies the column in
+        `self.sdata.tables[tables_key].var` containing the query gene
+        identifiers. If `None`, `var_names` are used. These identifiers are
+        used to subset the reference genes before marker selection.
+    """
+    )
 
     def run_label_transfer(
         self,
