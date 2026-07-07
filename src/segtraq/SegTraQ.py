@@ -991,7 +991,7 @@ class SegTraQ:
         t_pos: float = 0.25,
         t_neg: float = 1.0,
         min_cells_per_celltype: int = 10,
-        n_jobs: int = 1,
+        n_jobs: int = -1,
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
 
