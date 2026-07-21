@@ -258,8 +258,17 @@ def similarity_top_bottom(
         lambda s: s.quantile(1.0 - q)
     )
 
-    tx["_is_bottom"] = z <= tx["_z_bottom"]
-    tx["_is_top"] = z >= tx["_z_top"]
+    valid_split = tx["_z_bottom"] < tx["_z_top"]
+
+    tx["_is_bottom"] = (
+        valid_split
+        & (tx["_z_for_split"] <= tx["_z_bottom"])
+    )
+
+    tx["_is_top"] = (
+        valid_split
+        & (tx["_z_for_split"] >= tx["_z_top"])
+    )
 
     # counts per part
     counts_bottom = (

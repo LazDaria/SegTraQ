@@ -14,11 +14,10 @@ def _correct_z_drift(
     seed: int | None = 0,
 ) -> np.ndarray:
     """
-    Global z-drift correction (tilt regression + clipping + [0,1] scaling).
+    Global z-drift correction (tilt regression).
 
     This function removes global z-tilt by fitting a plane z ~ x + y and replacing
-    z with the residuals. It then clips extreme residuals to avoid outliers defining
-    the depth range and rescales the result to [0,1].
+    z with the residuals. 
 
     Parameters
     ----------
@@ -34,7 +33,6 @@ def _correct_z_drift(
     Returns
     -------
     z_corr : np.ndarray
-        Corrected and normalized z values in [0,1], same length/order as `tx`.
     """
     x = tx[points_x_key].to_numpy(dtype=float)
     y = tx[points_y_key].to_numpy(dtype=float)
