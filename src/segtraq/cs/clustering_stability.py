@@ -17,7 +17,7 @@ from .utils import (
 
 def cluster_connectedness(
     sdata: sd.SpatialData,
-    resolution: float | list[float] = (0.6, 0.8, 1.0),
+    resolution: float | list[float] = 0.2,
     use_weights: bool = False,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
@@ -40,7 +40,7 @@ def cluster_connectedness(
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
     resolution : float or list of float, optional
-        The resolution parameter(s) for Leiden clustering, by default (0.6, 0.8, 1.0).
+        The resolution parameter(s) for Leiden clustering, by default 0.2.
     use_weights: bool
         Use edge weights to evaluate connectedness. If false, fraction of
         equal neighbors is used.
@@ -138,7 +138,7 @@ def cluster_connectedness(
 
 def silhouette_score(
     sdata: sd.SpatialData,
-    resolution: float | list[float] = (0.6, 0.8, 1.0),
+    resolution: float | list[float] = 0.2,
     metric: str = "euclidean",
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
@@ -160,7 +160,7 @@ def silhouette_score(
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
     resolution : float, optional
-        The resolution parameter for Leiden clustering, by default 1.0.
+        The resolution parameter for Leiden clustering, by default 0.2.
     metric : str, optional
         The metric to use for silhouette score calculation, by default "euclidean".
     tables_key : str, optional
@@ -264,7 +264,7 @@ def silhouette_score(
 
 def purity(
     sdata: sd.SpatialData,
-    resolution: float = 1.0,
+    resolution: float = 0.2,
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
@@ -279,7 +279,7 @@ def purity(
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
     resolution : float, optional
-        The resolution parameter for Leiden clustering, by default 1.0.
+        The resolution parameter for Leiden clustering, by default 0.2.
     tables_key : str, optional
         The key in sdata.tables where the relevant AnnData is stored, by default "table".
     frac_cells_subset : float, optional
@@ -326,7 +326,7 @@ def purity(
 
 def adjusted_rand_index(
     sdata: sd.SpatialData,
-    resolution: float = 1.0,
+    resolution: float = 0.2,
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
@@ -342,7 +342,7 @@ def adjusted_rand_index(
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
     resolution : float, optional
-        The resolution parameter for Leiden clustering, by default 1.0.
+        The resolution parameter for Leiden clustering, by default 0.2.
     frac_cells_subset : float, optional
         The fraction of cells to subset for clustering, by default 0.63.
     tables_key : str, optional
