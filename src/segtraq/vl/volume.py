@@ -252,7 +252,6 @@ def similarity_top_bottom(
         tx["_z_for_split"] = tx[points_z_key].to_numpy(dtype=float)
 
     # compute per-cell quantile cutoffs
-    z = tx["_z_for_split"]
     tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(q))
     tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(
         lambda s: s.quantile(1.0 - q)
@@ -260,15 +259,9 @@ def similarity_top_bottom(
 
     valid_split = tx["_z_bottom"] < tx["_z_top"]
 
-    tx["_is_bottom"] = (
-        valid_split
-        & (tx["_z_for_split"] <= tx["_z_bottom"])
-    )
+    tx["_is_bottom"] = valid_split & (tx["_z_for_split"] <= tx["_z_bottom"])
 
-    tx["_is_top"] = (
-        valid_split
-        & (tx["_z_for_split"] >= tx["_z_top"])
-    )
+    tx["_is_top"] = valid_split & (tx["_z_for_split"] >= tx["_z_top"])
 
     # counts per part
     counts_bottom = (
