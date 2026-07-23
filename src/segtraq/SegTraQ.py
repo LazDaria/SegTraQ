@@ -229,8 +229,11 @@ class SegTraQ:
         self.points_gene_key = points_gene_key
 
         self.shapes_key = shapes_key
+        self.nucleus_shapes_key = nucleus_shapes_key
         self.shapes_cell_id_key = shapes_cell_id_key if shapes_cell_id_key is not None else SEGTRAQ_CELL_ID_KEY
-        self.nucleus_shapes_key = nucleus_shapes_key if nucleus_shapes_key is not None else SEGTRAQ_CELL_ID_KEY
+        self.nucleus_shapes_cell_id_key = (
+            nucleus_shapes_cell_id_key if nucleus_shapes_cell_id_key is not None else SEGTRAQ_CELL_ID_KEY
+        )
 
         self.bl = _BLFacade(self)
         self.rs = _RSFacade(self)
@@ -978,7 +981,7 @@ class SegTraQ:
         ref_cell_type: str,
         ref_gene_key: str | None = None,
         query_gene_key: str | None = None,
-        ref_raw_counts_layer: str | None = "raw",
+        ref_raw_counts_layer: str | None = None,
         mode: str = "de",
         max_fpr: float | None = None,
         auc_pos_thresh: float = 0.9,
@@ -1052,7 +1055,7 @@ class SegTraQ:
         ref_cell_type: str,
         ref_gene_key: str | None = None,
         query_gene_key: str | None = None,
-        ref_raw_counts_layer: str | None = "raw",
+        ref_raw_counts_layer: str | None = None,
         tx_min: float = 10.0,
         tx_max: float = float("inf"),
         gn_min: float = 5.0,

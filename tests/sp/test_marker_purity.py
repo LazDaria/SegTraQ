@@ -4,7 +4,7 @@ import segtraq as st
 
 
 def test_marker_purity_values_are_in_unit_interval(sdata_labeled, adata_ref):
-    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype")
+    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
 
     df = st.sp.marker_purity(
         sdata=sdata_labeled,
@@ -26,7 +26,7 @@ def test_marker_purity_values_are_in_unit_interval(sdata_labeled, adata_ref):
 
 
 def test_marker_purity_realdata_inplace_writes_obs(sdata_labeled, adata_ref):
-    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype")
+    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
 
     df = st.sp.marker_purity(
         sdata=sdata_labeled,
