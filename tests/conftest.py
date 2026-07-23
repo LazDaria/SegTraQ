@@ -81,6 +81,7 @@ def test_sdata_labeled(sdata_new, adata_ref):
         sdata=sdata_new,
         adata_ref=adata_ref,
         ref_cell_type="celltype",
+        ref_raw_counts_layer="raw",
         inplace=True,
     )
     return sdata_new
@@ -97,6 +98,7 @@ def test_sdata_3D_labeled(sdata_3D, adata_ref):
         points_key="transcripts",
         points_cell_id_key="assignment",
         points_gene_key="gene",
+        ref_raw_counts_layer="raw",
         inplace=True,
     )
     return sdata_3D

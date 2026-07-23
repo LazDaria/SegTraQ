@@ -8,7 +8,7 @@ def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref):
     n_types = adata_ref.obs["celltype"].nunique()
     assert n_types >= 2, "Need >= 2 types for differential markers"
 
-    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype")
+    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
 
     # Basic structure
     assert isinstance(markers, dict)
@@ -35,8 +35,12 @@ def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref):
 
 
 def test_overlap_filter_effect_without_internals(adata_ref):
-    markers_loose = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", t_pos=0.5)
-    markers_strict = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", t_pos=0.1)
+    markers_loose = st.markers_from_reference(
+        adata_ref.copy(), ref_cell_type="celltype", t_pos=0.5, ref_raw_counts_layer="raw"
+    )
+    markers_strict = st.markers_from_reference(
+        adata_ref.copy(), ref_cell_type="celltype", t_pos=0.1, ref_raw_counts_layer="raw"
+    )
 
     n_types = adata_ref.obs["celltype"].nunique()
 

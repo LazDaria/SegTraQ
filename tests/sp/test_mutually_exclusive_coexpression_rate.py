@@ -21,6 +21,7 @@ def test_mecr_realdata_runs_and_stores_in_uns(sdata_3D_labeled, adata_ref):
         t_pos=1.0,  # default: 0.25 (this was the culprit, setting this to 0 has the opposite effect of what I wanted)
         t_neg=1.0,  # default: 1.0
         min_cells_per_celltype=1,  # default: 10
+        ref_raw_counts_layer="raw",  # default: None
     )
 
     df = segtraq.sp.mutually_exclusive_coexpression_rate(

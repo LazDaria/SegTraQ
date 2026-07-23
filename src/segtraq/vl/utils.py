@@ -17,7 +17,7 @@ def _correct_z_drift(
     Global z-drift correction (tilt regression).
 
     This function removes global z-tilt by fitting a plane z ~ x + y and replacing
-    z with the residuals. 
+    z with the residuals.
 
     Parameters
     ----------

@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
-from shapely.geometry import MultiPolygon, Polygon
 
 from ..utils import _get_genes, _is_background, merge_into_obs, merge_into_uns, merge_into_var
 from .utils import count_polygons
@@ -456,8 +455,6 @@ def transcript_density(
         where "transcript_density" is the number of transcripts per unit area for
         each cell. Rows with missing values are dropped.
     """
-    adata = sdata.tables[tables_key]
-
     # this adds the transcript counts inplace
     # required to compute the density later on
     _ = transcripts_per_cell(
@@ -469,6 +466,7 @@ def transcript_density(
         tables_key=tables_key,
     )
 
+    adata = sdata.tables[tables_key]
     df = adata.obs[[tables_cell_id_key, tables_area_key, "transcript_count"]].copy()
     df["transcript_density"] = df["transcript_count"] / df[tables_area_key]
 
@@ -515,8 +513,8 @@ def morphological_features(
         Key in `sdata.shapes` specifying the geometry column (default is "cell_boundaries").
     features_to_compute : list of str, optional
         List of morphological features to compute. If None, all available features are computed.
-        Available features: "centroid", "cell_area", "perimeter", "circularity", "bbox_width", "bbox_height",
-        "extent", "solidity", "convexity", "elongation", "eccentricity", "compactness", "num_polygons".
+        Available features: "centroid", "num_polygons", "cell_area", "perimeter", "circularity",
+        "solidity", "convexity", "elongation", "eccentricity", "compactness".
     n_jobs : int, optional
         Number of parallel jobs to use for computation.
         Default `-1` uses all available CPU cores.
@@ -542,24 +540,22 @@ def morphological_features(
     Notes
     -----
     - Requires `geopandas`, `shapely`, `numpy`, `pandas`, and `joblib`.
-    - Some features are proxies or approximations (e.g., "sphericity" uses "circularity").
+    - For multi-part geometries (MultiPolygon), "solidity", "convexity", "elongation", and
+      "eccentricity" are computed on the convex hull of the *entire* geometry.
     - Invalid or null geometries are filtered out before computation.
     """
     # Define all possible features
     all_features = [
         "centroid",
+        "num_polygons",
         "cell_area",
         "perimeter",
         "circularity",
-        "bbox_width",
-        "bbox_height",
-        "extent",
         "solidity",
         "convexity",
         "elongation",
         "eccentricity",
         "compactness",
-        "num_polygons",
     ]
     # if we already have centroids in the table, we do not compute them here
     if features_to_compute is None and (tables_centroid_x_key is not None and tables_centroid_y_key is not None):
@@ -590,9 +586,12 @@ def morphological_features(
         features["centroid_x"] = centroids.x.values
         features["centroid_y"] = centroids.y.values
 
+    if "num_polygons" in features_to_compute:
+        features["num_polygons"] = geom.apply(count_polygons).values
+
     # Compute features conditionally
     if "cell_area" in features_to_compute or any(
-        f in features_to_compute for f in ["circularity", "extent", "solidity", "compactness", "sphericity"]
+        f in features_to_compute for f in ["circularity", "solidity", "compactness", "sphericity"]
     ):
         areas = geom.area.values
         if "cell_area" in features_to_compute:
@@ -606,7 +605,6 @@ def morphological_features(
             "circularity",
             "compactness",
             "convexity",
-            "compactness",
             "sphericity",
         ]
     ):
@@ -623,21 +621,13 @@ def morphological_features(
             perimeters = geom.length.values
         features["circularity"] = 4 * np.pi * areas / (perimeters**2 + eps)
 
-    if any(f in features_to_compute for f in ["bbox_width", "bbox_height", "extent"]):
-        bounds = geom.bounds
-        if "bbox_width" in features_to_compute:
-            features["bbox_width"] = (bounds["maxx"] - bounds["minx"]).values
-        if "bbox_height" in features_to_compute:
-            features["bbox_height"] = (bounds["maxy"] - bounds["miny"]).values
-        if "extent" in features_to_compute:
-            width = (bounds["maxx"] - bounds["minx"]).values
-            height = (bounds["maxy"] - bounds["miny"]).values
-            if areas is None:
-                areas = geom.area.values
-            features["extent"] = areas / (width * height + eps)
+    # convex hull is shared across solidity, convexity, elongation, and eccentricity,
+    # so it's computed once here if any of those features are requested
+    convex_hull = None
+    if any(f in features_to_compute for f in ["solidity", "convexity", "elongation", "eccentricity"]):
+        convex_hull = geom.convex_hull
 
     if "solidity" in features_to_compute or "convexity" in features_to_compute:
-        convex_hull = geom.convex_hull
         if "solidity" in features_to_compute:
             convex_areas = convex_hull.area.values
             if areas is None:
@@ -649,23 +639,14 @@ def morphological_features(
                 perimeters = geom.length.values
             features["convexity"] = (convex_perimeters / (perimeters + eps)).values
 
-    # Parallelized elongation and eccentricity calculation
-    def compute_elong_ecc(poly):
-        if poly.is_empty:
-            return np.nan, np.nan
-
-        # Handle MultiPolygon by selecting the largest polygon by area
-        if isinstance(poly, MultiPolygon):
-            if len(poly.geoms) == 0:
-                return np.nan, np.nan
-            poly = max(poly.geoms, key=lambda p: p.area)
-
-        # Skip invalid or degenerate geometries
-        if not isinstance(poly, Polygon) or poly.area == 0:
+    # Parallelized elongation and eccentricity calculation, based on the convex hull of the
+    # (possibly multi-part) geometry, so fragmented cells aren't reduced to a single sub-polygon
+    def compute_elong_ecc(hull):
+        if hull.is_empty or hull.area == 0:
             return np.nan, np.nan
 
         # Compute minimum rotated rectangle
-        min_rect = poly.minimum_rotated_rectangle
+        min_rect = hull.minimum_rotated_rectangle
         coords = list(min_rect.exterior.coords)
 
         if len(coords) < 4:
@@ -686,7 +667,9 @@ def morphological_features(
         return elongation, eccentricity
 
     if "elongation" in features_to_compute or "eccentricity" in features_to_compute:
-        results = Parallel(n_jobs=n_jobs, backend=parallel_backend)(delayed(compute_elong_ecc)(poly) for poly in geom)
+        results = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+            delayed(compute_elong_ecc)(hull) for hull in convex_hull
+        )
         elongations, eccentricities = zip(*results, strict=False)
         if "elongation" in features_to_compute:
             features["elongation"] = elongations
@@ -699,9 +682,6 @@ def morphological_features(
         if areas is None:
             areas = geom.area.values
         features["compactness"] = (perimeters**2) / (areas + eps)
-
-    if "num_polygons" in features_to_compute:
-        features["num_polygons"] = geom.apply(count_polygons).values
 
     if inplace:
         merge_into_obs(
