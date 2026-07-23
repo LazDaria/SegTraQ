@@ -464,8 +464,8 @@ columns are <cite>[points_cell_id_key, “mean_transcripts_per_gene”]</cite>.<
 <li><p><strong>tables_centroid_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column in <cite>sdata.tables[tables_key].obs</cite> to store the y-coordinate of the centroid (default is “centroid_y”).</p></li>
 <li><p><strong>shapes_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key in <cite>sdata.shapes</cite> specifying the geometry column (default is “cell_boundaries”).</p></li>
 <li><p><strong>features_to_compute</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – List of morphological features to compute. If None, all available features are computed.
-Available features: “centroid”, “cell_area”, “perimeter”, “circularity”, “bbox_width”, “bbox_height”,
-“extent”, “solidity”, “convexity”, “elongation”, “eccentricity”, “compactness”, “num_polygons”.</p></li>
+Available features: “centroid”, “num_polygons”, “cell_area”, “perimeter”, “circularity”,
+“solidity”, “convexity”, “elongation”, “eccentricity”, “compactness”.</p></li>
 <li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of parallel jobs to use for computation.
 Default <cite>-1</cite> uses all available CPU cores.</p></li>
 <li><p><strong>parallel_backend</strong> (<em>str</em><em>, </em><em>optional</em>) – Parallelization backend to use with joblib. Default is “threading”.</p></li>
@@ -487,7 +487,8 @@ Default <cite>-1</cite> uses all available CPU cores.</p></li>
 <p class="rubric">Notes</p>
 <ul class="simple">
 <li><p>Requires <cite>geopandas</cite>, <cite>shapely</cite>, <cite>numpy</cite>, <cite>pandas</cite>, and <cite>joblib</cite>.</p></li>
-<li><p>Some features are proxies or approximations (e.g., “sphericity” uses “circularity”).</p></li>
+<li><p>For multi-part geometries (MultiPolygon), “solidity”, “convexity”, “elongation”, and
+“eccentricity” are computed on the convex hull of the <em>entire</em> geometry.</p></li>
 <li><p>Invalid or null geometries are filtered out before computation.</p></li>
 </ul>
 </dd></dl>
