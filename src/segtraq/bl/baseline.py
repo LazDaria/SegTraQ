@@ -455,8 +455,6 @@ def transcript_density(
         where "transcript_density" is the number of transcripts per unit area for
         each cell. Rows with missing values are dropped.
     """
-    adata = sdata.tables[tables_key]
-
     # this adds the transcript counts inplace
     # required to compute the density later on
     _ = transcripts_per_cell(
@@ -468,6 +466,7 @@ def transcript_density(
         tables_key=tables_key,
     )
 
+    adata = sdata.tables[tables_key]
     df = adata.obs[[tables_cell_id_key, tables_area_key, "transcript_count"]].copy()
     df["transcript_density"] = df["transcript_count"] / df[tables_area_key]
 
