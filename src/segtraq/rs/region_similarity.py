@@ -869,7 +869,7 @@ def border_admixture_score(
     min_transcripts: int = 10,
     min_genes: int = 5,
     pseudocount: float = 0.5,
-    n_boot: int = 200,
+    n_boot: int = 0,
     ci_level: float = 0.95,
     random_state: int | None = None,
     n_jobs: int = -1,
@@ -885,7 +885,7 @@ def border_admixture_score(
     model and a fitted center-neighborhood mixture model. The reported score is
     the relative improvement of the mixture model over the center-only model.
 
-    Bootstrap confidence intervals are obtained by multinomial resampling of
+    If `n_boot` is set, bootstrap confidence intervals are obtained by multinomial resampling of
     the observed per-region gene count vectors within each focal cell.
 
     Notes
@@ -935,7 +935,7 @@ def border_admixture_score(
         Minimum number of genes required across the three regions combined.
     pseudocount : float, default=0.5
         Pseudocount used when converting counts to proportions.
-    n_boot : int, default=200
+    n_boot : int, default=0
         Number of bootstrap replicates per cell.
     ci_level : float, default=0.95
         Percentile confidence interval level.
