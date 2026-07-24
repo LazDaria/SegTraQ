@@ -26,11 +26,19 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
 ]
 
+nbsphinx_custom_formats = {
+    ".py": ["jupytext.reads", {"fmt": "py:percent"}],
+}
+nbsphinx_execute = "never"
+nbsphinx_execute_arguments = [
+    "--InlineBackend.print_figure_kwargs={'bbox_inches': 'tight', 'transparent': True}",
+]
+
 # Show both the class docstring and __init__ docstring
 autoclass_content = "both"
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "conf.py"]
 
 
 # -- Options for HTML output -------------------------------------------------
