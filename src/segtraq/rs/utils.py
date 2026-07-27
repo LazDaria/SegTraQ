@@ -928,7 +928,7 @@ def _bootstrap_mixture_fit(
     x_center: np.ndarray,
     x_border: np.ndarray,
     x_neighborhood: np.ndarray,
-    n_boot: int = 200,
+    n_boot: int = 0,
     min_transcripts: int = 10,
     min_genes: int = 5,
     pseudocount: float = 0.5,
@@ -943,7 +943,7 @@ def _bootstrap_mixture_fit(
     ----------
     x_center, x_border, x_neighborhood : np.ndarray
         Gene count vectors for the center, border, and neighborhood regions.
-    n_boot : int, default=200
+    n_boot : int, default=0
         Number of bootstrap replicates.
     min_transcripts : int, default=10
         Minimum number of transcripts required in each region.
@@ -994,6 +994,11 @@ def _bootstrap_mixture_fit(
     p_center = x_center / n_center
     p_border = x_border / n_border
     p_neighborhood = x_neighborhood / n_neighborhood
+
+    if n_boot <= 0:
+        return {
+            "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
+        }
 
     boot_scores = []
 
