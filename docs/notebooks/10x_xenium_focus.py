@@ -116,9 +116,9 @@ import segtraq
 warnings.filterwarnings(action="ignore")
 
 # %%
-sdata_xenium_ws = sd.read_zarr("../../data/xenium.zarr")
-sdata_bidcell_ws = sd.read_zarr("../../data/bidcell.zarr")
-sdata_proseg_ws = sd.read_zarr("../../data/proseg2.zarr")
+sdata_xenium_ws = sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr")
+sdata_bidcell_ws = sd.read_zarr("../../../data/xenium_5K_data/bidcell.zarr")
+sdata_proseg_ws = sd.read_zarr("../../../data/xenium_5K_data/proseg2.zarr")
 
 # %% [markdown]
 # The `SpatialData` objects can be subset via `spatialdata.query.bounding_box()`.
@@ -200,7 +200,7 @@ st_proseg = segtraq.SegTraQ(
 
 # %%
 # Load scRNA-seq data
-adata_ref = ad.read_h5ad("../../data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # %% [markdown]
 # For easier access, we store the `SpatialData` object into a dictionary.
@@ -211,7 +211,7 @@ st_dict = {"xenium": st_xenium, "bidcell": st_bidcell, "proseg": st_proseg}
 # %%
 # Transfer labels
 for _method, st in st_dict.items():
-    st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", inplace=True)
+    st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw", inplace=True)
 
 # %% [markdown]
 # We can visualize the spatial data and color cell masks by transferred labels using `spatialdata-plot`.
@@ -436,9 +436,6 @@ features = [
     "cell_area",
     "perimeter",
     "circularity",
-    "bbox_width",
-    "bbox_height",
-    "extent",
     "solidity",
     "convexity",
     "elongation",

@@ -24,10 +24,6 @@ Look through the GitHub issues for bugs. Anything tagged with "bug" and "help wa
 
 Look through the GitHub issues for features. Anything tagged with "enhancement" and "help wanted" is open to whoever wants to implement it.
 
-### Write Documentation
-
-SegTraQ could always use more documentation, whether as part of the official docs, in docstrings, or even on the web in blog posts, articles, and such.
-
 ### Submit Feedback
 
 The best way to send feedback is to file an issue at https://github.com/LazDaria/segtraq/issues.
@@ -99,6 +95,27 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the list in README.md.
 3. The pull request should work for Python 3.12 and 3.13. Tests run in GitHub Actions on every pull request to the main branch, make sure that the tests pass for all supported Python versions.
+
+### Write Documentation
+
+Docs are written as jupytext-paired `.py` files under `docs/notebooks/` — no
+`.ipynb` files should be committed. To build the docs locally (requires the
+test data from step 4 above):
+
+```sh
+uv pip install -e ".[docs]"
+make docs
+```
+
+This executes the notebooks against real data and builds the HTML site into
+`docs/_build/html`. Maintainers can publish the built site with:
+
+```sh
+make deploy-docs
+```
+
+Do not commit `.ipynb` files or `docs/_build/` — these are build artifacts
+and are excluded via `.gitignore`.
 
 ## Tips
 
