@@ -15,18 +15,26 @@
 # %% [markdown]
 # # Module: Volume (3D)
 #
-# Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical thickness of ~4–10 µm. Even for a relatively thin 5 µm section, 
-# cells can partially overlap along the z-dimension, depending on tissue orientation and how the sample is cut. As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination, because transcripts from overlapping cells may be assigned to the same segmentation mask.
+# Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical
+# thickness of ~4–10 µm. Even for a relatively thin 5 µm section,
+# cells can partially overlap along the z-dimension,
+# depending on tissue orientation and how the sample is cut.
+# As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination,
+# because transcripts from overlapping cells may be assigned to the same segmentation mask.
 #
 # <center>
 #  <img src='../_static/img/docs/volume.png' width='90%' />
 # </center>
 #
-# To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the `volume` (`vl`) accessor.
+# To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the
+# `volume` (`vl`) accessor.
 #
-# In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap, and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg), or in other words, how well it can disentangle transcripts from overlapping cells.
+# In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap,
+# and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg),
+# or in other words, how well it can disentangle transcripts from overlapping cells.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from
+# [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
 # %%
 # %load_ext autoreload
@@ -45,13 +53,16 @@ import pandas as pd
 import seaborn as sns
 import spatialdata as sd
 import spatialdata_plot  # noqa
+from sklearn.metrics import r2_score
 
 import segtraq
 
 warnings.filterwarnings(action="ignore")
 
 # %% [markdown]
-# We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium data segmented with Xenium's multimodal cell segmentation (`sdata_xenium`), with Proseg v2.0.5 (`sdata_proseg2`) and Proseg v3.1.0 (`sdata_proseg3`).
+# We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium
+# data segmented with Xenium's multimodal cell segmentation (`sdata_xenium`),
+# with Proseg v2.0.5 (`sdata_proseg2`) and Proseg v3.1.0 (`sdata_proseg3`).
 
 # %%
 sdata_xenium = sd.read_zarr(
@@ -65,7 +76,7 @@ sdata_proseg3 = sd.read_zarr(
 )
 
 # %% [markdown]
-# Next, we initialize `SegTraQ` objects. 
+# Next, we initialize `SegTraQ` objects.
 
 # %%
 st_xenium = segtraq.SegTraQ(
@@ -107,7 +118,7 @@ st_proseg3 = segtraq.SegTraQ(
 st_dict = {"xenium": st_xenium, "proseg2": st_proseg2, "proseg3": st_proseg3}
 
 # %% [markdown]
-# We can then transfer labels from a reference scRNA-seq dataset. 
+# We can then transfer labels from a reference scRNA-seq dataset.
 
 # %%
 adata_ref = ad.read_h5ad("../../data/BC_scRNAseq_Janesick.h5ad")
@@ -121,7 +132,11 @@ for _method, st in st_dict.items():
 
 # %% [markdown]
 # We will first examine the z-distribution of transcripts in Xenium data.
-# Proseg includes a correction step for z-drift, which can occur when the slide is not perfectly flat—for example due to tissue cutting and mounting—or due to imaging-related effects (e.g. microscope settings or slight unevenness of the slide and imaging surface).
+# Proseg includes a correction step for z-drift, which can occur when the slide
+# is not perfectly flat—for example due to tissue cutting and mounting—or due to
+# imaging-related effects (e.g. microscope settings or slight unevenness of the
+# slide and imaging surface).
+
 
 # %%
 def plot_transcripts_across_z_bins(sdata, method, n_z_bins, xy_bin_size=5.0):
@@ -187,9 +202,13 @@ def plot_transcripts_across_z_bins(sdata, method, n_z_bins, xy_bin_size=5.0):
 
 
 # %% [markdown]
-# In the raw Xenium data, we can still observe a pronounced z-drift across the tissue. In lower z-planes (e.g. Z plane 3), transcripts are more densely detected on the left side of the field of view, whereas in higher z-planes the transcript density shifts towards the right. 
+# In the raw Xenium data, we can still observe a pronounced z-drift across the tissue.
+# In lower z-planes (e.g. Z plane 3), transcripts are more densely detected on the left
+# side of the field of view, whereas in higher z-planes the transcript density shifts towards the right.
 #
-# Prosegs explicitly corrects for this type of depth-related variation and produces normalized z values, as can be seen [here](https://github.com/dcjones/proseg/blob/main/src/sampler/transcripts.rs#L162).
+# Prosegs explicitly corrects for this type of depth-related variation and produces
+# normalized z values, as can be seen
+# [here](https://github.com/dcjones/proseg/blob/main/src/sampler/transcripts.rs#L162).
 
 # %%
 for method, st in st_dict.items():
@@ -198,14 +217,26 @@ for method, st in st_dict.items():
 # %% [markdown]
 # ## Top–bottom z consistency (cosine similarity)
 #
-# To assess whether a segmented cell may contain transcripts from overlapping cells across z, we compute a top–bottom z similarity score. The intuition is that a correctly segmented single cell should have a broadly consistent expression profile across depth, while merged/overlapping cells may show depth-dependent expression shifts, lowering similarity.
+# To assess whether a segmented cell may contain transcripts from overlapping
+# cells across z, we compute a top–bottom z similarity score.
+# The intuition is that a correctly segmented single cell should have a broadly
+# consistent expression profile across depth, while merged/overlapping cells may
+# show depth-dependent expression shifts, lowering similarity.
 #
 # For each cell, we split its transcripts into:
 #
 # bottom: z ≤ q (default  q=0.30)
 # top: z ≥ 1−q
 #
-# We aggregate gene counts for both parts, normalize within each cell using the combined library size (top+bottom), apply `log1p`, and compute the cosine similarity between the two vectors (considering genes non-zero in either part). To enable fair comparisons between methods, we optionally correct for global z-drift by normalizing z coordinates before splitting transcripts into top and bottom (default `correct_z_drift=True`); Proseg already performs this normalization internally. Cells are set to `NaN` if either part has fewer than `min_transcripts` transcripts (default 10) or fewer than `min_genes` genes (default 5).
+# We aggregate gene counts for both parts, normalize within each cell using
+# the combined library size (top+bottom), apply `log1p`, and compute the cosine
+# similarity between the two vectors (considering genes non-zero in either part).
+# To enable fair comparisons between methods, we optionally correct for global
+# z-drift by normalizing z coordinates before splitting transcripts into top
+# and bottom (default `correct_z_drift=True`); Proseg already performs this
+# normalization internally. Cells are set to `NaN` if either part has fewer
+# than `min_transcripts` transcripts (default 10) or fewer than `min_genes`
+# genes (default 5).
 
 # %%
 for method, st in st_dict.items():
@@ -240,9 +271,15 @@ def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
 density_plot_feature(st_dict, "similarity_top_bottom")
 
 # %% [markdown]
-# Even after within-cell normalization, high-count cells have less sampling noise, so their top and bottom gene profiles are estimated more reliably and tend to look more similar, which increases cosine similarity. In low-count cells, random dropout and sparse gene sampling make the two vectors noisier and artificially reduce the similarity. 
+# Even after within-cell normalization, high-count cells have less sampling noise,
+# so their top and bottom gene profiles are estimated more reliably and tend to
+# look more similar, which increases cosine similarity. In low-count cells,
+# random dropout and sparse gene sampling make the two vectors noisier and artificially
+# reduce the similarity.
 #
-# In addition, high-count cells are often larger in size and therefore span a larger proportion of z, which might reduce the risk of 3D overlap and hence lead to increase similarity between top and bottom plane (`similarity_top_bottom`).
+# In addition, high-count cells are often larger in size and therefore span a
+# larger proportion of z, which might reduce the risk of 3D overlap and hence
+# lead to increase similarity between top and bottom plane (`similarity_top_bottom`).
 
 # %%
 df = st_dict["proseg2"].sdata.tables["table"].obs[["similarity_top_bottom", "transcript_count"]].dropna()
@@ -260,11 +297,10 @@ sns.regplot(
 plt.tight_layout()
 
 # %% [markdown]
-# The relationship between `similarity_top_bottom` and `transcript_count` looks linear. The analytical Pearson residuals lead to stabilisation of the count effect on the cosine similarity.
+# The relationship between `similarity_top_bottom` and `transcript_count` looks linear.
+# The analytical Pearson residuals lead to stabilisation of the count effect on the cosine similarity.
 
 # %%
-from sklearn.metrics import r2_score
-
 x = df["transcript_count"].to_numpy()
 y = df["similarity_top_bottom"].to_numpy()
 
@@ -291,9 +327,12 @@ print(f"R² sqrt:   {r2_sqrt:.3f}")
 
 
 # %% [markdown]
-# Thus, it makes sense to plot the expression similarity between top and bottom plane per cell type, as this have less variation in transcript counts and cell size. 
+# Thus, it makes sense to plot the expression similarity between top and bottom plane per cell type,
+# as this have less variation in transcript counts and cell size.
 #
-# This confirms that Proseg 2 and 3 show the highest expression similarity between top and bottom plane for each cell type.
+# This confirms that Proseg 2 and 3 show the highest expression similarity between top and
+# bottom plane for each cell type.
+
 
 # %%
 def boxplot_per_celltype(st_dict, feature, q=1):
@@ -329,7 +368,8 @@ def boxplot_per_celltype(st_dict, feature, q=1):
 boxplot_per_celltype(st_dict, "similarity_top_bottom")
 
 # %% [markdown]
-# Proseg achieves this despite having a lower mean transcript count overall, which would typically reduce the expected correlation.
+# Proseg achieves this despite having a lower mean transcript count overall,
+# which would typically reduce the expected correlation.
 
 # %%
 for method, st in st_dict.items():
@@ -338,17 +378,27 @@ for method, st in st_dict.items():
 # %% [markdown]
 # ## Heterotypic overlap area/fraction (detecting 3D overlaps)
 #
-# This metric is designed to quantify where a quasi-3D method detects overlaps across z. It can only be computed for methods that output per-z-layer cell polygons (e.g. Proseg), because it explicitly compares cell boundaries between different z layers.
+# This metric is designed to quantify where a quasi-3D method detects overlaps across z.
+# It can only be computed for methods that output per-z-layer cell polygons (e.g. Proseg),
+# because it explicitly compares cell boundaries between different z layers.
 #
-# Because each cell has can have polygons across more than one z layer (`cell_boundaries_z0`, …), we first pick a single representative polygon per cell: the polygon with the largest area across z. We then compare this representative polygon to polygons from other z layers, excluding polygons from the same cell and restricting to different cell types (based on `transferred_cell_type`). Cells for which no label could be assigned (`transferred_cell_type` is NaN) can either be treated as a separate category (default: `treat_as_label`) or excluded from the analysis.
+# Because each cell has can have polygons across more than one z layer (`cell_boundaries_z0`, …),
+# we first pick a single representative polygon per cell: the polygon with the largest area across z.
+# We then compare this representative polygon to polygons from other z layers,
+# excluding polygons from the same cell and restricting to different cell types
+# (based on `transferred_cell_type`).
+# Cells for which no label could be assigned (`transferred_cell_type` is NaN)
+# can either be treated as a separate category (default: `treat_as_label`) or excluded from the analysis.
 #
 # For each cell we report:
 #
-# `heterotypic_overlap_area`: total area where the representative polygon overlaps with polygons of other cell types in different z layers
+# `heterotypic_overlap_area`: total area where the representative polygon overlaps with polygons of
+# other cell types in different z layers
 #
 # `heterotypic_overlap_fraction`: the same overlap area normalized by the cell’s polygon area
 #
-# This metric is not intended as a standalone quality score, but is most informative when interpreted alongside other measures (see next chapter).
+# This metric is not intended as a standalone quality score, but is most informative
+# when interpreted alongside other measures (see next chapter).
 
 # %%
 proseg_dict = st_dict.copy()
@@ -361,7 +411,8 @@ for _method, st in proseg_dict.items():
         st.vl.fraction_heterotypic_overlap(unknown_policy="exclude", shapes_key_list=shapes_key_list)
 
 # %% [markdown]
-# Below we can see the distribution of the `heterotypic_overlap_area` and `heterotypic_overlap_fraction` in proseg v2 and v3. Some cells have heterotypic overlap fractions > 50%. 
+# Below we can see the distribution of the `heterotypic_overlap_area` and
+# `heterotypic_overlap_fraction` in proseg v2 and v3. Some cells have heterotypic overlap fractions > 50%.
 
 # %%
 density_plot_feature(proseg_dict, "heterotypic_overlap_area")
@@ -370,9 +421,15 @@ density_plot_feature(proseg_dict, "heterotypic_overlap_area")
 density_plot_feature(proseg_dict, "heterotypic_overlap_fraction")
 
 # %% [markdown]
-# Spatially, it is often more informative to visualize cells with high `heterotypic_overlap_area` rather than high heterotypic_overlap_fraction. The fraction normalizes by cell size, so very small cells (often partial cells near the top or bottom z-planes due to tissue cutting) can show high values (often close to 1) even when the absolute overlap is negligible. In contrast, the overlap area highlights regions where a substantial amount of tissue is involved in cross-type overlap.
+# Spatially, it is often more informative to visualize cells with high `heterotypic_overlap_area`
+# rather than high heterotypic_overlap_fraction. The fraction normalizes by cell size,
+# so very small cells (often partial cells near the top or bottom z-planes due to tissue cutting)
+# can show high values (often close to 1) even when the absolute overlap is negligible.
+# In contrast, the overlap area highlights regions where a substantial amount of tissue
+# is involved in cross-type overlap.
 #
-# Let's have a look at a cell with a high `heterotypic_overlap_area` in proseg2. It is a stromal cell that overlaps a dendritic cell (black cross marks cell centroid).
+# Let's have a look at a cell with a high `heterotypic_overlap_area` in proseg2.
+# It is a stromal cell that overlaps a dendritic cell (black cross marks cell centroid).
 
 # %%
 # Identify cell with high heterotypic_overlap_area
@@ -435,10 +492,17 @@ for ax in axes:
 
 # %% [markdown]
 # ## Mean VSI per cell (ovrlpy-based vertical signal integrity)
-# [Ovrlpy](https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full) is a package for detecting 3D overlap in spatial transcriptomics by using transcript coordinates.
-# It computes a Vertical Signal Integrity (VSI) map that highlights regions where the transcriptome signal is consistent across depth versus regions that likely contain vertical mixing (e.g. overlapping cells or tissue folds). Conceptually, VSI compares local gene expression between a virtual top and virtual bottom subslice of the tissue: high VSI indicates strong agreement, while low VSI suggests potential 3D overlap or other depth-related artifacts. 
+# [Ovrlpy](https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full) is a package
+# for detecting 3D overlap in spatial transcriptomics by using transcript coordinates.
+# It computes a Vertical Signal Integrity (VSI) map that highlights regions where the
+# transcriptome signal is consistent across depth versus regions that likely contain vertical mixing
+# (e.g. overlapping cells or tissue folds). Conceptually, VSI compares local gene expression
+# between a virtual top and virtual bottom subslice of the tissue: high VSI indicates strong agreement,
+# while low VSI suggests potential 3D overlap or other depth-related artifacts.
 #
-# To connect this pixel-level map to our 3D metrics, we compute mean VSI per cell by sampling the VSI value at each transcript’s (x,y) position and averaging these values across all transcripts assigned to the same cell.  
+# To connect this pixel-level map to our 3D metrics, we compute mean VSI per
+# cell by sampling the VSI value at each transcript’s (x,y)
+# position and averaging these values across all transcripts assigned to the same cell.
 
 # %% [markdown]
 # We can run the compute the VSI map and extract the mean VSI per cell.
@@ -450,9 +514,17 @@ for _method, st in st_dict.items():
     _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes}, n_workers=8)
 
 # %% [markdown]
-# Plotting `similarity_top_bottom` against `mean_vsi` shows a weaker association in Proseg v2 (and Proseg v3) than in Xenium. One plausible explanation is that Proseg’s quasi-3D assignment reduces the impact of vertically mixed regions on per-cell expression consistency: even where `mean_vsi` is low (regions that look vertically inconsistent in the raw transcript field), Proseg can assign transcripts more coherently to individual cells, resulting in relatively high `similarity_top_bottom`. In Xenium, by contrast, low-VSI regions more directly translate into lower within-cell top–bottom similarity, yielding a stronger correlation.
+# Plotting `similarity_top_bottom` against `mean_vsi` shows a weaker association in Proseg v2
+# (and Proseg v3) than in Xenium. One plausible explanation is that Proseg’s quasi-3D
+# assignment reduces the impact of vertically mixed regions on per-cell expression consistency:
+# even where `mean_vsi` is low (regions that look vertically inconsistent in the raw transcript field),
+# Proseg can assign transcripts more coherently to individual cells,
+# resulting in relatively high `similarity_top_bottom`. In Xenium, by contrast,
+# low-VSI regions more directly translate into lower within-cell top–bottom similarity,
+# yielding a stronger correlation.
 #
-# We filter out cells with transcript counts below the 10th percentile, as low-count cells tend to produce noisier and less stable similarity estimates.
+# We filter out cells with transcript counts below the 10th percentile,
+# as low-count cells tend to produce noisier and less stable similarity estimates.
 
 # %%
 n = len(st_dict)
@@ -489,9 +561,16 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# In addition, proseg v2 and v3 shows large `heterotypic_overlap_fraction` values at low `mean_vsi`, this supports the idea that Proseg is successfully detecting substantial cross-type overlap in regions with poor vertical signal integrity. In other words, low-VSI regions (where the raw transcript field appears vertically inconsistent and prone to 3D mixing) coincide with locations where Proseg identifies strong heterotypic overlap across z-layers. This suggests that the overlap signal captured by ovrlpy (low VSI) corresponds to biologically and geometrically meaningful overlap events that Proseg can partially represent in its quasi-3D segmentation output.
+# In addition, proseg v2 and v3 shows large `heterotypic_overlap_fraction` values at low `mean_vsi`,
+# this supports the idea that Proseg is successfully detecting substantial cross-type overlap
+# in regions with poor vertical signal integrity. In other words, low-VSI regions
+# (where the raw transcript field appears vertically inconsistent and prone to 3D mixing)
+# coincide with locations where Proseg identifies strong heterotypic overlap across z-layers.
+# This suggests that the overlap signal captured by ovrlpy (low VSI) corresponds to biologically
+# and geometrically meaningful overlap events that Proseg can partially represent in its quasi-3D segmentation output.
 #
-# We evaluate this relation in cell types individually to reduce confounding from large cell-type–specific differences in transcript abundance.
+# We evaluate this relation in cell types individually to reduce confounding from large cell-type–specific differences
+# in transcript abundance.
 
 # %%
 n = len(proseg_dict)

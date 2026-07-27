@@ -15,13 +15,16 @@
 # %% [markdown]
 # # Module: Region Similarity
 #
-# Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.
+# Assuming that transcripts are homogeneously distributed throughout the cell,
+# we expect there to be similar expression of genes in the nucleus and in the rest of the cell.
+# If this is not the case, it can be indicative of transcript spillover from adjacent cells.
 #
 # <center>
 #  <img src='../_static/img/docs/region_similarity.png' width='90%' />
 # </center>
 #
-# The `region similarity` (`rs`) module provides metrics to assess how similar the expression profiles are between subcellular regions (e.g., cell and nucleus). 
+# The `region similarity` (`rs`) module provides metrics to assess how similar the
+# expression profiles are between subcellular regions (e.g., cell and nucleus).
 #
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
@@ -56,20 +59,26 @@ st = segtraq.SegTraQ(
 sdata
 
 # %% [markdown]
-# As you can see, the `spatialdata`dataset contains cell and nuclear masks as `shapes`. It is important that you have a nuclear segmentation in your object, otherwise you will not be able to compute the metrics below.
+# As you can see, the `spatialdata`dataset contains cell and nuclear masks as `shapes`.
+# It is important that you have a nuclear segmentation in your object,
+# otherwise you will not be able to compute the metrics below.
 
 # %% [markdown]
 # ## Intersection over Union between cell and nucleus masks
 
 # %% [markdown]
-# First, we get the nucleus that overlaps most with each cell and compute the Intersection over Union (IoU) between cell and nuclear masks using the method `match_nuclei_to_cells()`.
+# First, we get the nucleus that overlaps most with each cell and compute the Intersection over Union (IoU)
+# between cell and nuclear masks using the method `match_nuclei_to_cells()`.
 
 # %%
 results_df = st.rs.match_nuclei_to_cells()
 results_df.head()
 
 # %% [markdown]
-# For each `cell_id`, we obtain the ID (`nucleus_id`) of the nucleus mask with the highest `IoU`. If a cell does not overlap with any nucleus, the function returns a missing value for `nucleus_id`. In addition to the `IoU`, we also report the fraction of the nucleus that overlaps with the cell. If the nucleus has an invalid geometry, `IoU` and `nucleus_fraction` are reported as `NA`.
+# For each `cell_id`, we obtain the ID (`nucleus_id`) of the nucleus mask with the highest `IoU`.
+# If a cell does not overlap with any nucleus, the function returns a missing value for `nucleus_id`.
+# In addition to the `IoU`, we also report the fraction of the nucleus that overlaps with the cell.
+# If the nucleus has an invalid geometry, `IoU` and `nucleus_fraction` are reported as `NA`.
 
 # %% [markdown]
 # Let's see what this looks like when we plot the IoU spatially.
@@ -99,6 +108,7 @@ sdata.pl.render_shapes(
 
 # %% [markdown]
 # We will quickly set up some helper functions to facilitate plotting.
+
 
 # %%
 # helper functions for plotting
@@ -217,7 +227,9 @@ plot_histogram(
 # ## Expression similarity between cell and nucleus
 
 # %% [markdown]
-# Now that we have matched each cell with a nucleus, we can investigate how similar the expression profiles are between the nucleus and the whole cell (including the nucleus). For this, we use the function `similarity_nucleus_cell()`.
+# Now that we have matched each cell with a nucleus, we can investigate how similar the expression
+# profiles are between the nucleus and the whole cell (including the nucleus).
+# For this, we use the function `similarity_nucleus_cell()`.
 
 # %%
 similarity_df = st.rs.similarity_nucleus_cell()
@@ -231,7 +243,10 @@ plot_histogram(
 )
 
 # %% [markdown]
-# The histogram shows the distribution of cosine similarity values across cells. It is right-skewed, with a median of 0.73. This provides intuition about possible spatial spillover: cells may be contaminated by neighboring cells, assuming that nuclei capture expression with less contamination due to their smaller radius.
+# The histogram shows the distribution of cosine similarity values across cells.
+# It is right-skewed, with a median of 0.73. This provides intuition about possible
+# spatial spillover: cells may be contaminated by neighboring cells, assuming that
+# nuclei capture expression with less contamination due to their smaller radius.
 
 # %%
 plot_regression(
@@ -243,10 +258,14 @@ plot_regression(
 )
 
 # %% [markdown]
-# The calculated R2 (coefficient of determination) is 0.428, indicating that similarity between cell and nucleus increases with their IoU. 
+# The calculated R2 (coefficient of determination) is 0.428, indicating that similarity between
+# cell and nucleus increases with their IoU.
 
 # %% [markdown]
-# The spatial plot below shows cell boundaries colored by cosine similarity between the nucleus and the cell. Cells whose transcripts are distributed across the nucleus region tend to have higher similarity with the nucleus, while cells whose transcripts are located outside the nuclear region —potentially due to spillover from neighboring cells— tend to exhibit lower similarity.
+# The spatial plot below shows cell boundaries colored by cosine similarity between the nucleus and the cell.
+# Cells whose transcripts are distributed across the nucleus region tend to have higher
+# similarity with the nucleus, while cells whose transcripts are located outside the nuclear region
+# —potentially due to spillover from neighboring cells— tend to exhibit lower similarity.
 
 # %%
 # link annotations with cell boundaries
@@ -297,7 +316,12 @@ df = obs[["cell_id", "iou", "similarity_nucleus_cell"]].dropna()
 df.loc[df["iou"] < 0.1].sort_values("similarity_nucleus_cell", ascending=False).head()
 
 # %% [markdown]
-# We can see that there are some cells with high `similarity_nucleus_cell` despite low `IoU`. Let's investigate one of these cells in more detail. By plotting the cell (centroid marked by grey cross) with its nucleus (centroid marked by black cross) and assigned transcripts (red), we can see that for this cell, the nucleus is small in comparison to the cell, however the transcripts are still somewhat homogeneously distributed within the cell, leading to the high similarity.
+# We can see that there are some cells with high `similarity_nucleus_cell` despite low `IoU`.
+# Let's investigate one of these cells in more detail. By plotting the cell (centroid marked by grey cross)
+# with its nucleus (centroid marked by black cross) and assigned transcripts (red),
+# we can see that for this cell, the nucleus is small in comparison to the cell,
+# however the transcripts are still somewhat homogeneously distributed within the cell,
+# leading to the high similarity.
 
 # %%
 cid = (
@@ -407,19 +431,31 @@ def plot_cell_with_nucleus_and_transcripts(
 plot_cell_with_nucleus_and_transcripts(cid, title="Cell with high similarity_nucleus_cell despite high IoU")
 
 # %% [markdown]
-# Just looking at the similarity between the nucleus and the entire cell isn't specific enough. As a better metric, we therefore compute the similarity between the transcripts in the cell region intersecting the nucleus and the transcripts in the remaining cell region (we call this the cytoplasm, however with Proseg, this can also include transcripts that were originally measured outside of the cell). 
+# Just looking at the similarity between the nucleus and the entire cell isn't specific enough.
+# As a better metric, we therefore compute the similarity between the transcripts in the cell region
+# intersecting the nucleus and the transcripts in the remaining cell region
+# (we call this the cytoplasm, however with Proseg, this can also include transcripts that were originally
+# measured outside of the cell).
 
 # %% [markdown]
 # ## Similarity between Nucleus and Cytoplasm
 #
-# The function `similarity_nucleus_cytoplasm()` computes the cosine similarity between the spatial transcript feature counts within the nucleus and the cytoplasm. It is applicable only when nuclear masks are available. It returns `NaN` when the regions have no or not a sufficient number of overlapping transcripts (`min_transcripts`, `min_genes`). A low correlation/similarity may indicate that the cell boundary extension captures neighborhood or ambient signal rather than true intracellular expression—a concern similarly highlighted by segmentation benchmarks such as [Baysor](https://www.nature.com/articles/s41587-021-01044-w). This is based on the assumption that transcripts are homogeneously distributed within the cell and not localized in specific subcellular regions. 
+# The function `similarity_nucleus_cytoplasm()` computes the cosine similarity between the spatial
+# transcript feature counts within the nucleus and the cytoplasm.
+# It is applicable only when nuclear masks are available.
+# It returns `NaN` when the regions have no or not a sufficient number of overlapping transcripts
+# (`min_transcripts`, `min_genes`). A low correlation/similarity may indicate that the cell boundary
+# extension captures neighborhood or ambient signal rather than true intracellular expression—a concern
+# similarly highlighted by segmentation benchmarks such as [Baysor](https://www.nature.com/articles/s41587-021-01044-w).
+# This is based on the assumption that transcripts are homogeneously distributed within the cell
+# and not localized in specific subcellular regions.
 
 # %%
 sim_nuc_cyto_df = st.rs.similarity_nucleus_cytoplasm()
 sim_nuc_cyto_df.head()
 
 # %% [markdown]
-# The histogram below shows that the cosine similarity between the nucleus and remaining part of the cell is 0.45. 
+# The histogram below shows that the cosine similarity between the nucleus and remaining part of the cell is 0.45.
 
 # %%
 plot_histogram(
@@ -429,7 +465,10 @@ plot_histogram(
 )
 
 # %% [markdown]
-# The scatter plot below visualizes the cosine similarity between transcript counts in the intersection and remainder of each cell, plotted against the Intersection over Union (IoU) with the nucleus. The calculated R2 value is 0.032, indicating that `similarity_nucleus_cytoplasm` less dependent on `IoU` than `similarity_cell_nucleus`.
+# The scatter plot below visualizes the cosine similarity between transcript counts in the
+# intersection and remainder of each cell, plotted against the Intersection over Union (IoU) with the nucleus.
+# The calculated R2 value is 0.032, indicating that `similarity_nucleus_cytoplasm`
+# less dependent on `IoU` than `similarity_cell_nucleus`.
 
 # %%
 plot_regression(
@@ -441,7 +480,8 @@ plot_regression(
 )
 
 # %% [markdown]
-# The spatial plots below shows the spatial distribution of computed correlations. The cosine similarity between parts can be a measure of how much neighboring signal is captured. 
+# The spatial plots below shows the spatial distribution of computed correlations.
+# The cosine similarity between parts can be a measure of how much neighboring signal is captured.
 
 # %%
 # link annotations with cell boundaries
@@ -514,12 +554,13 @@ sdata.pl.render_shapes(
 )
 
 # %% [markdown]
-# Above, we can see that there are some cells with low cosine similarity between parts despite high `IoU`. 
+# Above, we can see that there are some cells with low cosine similarity between parts despite high `IoU`.
 
 # %% [markdown]
 # ## Similarity between the cell center and border
 #
-# The function `similarity_center_border()` computes the cosine similarity between gene expression in the cell interior (“center”) and outer ring (“border”).
+# The function `similarity_center_border()` computes the cosine similarity between gene
+# expression in the cell interior (“center”) and outer ring (“border”).
 #
 # Specifically, it:
 #
@@ -549,7 +590,7 @@ plot_histogram(
 )
 
 # %% [markdown]
-# The spatial plots below shows the spatial distribution of computed similarity. 
+# The spatial plots below shows the spatial distribution of computed similarity.
 
 # %%
 # link annotations with cell boundaries
@@ -584,7 +625,8 @@ sdata.pl.render_shapes(
 
 # %% [markdown]
 # ## Similarity between the border and neighborhood
-# The function `similarity_border_neighborhood()` computes the cosine similarity between gene expression in the cell border and its surrounding neighborhood.
+# The function `similarity_border_neighborhood()` computes the cosine similarity
+# between gene expression in the cell border and its surrounding neighborhood.
 #
 # Specifically, it:
 # 1. Defines the border region as the outer ring of each cell (with an inner buffer gap).
@@ -611,7 +653,7 @@ plot_histogram(
 )
 
 # %% [markdown]
-# The spatial plots below shows the spatial distribution of computed similarity. 
+# The spatial plots below shows the spatial distribution of computed similarity.
 
 # %%
 # link annotations with cell boundaries
@@ -645,7 +687,9 @@ sdata.pl.render_shapes(
 )
 
 # %% [markdown]
-# The border can resemble both the center and the neighborhood. A more specific indication of potential contamination can be obtained by comparing these similarities, for example via their ratio.
+# The border can resemble both the center and the neighborhood.
+# A more specific indication of potential contamination can be obtained by comparing these similarities,
+# for example via their ratio.
 
 # %%
 sdata.tables["table"].obs["neighborhood_center_ratio"] = (
@@ -682,7 +726,10 @@ sdata.pl.render_shapes(element="cell_boundaries", color="neighborhood_center_rat
 
 # %% [markdown]
 # ## Border admixture score
-# The ratio between border–neighborhood and center–border similarity can be unstable, as it can become very large when the similarity between center and border is close to zero. A more robust metric is therefore the **border admixture score**, which explicitly models the border as a mixture of center and neighborhood expression.
+# The ratio between border–neighborhood and center–border similarity can be unstable,
+# as it can become very large when the similarity between center and border is close to zero.
+# A more robust metric is therefore the **border admixture score**, which explicitly models the
+# border as a mixture of center and neighborhood expression.
 #
 # Specifically, the function `border_admixture_score()`:
 #
@@ -698,13 +745,14 @@ sdata.pl.render_shapes(element="cell_boundaries", color="neighborhood_center_rat
 # 5. Computes how much better this mixture explains the border compared to the center alone (`border_admixture_score`).
 # 6. Estimates confidence intervals via bootstrap resampling.
 #
-# The resulting score reflects how strongly the border resembles the neighborhood beyond what is expected from the center alone.
+# The resulting score reflects how strongly the border resembles the neighborhood beyond what
+# is expected from the center alone.
 
 # %%
 st.rs.border_admixture_score(n_jobs=-1)
 
 # %% [markdown]
-# The histogram below shows the distribution of the border_admixture_score. 
+# The histogram below shows the distribution of the border_admixture_score.
 
 # %%
 plot_histogram(
@@ -714,11 +762,18 @@ plot_histogram(
 )
 
 # %% [markdown]
-# The confidence interval reflects the uncertainty in the border admixture score due to limited and noisy transcript counts, estimated via bootstrap resampling. It should be considered to distinguish robust signals from effects that could arise by chance, especially in sparse data.
+# The confidence interval reflects the uncertainty in the border admixture score due to
+# limited and noisy transcript counts, estimated via bootstrap resampling.
+# It should be considered to distinguish robust signals from effects that could arise by chance,
+# especially in sparse data.
 #
-# A border_admixture_score > 0 indicates that including the neighborhood improves the fit to the border compared to using the center alone. A score of 1 means that the border expression is perfectly explained by a mixture of center and neighborhood.
+# A border_admixture_score > 0 indicates that including the neighborhood improves the fit to the
+# border compared to using the center alone. A score of 1 means that the border expression is
+# perfectly explained by a mixture of center and neighborhood.
 #
-# To identify potentially contaminated cells, we use a threshold of 0.25 and require that the lower bound of the confidence interval exceeds this threshold, ensuring that only cells with a robust and consistent neighborhood contribution are selected.
+# To identify potentially contaminated cells, we use a threshold of 0.25 and require that
+# the lower bound of the confidence interval exceeds this threshold,
+# ensuring that only cells with a robust and consistent neighborhood contribution are selected.
 
 # %%
 obs = sdata.tables["table"].obs

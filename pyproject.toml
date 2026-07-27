@@ -103,5 +103,10 @@ select = [
     "UP",  # pyupgrade
 ]
 
+# B018 ignores standalone expressions (e.g. used for printing at the end of a code block in a notebook)
+# E402 ignores module level import not at top of file (e.g. used for imports in a notebook)
+[tool.ruff.lint.per-file-ignores]
+"docs/notebooks/*.py" = ["B018", "E402"]
+
 [tool.uv]
 package = true

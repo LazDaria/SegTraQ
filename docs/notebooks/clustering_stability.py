@@ -15,13 +15,19 @@
 # %% [markdown]
 # # Module: Clustering Stability
 #
-# When analyzing (spatial) transcriptomics data, cells are typically clustered into cell types based on their RNA expression. If the segmentation of a spatial transcriptomics dataset went well, we would assume that this clustering is somewhat stable, even if we only cluster on parts of the data. The `clustering stability` (`cs`) module includes some functions to apply clustering and assess its robustness. The figure below shows a bad clustering (lots of overlap) vs. a good clustering.
+# When analyzing (spatial) transcriptomics data, cells are typically clustered
+# into cell types based on their RNA expression. If the segmentation of a spatial transcriptomics
+# dataset went well, we would assume that this clustering is somewhat stable,
+# even if we only cluster on parts of the data. The `clustering stability` (`cs`)
+# module includes some functions to apply clustering and assess its robustness.
+# The figure below shows a bad clustering (lots of overlap) vs. a good clustering.
 #
 # <center>
 #  <img src='../_static/img/docs/clustering_stability.png' width='90%' />
 # </center>
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from
+# [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
 # %%
 # %load_ext autoreload
@@ -100,7 +106,9 @@ st_dict = {"bidcell": st_bidcell, "segger": st_segger, "xenium": st_xenium, "pro
 
 # %% [markdown]
 # ## The problem
-# Segmentation errors affect downstream analysis in spatial transcriptomics datasets. For example, let's consider the UMAPs of four different segmentations. You can see below that they differ substantially.
+# Segmentation errors affect downstream analysis in spatial transcriptomics datasets.
+# For example, let's consider the UMAPs of four different segmentations.
+# You can see below that they differ substantially.
 
 # %%
 fig, axs = plt.subplots(1, 4, figsize=(8, 2))
@@ -142,9 +150,13 @@ plt.show()
 # %% [markdown]
 # ## Cluster Connectedness
 #
-# The cluster connectedness (CC) is a measure that looks at the compactness of clusters. To compute it, we use the neighborhood graph we computed with scanpy earlier. The connectedness then iterates over all cells and computes the number of neighbors with the same cluster assignment and divides it by the number of total neighbors.
+# The cluster connectedness (CC) is a measure that looks at the compactness of clusters.
+# To compute it, we use the neighborhood graph we computed with scanpy earlier.
+# The connectedness then iterates over all cells and computes the number of neighbors with the
+# same cluster assignment and divides it by the number of total neighbors.
 #
-# By default, we compute this metric for Leiden clustering at resolution 0.2. You can adjust this with the `resolution` parameter.
+# By default, we compute this metric for Leiden clustering at resolution 0.2.
+# You can adjust this with the `resolution` parameter.
 
 # %%
 ccs = {}
@@ -155,9 +167,13 @@ ccs
 # %% [markdown]
 # ## Silhouette Score
 #
-# A slightly more elaborate metric is the silhouette score. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). Values range from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.
+# A slightly more elaborate metric is the silhouette score.
+# It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation).
+# Values range from −1 to +1, where a high value indicates that the object is well matched to its
+# own cluster and poorly matched to neighboring clusters.
 #
-# By default, we compute this metric for Leiden clustering at resolution 0.2. You can adjust this with the `resolution` parameter.
+# By default, we compute this metric for Leiden clustering at resolution 0.2.
+# You can adjust this with the `resolution` parameter.
 
 # %%
 silhouette_scores = {}
@@ -168,15 +184,21 @@ silhouette_scores
 # %% [markdown]
 # ## Purity
 #
-# Another way to assess cluster stability is to cluster only on a subset of all cells. For example, if we randomly select 63% ($1 - e^{-1}$) of cells and then perform Leiden clustering on those, will our cells typically get assigned to the same cluster or to different ones?
+# Another way to assess cluster stability is to cluster only on a subset of all cells.
+# For example, if we randomly select 63% ($1 - e^{-1}$) of cells and then perform Leiden
+# clustering on those, will our cells typically get assigned to the same cluster or to different ones?
 #
-# One way to assess this is by comparing the purity between two clusterings. For every cluster in clustering 1, we check how many other clusters it contains in clustering 2.
+# One way to assess this is by comparing the purity between two clusterings.
+# For every cluster in clustering 1, we check how many other clusters it contains in clustering 2.
 #
-# A purity value of 1 means that the clusters are completely pure, whereas a value closer to 0 means that they are more mixed.
+# A purity value of 1 means that the clusters are completely pure,
+# whereas a value closer to 0 means that they are more mixed.
 #
-# We randomly select 63% of cells, perform clustering on them, and do this five times, to obtain five different clusterings. Then we compare them using the purity score.
+# We randomly select 63% of cells, perform clustering on them, and do this five times,
+# to obtain five different clusterings. Then we compare them using the purity score.
 #
-# **Note:** this method will recompute the PCA based on a subset of features. If you will be using the PCA in the anndata later, you should recompute it on the whole data.
+# **Note:** this method will recompute the PCA based on a subset of features.
+# If you will be using the PCA in the anndata later, you should recompute it on the whole data.
 
 # %%
 purities = {}
@@ -187,7 +209,10 @@ purities
 # %% [markdown]
 # ## Adjusted Rand Index (ARI)
 #
-# The adjusted rand index (ARI) is another metric to determine the similarity of different clusterings (again, we create five clusterings based on random subsets of 63% of cells each). Just like the purity, its values range from 0 (no similarity, not a robust clustering) to 1 (exactly the same clusters, high robustness).
+# The adjusted rand index (ARI) is another metric to determine the similarity of
+# different clusterings (again, we create five clusterings based on random subsets of 63% of cells each).
+# Just like the purity, its values range from 0 (no similarity, not a robust clustering) to 1
+# (exactly the same clusters, high robustness).
 
 # %%
 aris = {}
@@ -204,7 +229,8 @@ st_dict["proseg2"].sdata.tables["table"]
 # %% [markdown]
 # ## Visualization
 #
-# Looking at numbers is one thing, but interpretation will be a lot easier if we visualize our results. The following couple of codeblocks demonstrate how the four methods compare.
+# Looking at numbers is one thing, but interpretation will be a lot easier if we visualize our results.
+# The following couple of codeblocks demonstrate how the four methods compare.
 
 # %%
 # putting everything into a dataframe for easier plotting
@@ -245,7 +271,10 @@ plt.show()
 # %% [markdown]
 # ## Supervised cluster stability
 #
-# If you already have labels for your cells, e. g. from performing label transfer on your data, you might want to check how compact those clusters are. Here, we assess Cluster Connectedness and Silhouette score on clusters obtained via label transfer. We do this by simply specifying a `label_key` in the respective functions.
+# If you already have labels for your cells, e. g. from performing label transfer on your data,
+# you might want to check how compact those clusters are.
+# Here, we assess Cluster Connectedness and Silhouette score on clusters obtained via label transfer.
+# We do this by simply specifying a `label_key` in the respective functions.
 
 # %%
 # Running label transfer from an scRNA-seq dataset

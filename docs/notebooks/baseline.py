@@ -15,7 +15,9 @@
 # %% [markdown]
 # # Module: Baseline Metrics
 #
-# When assessing the quality of a segmentation, the first thing one usually looks at are summary metrics such as the number of segmented cells, number of transcripts/genes per cell, the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.
+# When assessing the quality of a segmentation, the first thing one usually looks at are summary metrics
+# such as the number of segmented cells, number of transcripts/genes per cell,
+# the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.
 #
 # <center>
 #  <img src='../_static/img/docs/baseline.png' width='90%' />
@@ -52,7 +54,9 @@ st = segtraq.SegTraQ(
 )
 
 # %% [markdown]
-# To get a first impression of the quality of the data, we can check how many cells there are in the data. We can also check how many transcripts were measured in total, how many genes they map to, and how many transcripts were not assigned to a cell.
+# To get a first impression of the quality of the data, we can check how many cells there are in the data.
+# We can also check how many transcripts were measured in total,
+# how many genes they map to, and how many transcripts were not assigned to a cell.
 
 # %%
 st.bl.num_cells()
@@ -67,7 +71,8 @@ st.bl.num_genes()
 st.bl.perc_unassigned_transcripts()
 
 # %% [markdown]
-# Next, let's see how many transcripts were detected per cell. We can do this using the `transcripts_per_cell()` method.
+# Next, let's see how many transcripts were detected per cell.
+# We can do this using the `transcripts_per_cell()` method.
 
 # %%
 transcripts_per_cell = st.bl.transcripts_per_cell()
@@ -102,7 +107,8 @@ plt.title("Distribution of Transcripts per Cell")
 plt.show()
 
 # %% [markdown]
-# We can also do the same thing for the number of genes per cell, since there are often multiple transcripts measured per gene.
+# We can also do the same thing for the number of genes per cell,
+# since there are often multiple transcripts measured per gene.
 
 # %%
 genes_per_cell = st.bl.genes_per_cell()
@@ -134,7 +140,9 @@ plt.title("Distribution of Genes per Cell")
 plt.show()
 
 # %% [markdown]
-# Next to the number of transcripts per cell, we can also investigate the transcript density, which is computed as the number of transcripts divided by the cell area. Note that the background does not appear in this data frame.
+# Next to the number of transcripts per cell, we can also investigate the transcript density,
+# which is computed as the number of transcripts divided by the cell area.
+# Note that the background does not appear in this data frame.
 
 # %%
 transcript_density = st.bl.transcript_density()
@@ -167,7 +175,9 @@ plt.title("Distribution of Transcript Density per Cell")
 plt.show()
 
 # %% [markdown]
-# We can also compute the mean number of transcripts per detected gene per cell, which is computed by averaging per-gene transcript counts across genes observed in each cell. Note that only detected genes are considered and background transcripts are excluded.
+# We can also compute the mean number of transcripts per detected gene per cell,
+# which is computed by averaging per-gene transcript counts across genes observed in each cell.
+# Note that only detected genes are considered and background transcripts are excluded.
 
 # %%
 mean_transcripts_per_gene_per_cell = st.bl.mean_transcripts_per_gene_per_cell()
@@ -200,7 +210,12 @@ plt.title("Distribution of Transcript Density per Cell")
 plt.show()
 
 # %% [markdown]
-# Finally, let's look at some morphological features, such as the cell area, circularity, elongation, etc. We can get those with the function `morphological_features()`. If you only want to compute certain features, you can select them with the `features_to_compute` argument. This can drastically reduce the runtime, as especially the features `elongation` and `eccentricity` can take a while to compute.
+# Finally, let's look at some morphological features,
+# such as the cell area, circularity, elongation, etc.
+# We can get those with the function `morphological_features()`.
+# If you only want to compute certain features, you can select them with the
+# `features_to_compute` argument. This can drastically reduce the runtime,
+# as especially the features `elongation` and `eccentricity` can take a while to compute.
 
 # %%
 morphological_features = st.bl.morphological_features()
@@ -249,14 +264,18 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Instead of measures per cell, we can also compute some metrics per gene. For example, we can see the percentage of how often a gene was not assigned to any cell. This can help to detect potential biases in our segmentation.
+# Instead of measures per cell, we can also compute some metrics per gene.
+# For example, we can see the percentage of how often a gene was not assigned to any cell.
+# This can help to detect potential biases in our segmentation.
 
 # %%
 perc_unassigned_transcripts_per_gene = st.bl.perc_unassigned_transcripts_per_gene()
 perc_unassigned_transcripts_per_gene.sort_values(by="perc_unassigned", ascending=False).head()
 
 # %% [markdown]
-# In our example, most transcripts were assigned to a cell. However, if you detected that a large number of transcripts were unassigned, you could follow up with a gene set enrichment analysis (GSEA) to look for specific biases.
+# In our example, most transcripts were assigned to a cell.
+# However, if you detected that a large number of transcripts were unassigned,
+# you could follow up with a gene set enrichment analysis (GSEA) to look for specific biases.
 
 # %% [markdown]
 # Finally, we can check the anndata object to verify that all of our metrics are stored in there.
