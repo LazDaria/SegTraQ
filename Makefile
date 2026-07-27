@@ -67,8 +67,6 @@ pdb:  ## Run all the tests, but on failure, drop into the debugger
 	pytest --pdb --maxfail=10 --pdbcls=IPython.terminal.debugger:TerminalPdb $(filter-out $@,$(MAKECMDGOALS))
 
 test-all: ## run tests on every Python version with uv
-	uv run --python=3.10 --extra test pytest
-	uv run --python=3.11 --extra test pytest
 	uv run --python=3.12 --extra test pytest
 	uv run --python=3.13 --extra test pytest
 

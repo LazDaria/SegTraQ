@@ -23,7 +23,7 @@
 # because transcripts from overlapping cells may be assigned to the same segmentation mask.
 #
 # <center>
-#  <img src='../_static/img/docs/volume.png' width='90%' />
+#  <img src='../../_static/img/docs/volume.png' width='90%' />
 # </center>
 #
 # To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the
@@ -121,7 +121,7 @@ st_dict = {"xenium": st_xenium, "proseg2": st_proseg2, "proseg3": st_proseg3}
 # We can then transfer labels from a reference scRNA-seq dataset.
 
 # %%
-adata_ref = ad.read_h5ad("../../data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../../data/BC_scRNAseq_Janesick.h5ad")
 
 for _method, st in st_dict.items():
     st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", inplace=True)
