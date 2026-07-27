@@ -32,6 +32,7 @@ jobs:
       - name: Install pandoc
         run: sudo apt-get update && sudo apt-get install -y pandoc
 
+      # TODO: THIS NEEDS TO BE CHANGED SO THAT IS JUST PUSHES THE PREBUILT DOCS TO THE GITHUB PAGES BRANCH
       - name: Build docs
         working-directory: ./docs
         run: make html
