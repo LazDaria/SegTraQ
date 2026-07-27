@@ -108,14 +108,12 @@ make docs
 ```
 
 This executes the notebooks against real data and builds the HTML site into
-`docs/_build/html`. Maintainers can publish the built site with:
+`docs/_build/html`. Please double-check the resulting HTML pages for correctness.
+Maintainers can publish the built site with:
 
 ```sh
 make deploy-docs
 ```
-
-Do not commit `.ipynb` files or `docs/_build/` — these are build artifacts
-and are excluded via `.gitignore`.
 
 ## Tips
 

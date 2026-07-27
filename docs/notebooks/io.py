@@ -26,7 +26,7 @@
 # %%
 import anndata as ad
 
-ad_test = ad.read_h5ad("/home/lazic/src/SegTraQ/data/BC_scRNAseq_Janesick.h5ad")
+ad_test = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # %%
 import spatialdata_io  # noqa
@@ -187,6 +187,8 @@ st_xenium = segtraq.SegTraQ(
     tables_centroid_x_key=None,
     tables_centroid_y_key=None,
     points_background_id=-1,  # "UNASSIGNED" for Xenium prime
+    shapes_cell_id_key=None,
+    nucleus_shapes_cell_id_key=None,
 )
 
 # %% [markdown]
@@ -493,6 +495,7 @@ sdata_proseg2_crop.pl.render_shapes(
 st_proseg2 = segtraq.SegTraQ(
     sdata_proseg2,
     shapes_cell_id_key="cell",
+    nucleus_shapes_cell_id_key="segtraq_id",
     tables_cell_id_key="cell",
     points_cell_id_key="assignment",
     points_gene_key="gene",

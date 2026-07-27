@@ -960,6 +960,7 @@ for method, st in st_dict.items():
     markers[method] = st.markers_from_reference(
         adata_ref,
         ref_cell_type="celltype_major",
+        ref_raw_counts_layer="raw",
         n_jobs=16,
     )
 
@@ -1383,6 +1384,7 @@ for method, st in st_dict.items():
         adata_ref,
         ref_cell_type="celltype_major",
         min_pos_frac=0.3,
+        ref_raw_counts_layer="raw",
         n_jobs=16,
     )
 
@@ -1490,11 +1492,11 @@ for _method, st in st_dict.items():
 # have completely different gene compositions (genes present in one are essentially absent in the other).
 
 # %%
-feature = ["cosine_sim_top_bottom_z"]
+feature = ["similarity_top_bottom"]
 density_plot_feature(st_dict, feature)
 
 # %%
-boxplot_per_celltype(st_dict, "cosine_sim_top_bottom_z")
+boxplot_per_celltype(st_dict, "similarity_top_bottom")
 
 # %% [markdown]
 # In [volume.ipynb](./volume.ipynb), we explore the distribution of transcripts along the z-dimension

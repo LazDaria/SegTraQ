@@ -20,7 +20,7 @@
 # or if they are shifted towards the membrance, which can be due to spillover from adjacent cells.
 #
 # <center>
-#  <img src='../_static/img/docs/point_statistics.png' width='90%' />
+#  <img src='../../_static/img/docs/point_statistics.png' width='90%' />
 # </center>
 #
 # This functionality is provided in the `point statistics` (`ps`) module.
@@ -58,8 +58,8 @@ import segtraq
 # segmented with Xenium's multimodal cell segmentation (`sdata_xenium`) and with Proseg v2.0.5 (`sdata_proseg2`).
 
 # %%
-sdata_xenium = sd.read_zarr("../data/xenium_v1_data/sdata_xenium_crop.zarr")
-sdata_proseg2 = sd.read_zarr("../data_proseg_v2_crop.zarr")
+sdata_xenium = sd.read_zarr("../../../data/xenium_v1_data/sdata_xenium_crop.zarr")
+sdata_proseg2 = sd.read_zarr("../../../data/proseg_v2_crop.zarr")
 
 # %% [markdown]
 # We initialize `SegTraQ` objects.
@@ -94,7 +94,7 @@ st_dict = {"xenium": st_xenium, "proseg2": st_proseg2}
 # We can then transfer labels from a reference scRNA-seq dataset.
 
 # %%
-adata_ref = ad.read_h5ad("../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 for _method, st in st_dict.items():
     st.run_label_transfer(
