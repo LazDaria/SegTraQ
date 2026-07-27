@@ -1,0 +1,1080 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>The SegTraQ (SegTraQ) class &#8212; SegTraQ</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=4418a689" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'modules/segtraq_class';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/icon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Utility functions" href="utils.html" />
+    <link rel="prev" title="The plotting (pl) accessor" href="plotting.html" />
+    <link href="../_static/style.css" rel="stylesheet" type="text/css">
+
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
+    <img src="../_static/logo_dark.png" class="logo__image only-dark pst-js-only" alt="SegTraQ - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utility functions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Module: Point Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/plotting.html">Module: Plotting</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/modules/segtraq_class.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>The SegTraQ (SegTraQ) class</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ"><code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_low_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_low_quality_transcripts()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.markers_from_reference"><code class="docutils literal notranslate"><span class="pre">SegTraQ.markers_from_reference()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_clustering_stability"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_clustering_stability()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="the-segtraq-segtraq-class">
+<h1>The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class<a class="headerlink" href="#the-segtraq-segtraq-class" title="Link to this heading">#</a></h1>
+<p>The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class represents the core interface for computing SegTraQ metrics.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="segtraq.SegTraQ">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">segtraq.</span></span><span class="sig-name descname"><span class="pre">SegTraQ</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SpatialData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'morphology_focus'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_area_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_area'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transcripts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_background_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'UNASSIGNED'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_z_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'feature_name'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_shapes_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'nucleus_boundaries'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nucleus_shapes_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_low_quality_transcripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ" title="Link to this definition">#</a></dt>
+<dd><p>Initialize a SegTraQ object, the core interface for computing SegTraQ metrics.
+Defaults target 10x Genomics Xenium; override keys for other technologies.
+By default, this removes low-quality and control transcripts that would otherwise skew metrics,
+but this can be configured via the <cite>filter_low_quality_transcripts</cite> and <cite>filter_kwargs</cite> arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData</em>) – A <cite>SpatialData</cite> object containing segmented and transcript-assigned spatial
+transcriptomics data (images, tables, points, shapes and optional labels).</p></li>
+<li><p><strong>images_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;morphology_focus&quot;</em>) – Key in <cite>sdata.images</cite> for a nuclear or morphology image (e.g., DAPI).
+Used for visualization or to derive a nucleus mask via <cite>segtraq.run_cellpose</cite>
+when using the nuclear correlation module (<cite>segtraq.nc</cite>). If <cite>None</cite>, no image
+is expected.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – Key in <cite>sdata.tables</cite> for the cell-level metadata table.</p></li>
+<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the cell table uniquely identifying each cell.</p></li>
+<li><p><strong>tables_area_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_area&quot;</em>) – Column in the cell table with cell area (2D).
+If <cite>None</cite>, area will be computed via
+<cite>segtraq.bl.morphological_features</cite>.</p></li>
+<li><p><strong>tables_centroid_x_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;x_centroid&quot;</em>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
+<li><p><strong>tables_centroid_y_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;y_centroid&quot;</em>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
+<li><p><strong>tables_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers
+matching those in <cite>sdata.points[points_key][points_gene_key]</cite>.
+If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
+<li><p><strong>tables_raw_counts_layer</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Layer containing count data. If <cite>None</cite>, <cite>adata.X</cite> is used if it looks
+like counts.
+If a layer is specified, it must exist and contain count-like values.</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>default=&quot;transcripts&quot;</em>) – Key in <cite>sdata.points</cite> for spot/transcript-level data.</p></li>
+<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the points table linking each transcript/spot to a cell.</p></li>
+<li><p><strong>points_background_id</strong> (<em>str</em><em> or </em><em>int</em><em> or </em><em>None</em><em>, </em><em>default=&quot;UNASSIGNED&quot;</em>) – Identifier for transcripts not assigned to any cell (background).</p></li>
+<li><p><strong>points_x_key</strong> (<em>str</em><em>, </em><em>default=&quot;x&quot;</em>) – Column for the x-coordinate of each transcript/spot.</p></li>
+<li><p><strong>points_y_key</strong> (<em>str</em><em>, </em><em>default=&quot;y&quot;</em>) – Column for the y-coordinate of each transcript/spot.</p></li>
+<li><p><strong>points_z_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;z&quot;</em>) – Column for the z-coordinate (3D data). If <cite>None</cite>, data are treated as 2D.</p></li>
+<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>default=&quot;feature_name&quot;</em>) – Column specifying the gene/feature name for each transcript/spot.</p></li>
+<li><p><strong>shapes_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_boundaries&quot;</em>) – Key in <cite>sdata.shapes</cite> for cell boundary polygons.</p></li>
+<li><p><strong>shapes_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Cell ID key for <cite>sdata.shapes[shapes_key]</cite>. Must match either the shapes index name
+or a column name (which will be set as the index if needed).
+If <cite>None</cite>, the index is assumed to contain cell IDs and
+renamed to “segtraq_id”.</p></li>
+<li><p><strong>nucleus_shapes_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;nucleus_boundaries&quot;</em>) – Key in <cite>sdata.shapes</cite> for nucleus boundary polygons, if available.
+If None, a nucleus mask can be obtained via <cite>segtraq.run_cellpose</cite>.</p></li>
+<li><p><strong>nucleus_shapes_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Cell ID key for <cite>sdata.shapes[nucleus_shapes_key]</cite>. Must match either the shapes
+index name or a column name (which will be set as the index if needed).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>filter_low_quality_transcripts<span class="classifier">bool, default=True</span></dt><dd><p>Whether to filter out low-quality and control transcripts that would otherwise skew metrics.</p>
+</dd>
+<dt>filter_kwargs<span class="classifier">dict or None, optional</span></dt><dd><p>If <cite>filter_low_quality_transcripts</cite> is True, these keyword arguments are forwarded
+to the filtering function.
+Possible keys are: <cite>min_qv</cite>, <cite>control_genes</cite>, <cite>control_prefixes</cite>, <cite>inplace</cite>.
+Please refer to the function <cite>_filter_control_and_low_quality_transcripts</cite> for details.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>After initializing a SegTraQ instance, all SegTraQ modules can be run
+directly from the object using its module facades.</p>
+<p>Wrappers (run_baseline, run_nuclear_correlation, etc.) to run all metrics of a module are provided below.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.filter_cells">
+<span class="sig-name descname"><span class="pre">filter_cells</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.filter_cells" title="Link to this definition">#</a></dt>
+<dd><p>Filter cells from the cell table based on a user-defined function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Column in the cell table to apply the filtering function on.</p></li>
+<li><p><strong>func</strong> (<em>Callable</em>) – A function that takes a single argument (the column value) and returns
+True if the cell should be kept, False otherwise.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, modifies <cite>self.sdata</cite> in place.
+If False, returns a new SpatialData object with the filtered cells.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>If <cite>inplace=True</cite>: returns None after modifying <cite>self.sdata</cite>.</p></li>
+<li><p>If <cite>inplace=False</cite>: returns a new SpatialData object with filtered cells.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or SpatialData</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">st</span><span class="o">.</span><span class="n">filter_cells</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="s1">&#39;cell_area&#39;</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.filter_control_and_low_quality_transcripts">
+<span class="sig-name descname"><span class="pre">filter_control_and_low_quality_transcripts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_qv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">control_prefixes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('NegControlProbe_',</span> <span class="pre">'antisense_',</span> <span class="pre">'NegControlCodeword',</span> <span class="pre">'BLANK_',</span> <span class="pre">'Blank-',</span> <span class="pre">'NegPrb',</span> <span class="pre">'DeprecatedCodeword_',</span> <span class="pre">'UnassignedCodeword_')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">control_genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recompute_expression</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.filter_control_and_low_quality_transcripts" title="Link to this definition">#</a></dt>
+<dd><p>Filter control and low-quality transcripts from the SpatialData object.
+This is always done in place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>sd.SpatialData</em>) – The SpatialData object containing transcript data.</p></li>
+<li><p><strong>min_qv</strong> (<em>float</em><em> | </em><em>None</em><em>, </em><em>default=20.0</em>) – Minimum quality value (qv) threshold for transcripts to be considered valid.
+If None, no filtering is applied based on quality.</p></li>
+<li><p><strong>control_prefixes</strong> (<em>tuple</em><em> | </em><em>list</em><em>, </em><em>default=</em><em>(</em>) – “<a href="#id1"><span class="problematic" id="id2">NegControlProbe_</span></a>”,
+“<a href="#id3"><span class="problematic" id="id4">antisense_</span></a>”,
+“NegControlCodeword”,
+“<a href="#id5"><span class="problematic" id="id6">BLANK_</span></a>”,
+“Blank-“,
+“NegPrb”,
+“<a href="#id7"><span class="problematic" id="id8">DeprecatedCodeword_</span></a>”,
+“<a href="#id9"><span class="problematic" id="id10">UnassignedCodeword_</span></a>”,
+“<a href="#id11"><span class="problematic" id="id12">Intergenic_Region_</span></a>”,</p></li>
+<li><p><strong>)</strong> – Control prefixes to identify control probes in gene names.
+Transcripts with gene names starting with any of these prefixes will be considered
+control probes and filtered out.</p></li>
+<li><p><strong>control_genes</strong> (<em>tuple</em><em> | </em><em>list</em><em>, </em><em>default=</em><em>(</em><em>)</em>) – Additional keywords to identify control probes in gene names.
+For these ones, exact matches will be filtered out (e.g. “GAPDH” or “ERCC-00002”),
+whereas for the control_prefixes, any gene name starting with the prefix will be
+filtered out (e.g. “NegControlProbe_1” or “NegControlProbe_2”).</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>default=&quot;transcripts&quot;</em>) – The key in the SpatialData points attribute that contains transcript data.</p></li>
+<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>default=&quot;feature_name&quot;</em>) – The column name in the points DataFrame that contains gene names.</p></li>
+<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – The column name in the points DataFrame that contains cell IDs.</p></li>
+<li><p><strong>points_background_id</strong> (<em>str</em><em> | </em><em>int</em><em> | </em><em>None</em><em>, </em><em>default=&quot;UNASSIGNED&quot;</em>) – The value in the points DataFrame that indicates background/unassigned transcripts.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – The key in the SpatialData tables attribute that contains the expression table.</p></li>
+<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – The column name in the tables DataFrame that contains cell IDs.</p></li>
+<li><p><strong>tables_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers.
+If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
+<li><p><strong>recompute_expression</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to recompute the expression matrix after filtering.
+Note that this can be computationally expensive for large datasets.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to modify the SpatialData object in place. Defaults to True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated SpatialData object with invalid transcripts marked (in an extra column).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sd.SpatialData</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.markers_from_reference">
+<span class="sig-name descname"><span class="pre">markers_from_reference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'de'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_fpr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auc_pos_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.9</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'wilcoxon'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pval_adj_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logfc_pos_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vote_fraction_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pos_frac</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_neg_frac</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_neg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_cells_per_celltype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.markers_from_reference" title="Link to this definition">#</a></dt>
+<dd><p>Compute positive and negative markers per cell type using pairwise contrasts
+(AUC/pAUC or DE) followed by voting and a rarity-based definition of
+negative markers.</p>
+<p>Positive markers:
+For each cell type c, a gene g is considered a positive marker if it is
+“up in c” in at least ceil(vote_fraction_pos * M_c) of its valid pairwise
+comparisons (M_c). Additionally, g must be expressed (&gt; 0) in at least
+min_pos_frac fraction of cells of type c in the reference dataset.</p>
+<p>Negative markers:
+For each ordered pair (a, b) of cell types, take genes up in a vs b and consider them
+negative-marker candidates for b if  (1.) they are expressed (&gt; 0) in at most
+max_neg_frac fraction of cells of type b, and (2.) are not up in b vs any cell
+type (computed across all ordered contrasts).</p>
+<p>Overlap filtering:
+Overlap filtering is applied separately to positive and negative markers:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.</p></li>
+<li><p>Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata</strong> (<em>AnnData</em>) – Reference single-cell dataset (cells x genes).</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in <cite>adata.obs</cite> containing cell type labels.</p></li>
+<li><p><strong>ref_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.var</cite> containing gene identifiers.
+If <cite>None</cite>, <cite>adata_ref.var_names</cite> are used.</p></li>
+<li><p><strong>ref_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer containing raw counts. If <cite>None</cite>, raw counts are expected in
+<cite>adata.X</cite>.</p></li>
+<li><p><strong>mode</strong> (<em>{&quot;auc&quot;</em><em>, </em><em>&quot;de&quot;}</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;de&quot;</em><em>)</em>) – <ul>
+<li><p>“auc”: compute markers using pairwise AUC/pAUC.</p></li>
+<li><p>”de” : compute markers using pairwise DE.</p></li>
+</ul>
+</p></li>
+<li><p><strong>max_fpr</strong> (<em>float</em><em> or </em><em>None</em><em>, </em><em>optional</em><em> (</em><em>default: None</em><em>)</em>) – (AUC mode only)
+If None, compute full AUC. If in (0, 1], compute standardized pAUC over
+[0, max_fpr] using sklearn’s <cite>roc_auc_score(max_fpr=max_fpr)</cite>.</p></li>
+<li><p><strong>auc_pos_thresh</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.9</em><em>)</em>) – (AUC mode only)
+Minimum AUC/pAUC for a gene to be considered “up in c_i vs c_j”.</p></li>
+<li><p><strong>method</strong> (<em>str</em><em>, </em><em>optional</em><em> (</em><em>default: &quot;wilcoxon&quot;</em><em>)</em>) – (DE mode only)
+DE method passed to <cite>sc.tl.rank_genes_groups</cite> (“wilcoxon”, “t-test”, “logreg”, …).</p></li>
+<li><p><strong>pval_adj_thresh</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.05</em><em>)</em>) – (DE mode only)
+FDR (adjusted p-value) cutoff for positive markers.</p></li>
+<li><p><strong>logfc_pos_thresh</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1.0</em><em>)</em>) – (DE mode only)
+Minimum log fold-change for <em>positive</em> markers (c &gt; d).</p></li>
+<li><p><strong>vote_fraction_pos</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.5</em><em>)</em>) – Fraction of valid pairwise contrasts in which a gene must be “up in c”
+(AUC mode) / significantly up in c (DE mode) to be called a positive
+marker of c.</p></li>
+<li><p><strong>min_pos_frac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.1</em><em>)</em>) – Minimum fraction of cells of type c in which a gene must be expressed
+(counts &gt; 0) in the reference dataset to be considered a <em>positive</em>
+marker of c.</p></li>
+<li><p><strong>max_neg_frac</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.05</em><em>)</em>) – Maximum fraction of cells of type c in which a gene may be expressed
+(counts &gt; 0) in the reference dataset to be considered a <em>negative</em>
+marker of c.</p></li>
+<li><p><strong>t_pos</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 0.25</em><em>)</em>) – Overlap filter threshold for positive markers.</p></li>
+<li><p><strong>t_neg</strong> (<em>float</em><em>, </em><em>optional</em><em> (</em><em>default: 1.0</em><em>)</em>) – Overlap filter threshold for negative markers.</p></li>
+<li><p><strong>min_cells_per_celltype</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 10</em><em>)</em>) – Minimum number of cells required per cell type to be included in pairwise
+computations.</p></li>
+<li><p><strong>n_jobs</strong> (<em>int</em><em>, </em><em>optional</em><em> (</em><em>default: 1</em><em>)</em>) – Number of parallel jobs for running pairwise computations.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A dictionary mapping each cell type to its positive and negative markers:
+{cell_type: {“positive”: [genes], “negative”: [genes]}}</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>query_gene_key<span class="classifier">str | None</span></dt><dd><p>Addtional parameter only used when <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code> is called
+as a method of a <cite>SegTraQ</cite> instance. Specifies the column in
+<cite>self.sdata.tables[tables_key].var</cite> containing the query gene
+identifiers. If <cite>None</cite>, <cite>var_names</cite> are used. These identifiers are
+used to subset the reference genes before marker selection.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_baseline">
+<span class="sig-name descname"><span class="pre">run_baseline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">morphological_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_baseline" title="Link to this definition">#</a></dt>
+<dd><p>Run baseline (bl) metrics.</p>
+<p>Convenience wrapper around global and per-cell summary metrics. Runs, in order:</p>
+<ol class="arabic simple">
+<li><p>number of cells</p></li>
+<li><p>number of transcripts</p></li>
+<li><p>number of genes</p></li>
+<li><p>% unassigned transcripts</p></li>
+<li><p>% unassigned transcripts per gene</p></li>
+<li><p>transcripts per cell</p></li>
+<li><p>genes per cell</p></li>
+<li><p>mean transcripts per detected gene per cell</p></li>
+<li><p>morphological features</p></li>
+<li><p>transcript density</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, results are merged into <cite>.uns</cite>, <cite>.obs</cite>, and/or <cite>.var</cite> as implemented
+by each metric, and None is returned.
+If False, per-metric results are returned in a dict.</p></li>
+<li><p><strong>morphological_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">bl.morphological_features()</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If <cite>inplace=True</cite>, returns None.
+If <cite>inplace=False</cite>, returns a dict with keys:
+- <cite>“num_cells”</cite>
+- <cite>“num_transcripts”</cite>
+- <cite>“num_genes”</cite>
+- <cite>“perc_unassigned_transcripts”</cite>
+- <cite>“perc_unassigned_transcripts_per_gene”</cite>
+- <cite>“transcripts_per_cell”</cite>
+- <cite>“genes_per_cell”</cite>
+- <cite>“mean_transcripts_per_gene_per_cell”</cite>
+- <cite>“morphological_features”</cite>
+- <cite>“transcript_density”</cite></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_clustering_stability">
+<span class="sig-name descname"><span class="pre">run_clustering_stability</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'leiden_subset'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_hvg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectedness_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">silhouette_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ari_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leiden_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_clustering_stability" title="Link to this definition">#</a></dt>
+<dd><p>Run clustering-stability metrics.</p>
+<p>This method is a convenience wrapper around the clustering-stability (cs)
+functions. It runs, in order:</p>
+<ol class="arabic simple">
+<li><p>cluster connectedness</p></li>
+<li><p>silhouette score</p></li>
+<li><p>purity (subset stability)</p></li>
+<li><p>ARI (subset stability)</p></li>
+</ol>
+<p>Only parameters shared by all four computations are exposed explicitly.
+All other parameters are provided via method-specific <cite>*_kwargs</cite> dictionaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key_prefix</strong> (<em>str</em><em>, </em><em>default=&quot;leiden_subset&quot;</em>) – Prefix for Leiden clustering labels written to <cite>.obs</cite> by the underlying
+methods (where applicable).</p></li>
+<li><p><strong>use_hvg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to use highly variable genes (HVGs) for PCA. By default False.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, metrics are written to <cite>sdata.tables[“table”].uns</cite> by the
+underlying methods and this function returns None. If False, the
+computed metrics are returned as a dictionary.</p></li>
+<li><p><strong>connectedness_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_cluster_connectedness()</span></code>.</p></li>
+<li><p><strong>silhouette_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_silhouette_score()</span></code>.</p></li>
+<li><p><strong>purity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_purity()</span></code>.</p></li>
+<li><p><strong>ari_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additonal keyword arguments forwarded to <code class="xref py py-meth docutils literal notranslate"><span class="pre">cs.compute_ari()</span></code>.</p></li>
+<li><p><strong>leiden_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Additional keyword arguments forwarded to Leiden clustering in all
+underlying methods that perform clustering.
+For example, <cite>flavor=’igraph’</cite> can be used to specify the Leiden implementation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>If <cite>inplace=True</cite>, returns None.
+If <cite>inplace=False</cite>, returns a dict with keys:</p>
+<ul class="simple">
+<li><p><cite>”cluster_connectedness”</cite> : float</p></li>
+<li><p><cite>”silhouette_score”</cite> : float</p></li>
+<li><p><cite>”mean_purity”</cite> : float</p></li>
+<li><p><cite>”mean_ari”</cite> : float</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_label_transfer">
+<span class="sig-name descname"><span class="pre">run_label_transfer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tx_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gn_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gn_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_hvg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_gene_prefixes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('MT-',</span> <span class="pre">'RPL',</span> <span class="pre">'RPS')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_label_transfer" title="Link to this definition">#</a></dt>
+<dd><p>Transfer cell type labels from a reference AnnData object to cells in a
+SpatialData table using Pearson correlation to reference mean expression profiles.</p>
+<p>Raw counts are selected first, normalized with <cite>sc.pp.normalize_total</cite>,
+log-transformed with <cite>sc.pp.log1p</cite>, and then used for label transfer. If a
+raw-count layer is provided, it is used preferentially. Otherwise, <cite>.X</cite> is
+expected to contain raw counts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData</em>) – SpatialData object containing the query dataset. Cell-level expression
+data are expected in <cite>sdata.tables[tables_key]</cite>.</p></li>
+<li><p><strong>adata_ref</strong> (<em>AnnData</em>) – Reference AnnData object containing annotated cells.</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> containing the reference cell type labels.</p></li>
+<li><p><strong>tables_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer in <cite>sdata.tables[tables_key].layers</cite> containing raw counts for
+the query data. If <cite>None</cite>, raw counts are expected in
+<cite>sdata.tables[tables_key].X</cite>.</p></li>
+<li><p><strong>ref_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer in <cite>adata_ref.layers</cite> containing raw counts for the reference
+data. If <cite>None</cite>, raw counts are expected in <cite>adata_ref.X</cite>.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – Key identifying the cell-level AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in <cite>sdata.tables[tables_key].obs</cite> containing unique cell identifiers.</p></li>
+<li><p><strong>query_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers matching
+<cite>adata_ref.var[ref_gene_key]</cite>. If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
+<li><p><strong>points_key</strong> (<em>str</em><em>, </em><em>default=&quot;transcripts&quot;</em>) – Key identifying the transcript-level points element in <cite>sdata.points</cite>.</p></li>
+<li><p><strong>points_cell_id_key</strong> (<em>str</em><em>, </em><em>default=&quot;cell_id&quot;</em>) – Column in the transcript points table containing cell identifiers.</p></li>
+<li><p><strong>points_gene_key</strong> (<em>str</em><em>, </em><em>default=&quot;feature_name&quot;</em>) – Column in the transcript points table containing gene names.</p></li>
+<li><p><strong>tx_min</strong> (<em>float</em><em>, </em><em>default=10.0</em>) – Minimum number of detected transcripts required for a cell to be retained.</p></li>
+<li><p><strong>tx_max</strong> (<em>float</em><em>, </em><em>default=float</em><em>(</em><em>&quot;inf&quot;</em><em>)</em>) – Maximum number of detected transcripts allowed for a cell to be retained.</p></li>
+<li><p><strong>gn_min</strong> (<em>float</em><em>, </em><em>default=5.0</em>) – Minimum number of detected genes required for a cell to be retained.</p></li>
+<li><p><strong>gn_max</strong> (<em>float</em><em>, </em><em>default=np.inf</em>) – Maximum number of detected genes allowed for a cell to be retained.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>default=&quot;transferred_cell_type&quot;</em>) – Column name used to store transferred labels in the query table’s <cite>.obs</cite>.</p></li>
+<li><p><strong>ref_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.var</cite> containing gene identifiers.
+If <cite>None</cite>, <cite>adata_ref.var_names</cite> are used.</p></li>
+<li><p><strong>use_hvg</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If <cite>True</cite>, restrict label transfer to highly variable genes computed
+from the reference dataset.</p></li>
+<li><p><strong>exclude_gene_prefixes</strong> (<em>tuple</em><em> of </em><em>str</em><em>, </em><em>default=</em><em>(</em><em>&quot;MT-&quot;</em><em>, </em><em>&quot;RPL&quot;</em><em>, </em><em>&quot;RPS&quot;</em><em>)</em>) – Gene prefixes to exclude from the HVG set before label transfer. Set to
+an empty tuple to disable this filtering.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If <cite>True</cite>, write transferred labels to
+<cite>sdata.tables[tables_key].obs[cell_type_key]</cite> and return <cite>None</cite>.
+If <cite>False</cite>, return a DataFrame with transferred labels and Pearson
+correlation scores.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If <cite>inplace=False</cite>, returns a DataFrame with columns including
+<cite>tables_cell_id_key</cite>, <cite>cell_type_key</cite>, and <cite>“pearson_score”</cite>.
+If <cite>inplace=True</cite>, modifies <cite>sdata</cite> in place and returns <cite>None</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_point_statistics">
+<span class="sig-name descname"><span class="pre">run_point_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'transferred_cell_type'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">membrane_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skew_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compartments_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_point_statistics" title="Link to this definition">#</a></dt>
+<dd><p>Run point-statistics (ps) metrics.</p>
+<p>Convenience wrapper around point-level spatial statistics. Applies shared
+transcript and cell filtering (by gene(s) and cell type) and runs, in order:</p>
+<ol class="arabic simple">
+<li><p>percentage of transcripts in compartments (nucleus overlap, cytoplasm, outside)</p></li>
+<li><p>distance to centroid (cell or nucleus)</p></li>
+<li><p>distance to membrane (cell or nucleus)</p></li>
+<li><p>membrane-distance skewness</p></li>
+</ol>
+<p>Only parameters shared by all computations are exposed explicitly. All other
+parameters are forwarded via method-specific <cite>*_kwargs</cite> dictionaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>genes</strong> (<em>str</em><em> | </em><em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Gene(s) to include. If None, all genes are used.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em>, </em><em>default=&quot;transferred_cell_type&quot;</em>) – Cell-type annotation key in <cite>sdata.tables[…].obs</cite>.</p></li>
+<li><p><strong>cell_type_query</strong> (<em>str</em><em> | </em><em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Restrict computations to cells matching these label(s).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, results are merged into <cite>.obs</cite> and None is returned.
+If False, per-metric results are returned.</p></li>
+<li><p><strong>centroid_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.distance_to_centroid()</span></code>.</p></li>
+<li><p><strong>membrane_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.distance_to_membrane()</span></code>.</p></li>
+<li><p><strong>skew_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.membrane_distance_skewness()</span></code>.</p></li>
+<li><p><strong>compartments_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <code class="xref py py-meth docutils literal notranslate"><span class="pre">ps.percentage_transcripts_in_compartments()</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If <cite>inplace=True</cite>, returns None.
+If <cite>inplace=False</cite>, returns a dict with keys:
+- <cite>“percentage_transcripts_in_compartments”</cite>
+- <cite>“distance_to_centroid”</cite>
+- <cite>“distance_to_membrane”</cite>
+- <cite>“membrane_distance_skewness”</cite></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_region_similarity">
+<span class="sig-name descname"><span class="pre">run_region_similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel_backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'threading'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iou_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cell_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_nucleus_cytoplasm_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_center_border_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_border_neighborhood_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">border_admixture_score_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_region_similarity" title="Link to this definition">#</a></dt>
+<dd><p>Compute region similarity metrics and optionally merge them into the cell table.</p>
+<p>This runs, in order:
+1) matching between each cell and its best-matching nucleus
+2) similarity between per-cell expression and its matched nucleus
+3) similarity between the cell’s nucleus-overlapping and cytoplasmic expression
+4) similarity between center and border expression
+5) similarity between border and neighborhood expression
+6) border admixture score</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If <cite>inplace=True</cite>, returns None after writing to <cite>sdata</cite>.
+If <cite>inplace=False</cite>, returns a dictionary of DataFrames.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None or dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_supervised">
+<span class="sig-name descname"><span class="pre">run_supervised</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_transfer_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers_from_reference_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contamination_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mecr_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_supervised" title="Link to this definition">#</a></dt>
+<dd><p>Run supervised (sp) metrics.</p>
+<p>If <cite>markers</cite> is <cite>None</cite>, marker genes are generated from <cite>adata_ref</cite>
+using <cite>self.markers_from_reference()</cite> with <cite>ref_cell_type</cite>.</p>
+<p>If <cite>cell_type_key</cite> is <cite>None</cite>, label transfer is run first via
+<cite>self.run_label_transfer()</cite> using <cite>adata_ref</cite> and <cite>ref_cell_type</cite>.
+The resulting labels are stored under <cite>“transferred_cell_type”</cite>.</p>
+<p>Runs, in order:</p>
+<ol class="arabic simple">
+<li><p>label transfer</p></li>
+<li><p>marker generation from reference</p></li>
+<li><p>marker_purity</p></li>
+<li><p>neighbor_contamination</p></li>
+<li><p>mutually_exclusive_coexpression_rate</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata_ref</strong> (<em>AnnData</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Reference AnnData object used for label transfer and/or marker
+extraction. Required if <cite>cell_type_key=None</cite> or <cite>markers=None</cite>.</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.obs</cite> containing reference cell-type labels.
+Required if <cite>cell_type_key=None</cite> or <cite>markers=None</cite>.</p></li>
+<li><p><strong>ref_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.var</cite> containing gene identifiers.
+If <cite>None</cite>, <cite>adata_ref.var_names</cite> are used.</p></li>
+<li><p><strong>query_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers matching
+<cite>adata_ref.var[ref_gene_key]</cite>. If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
+<li><p><strong>ref_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer containing raw counts. If <cite>None</cite>, raw counts are expected in
+<cite>adata.X</cite>.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Dictionary of marker genes in the form
+<cite>{cell_type: {“positive”: list[str], “negative”: list[str]}}</cite>.
+If <cite>None</cite>, markers are computed from <cite>adata_ref</cite> using
+<cite>self.markers_from_reference()</cite>.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em> | </em><em>None = None</em>) – Column in the query AnnData <cite>.obs</cite> with cell-type labels.
+If <cite>None</cite>, label transfer is run first using <cite>adata_ref</cite> and
+<cite>ref_cell_type</cite>, and the transferred labels are stored under
+<cite>“transferred_cell_type”</cite>.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If <cite>True</cite>, writes results into <cite>.obs</cite> and/or <cite>.uns</cite> as implemented
+by the underlying functions and returns <cite>None</cite>. If <cite>False</cite>, returns
+all results as a dictionary.</p></li>
+<li><p><strong>label_transfer_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>self.run_label_transfer()</cite>.
+Do not include <cite>adata_ref</cite> or <cite>ref_cell_type</cite> here; pass them
+directly to <cite>run_supervised</cite>.</p></li>
+<li><p><strong>markers_from_reference_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>self.markers_from_reference()</cite>.
+Do not include <cite>adata</cite> or <cite>ref_cell_type</cite> here; pass them directly
+to <cite>run_supervised</cite>.</p></li>
+<li><p><strong>purity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <cite>sp.marker_purity</cite>.</p></li>
+<li><p><strong>contamination_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <cite>sp.neighbor_contamination</cite>.</p></li>
+<li><p><strong>mecr_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra arguments for <cite>sp.mutually_exclusive_coexpression_rate</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If <cite>inplace=True</cite>, returns <cite>None</cite>. If <cite>inplace=False</cite>, returns a
+dictionary with keys <cite>“label_transfer”</cite>, <cite>“markers”</cite>,
+<cite>“marker_purity”</cite>, <cite>“neighbor_contamination”</cite>, and
+<cite>“mutually_exclusive_coexpression_rate”</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="segtraq.SegTraQ.run_volume">
+<span class="sig-name descname"><span class="pre">run_volume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_transfer_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">similarity_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">heterotypic_overlap_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vsi_kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.SegTraQ.run_volume" title="Link to this definition">#</a></dt>
+<dd><p>Run volume-layer (vl) metrics.</p>
+<p>Convenience wrapper around segtraq.vl functions via the instance facade <cite>self.vl</cite>.</p>
+<p>If <cite>cell_type_key</cite> is provided, it is used for cell-type-aware metrics and to infer
+the number of ovrlpy components from <cite>sdata.tables[tables_key].obs[cell_type_key]</cite>.</p>
+<p>If <cite>cell_type_key</cite> is <cite>None</cite> and <cite>adata_ref</cite> is provided, label transfer is run first
+via <cite>self.run_label_transfer()</cite> using <cite>adata_ref</cite> and <cite>ref_cell_type</cite>. The resulting
+labels are stored under <cite>“transferred_cell_type”</cite>.</p>
+<p>If neither <cite>cell_type_key</cite> nor <cite>adata_ref</cite> is provided, cell-type-aware metrics are
+skipped and ovrlpy is run with its default number of components.</p>
+<p>A precomputed <cite>ovrlpy.Ovrlp</cite> object can be passed via <cite>vsi_kwargs={“ovrlp”: ovrlp}</cite>.
+In that case, ovrlpy is not run internally and <cite>n_components</cite> is not inferred.</p>
+<p>Runs, in order:</p>
+<ol class="arabic simple">
+<li><p>similarity_top_bottom</p></li>
+<li><p>label transfer, if needed and possible</p></li>
+<li><p>vertical_signal_integrity_per_cell</p></li>
+<li><p>fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata_ref</strong> (<em>AnnData</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Reference AnnData object used for label transfer and/or to infer the number of
+ovrlpy components from reference cell-type labels.</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.obs</cite> containing reference cell-type labels. Required if
+<cite>cell_type_key=None</cite> and label transfer should be run, or if <cite>adata_ref</cite> is used
+to infer <cite>n_components</cite>.</p></li>
+<li><p><strong>ref_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.var</cite> containing gene identifiers.
+If <cite>None</cite>, <cite>adata_ref.var_names</cite> are used.</p></li>
+<li><p><strong>query_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers matching
+<cite>adata_ref.var[ref_gene_key]</cite>. If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
+<li><p><strong>ref_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer containing raw counts. If <cite>None</cite>, raw counts are expected in
+<cite>adata.X</cite>.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].obs</cite> containing cell-type labels. If provided,
+this column is used for <cite>fraction_heterotypic_overlap</cite> and to infer ovrlpy
+<cite>n_components</cite>. If <cite>None</cite> and <cite>adata_ref</cite> is provided, label transfer is run first
+and labels are stored under <cite>“transferred_cell_type”</cite>.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If <cite>True</cite>, writes results into <cite>sdata.tables[tables_key].obs</cite> as implemented by
+the underlying functions and returns <cite>None</cite>. If <cite>False</cite>, returns all results as
+a dictionary.</p></li>
+<li><p><strong>label_transfer_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>self.run_label_transfer()</cite>. Do not include
+<cite>adata_ref</cite> or <cite>ref_cell_type</cite> here; pass them directly to <cite>run_volume</cite>.</p></li>
+<li><p><strong>similarity_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>vl.similarity_top_bottom</cite>.</p></li>
+<li><p><strong>heterotypic_overlap_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>vl.fraction_heterotypic_overlap</cite>.</p></li>
+<li><p><strong>vsi_kwargs</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Extra keyword arguments forwarded to <cite>vl.vertical_signal_integrity_per_cell</cite>.
+To use a precomputed ovrlpy object, pass it here as <cite>{“ovrlp”: ovrlp}</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>If <cite>inplace=True</cite>, returns <cite>None</cite>.</p>
+<p>If <cite>inplace=False</cite>, returns a dictionary with available metric results.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None or dict[str, object]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="plotting.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="utils.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Utility functions</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ"><code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_cells"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_cells()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.filter_control_and_low_quality_transcripts"><code class="docutils literal notranslate"><span class="pre">SegTraQ.filter_control_and_low_quality_transcripts()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.markers_from_reference"><code class="docutils literal notranslate"><span class="pre">SegTraQ.markers_from_reference()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_baseline"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_baseline()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_clustering_stability"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_clustering_stability()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_label_transfer"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_label_transfer()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_point_statistics"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_point_statistics()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_region_similarity"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_region_similarity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_supervised"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_supervised()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.SegTraQ.run_volume"><code class="docutils literal notranslate"><span class="pre">SegTraQ.run_volume()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
