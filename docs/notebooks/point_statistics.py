@@ -16,15 +16,22 @@
 # # Module: Point Statistics
 
 # %% [markdown]
-# We can check whether transcripts are distributed equally within the cell, or if they are shifted towards the membrance, which can be due to spillover from adjacent cells.
+# We can check whether transcripts are distributed equally within the cell,
+# or if they are shifted towards the membrance, which can be due to spillover from adjacent cells.
 #
 # <center>
 #  <img src='../_static/img/docs/point_statistics.png' width='90%' />
 # </center>
 #
-# This functionality is provided in the `point statistics` (`ps`) module. The idea of this module is to provide an intuition whether transcripts are distributed unequally, meaning they are more likely to have resulted from a spillover from neighbouring cells. This can happen due to imperfect boundaries, dense packing, partial overlaps, and other sources of “spillover” between adjacent cells.
+# This functionality is provided in the `point statistics` (`ps`) module.
+# The idea of this module is to provide an intuition whether transcripts are distributed unequally,
+# meaning they are more likely to have resulted from a spillover from neighbouring cells.
+# This can happen due to imperfect boundaries, dense packing, partial overlaps,
+# and other sources of “spillover” between adjacent cells.
 #
-# The `ps` module summarizes transcript localization relative to cell (and optionally nucleus) geometry, providing intuitive signals for potential contamination or biased spatial distributions. Metrics can be returned as a table and, if desired, stored in place in the `SpatialData` object.
+# The `ps` module summarizes transcript localization relative to cell (and optionally nucleus) geometry,
+# providing intuitive signals for potential contamination or biased spatial distributions.
+# Metrics can be returned as a table and, if desired, stored in place in the `SpatialData` object.
 #
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
@@ -47,14 +54,15 @@ import spatialdata_plot  # noqa
 import segtraq
 
 # %% [markdown]
-# We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium data segmented with Xenium's multimodal cell segmentation (`sdata_xenium`) and with Proseg v2.0.5 (`sdata_proseg2`).
+# We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium data
+# segmented with Xenium's multimodal cell segmentation (`sdata_xenium`) and with Proseg v2.0.5 (`sdata_proseg2`).
 
 # %%
 sdata_xenium = sd.read_zarr("../data/xenium_v1_data/sdata_xenium_crop.zarr")
 sdata_proseg2 = sd.read_zarr("../data_proseg_v2_crop.zarr")
 
 # %% [markdown]
-# We initialize `SegTraQ` objects. 
+# We initialize `SegTraQ` objects.
 
 # %%
 st_xenium = segtraq.SegTraQ(
@@ -83,7 +91,7 @@ st_proseg2 = segtraq.SegTraQ(
 st_dict = {"xenium": st_xenium, "proseg2": st_proseg2}
 
 # %% [markdown]
-# We can then transfer labels from a reference scRNA-seq dataset. 
+# We can then transfer labels from a reference scRNA-seq dataset.
 
 # %%
 adata_ref = ad.read_h5ad("../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
@@ -99,9 +107,17 @@ for _method, st in st_dict.items():
 # ## Centroid mean coordinate difference
 
 # %% [markdown]
-# To assess whether transcripts assigned to a cell are spatially balanced within its geometry, we compare the mean transcript coordinate (i.e. the transcript center of mass) to a reference centroid derived from the segmentation.
+# To assess whether transcripts assigned to a cell are spatially balanced within its geometry,
+# we compare the mean transcript coordinate (i.e. the transcript center of mass) to a reference
+# centroid derived from the segmentation.
 #
-# For each cell, we compute the Euclidean distance between the mean transcript position $\mu_{x,y}$ and a centroid $cc_{x,y}$, which can be defined either by the cell outline or by a matched nucleus. When nuclei are used, each cell is first paired with a nucleus based on geometric overlap. Optionally, the calculation can be restricted to transcripts that lie within the cell. Because absolute distances scale with cell size, the displacement is normalized by a cell-specific length scale $|C|$, enabling comparisons across different cell sizes (`distance_norm_<feature>`).
+# For each cell, we compute the Euclidean distance between the mean transcript position
+# $\mu_{x,y}$ and a centroid $cc_{x,y}$, which can be defined either by the cell outline
+# or by a matched nucleus. When nuclei are used, each cell is first paired with a nucleus
+# based on geometric overlap. Optionally, the calculation can be restricted to transcripts
+# that lie within the cell. Because absolute distances scale with cell size,
+# the displacement is normalized by a cell-specific length scale $|C|$,
+# enabling comparisons across different cell sizes (`distance_norm_<feature>`).
 
 # %% [markdown]
 # $$
@@ -109,12 +125,19 @@ for _method, st in st_dict.items():
 # $$
 
 # %% [markdown]
-# The metric can be computed for a single gene, a selected set of genes, or for all transcripts jointly. Larger values indicate a stronger spatial bias of transcripts toward one side of the cell (or nucleus), which may reflect polarized expression patterns, boundary leakage, or spillover from neighboring cells.
+# The metric can be computed for a single gene, a selected set of genes, or for all transcripts jointly.
+# Larger values indicate a stronger spatial bias of transcripts toward one side of the cell (or nucleus),
+# which may reflect polarized expression patterns, boundary leakage, or spillover from neighboring cells.
 
 # %% [markdown]
-# We first compute this metric on Proseg-segmented data, which allows transcript repositioning—meaning that transcripts assigned to a cell may lie outside its segmented boundary. We focus on transcripts of the gene ERBB2 and compare the average normalized centroid–mean distance (`distance_to_cell_centroid__norm_ERBB2`) when transcripts are restricted to lie within the cell boundary (`restrict_to_within_boundary=True`) versus when all assigned transcripts are used.
+# We first compute this metric on Proseg-segmented data, which allows transcript repositioning—meaning
+# that transcripts assigned to a cell may lie outside its segmented boundary.
+# We focus on transcripts of the gene ERBB2 and compare the average normalized
+# centroid–mean distance (`distance_to_cell_centroid__norm_ERBB2`) when transcripts are restricted
+# to lie within the cell boundary (`restrict_to_within_boundary=True`) versus when all assigned transcripts are used.
 #
-# As expected, restricting the calculation to transcripts inside the cell leads to a lower mean distance to the centroid.
+# As expected, restricting the calculation to transcripts inside the cell leads to a lower mean
+# distance to the centroid.
 
 # %%
 # restricting to boundary
@@ -166,7 +189,9 @@ st_xenium.sdata.pl.render_shapes(
 )
 
 # %% [markdown]
-# When computing the distance across all transcripts (`genes=None`), the average `distance_all_genes` is close to zero, as the mean transcript position converges toward the cell centroid when many points are averaged.
+# When computing the distance across all transcripts (`genes=None`),
+# the average `distance_all_genes` is close to zero, as the mean transcript position converges
+# toward the cell centroid when many points are averaged.
 
 # %% [markdown]
 # We might also be interested in whether a gene's transcripts are further away from the cell than the nucleus centroid.
@@ -226,11 +251,20 @@ st_proseg2.sdata.pl.render_shapes(
 # ## Distance to membrane
 
 # %% [markdown]
-# Another way to look at the spatial distribution of transcripts is the distance of a gene's transcripts to the boundary (membrane). In some sense, this is complementary to the `distance_to_centroid` metric. However, in the case of very irregularly shaped cells, the distance to the membrane is a more direct measure of unequal transcript distribution and hence potential spillover.  
+# Another way to look at the spatial distribution of transcripts is the
+# distance of a gene's transcripts to the boundary (membrane).
+# In some sense, this is complementary to the `distance_to_centroid` metric.
+# However, in the case of very irregularly shaped cells, the distance to the membrane is
+# a more direct measure of unequal transcript distribution and hence potential spillover.
 #
-# For each transcript, we compute its distance to the selected boundary, defined either by the cell outline or by a matched nucleus. Distances can be treated as signed (positive inside/on the boundary, negative outside), setting `signed=True`, and the computation can optionally be restricted to transcripts that lie within the selected boundary (`restrict_to_within_boundary=True`). 
+# For each transcript, we compute its distance to the selected boundary,
+# defined either by the cell outline or by a matched nucleus.
+# Distances can be treated as signed (positive inside/on the boundary, negative outside),
+# setting `signed=True`, and the computation can optionally be restricted to transcripts
+# that lie within the selected boundary (`restrict_to_within_boundary=True`).
 #
-# The per-cell metric is defined as the mean distance to the cell/nuclear membrane $\mu(d(m,t))$ (as provided in the `spatialdata` object) divided by boundary-specific length-scale $\sqrt{|B|}$.
+# The per-cell metric is defined as the mean distance to the cell/nuclear membrane
+# $\mu(d(m,t))$ (as provided in the `spatialdata` object) divided by boundary-specific length-scale $\sqrt{|B|}$.
 # Again, this can be applied either to specific genes or all genes simultaneously.
 
 # %% [markdown]
@@ -239,7 +273,8 @@ st_proseg2.sdata.pl.render_shapes(
 # $$
 
 # %% [markdown]
-# Let's investigate the distance of MS4A1 (a B-cell marker) in B cells. Below it looks like MS4A1 is mostly expressed in the nucleus.
+# Let's investigate the distance of MS4A1 (a B-cell marker) in B cells.
+# Below it looks like MS4A1 is mostly expressed in the nucleus.
 
 # %%
 for _method, st in st_dict.items():
@@ -270,7 +305,8 @@ st_xenium.sdata.pl.render_shapes(
 )
 
 # %% [markdown]
-# Let's compute the mean distance to the nucleus and cell membrane to verify this. This confirms that MS4A1 transcripts are located closer to the nuclear than to the cell membrane. 
+# Let's compute the mean distance to the nucleus and cell membrane to verify this.
+# This confirms that MS4A1 transcripts are located closer to the nuclear than to the cell membrane.
 
 # %%
 for _method, st in st_dict.items():
@@ -298,7 +334,9 @@ print(f"Mean distance of MS4A1 transcripts to nucleus membrane: {proseg_nucleus_
 # ## Percentage of points in compartments
 
 # %% [markdown]
-# To determine the percentage of transcripts of a cell that localize to cell nulceus, the cell cytoplasm and those that are outside the cell membrane, we can provide the `percentage_points_compartments` function. 
+# To determine the percentage of transcripts of a cell that localize to cell nulceus,
+# the cell cytoplasm and those that are outside the cell membrane,
+# we can provide the `percentage_points_compartments` function.
 
 # %%
 gene = "MS4A1"
@@ -345,7 +383,7 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# We might be interested in the distribution of transcripts of gene "ERBB2" (a DCIS2 marker) in all cell types. 
+# We might be interested in the distribution of transcripts of gene "ERBB2" (a DCIS2 marker) in all cell types.
 
 # %%
 for _method, st in st_dict.items():
@@ -391,7 +429,14 @@ for method, st in st_dict.items():
     plt.show()
 
 # %% [markdown]
-# These results show that ERBB2 transcripts are present at comparable percentages in the cytoplasm and nucleus of DCIS2 cells, whereas in all other cell types they are predominantly cytoplasmic (suggesting contamination). Notably, ERBB2 transcripts are also enriched in the nuclear compartment of myoepithelial cells, which frequently border DCIS2 cells. This likely reflects neighborhood contamination rather than myoepithelial expression. Also stromal cells show a high cytoplasmic expression of ERBB2. As expected, Proseg shows a higher fraction of transcripts outside the cell, consistent with its transcript repositioning mechanism.
+# These results show that ERBB2 transcripts are present at comparable percentages
+# in the cytoplasm and nucleus of DCIS2 cells, whereas in all other cell types they
+# are predominantly cytoplasmic (suggesting contamination). Notably,
+# ERBB2 transcripts are also enriched in the nuclear compartment of myoepithelial cells,
+# which frequently border DCIS2 cells. This likely reflects neighborhood contamination
+# rather than myoepithelial expression. Also stromal cells show a high cytoplasmic expression of ERBB2.
+# As expected, Proseg shows a higher fraction of transcripts outside the cell,
+# consistent with its transcript repositioning mechanism.
 
 # %% [markdown]
 # Let's visualize this spatially.
@@ -460,16 +505,23 @@ for i, (method, st) in enumerate(st_dict.items()):
     plot_feature_labels(st.sdata, method, "num_in_cytoplasm_ERBB2", axes, i)
 
 # %% [markdown]
-# The plots above show high ERBB2 transcript abundance in DCIS2 and myoepithelial cells, as well as high levels in stromal cells, where ERBB2 transcripts are largely excluded from the nuclear compartment.
+# The plots above show high ERBB2 transcript abundance in DCIS2 and myoepithelial cells,
+# as well as high levels in stromal cells, where ERBB2 transcripts are largely excluded from the nuclear compartment.
 
 # %% [markdown]
 # ## Membrane distance skewness
 
 # %% [markdown]
-# Membrane distance skewness quantifies the asymmetry of transcript distances to the cell boundary within individual cells, using only transcripts assigned to a cell and located inside or on its segmentation polygon. Positive skewness indicates an enrichment of transcripts close to the membrane, whereas negative skewness reflects a bias toward the cell interior. The metric is computed using Fisher–Pearson sample skewness and is reported only for cells with at least a minimum number of transcripts (`min_transcripts`) to ensure robust skewness estimates.
+# Membrane distance skewness quantifies the asymmetry of transcript distances to the cell boundary
+# within individual cells, using only transcripts assigned to a cell and located inside or on its
+# segmentation polygon. Positive skewness indicates an enrichment of transcripts close to the membrane,
+# whereas negative skewness reflects a bias toward the cell interior. The metric is computed using
+# Fisher–Pearson sample skewness and is reported only for cells with at least a minimum number of
+# transcripts (`min_transcripts`) to ensure robust skewness estimates.
 
 # %% [markdown]
-# Let's evaluate the skewness of ERBB2 transcripts within cells. The `min_transcripts` set to 5 will exclude a lot of cells. 
+# Let's evaluate the skewness of ERBB2 transcripts within cells.
+# The `min_transcripts` set to 5 will exclude a lot of cells.
 
 # %%
 _skew = st_proseg2.ps.membrane_distance_skewness(["ERBB2"], min_transcripts=5)
@@ -531,7 +583,8 @@ def boxplot_per_celltype(st_dict, feature, q=1):
 boxplot_per_celltype(st_dict, "skew_dist_to_cell_membrane_all_genes")
 
 # %% [markdown]
-# This shows the the transcripts are slightly more enriched close to the membrane for xenium, however, the differences are minor.
+# This shows the the transcripts are slightly more enriched close to the membrane for xenium,
+# however, the differences are minor.
 
 # %% [markdown]
 # ## Session Info

@@ -54,7 +54,7 @@ from spatialdata.transformations import (
 import segtraq
 
 # %% [markdown]
-# ##### MERSCOPE 
+# ##### MERSCOPE
 # We first read the single cell data generated based on MERSCOPE segmentation.
 
 # %%
@@ -63,7 +63,10 @@ merscope_path = Path.home() / "segtraq/data/breast/Merscope/region_R1"
 sdata_merscope = spatialdata_io.merscope(merscope_path)
 
 # %% [markdown]
-# Since MERSCOPE does not provide nucleus segmentation masks, we first run cellpose segmentation on the DAPI image and add the nucleus shapes to the SpatialData object via `cellpose`. For improved cellpose performance, a higher resolution (`scale3` or lower) can be used but this will drastically increase memory usage of cellpose.
+# Since MERSCOPE does not provide nucleus segmentation masks, we first run cellpose segmentation
+# on the DAPI image and add the nucleus shapes to the SpatialData object via `cellpose`.
+# For improved cellpose performance, a higher resolution (`scale3` or lower) can be used
+# but this will drastically increase memory usage of cellpose.
 
 # %%
 segtraq.cellpose(
@@ -150,7 +153,10 @@ sdata_proseg = sd.SpatialData(
 )
 
 # %% [markdown]
-# We will copy data that is independent from Proseg segmentation (e.g. `images`, `shapes["nucleus_boundaries"]`) from the MERSCOPE to the Proseg SpatialData object. We will also copy transformations for points and shapes in `sdata_proseg` to align them with the MERSCOPE data. 
+# We will copy data that is independent from Proseg segmentation (e.g. `images`,
+# `shapes["nucleus_boundaries"]`) from the MERSCOPE to the Proseg SpatialData object.
+# We will also copy transformations for points and shapes in `sdata_proseg` to align
+# them with the MERSCOPE data.
 
 # %%
 sdata_proseg.images = sdata_merscope.images
@@ -168,10 +174,12 @@ set_transformation(sdata_proseg.points["transcripts"], merscope_transformation)
 # %% [markdown]
 # ### Initialize SegTraQ objects
 #
-# Next, we initialize SegTraQ objects, the core interface for computing SegTraQ metrics. During initialization, all inputs are are validated via `validate_spatialdata()`. 
+# Next, we initialize SegTraQ objects, the core interface for computing SegTraQ metrics.
+# During initialization, all inputs are are validated via `validate_spatialdata()`.
 
 # %% [markdown]
-# Cell IDs are of datatype `str` in points and `int64` in shapes in `sdata_merscope`. We will convert the cell IDs in points to `str`. 
+# Cell IDs are of datatype `str` in points and `int64` in shapes in `sdata_merscope`.
+# We will convert the cell IDs in points to `str`.
 
 # %%
 sdata_merscope["Merscope_region_R1_transcripts"]["cell_id"] = sdata_merscope["Merscope_region_R1_transcripts"][
@@ -290,7 +298,8 @@ sdata_proseg.pl.render_shapes(
 # #### Baseline metrics
 
 # %% [markdown]
-# The baseline `bl` module allows the computation of baseline metrics such as the number of cells and the % of unassigned transcripts.
+# The baseline `bl` module allows the computation of baseline metrics such as the number of
+# cells and the % of unassigned transcripts.
 
 # %%
 st_dict = {"merscope": st_merscope, "proseg": st_proseg}
@@ -379,7 +388,8 @@ g._legend.remove()
 
 # %% [markdown]
 # #### Clustering stability metrics
-# The clustering stability (`cs`) module provides metrics for assessing the stability of clustering results across different resolutions and random subsets of genes.
+# The clustering stability (`cs`) module provides metrics for assessing the stability of
+# clustering results across different resolutions and random subsets of genes.
 
 # %% [markdown]
 # Let`s first perform Leiden clustering and visualize these in the UMAP space.
@@ -499,7 +509,8 @@ plt.show()
 # %% [markdown]
 # #### Supervised metrics
 #
-# To enable the computation of supervised metrics, we first transfer labels from the reference scRNA-seq dataset to the spatial data using `segtraq.run_label_transfer`.
+# To enable the computation of supervised metrics, we first transfer labels
+# from the reference scRNA-seq dataset to the spatial data using `segtraq.run_label_transfer`.
 
 # %%
 adata_ref = ad.read_h5ad("../../data/BC_scRNAseq_Janesick.h5ad")
@@ -671,7 +682,8 @@ def boxplot_per_celltype(st_dict, feature, q=1):
 boxplot_per_celltype(st_dict, "transcript_count")
 
 # %% [markdown]
-# The supervised metrics module (`sp`) provides metrics to compare the spatial single cell expression profiles to those from a single-cell RNA sequencing dataset.
+# The supervised metrics module (`sp`) provides metrics to compare the
+# spatial single cell expression profiles to those from a single-cell RNA sequencing dataset.
 
 # %%
 for _method, st in st_dict.items():
@@ -696,9 +708,11 @@ boxplot_per_celltype(st_dict, "cell_area", q=0.99)
 # - IoU between each cell and its best-matching nucleus
 # - Correlation between per-cell expression and its matched nucleus
 # - Correlation between the cell's nucleus-overlap part vs. remainder (vectorized)
-# - Correlation of gene expression in an eroded interior ("center") and a thin outer shell ("border"), (2) in the border and the neighborhood composition vector (NCV), and ratio between the two.
+# - Correlation of gene expression in an eroded interior ("center") and a thin outer shell
+# ("border"), (2) in the border and the neighborhood composition vector (NCV), and ratio between the two.
 #
-# This takes about 28min for both SpatialData objects (Merscope original and Proseg re-segmentation) of the large Merscope dataset. 
+# This takes about 28min for both SpatialData objects (Merscope original and
+# Proseg re-segmentation) of the large Merscope dataset.
 
 # %%
 for _method, st in st_dict.items():

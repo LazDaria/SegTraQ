@@ -15,7 +15,9 @@
 # %% [markdown]
 # # Technology Focus - NanoString CosMx
 #
-# The data was downloaded from [here](https://nanostring.com/products/cosmx-spatial-molecular-imager/ffpe-dataset/nsclc-ffpe-dataset/) ([download link](https://datasets.cellxgene.cziscience.com/c1870f1f-ca36-4d96-b03b-7dc0e96d83ee.h5ad)). We applied Proseg 2 and 3 on the dataset.
+# The data was downloaded from [here](https://nanostring.com/products/cosmx-spatial-molecular-imager/
+# ffpe-dataset/nsclc-ffpe-dataset/) ([download link](https://datasets.cellxgene.cziscience.com/
+# c1870f1f-ca36-4d96-b03b-7dc0e96d83ee.h5ad)). We applied Proseg 2 and 3 on the dataset.
 
 # %%
 # %load_ext autoreload
@@ -47,7 +49,10 @@ import segtraq
 # %% [markdown]
 # ## Data Reading
 #
-# First, we need to get the data into `spatialdata` format. For proseg 3, this is relatively easy, since it already provides a `spatialdata` object as output. For the CosMx default segmentation and proseg 2, we need to write some custom code to ensure we have all the necessary data.
+# First, we need to get the data into `spatialdata` format. For proseg 3, this is relatively easy,
+# since it already provides a `spatialdata` object as output. For the CosMx default
+# segmentation and proseg 2, we need to write some custom code to ensure we have
+# all the necessary data.
 
 # %% [markdown]
 # ### CosMx default segmentation
@@ -176,7 +181,8 @@ sdata_subset = sdata_cosmx.query.bounding_box(
     target_coordinate_system="global",
 )
 
-# unfortunately, spatialdata_plot does not allow changing the color or the outline, see https://github.com/scverse/spatialdata-plot/issues/462
+# unfortunately, spatialdata_plot does not allow changing the color or the outline, see
+# https://github.com/scverse/spatialdata-plot/issues/462
 sdata_subset.pl.render_images(element=None).pl.render_shapes(
     "cell_boundaries", outline_alpha=1, fill_alpha=0, outline_color="white"
 ).pl.show(coordinate_systems="global")
@@ -184,6 +190,7 @@ sdata_subset.pl.render_images(element=None).pl.render_shapes(
 
 # %% [markdown]
 # ### Proseg 2
+
 
 # %%
 def read_proseg2(path):
@@ -311,7 +318,9 @@ st_dict = {"cosmx": st_cosmx, "proseg2": st_p2, "proseg3": st_p3}
 # %% [markdown]
 # ## Baseline Metrics
 #
-# Let's start our analysis by investigating some basic properties of the different segmentations. This includes how many cells were detected, how many transcripts were assigned, and what the cell morphologies look like.
+# Let's start our analysis by investigating some basic properties of the different segmentations.
+# This includes how many cells were detected, how many transcripts were assigned,
+# and what the cell morphologies look like.
 
 # %%
 for method, st in st_dict.items():
@@ -371,7 +380,9 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# There are some striking differences between the segmentation methods. For example, the CosMx default segmentation seems to produce some very large cells, which do not occur with proseg.
+# There are some striking differences between the segmentation methods.
+# For example, the CosMx default segmentation seems to produce some very large cells,
+# which do not occur with proseg.
 
 # %% [markdown]
 # ## Detection of Stitching Artefacts
@@ -502,7 +513,10 @@ plt.show()
 
 # %% [markdown]
 # ## Region Correlation
-# Most of the region correlation require both a whole-cell and a nucleus mask. CosMx does not provide a nuclear mask by default, so if you wish to compute those metrics, you have to run cellpose yourself on the nuclear stain. You can make use of `segtraq.cellpose()` for this. Here, we only show the methods that can be run without a nuclear segmentation.
+# Most of the region correlation require both a whole-cell and a nucleus mask.
+# CosMx does not provide a nuclear mask by default, so if you wish to compute those metrics,
+# you have to run cellpose yourself on the nuclear stain. You can make use of `segtraq.cellpose()` for this.
+# Here, we only show the methods that can be run without a nuclear segmentation.
 
 # %%
 for _method, st in tqdm(st_dict.items()):
@@ -543,8 +557,13 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# ## Supervised module 
-# We downloaded a reference single-cell RNAseq NSCLC dataset that was obtained in [this study](https://www.nature.com/articles/s41597-023-02074-6) ([download link](https://figshare.com/articles/dataset/NSCLC_Final_dataset/22114682?backTo=%2Fcollections%2FAn_integrated_single-cell_transcriptomic_dataset_for1_non-small_cell_lung_cancer%2F6222221&file=39330485)). We used `seurat-disk` to convert this into an anndata object that we can use for label transfer.
+# ## Supervised module
+# We downloaded a reference single-cell RNAseq NSCLC dataset that was
+# obtained in [this study](https://www.nature.com/articles/s41597-023-02074-6)
+# ([download link](https://figshare.com/articles/dataset/NSCLC_Final_dataset/
+# 22114682?backTo=%2Fcollections%2FAn_integrated_single-cell_transcriptomic_dataset_for1_non-small_cell_lung_
+# cancer%2F6222221&file=39330485)).
+# We used `seurat-disk` to convert this into an anndata object that we can use for label transfer.
 
 # %%
 # Load scRNA-seq dataset
@@ -560,7 +579,8 @@ st_cosmx.run_label_transfer(
 
 # %%
 # TODO: not sure how much I trust these cell type annotations...
-# they have some annotations here: https://nanostring.com/products/cosmx-spatial-molecular-imager/ffpe-dataset/nsclc-ffpe-dataset/
+# they have some annotations here: https://nanostring.com/products/cosmx-spatial-molecular-imager/
+# ffpe-dataset/nsclc-ffpe-dataset/
 # however, I could not find these in the dataset
 sdata = st_cosmx.sdata
 

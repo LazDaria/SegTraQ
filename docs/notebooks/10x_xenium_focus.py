@@ -15,7 +15,8 @@
 # %% [markdown]
 # # Technology Focus: 10x Genomics Xenium
 #
-# To follow along with this tutorial, you can download the data already in `SpatialData` format from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data already in
+# `SpatialData` format from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
 # %% [markdown]
 # ## Description of prior dataset acquisition and segmentation
@@ -24,7 +25,8 @@
 # For this tutorial, we used data from the **10x Genomics Xenium Prime Breast Cancer FFPE** dataset.
 # We downloaded the data using:
 # ```bash
-# curl -O https://s3-us-west-2.amazonaws.com/10x.files/samples/xenium/3.0.0/Xenium_Prime_Breast_Cancer_FFPE/Xenium_Prime_Breast_Cancer_FFPE_outs.zip
+# curl -O https://s3-us-west-2.amazonaws.com/10x.files/samples/xenium/3.0.0/
+# Xenium_Prime_Breast_Cancer_FFPE/Xenium_Prime_Breast_Cancer_FFPE_outs.zip
 # ```
 #
 # ### Subsetting the Field of View
@@ -37,21 +39,29 @@
 # ```
 #
 # ### Cell Segmentation Methods
-# We applied two segmentation approaches for comparison to the [Xenium Multi-Modal Cell Segmentation](https://www.10xgenomics.com/support/software/xenium-onboard-analysis/3.1/algorithms-overview/segmentation):
+# We applied two segmentation approaches for comparison to the
+# [Xenium Multi-Modal Cell Segmentation](https://www.10xgenomics.com/support/software/
+# xenium-onboard-analysis/3.1/algorithms-overview/segmentation):
 # 1. **BIDCell** — [https://github.com/SydneyBioX/BIDCell](https://github.com/SydneyBioX/BIDCell)
 # 2. **Proseg** (v2.0.5) — [https://github.com/dcjones/proseg](https://github.com/dcjones/proseg)
 #
 # ### Reference scRNA-seq Dataset for Training & QC
-# For **BIDCell** training, as well as supervised quality control (see below in this tutorial), we used the **Janesick et al.** scRNA-seq breast cancer dataset following:
+# For **BIDCell** training, as well as supervised quality control (see below in this tutorial),
+# we used the **Janesick et al.** scRNA-seq breast cancer dataset following:
 # * LMWeber Script on loading Chromium data:
-#   [https://github.com/lmweber/STexampleData/blob/devel/inst/scripts/make-data-Janesick-breastCancer-Chromium.R](https://github.com/lmweber/STexampleData/blob/devel/inst/scripts/make-data-Janesick-breastCancer-Chromium.R)
+#   [https://github.com/lmweber/STexampleData/blob/devel/inst/scripts/
+# make-data-Janesick-breastCancer-Chromium.R](https://github.com/lmweber/STexampleData/blob/devel/inst/
+# scripts/make-data-Janesick-breastCancer-Chromium.R)
 # * OSTA Guide on processing the Chromium data:
-#   [https://lmweber.org/OSTA/pages/seq-deconvolution.html](https://lmweber.org/OSTA/pages/seq-deconvolution.html#:~:text=e.%C2%A0Annogrp\).\-,Code\,-%23%20retrieve%20dataset%20from)
+#   [https://lmweber.org/OSTA/pages/seq-deconvolution.html](https://lmweber.org/OSTA/pages/
+# seq-deconvolution.html#:~:text=e.%C2%A0Annogrp\).\-,Code\,-%23%20retrieve%20dataset%20from)
 #
 # Download commands:
 # ```bash
-# wget -O count_matrix.h5 "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSM7782698&format=file&file=GSM7782698%5Fcount%5Fraw%5Ffeature%5Fbc%5Fmatrix%2Eh5"
-# wget -O Cell_Barcode_Type_Matrices.xlsx "https://zenodo.org/records/10076046/files/Cell_Barcode_Type_Matrices.xlsx?download=1"
+# wget -O count_matrix.h5 "https://www.ncbi.nlm.nih.gov/geo/download/
+# ?acc=GSM7782698&format=file&file=GSM7782698%5Fcount%5Fraw%5Ffeature%5Fbc%5Fmatrix%2Eh5"
+# wget -O Cell_Barcode_Type_Matrices.xlsx "https://zenodo.org/records/10076046/files/
+# Cell_Barcode_Type_Matrices.xlsx?download=1"
 # ```
 #
 # ### Segmentation Parameters
@@ -73,8 +83,12 @@
 #     * All other parameters left at default.
 #
 # ### Import into SpatialData
-# After segmentation, all outputs were imported into **SpatialData** objects. For a demonstration on how to get data into the right format, please refer to this [tutorial](io.ipynb).
-# These processed SpatialData objects are also uploaded to the [tutorial repository](https://oc.embl.de/index.php/s/1JyN4Qvk4mw0T5J) so users can directly run the workflow without repeating the preprocessing steps.
+# After segmentation, all outputs were imported into **SpatialData** objects.
+# For a demonstration on how to get data into the right format,
+# please refer to this [tutorial](io.ipynb).
+# These processed SpatialData objects are also uploaded to the
+# [tutorial repository](https://oc.embl.de/index.php/s/1JyN4Qvk4mw0T5J)
+# so users can directly run the workflow without repeating the preprocessing steps.
 
 # %% [markdown]
 # ## Read and crop SpatialData objects
@@ -141,11 +155,20 @@ sdata_proseg = crop(sdata_proseg_ws)
 # %% [markdown]
 # ## Initialize SegTraQ objects
 #
-# Next, we initialize SegTraQ objects, the core interface for computing SegTraQ metrics. During initialization, all inputs are are validated via `validate_spatialdata()`. Don't worry if you do not know which parameters you need up front; just put in your spatialdata object, and SegTraQ will tell you which arguments are wrong/missing.
+# Next, we initialize SegTraQ objects, the core interface for computing SegTraQ metrics.
+# During initialization, all inputs are are validated via `validate_spatialdata()`.
+# Don't worry if you do not know which parameters you need up front;
+# just put in your spatialdata object, and SegTraQ will tell you which arguments are wrong/missing.
 #
-# The four segmentation methods apply different filters to the points prior to segmentation. Proseg and BIDCell remove control probes (e.g. NegControlProbe, Intergenic_Region) before segmentation. In addition, Proseg and BIDCell exclude transcripts with a quality value (qv, the Xenium per-transcript decoding quality score) < 20. 
+# The four segmentation methods apply different filters to the points prior to segmentation.
+# Proseg and BIDCell remove control probes (e.g. NegControlProbe, Intergenic_Region)
+# before segmentation. In addition, Proseg and BIDCell exclude
+# transcripts with a quality value (qv, the Xenium per-transcript decoding quality score) < 20.
 #
-# For a fair comparison of metrics, like the percentage of unassigned transcripts, across methods, we subset the transcripts to include only gene-specific probes with qv ≥ 20. This is also compatible with the preprocessing for the cell feature matrix by [10x Genomics](https://cf.10xgenomics.com/supp/xenium/xenium_documentation.html?utm_source=chatgpt.com).
+# For a fair comparison of metrics, like the percentage of unassigned transcripts,
+# across methods, we subset the transcripts to include only gene-specific probes with qv ≥ 20.
+# This is also compatible with the preprocessing for the cell feature matrix by
+# [10x Genomics](https://cf.10xgenomics.com/supp/xenium/xenium_documentation.html).
 
 # %%
 st_xenium = segtraq.SegTraQ(
@@ -171,14 +194,16 @@ st_proseg = segtraq.SegTraQ(
 # ## Load reference scRNA-seq data and transfer labels
 
 # %% [markdown]
-# To evaluate how SegTraQ metrics differ between cell types, we first transfer labels from the reference scRNA-seq dataset to the spatial data using `segtraq.run_label_transfer`. 
+# To evaluate how SegTraQ metrics differ between cell types,
+# we first transfer labels from the reference scRNA-seq dataset to the spatial data using
+# `segtraq.run_label_transfer`.
 
 # %%
 # Load scRNA-seq data
 adata_ref = ad.read_h5ad("../../data/BC_scRNAseq_Janesick.h5ad")
 
 # %% [markdown]
-# For easier access, we store the `SpatialData` object into a dictionary. 
+# For easier access, we store the `SpatialData` object into a dictionary.
 
 # %%
 st_dict = {"xenium": st_xenium, "bidcell": st_bidcell, "proseg": st_proseg}
@@ -210,7 +235,9 @@ col_celltype = {
 }
 
 # %% [markdown]
-# Cells with a transcripts count < 10 and a gene count < 5 are not considered in label transfer and their returned `transferred_cell_type` returns `np.nan`, and missing values are subsequently replaced with the label "Unknown".
+# Cells with a transcripts count < 10 and a gene count < 5 are not considered in
+# label transfer and their returned `transferred_cell_type` returns `np.nan`,
+# and missing values are subsequently replaced with the label "Unknown".
 
 # %%
 # Replace NaN with Unknown for plotting
@@ -264,7 +291,8 @@ feature_spatial_plot(st_bidcell.sdata, "cell_boundaries", "transferred_celltype_
 feature_spatial_plot(st_proseg.sdata, "cell_boundaries_z1", "transferred_celltype_plot", col_celltype, "Proseg")
 
 # %% [markdown]
-# The dominant cell types are DCIS2, T and B cells. Proseg has the highest proportion of cells assigned to "Unknown", i.e. transcript counts <10 and gene_counts<5. 
+# The dominant cell types are DCIS2, T and B cells. Proseg has the highest
+# proportion of cells assigned to "Unknown", i.e. transcript counts <10 and gene_counts <5.
 
 # %%
 method_dfs = []
@@ -297,13 +325,17 @@ plt.show()
 # ## Running SegTraQ QC metrics
 
 # %% [markdown]
-# Now the data is ready to compute SegTraQ QC metrics. Below we demonstrate how to run the individual modules. 
+# Now the data is ready to compute SegTraQ QC metrics.
+# Below we demonstrate how to run the individual modules.
 
 # %% [markdown]
 # ### Baseline module
 
 # %% [markdown]
-# The baseline (`bl`) module computes basic quality-control metrics such as the number of cells, the percentage of unassigned transcripts, and the number of transcripts and genes per cell. When `inplace=True`, global metrics are stored in the `uns` slot, and per-cell metrics are stored in the `obs` slot of the table within the `SpatialData` object.
+# The baseline (`bl`) module computes basic quality-control metrics such as the number of cells,
+# the percentage of unassigned transcripts, and the number of transcripts and genes per cell.
+# When `inplace=True`, global metrics are stored in the `uns` slot, and per-cell metrics
+# are stored in the `obs` slot of the table within the `SpatialData` object.
 
 # %%
 for method, st in st_dict.items():
@@ -329,6 +361,7 @@ for method, st in st_dict.items():
 # The number of detected cells is comparable across Xenium, BIDCell, and Proseg.
 # Proseg leaves the smallest fraction of transcripts unassigned (0.81%).
 # The number of transcripts and genes per cell can be visualized per cell type, as shown below.
+
 
 # %%
 # method for visualization
@@ -361,21 +394,32 @@ def boxplot_per_celltype(st_dict, feature, q=1):
 
 
 # %% [markdown]
-# Proseg yields the highest mean number of transcripts per cell, driven by increased transcript detection in DCIS2 and T, B and stromal cells, which constitute the dominant cell populations in the dataset. In contrast, Proseg detects fewer transcripts in some of the less abundant cell types, such as DCIS1 and myoepithelial cells.
+# Proseg yields the highest mean number of transcripts per cell,
+# driven by increased transcript detection in DCIS2 and T, B and stromal cells,
+# which constitute the dominant cell populations in the dataset.
+# In contrast, Proseg detects fewer transcripts in some of the less abundant cell types,
+# such as DCIS1 and myoepithelial cells.
 
 # %%
 boxplot_per_celltype(st_dict, "transcript_count")
 
 # %% [markdown]
-# The number of genes detected per cell correlates strongly with the number of transcripts per cell. 
+# The number of genes detected per cell correlates strongly with the number of transcripts per cell.
 
 # %%
 boxplot_per_celltype(st_dict, "gene_count")
 
 # %% [markdown]
-# On average, the number of transcripts per gene per cell is approximately 1, indicating that across methods we detect roughly one to two transcripts per gene per cell. Among the methods, Proseg shows the highest mean number of transcripts per gene per cell when the *Unknown* cluster (cells with transcript counts < 10 and gene counts < 5) is excluded.
+# On average, the number of transcripts per gene per cell is approximately 1,
+# indicating that across methods we detect roughly one to two transcripts per gene per cell.
+# Among the methods, Proseg shows the highest mean number of transcripts per gene
+# per cell when the *Unknown* cluster (cells with transcript counts < 10 and gene counts < 5) is excluded.
 #
-# Interestingly, Proseg detects more transcripts per gene per cell across all cell types, even in cases where the total transcript and gene counts per cell are lower, e.g. DCIS1 and myoepithelial cells. This pattern suggests that transcripts are concentrated among fewer genes per cell, potentially reflecting more homogeneous within-cell expression profiles (i.e. reduced gene-level variability).
+# Interestingly, Proseg detects more transcripts per gene per cell across all cell types,
+# even in cases where the total transcript and gene counts per cell are lower,
+# e.g., DCIS1 and myoepithelial cells.
+# This pattern suggests that transcripts are concentrated among fewer genes per cell,
+# potentially reflecting more homogeneous within-cell expression profiles (i.e. reduced gene-level variability).
 
 # %%
 boxplot_per_celltype(st_dict, "mean_transcripts_per_gene")
@@ -428,7 +472,15 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Xenium detects rounder cells, characterized by higher circularity and solidity, while BIDCell recovers a wider distribution of cell shapes, including both low and high circularity and solidity. BIDCell incorporates a loss term enforcing cell type–specific elongation, which may explain the detection of less circular cell shapes. Notably, the same cell types specified as elongated during training (perivascular, myoepithelial, stromal, and endothelial cells) also exhibit the highest median elongation in the results, highlighting the strong influence of the prior on the inferred cell shapes.
+# Xenium detects rounder cells, characterized by higher circularity and solidity,
+# while BIDCell recovers a wider distribution of cell shapes,
+# including both low and high circularity and solidity.
+# BIDCell incorporates a loss term enforcing cell type–specific elongation,
+# which may explain the detection of less circular cell shapes.
+# Notably, the same cell types specified as elongated during training
+# (perivascular, myoepithelial, stromal, and endothelial cells) also exhibit the highest
+# median elongation in the results, highlighting the strong influence of the prior on
+# the inferred cell shapes.
 
 # %%
 obs = st_bidcell.sdata["table"].obs[st_bidcell.sdata["table"].obs["transferred_cell_type"].notna()]
@@ -454,7 +506,17 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Proseg, in contrast, does not rely solely on membrane stainings. Instead, it incorporates transcript positions, which may extend beyond the membrane boundary due to diffusion. This may explain why perivascular or myoepithelial cells do not appear among the most elongated cell types. Importantly, a segmentation mask that accurately delineates cell geometry may still misassign transcripts (e.g. due to diffusion or spatial overlap), while a mask that poorly represents cell shape may nonetheless correctly assign transcripts. Therefore, it is essential to evaluate not only the geometric accuracy of cell shapes but also the accuracy of transcript assignment to cells. We will compute metrics to evaluate transcript assignment accuracy below.
+# Proseg, in contrast, does not rely solely on membrane stainings.
+# Instead, it incorporates transcript positions,
+# which may extend beyond the membrane boundary due to diffusion.
+# This may explain why perivascular or myoepithelial cells do not appear
+# among the most elongated cell types. Importantly, a segmentation mask that accurately
+# delineates cell geometry may still misassign transcripts
+# (e.g. due to diffusion or spatial overlap), while a mask that poorly represents
+# cell shape may nonetheless correctly assign transcripts.
+# Therefore, it is essential to evaluate not only the geometric accuracy of
+# cell shapes but also the accuracy of transcript assignment to cells.
+# We will compute metrics to evaluate transcript assignment accuracy below.
 
 # %%
 obs = st_proseg.sdata["table"].obs[st_proseg.sdata["table"].obs["transferred_cell_type"].notna()]
@@ -481,7 +543,8 @@ plt.show()
 
 # %% [markdown]
 # ### Clustering stability module
-# The clustering stability (`cs`) module provides metrics for assessing the stability of clustering results across different resolutions and random subsets of genes.
+# The clustering stability (`cs`) module provides metrics for assessing the stability
+# of clustering results across different resolutions and random subsets of genes.
 
 # %% [markdown]
 # Let`s first perform Leiden clustering and visualize the clusters in the UMAP space.
@@ -589,9 +652,13 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Proseg achieves the highest adjusted Rand index (ARI) and clustering purity, as well as the lowest mean cosine distance. Together, these results suggest that Proseg retrieves the most internally consistent expression profiles and could indicate less contaminated single cell signatures. 
+# Proseg achieves the highest adjusted Rand index (ARI) and clustering purity,
+# as well as the lowest mean cosine distance. Together,
+# these results suggest that Proseg retrieves the most internally consistent expression
+# profiles and could indicate less contaminated single cell signatures.
 #
-# The silhouette score can also be computed on the transferred labels. We will first visualize transferred labels in the UMAP space.
+# The silhouette score can also be computed on the transferred labels.
+# We will first visualize transferred labels in the UMAP space.
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
@@ -622,7 +689,9 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Proseg achieves the highest silhouette score for the transferred labels, indicating higher intra-cluster coherence and improved inter-cluster separation; this is also visually consistent with the UMAP embedding.
+# Proseg achieves the highest silhouette score for the transferred labels,
+# indicating higher intra-cluster coherence and improved inter-cluster separation;
+# this is also visually consistent with the UMAP embedding.
 
 # %%
 silhouette_scores_labels = {}
@@ -635,13 +704,25 @@ silhouette_scores_labels
 # %% [markdown]
 # ## Region similarity module
 #
-# While individual genes may exhibit subcellular localization patterns, the overall distribution of transcripts, when averaged across genes, is expected to be relatively smooth and approximately uniform within a cell. Based on this assumption, the region similarity module evaluates the similarity of gene expression profiles across different subcellular compartments. Deviations from this expected intra-cellular consistency can serve as indicators of transcript contamination originating from neighboring cells.
+# While individual genes may exhibit subcellular localization patterns,
+# the overall distribution of transcripts, when averaged across genes,
+# is expected to be relatively smooth and approximately uniform within a cell.
+# Based on this assumption, the region similarity module evaluates the
+# similarity of gene expression profiles across different subcellular compartments.
+# Deviations from this expected intra-cellular consistency can serve as indicators of
+# transcript contamination originating from neighboring cells.
 
 # %% [markdown]
 # *Intersection over Union (IoU)*
 
 # %% [markdown]
-# Proseg shows the lowest intersection over union (IoU) between the cell and nucleus. It relies on transcript assignment rather than explicit morphology-based segmentation, allowing transcripts that are repositioned outside the cell membrane (e.g. due to transcript diffusion) to be reassigned to the cell of origin. This often results in larger inferred cell areas (or perimeters, as shown above) relative to the nucleus or less aligned cell and nucleus shapes, leading to lower cell–nucleus IoU values.
+# Proseg shows the lowest intersection over union (IoU) between the cell and nucleus.
+# It relies on transcript assignment rather than explicit morphology-based segmentation,
+# allowing transcripts that are repositioned outside the cell membrane
+# (e.g. due to transcript diffusion) to be reassigned to the cell of origin.
+# This often results in larger inferred cell areas (or perimeters, as shown above)
+# relative to the nucleus or less aligned cell and nucleus shapes, leading to
+# lower cell–nucleus IoU values.
 
 # %%
 plt.style.use("default")
@@ -682,7 +763,8 @@ for i, (method, st) in enumerate(st_dict.items()):
 # %% [markdown]
 # *Similarity between expression in cell and nucleus*
 #
-# Once, the "best-matching" nucleus is determined for each cell based on IoU, we can compute the similarity between cell and nuclear expression. 
+# Once, the "best-matching" nucleus is determined for each cell based on IoU,
+# we can compute the similarity between cell and nuclear expression.
 
 # %%
 for _method, st in st_dict.items():
@@ -690,7 +772,10 @@ for _method, st in st_dict.items():
 
 
 # %% [markdown]
-# When the intersection-over-union (IoU) between the cell and nucleus masks is high, a large fraction of transcripts assigned to the cell also overlap with the nucleus. Consequently, the returned similarity metric is strongly correlated with IoU.
+# When the intersection-over-union (IoU) between the cell and nucleus masks is high,
+# a large fraction of transcripts assigned to the cell also overlap with the nucleus.
+# Consequently, the returned similarity metric is strongly correlated with IoU.
+
 
 # %%
 def plot_correlation(sdata, method, ax):
@@ -735,7 +820,9 @@ for i, (method, st) in enumerate(st_dict.items()):
 plt.show()
 
 # %% [markdown]
-# A more informative metric is therefore the similarity in gene expression between the region where the cell and nucleus overlap and the remaining cell area, corresponding to the cytoplasm.
+# A more informative metric is therefore the similarity in gene expression
+# between the region where the cell and nucleus overlap and the remaining cell area,
+# corresponding to the cytoplasm.
 
 # %%
 for _method, st in st_dict.items():
@@ -743,7 +830,9 @@ for _method, st in st_dict.items():
 
 
 # %% [markdown]
-# This metric shows higher values for Xenium and Proseg, which may indicate reduced transcript contamination in the cytoplasmic compartment.
+# This metric shows higher values for Xenium and Proseg, which may indicate reduced
+# transcript contamination in the cytoplasmic compartment.
+
 
 # %%
 def density_plot_feature(sdata_dict, features):
@@ -784,9 +873,18 @@ features = ["similarity_nucleus_cytoplasm"]
 density_plot_feature(st_dict, features)
 
 # %% [markdown]
-# *Similarity of gene expression between (1) cell center and cell border and (2) cell border and cell neighborhood*
+# *Similarity of gene expression between
+# (1) cell center and cell border and
+# (2) cell border and cell neighborhood*
 #
-# To better disentangle biology from technical contamination, we introduced a metric that evaluates expression similarity between the cell center and the cell border. The underlying assumption is that although genes may differ between nucleus and cytoplasm, their expression should not systematically differ between the interior cytoplasm and the cell periphery. To quantify potential contamination, we compare the expression similarity of (i) the cell border and its eroded cell center and (ii) the cell border and its local neighborhood.
+# To better disentangle biology from technical contamination,
+# we introduced a metric that evaluates expression similarity
+# between the cell center and the cell border.
+# The underlying assumption is that although genes may differ between nucleus and cytoplasm,
+# their expression should not systematically differ between the interior cytoplasm and the cell periphery.
+# To quantify potential contamination, we compare the expression similarity of
+# (i) the cell border and its eroded cell center and
+# (ii) the cell border and its local neighborhood.
 
 # %%
 for _method, st in st_dict.items():
@@ -800,21 +898,38 @@ density_plot_feature(st_dict, features)
 # %% [markdown]
 # *Admixture (contamination) of the cell border*
 #
-# A low `similarity_center_border` or high `similarity_border_neighborhood` does not necessarily represent contamination. To evaluate the contamination of the cell border robustly, we compute the the `border_admixture_score`, which explicitly models the border as a mixture of center and neighborhood expression, and estimates how much better this mixture explains the border compared to the center alone.
+# A low `similarity_center_border` or high `similarity_border_neighborhood` does
+# not necessarily represent contamination. To evaluate the contamination of the
+# cell border robustly, we compute the the `border_admixture_score`,
+# which explicitly models the border as a mixture of center and neighborhood expression,
+# and estimates how much better this mixture explains the border compared to the center alone.
 
 # %%
 for _method, st in st_dict.items():
     st.rs.border_admixture_score()
 
 # %% [markdown]
-# A high `border_admixture_score` means the border is better explained by the mixture than by the center alone. The density plot below shows that Proseg and BIDCell shows the least contamination. It is important to note that Proseg is a transcript-assignment method, meaning that transcripts located near or even within a cell boundary are not necessarily assigned to that cell. When computing the border admixture score, transcripts in the border region that are assigned to other cells must therefore be excluded. This can increase sparsity and noise in the data and may lead to less stable estimates. 
+# A high `border_admixture_score` means the border is better explained by the
+# mixture than by the center alone. The density plot below shows that Proseg
+# and BIDCell shows the least contamination. It is important to note that Proseg
+# is a transcript-assignment method, meaning that transcripts located near or even within
+# a cell boundary are not necessarily assigned to that cell. When computing the border admixture score,
+# transcripts in the border region that are assigned to other cells must therefore be excluded.
+# This can increase sparsity and noise in the data and may lead to less stable estimates.
 
 # %%
 features = ["border_admixture_score"]
 density_plot_feature(st_dict, features)
 
 # %% [markdown]
-# While it is important to consider metrics that do not depend on the availability of high-quality reference scRNA-seq data—and therefore do not rely on the performance of label transfer—a limitation of the region similarity module is that it cannot distinguish between homogeneous and heterogeneous cellular neighborhoods. In homogeneous neighborhoods, a high `border_admixture_score` does not necessarily indicate contamination. Nevertheless, when comparing methods globally or on a cell-type level, this is a useful unsupervised contamination metric that does not rely on reference scRNA-seq data.
+# While it is important to consider metrics that do not depend on the availability of
+# high-quality reference scRNA-seq data—and therefore do not rely on the performance of
+# label transfer—a limitation of the region similarity module is that it cannot
+# distinguish between homogeneous and heterogeneous cellular neighborhoods.
+# In homogeneous neighborhoods, a high `border_admixture_score` does not necessarily
+# indicate contamination. Nevertheless, when comparing methods globally or on a
+# cell-type level, this is a useful unsupervised contamination metric that does
+# not rely on reference scRNA-seq data.
 
 # %%
 boxplot_per_celltype(st_dict, "border_admixture_score")
@@ -823,16 +938,21 @@ boxplot_per_celltype(st_dict, "border_admixture_score")
 # ### Supervised module
 
 # %% [markdown]
-# The `sp` (supervised) module provides metrics to evaluate how well cell profiles in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset with cell type annotations.
+# The `sp` (supervised) module provides metrics to evaluate how well cell profiles
+# in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq
+# (scRNA-seq) dataset with cell type annotations.
 #
-# Unlike scRNA-seq, contamination in spatial transcriptomics measurements mostly originates from the local tissue context. 
+# Unlike scRNA-seq, contamination in spatial transcriptomics measurements mostly originates
+# from the local tissue context.
 #
-# By comparing spatial expression profiles to a high-quality scRNA-seq reference, the supervised module aims to quantify this mismatch. Specifically, we compute metrics that measure:
+# By comparing spatial expression profiles to a high-quality scRNA-seq reference,
+# the supervised module aims to quantify this mismatch. Specifically, we compute metrics that measure:
 # - how well each spatial cell matches its expected cell type,
 # - how much its expression resembles other (neighboring) cell types, and
 # - if it is possible to predict that a cell of one cell type is adjacent to a different cell type.
 #
-# To obtain cell-type specific marker genes, we define positive and negative markers in the annotated scRNA-seq via `markers_from_reference`.
+# To obtain cell-type specific marker genes, we define positive and negative markers in the
+# annotated scRNA-seq via `markers_from_reference`.
 
 # %% [markdown]
 # *Computing cell-type specific markers*
@@ -847,7 +967,8 @@ for method, st in st_dict.items():
     )
 
 # %% [markdown]
-# A list of positive and negative markers computed for each cell type is shown below. We will use xenium for demonstration.
+# A list of positive and negative markers computed for each cell type is shown below.
+# We will use xenium for demonstration.
 
 # %%
 for cell_type, sign in markers["xenium"].items():
@@ -858,10 +979,13 @@ for cell_type, sign in markers["xenium"].items():
     print(f"{cell_type}  |  negative: {', '.join(neg)}\n")
 
 # %% [markdown]
-# Below, we show the number of negative markers that overlap with the positive markers of each cell type.  
-# To reliably estimate contamination, each cell type should share **at least ~5 negative markers** with the positive marker set of every other cell type. If these overlaps are too small, contamination estimates become unstable.
+# Below, we show the number of negative markers that overlap with the positive markers of each cell type.
+# To reliably estimate contamination, each cell type should share
+# **at least ~5 negative markers** with the positive marker set of every other cell type.
+# If these overlaps are too small, contamination estimates become unstable.
 #
-# In such cases, the marker definition can be relaxed by adjusting the thresholds used in `markers_from_reference` above.
+# In such cases, the marker definition can be relaxed by adjusting the thresholds used in
+# `markers_from_reference` above.
 
 # %%
 ctypes = list(markers["xenium"].keys())
@@ -878,7 +1002,13 @@ overlap_df
 # %% [markdown]
 # *Marker purity*
 #
-# To quantify how well each segmented cell in the spatial transcriptomics data matches its annotated cell type, we defined a marker-based purity (`marker_balanced_accuracy`) score that jointly evaluates the expression of positive (`positive_marker_recall`) and the absence of neighborhood-associated negative markers (`negative_marker_avoidance`). The method accounts for the spatial context of each cell and is motivated by the assumption that differences between scRNA-seq and spatial transcriptomics-derived cell type profiles arise mainly from local contamination by neighboring cells.
+# To quantify how well each segmented cell in the spatial transcriptomics data
+# matches its annotated cell type, we defined a marker-based purity (`marker_balanced_accuracy`)
+# score that jointly evaluates the expression of positive (`positive_marker_recall`) and
+# the absence of neighborhood-associated negative markers (`negative_marker_avoidance`).
+# The method accounts for the spatial context of each cell and is motivated by the assumption
+# that differences between scRNA-seq and spatial transcriptomics-derived cell type profiles
+# arise mainly from local contamination by neighboring cells.
 
 # %%
 for method, st in st_dict.items():
@@ -889,14 +1019,19 @@ for method, st in st_dict.items():
     )
 
 # %% [markdown]
-# Proseg exhibits the highest `marker_balanced_accuracy` across most cell types, with the exception of DCIS1. To better interpret the overall purity scores, it is informative to examine the `positive_marker_recall` and `negative_marker_avoidance` scores separately, as they capture distinct aspects of marker specificity.
+# Proseg exhibits the highest `marker_balanced_accuracy` across most cell types, with the exception of DCIS1.
+# To better interpret the overall purity scores, it is informative to examine the `positive_marker_recall`
+# and `negative_marker_avoidance` scores separately, as they capture distinct aspects of marker specificity.
 
 # %%
 boxplot_per_celltype(st_dict, "marker_balanced_accuracy")
 
 
 # %% [markdown]
-# The `negative_marker_avoidance` score quantifies the extent to which a focal cell expresses positive markers of neighboring cell types, and thus reflects contamination. Overall, contamination levels are low; however, increased contamination is observed for DCIS1.
+# The `negative_marker_avoidance` score quantifies the extent to which a focal cell expresses positive
+# markers of neighboring cell types, and thus reflects contamination. Overall, contamination levels are low;
+# however, increased contamination is observed for DCIS1.
+
 
 # %%
 def box_strip_plot_per_celltype(
@@ -962,13 +1097,18 @@ def box_strip_plot_per_celltype(
 box_strip_plot_per_celltype(st_dict, "negative_marker_avoidance")
 
 # %% [markdown]
-# In contrast, the `positive_marker_recall` score measures how consistently a cell expresses markers expected for its assigned cell type. 
+# In contrast, the `positive_marker_recall` score measures how consistently a cell
+# expresses markers expected for its assigned cell type.
 
 # %%
 boxplot_per_celltype(st_dict, "positive_marker_recall")
 
 # %% [markdown]
-# These metrics are most informative when considered jointly. For example, we plot the mean `negative_marker_avoidance` (a supervised measure of contamination) against the mean `border_admixture_score`, an unsupervised contamination metric. In this combined view, we can see that the two transcript-informed methods, BIDCell and Proseg, show marginally less contamination than the transcript-agnostic segmentation method from Xenium.
+# These metrics are most informative when considered jointly. For example, we plot the mean
+# `negative_marker_avoidance` (a supervised measure of contamination) against the mean
+# `border_admixture_score`, an unsupervised contamination metric. In this combined view,
+# we can see that the two transcript-informed methods, BIDCell and Proseg,
+# show marginally less contamination than the transcript-agnostic segmentation method from Xenium.
 
 # %%
 rows = []
@@ -1014,7 +1154,11 @@ plt.show()
 # %% [markdown]
 # *Neighborhood contamination*
 #
-# Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify (i) **how many contaminating transcripts** are present per cell and (ii) **which neighboring cell types** contribute to this signal. We therefore compute neighborhood contamination.
+# Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives.
+# In many cases, we also want to quantify
+# (i) **how many contaminating transcripts** are present per cell and
+# (ii) **which neighboring cell types** contribute to this signal.
+# We therefore compute neighborhood contamination.
 
 # %%
 for method, st in st_dict.items():
@@ -1023,7 +1167,8 @@ for method, st in st_dict.items():
     )
 
 # %% [markdown]
-# Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination. Across methods, the highest number of cells affected by contamination are found among T and B cells. 
+# Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination.
+# Across methods, the highest number of cells affected by contamination are found among T and B cells.
 
 # %%
 methods_df = []
@@ -1037,7 +1182,8 @@ merged = pd.concat(methods_df, axis=1)
 merged
 
 # %% [markdown]
-# Proseg contains the lowest number of T cells and B cells, and hence the overall contamination will be lower than for the other methods.
+# Proseg contains the lowest number of T cells and B cells, and hence the overall
+# contamination will be lower than for the other methods.
 
 # %%
 methods_df = []
@@ -1099,6 +1245,7 @@ plt.show()
 # %% [markdown]
 # The spatial plot below shows the number of contaminating transcripts in each cell.
 
+
 # %%
 def plot_feature_labels(sdata, method, feature, axes, i):
     labels = sdata.tables["table"].obs["transferred_celltype_plot"].unique().astype(str).tolist()
@@ -1131,9 +1278,14 @@ for i, (method, st) in enumerate(st_dict.items()):
     plot_feature_labels(st.sdata, method, "contamination_counts", axes, i)
 
 # %% [markdown]
-# The heatmap below summarizes contamination strength for each source–target cell-type pair. Each entry represents the mean contamination strength across all evaluable target cells of the given target cell type, where the source-specific contamination strength is computed as the fraction of transcripts in the target cell that correspond to contamination-relevant markers of the source cell type.
+# The heatmap below summarizes contamination strength for each source–target cell-type pair.
+# Each entry represents the mean contamination strength across all evaluable target cells
+# of the given target cell type, where the source-specific contamination strength is computed
+# as the fraction of transcripts in the target cell that correspond to contamination-relevant
+# markers of the source cell type.
 #
-# The bubble plot illustrates the contamination strength (bubble color) and the number of evaluable target cells (bubble size).
+# The bubble plot illustrates the contamination strength (bubble color) and the
+# number of evaluable target cells (bubble size).
 
 # %%
 import matplotlib.pyplot as plt
@@ -1219,7 +1371,12 @@ plt.show()
 # *Mutually exclusive co-expression rate (MECR)*
 
 # %% [markdown]
-# The mutually exclusive co-expression rate (MECR) is a measure for whether combinations of positive and negative markers (computed with a more stringent setting to increase mutual exclusivity, `vote_frac_pos=0.3`) co-occur less often than expected under independence (using Fisher's exact test). By conditioning on the marginal detection frequencies of each gene, Fisher’s exact test does not favor methods with low overall transcript counts.
+# The mutually exclusive co-expression rate (MECR) is a measure for whether
+# combinations of positive and negative markers (computed with a more stringent setting
+# to increase mutual exclusivity, `vote_frac_pos=0.3`) co-occur less often than
+# expected under independence (using Fisher's exact test). By conditioning on the
+# marginal detection frequencies of each gene, Fisher’s exact test does not favor
+# methods with low overall transcript counts.
 
 # %%
 markers = {}
@@ -1237,7 +1394,10 @@ for method, st in st_dict.items():
     )
 
 # %% [markdown]
-# Across all methods, positive and negative markers co-occur less frequently than expected under independence, indicating a consistent depletion of co-expression. Although the differences are minor, Proseg shows the strongest depletion of co-expression of positive and negative markers.
+# Across all methods, positive and negative markers co-occur less frequently than expected
+# under independence, indicating a consistent depletion of co-expression.
+# Although the differences are minor, Proseg shows the strongest depletion of co-expression
+# of positive and negative markers.
 
 # %%
 rows = []
@@ -1304,23 +1464,33 @@ plt.show()
 # %% [markdown]
 # ### 3D Volume Module
 #
-# The volume (`vl`) accessor provides metrics to assess how well a segmentation method resolves cell overlaps in 3D. Spatial transcriptomics tissue sections have a finite thickness (~4–10 µm), so cells can overlap along the z-dimension and 2D segmentation methods may introduce mixing by assigning transcripts from overlapping cells to the same mask. In this module, we introduce metrics to quantify sensitivity to 3D overlap and evaluate how well quasi-3D methods (e.g. Proseg) disentangle transcripts from overlapping cells. 
+# The volume (`vl`) accessor provides metrics to assess how well a segmentation method
+# resolves cell overlaps in 3D. Spatial transcriptomics tissue sections have a finite
+# thickness (~4–10 µm), so cells can overlap along the z-dimension and 2D segmentation
+# methods may introduce mixing by assigning transcripts from overlapping cells to the same mask.
+# In this module, we introduce metrics to quantify sensitivity to 3D overlap and evaluate how
+# well quasi-3D methods (e.g. Proseg) disentangle transcripts from overlapping cells.
 #
 # For a detailed description of this module, please refer to this [tutorial](volume.ipynb).
 
 # %% [markdown]
 # *Top-bottom z consistency*
 #
-# To detect potential z-overlap mixing within segmented cells, we split each cell’s transcripts into bottom/top z-quantiles (q=0.30), compute log-normalized gene profiles for both parts, and report their cosine similarity (NaN if either part has <10 transcripts or <5 genes).
+# To detect potential z-overlap mixing within segmented cells, we split each cell’s
+# transcripts into bottom/top z-quantiles (q=0.30), compute log-normalized gene profiles
+# for both parts, and report their cosine similarity (NaN if either part has <10 transcripts or <5 genes).
 
 # %%
 for _method, st in st_dict.items():
     _cos_sim = st.vl.similarity_top_bottom()
 
 # %% [markdown]
-# Proseg 2 shows the highest expression similarity between top and bottom plane both overall and on a cell type level. This is also true for cell types, for which proseg has a lower per-cell transcript counts such as myoepithelial and DCIS2 cells.
+# Proseg 2 shows the highest expression similarity between top and bottom plane both
+# overall and on a cell type level. This is also true for cell types,
+# for which proseg has a lower per-cell transcript counts such as myoepithelial and DCIS2 cells.
 #
-# The other three methods have peaks at zero, which means that top and bottom parts have completely different gene compositions (genes present in one are essentially absent in the other).
+# The other three methods have peaks at zero, which means that top and bottom parts
+# have completely different gene compositions (genes present in one are essentially absent in the other).
 
 # %%
 feature = ["cosine_sim_top_bottom_z"]
@@ -1330,16 +1500,23 @@ density_plot_feature(st_dict, feature)
 boxplot_per_celltype(st_dict, "cosine_sim_top_bottom_z")
 
 # %% [markdown]
-# In [volume.ipynb](./volume.ipynb), we explore the distribution of transcripts along the z-dimension in more depth and put it into context with [ovrlpy](https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full), a package for detecting 3D overlap in spatial transcriptomics.
+# In [volume.ipynb](./volume.ipynb), we explore the distribution of transcripts along the z-dimension
+# in more depth and put it into context with
+# [ovrlpy](https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full),
+# a package for detecting 3D overlap in spatial transcriptomics.
 
 # %% [markdown]
 # ### Point statistic metrics
 #
-# The point statistics (`ps`) module is designed to compare the distribution of a set of transcripts in the cell relative to its cell centroid or cell border. The idea is to compute the distances of the transcripts to a reference point in the cell, either the cell centroid or the cell boundaries and aggregate this measure per transcript id. 
+# The point statistics (`ps`) module is designed to compare the
+# distribution of a set of transcripts in the cell relative to its cell centroid or cell border.
+# The idea is to compute the distances of the transcripts to a reference point in the cell,
+# either the cell centroid or the cell boundaries and aggregate this measure per transcript id.
 #
 # _distance to membrane metric_
 #
-# In this metric we compute the distance to the segmented cell membrane of each transcript coordinate and aggregate this metric per transcript id as mean. 
+# In this metric we compute the distance to the segmented cell membrane of each transcript coordinate
+# and aggregate this metric per transcript id as mean.
 
 # %%
 plt.style.use("dark_background")
@@ -1377,7 +1554,8 @@ def plot_metric(sdata, boundary_key, method, metric, genes, ax):
 
 
 # %% [markdown]
-# First, we compute both the average distance to the cell membrane across all previously defined negative and positive markers for the cell type "DCIS1". 
+# First, we compute both the average distance to the cell membrane across all previously
+# defined negative and positive markers for the cell type "DCIS1".
 
 # %%
 border_distance_negative = {}
@@ -1445,7 +1623,8 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# We can plot now the distance to membrane for the positive and negative markers across the different segmentation algorithms and for the cell type "DCIS1". 
+# We can plot now the distance to membrane for the positive and negative markers
+# across the different segmentation algorithms and for the cell type "DCIS1".
 
 # %% [markdown]
 # We can also run the method inplace and plot the results in space
@@ -1474,13 +1653,18 @@ for i, (method, st) in enumerate(st_dict.items()):
     )
 
 # %% [markdown]
-# We can identify cells in which the distribution of negative markers is clearly more skewed than for thers and that these values differ again greatly between the segmentation algorithms
+# We can identify cells in which the distribution of negative markers is clearly
+# more skewed than for thers and that these values differ again greatly between the segmentation algorithms.
 
 # %% [markdown]
 # ### Metrics orthogonolisation
 
 # %% [markdown]
-# In order to look at the co-linearity of the computed metrics, we will compute the correlation matrix (scaled covariance matrix) of all the metrics. Since the directionality (positively or negatively correlated) does not matter, we take the absolute value of the correlation coefficient as our orthogonality metric. Like this, we can visualise which metrics correlate 
+# In order to look at the co-linearity of the computed metrics,
+# we will compute the correlation matrix (scaled covariance matrix) of all the metrics.
+# Since the directionality (positively or negatively correlated) does not matter,
+# we take the absolute value of the correlation coefficient as our orthogonality metric.
+# Like this, we can visualise which metrics correlate
 
 # %%
 # code adapted from claude.ai
@@ -1516,7 +1700,9 @@ for method, st in st_dict.items():
     plt.show()
 
 # %% [markdown]
-# There are quite some metrics which correlate with the segmented cell area, such as total counts of all transcripts and metrics related to this. We note as well that the correlation of metrics differs between algorithms. 
+# There are quite some metrics which correlate with the segmented cell area,
+# such as total counts of all transcripts and metrics related to this.
+# We note as well that the correlation of metrics differs between algorithms.
 
 # %% [markdown]
 # ## Session Info

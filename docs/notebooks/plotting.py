@@ -15,15 +15,18 @@
 # %% [markdown]
 # # Module: Plotting
 #
-# One of the main usecases of `SegTraQ` is to compare different segmentation methods. To facilitate this task, you can make use of the plotting module (`pl`).
-# In order to use it, you need to prepare your data in the form of a dictionary that maps the method name to the corresponding `SegTraQ` object.
+# One of the main usecases of `SegTraQ` is to compare different segmentation methods.
+# To facilitate this task, you can make use of the plotting module (`pl`).
+# In order to use it, you need to prepare your data in the form of a dictionary
+# that maps the method name to the corresponding `SegTraQ` object.
 #
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
 # %% [markdown]
 # ## Data Preparation
 #
-# First, we need to get the data into the right format. This closely follows the [Xenium Focus](10x_xenium_focus.ipynb).
+# First, we need to get the data into the right format.
+# This closely follows the [Xenium Focus](10x_xenium_focus.ipynb).
 
 # %%
 # %load_ext autoreload
@@ -100,7 +103,8 @@ st_dict = {"xenium": st_xenium, "bidcell": st_bidcell, "proseg": st_proseg, "seg
 
 # %% [markdown]
 # ## Run desired metrics
-# Now, we can run all of the metrics we want on this dataset. For now, we simply run a label transfer and run some `scanpy` functions to compute the UMAP coordinates.
+# Now, we can run all of the metrics we want on this dataset.
+# For now, we simply run a label transfer and run some `scanpy` functions to compute the UMAP coordinates.
 
 # %%
 # Load scRNA-seq data
@@ -113,7 +117,13 @@ for _method, st in st_dict.items():
 # %% [markdown]
 # # Plots for individual samples
 #
-# The `pl` module provides methods to plot different things: on one hand, it can be used to visualize certain characteristics of a sample, and on the other, it can be used to compare between different samples or segmentation methods. Let's start by looking at some sample-specific plots. Specifically, we can look at the distribution of transcripts and different segmentation features across the x and y coordinate. For some technologies (such as CosMx), this can help to detect stitching artefacts.
+# The `pl` module provides methods to plot different things: on one hand,
+# it can be used to visualize certain characteristics of a sample,
+# and on the other, it can be used to compare between different samples or segmentation methods.
+# Let's start by looking at some sample-specific plots. Specifically,
+# we can look at the distribution of transcripts and different segmentation features across
+# the x and y coordinate. For some technologies (such as CosMx),
+# this can help to detect stitching artefacts.
 
 # %%
 # transcript distribution across the x and y axis of the image
@@ -125,7 +135,9 @@ _ = st_xenium.pl.transcript_distribution_across_space(filter_size=21)
 _ = st_xenium.pl.feature_distribution_across_space(features=["cell_area", "nucleus_area"], filter_size=21)
 
 # %% [markdown]
-# We can see two things here: for the Xenium segmentation, the right part of the image contains more transcripts. Its cells are also larger. We can use `spatialdata_plot` to have a look at the actual data.
+# We can see two things here: for the Xenium segmentation,
+# the right part of the image contains more transcripts.
+# Its cells are also larger. We can use `spatialdata_plot` to have a look at the actual data.
 
 # %%
 fig, ax = plt.subplots(1, 2, figsize=(7, 7), dpi=100)
@@ -133,12 +145,15 @@ st_xenium.sdata.pl.render_points("transcripts", size=0.01, color="red", method="
 st_xenium.sdata.pl.render_shapes("cell_boundaries").pl.show(ax=ax[1])
 
 # %% [markdown]
-# Here, this is actually due to the structure of the tissue (large tumor cells are on the right side of the image). When applying these methods on larger tissues, they can also help to detect technical artefacts.
+# Here, this is actually due to the structure of the tissue
+# (large tumor cells are on the right side of the image).
+# When applying these methods on larger tissues, they can also help to detect technical artefacts.
 
 # %% [markdown]
 # # Comparing between segmentation methods
 #
-# We can also use the `pl` module to compare between different segmentation methods. All we need to do is pass our dictionary of `SegTraQ` objects.
+# We can also use the `pl` module to compare between different segmentation methods.
+# All we need to do is pass our dictionary of `SegTraQ` objects.
 
 # %%
 _ = segtraq.pl.celltype_proportions(st_dict, celltype_col="transferred_cell_type")
