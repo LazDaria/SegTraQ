@@ -643,6 +643,23 @@ sdata_proseg3_crop.pl.render_shapes(
 # Finally, we can initialize the `SegTraQ` object, based on which all metrics can be computed.
 
 # %%
+filter_kwargs = {
+    "min_qv": None,
+    "control_prefixes": (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+        "Intergenic_Region_",
+    ),
+    "control_genes": (),
+    "inplace": True,
+}
+
 st_proseg3 = segtraq.SegTraQ(
     sdata_proseg3,
     points_cell_id_key="assignment",
@@ -651,8 +668,10 @@ st_proseg3 = segtraq.SegTraQ(
     tables_area_key=None,
     tables_cell_id_key="cell",
     shapes_cell_id_key="cell",
+    nucleus_shapes_cell_id_key="segtraq_id",
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
+    filter_kwargs=filter_kwargs,
 )
 
 # %% [markdown]
@@ -762,6 +781,7 @@ st_segger = segtraq.SegTraQ(
     tables_cell_id_key="cell_id",
     tables_centroid_x_key="cell_centroid_x",
     tables_centroid_y_key="cell_centroid_y",
+    nucleus_shapes_cell_id_key="segtraq_id",
 )
 
 # %% [markdown]

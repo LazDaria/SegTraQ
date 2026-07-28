@@ -65,15 +65,9 @@ warnings.filterwarnings(action="ignore")
 # with Proseg v2.0.5 (`sdata_proseg2`) and Proseg v3.1.0 (`sdata_proseg3`).
 
 # %%
-sdata_xenium = sd.read_zarr(
-    "/g/huber/projects/CODEX/segtraq/data/20260204_SegTraQ_sdata/xenium_v1_data/sdata_xenium_crop.zarr"
-)
-sdata_proseg2 = sd.read_zarr(
-    "/g/huber/projects/CODEX/segtraq/data/20260204_SegTraQ_sdata/xenium_v1_data/sdata_proseg_v2_crop.zarr/"
-)
-sdata_proseg3 = sd.read_zarr(
-    "/g/huber/projects/CODEX/segtraq/data/20260204_SegTraQ_sdata/xenium_v1_data/sdata_proseg_v3_crop.zarr/"
-)
+sdata_xenium = sd.read_zarr("../../../data/xenium_v1_data/sdata_xenium_crop.zarr")
+sdata_proseg2 = sd.read_zarr("../../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")
+sdata_proseg3 = sd.read_zarr("../../../data/xenium_v1_data/sdata_proseg_v3_crop.zarr/")
 
 # %% [markdown]
 # Next, we initialize `SegTraQ` objects.
@@ -121,10 +115,10 @@ st_dict = {"xenium": st_xenium, "proseg2": st_proseg2, "proseg3": st_proseg3}
 # We can then transfer labels from a reference scRNA-seq dataset.
 
 # %%
-adata_ref = ad.read_h5ad("../../../data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 for _method, st in st_dict.items():
-    st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", inplace=True)
+    st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw", inplace=True)
 
 
 # %% [markdown]
@@ -615,11 +609,12 @@ for method, st in st_dict.items():
         st.run_volume(
             adata_ref=adata_ref,
             ref_cell_type="celltype_major",
+            ref_raw_counts_layer="raw",
             heterotypic_overlap_kwargs={"shapes_key_list": shapes_key_list},
         )
 
     else:
-        st.run_volume(adata_ref=adata_ref, ref_cell_type="celltype_major")
+        st.run_volume(adata_ref=adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw")
 
 # %% [markdown]
 # ## Session Info

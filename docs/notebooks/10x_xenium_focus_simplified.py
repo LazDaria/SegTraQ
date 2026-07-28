@@ -198,7 +198,7 @@ st.cs.purity()
 # %% [markdown]
 # ### Similarity between nucleus and cytoplasm
 # First, we look at the correlation between a cell's nucleus and the rest of the cell.
-# A high similarity here means that there is littly contamination,
+# A high similarity here means that there is little contamination,
 # whereas a low correlation can hint towards spillover from adjacent cells.
 
 # %%
