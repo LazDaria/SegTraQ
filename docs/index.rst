@@ -43,5 +43,3 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
    notebooks/plotting
    notebooks/10x_xenium_focus_simplified
    notebooks/10x_xenium_focus
-   # notebooks/vizgen_merscope_focus
-   # notebooks/cosmx_focus

@@ -34,7 +34,6 @@ __all__ = [
     "vl",
     "ps",
     "markers_from_reference",
-    "get_mut_excl_markers",
     "run_label_transfer",
     "bins_to_transcripts",
     "validate_spatialdata",

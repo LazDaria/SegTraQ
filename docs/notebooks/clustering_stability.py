@@ -23,7 +23,7 @@
 # The figure below shows a bad clustering (lots of overlap) vs. a good clustering.
 #
 # <center>
-#  <img src='../../_static/img/docs/clustering_stability.png' width='90%' />
+#  <img src='../_static/img/docs/clustering_stability.png' width='90%' />
 # </center>
 #
 # To follow along with this tutorial, you can download the data from

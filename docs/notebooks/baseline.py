@@ -20,7 +20,7 @@
 # the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.
 #
 # <center>
-#  <img src='../../_static/img/docs/baseline.png' width='90%' />
+#  <img src='../_static/img/docs/baseline.png' width='90%' />
 # </center>
 #
 # The `baseline` (`bl`) module contains several metrics that can help you to assess the quality of your segmentation.
