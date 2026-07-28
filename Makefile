@@ -79,7 +79,12 @@ coverage: ## check code coverage quickly with the default Python
 NOTEBOOK_SRCS := $(wildcard docs/notebooks/*.py)
 NOTEBOOK_OUTS := $(patsubst docs/notebooks/%.py,docs/_build/notebooks/%.ipynb,$(NOTEBOOK_SRCS))
 
-docs/_build/notebooks/%.ipynb: docs/notebooks/%.py
+.PHONY: ensure-kernel
+ensure-kernel:
+	@uv run --extra docs jupyter kernelspec list 2>/dev/null | grep -q python3 || \
+	uv run --extra docs python -m ipykernel install --user --name python3 --display-name "Python 3 (.venv)"
+
+docs/_build/notebooks/%.ipynb: docs/notebooks/%.py ensure-kernel
 	mkdir -p docs/_build/notebooks docs/_build/.hashes
 	@current_hash=$$(sha256sum $< | cut -d' ' -f1); \
 	stored_hash=$$(cat docs/_build/.hashes/$*.hash 2>/dev/null || echo ""); \

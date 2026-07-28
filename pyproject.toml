@@ -58,6 +58,8 @@ docs = [
     "pandoc",
     "pygments",
     "ipython",
+    "nbconvert",
+    "ipykernel",
 ]
 
 [project.urls]
