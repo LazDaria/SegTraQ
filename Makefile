@@ -67,8 +67,6 @@ pdb:  ## Run all the tests, but on failure, drop into the debugger
 	pytest --pdb --maxfail=10 --pdbcls=IPython.terminal.debugger:TerminalPdb $(filter-out $@,$(MAKECMDGOALS))
 
 test-all: ## run tests on every Python version with uv
-	uv run --python=3.10 --extra test pytest
-	uv run --python=3.11 --extra test pytest
 	uv run --python=3.12 --extra test pytest
 	uv run --python=3.13 --extra test pytest
 
@@ -78,16 +76,31 @@ coverage: ## check code coverage quickly with the default Python
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/segtraq.md
-	rm -f docs/modules.md
-	sphinx-apidoc -o docs/ segtraq
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
+NOTEBOOK_SRCS := $(wildcard docs/notebooks/*.py)
+NOTEBOOK_OUTS := $(patsubst docs/notebooks/%.py,docs/_build/notebooks/%.ipynb,$(NOTEBOOK_SRCS))
 
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.md' -c '$(MAKE) -C docs html' -R -D .
+docs/_build/notebooks/%.ipynb: docs/notebooks/%.py
+	mkdir -p docs/_build/notebooks docs/_build/.hashes
+	@current_hash=$$(sha256sum $< | cut -d' ' -f1); \
+	stored_hash=$$(cat docs/_build/.hashes/$*.hash 2>/dev/null || echo ""); \
+	if [ "$$current_hash" = "$$stored_hash" ] && [ -f $@ ]; then \
+		echo "Skipping $@ (content unchanged)"; \
+	else \
+		uv run --extra docs jupytext --to ipynb -o $@ $< && \
+		uv run --extra docs jupyter nbconvert --to notebook --execute --inplace $@ && \
+		echo "$$current_hash" > docs/_build/.hashes/$*.hash; \
+	fi
+
+.PHONY: docs
+ifdef NOTEBOOK
+docs: docs/_build/notebooks/$(NOTEBOOK).ipynb ## build docs, only executing the specified notebook
+else
+docs: $(NOTEBOOK_OUTS) ## build docs, only re-executing notebooks whose .py source changed
+endif
+	uv run --extra docs sphinx-build -b html docs docs/_build/html
+
+deploy-docs: docs
+	uv run ghp-import -n -p -f docs/_build/html
 
 release: dist ## package and upload a release
 	uv release -t $(UV_PUBLISH_TOKEN)

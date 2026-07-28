@@ -114,3 +114,6 @@ tests/data/scRNAseq_ref_large.h5ad
 data/
 # required for symlink
 data
+
+# artifacts from the docs build process
+docs/_build/

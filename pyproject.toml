@@ -19,8 +19,8 @@ classifiers = [
 license = "MIT"
 dependencies = [
   "typer",
-  "scanpy",
-  "spatialdata>=0.7.2",  # not strictly required
+  "scanpy>=1.12",  # not strictly required
+  "spatialdata>=0.8.0",  # not strictly required
   "joblib",
   "geopandas",
   "rtree",
@@ -32,7 +32,7 @@ dependencies = [
   "ome_zarr>=0.13.0",
   "setuptools<82.0.0"  # setuptools==82.0.0 dropped pkg_resources, which is needed by xarray and thus spatialdata
 ]
-requires-python = ">= 3.11"
+requires-python = ">= 3.12"
 
 [project.optional-dependencies]
 test = [
@@ -52,6 +52,7 @@ docs = [
     "sphinx-book-theme",  # or another theme you prefer
     "myst-parser",        # if you want to support markdown in Sphinx
     "nbsphinx",          # for rendering Jupyter notebooks in Sphinx
+    "jupytext",
     "sphinx-autodoc-typehints",  # for better type hint rendering in
     "sphinx-copybutton",  # for copy buttons in code blocks
     "pandoc",
@@ -101,6 +102,11 @@ select = [
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
 ]
+
+# B018 ignores standalone expressions (e.g. used for printing at the end of a code block in a notebook)
+# E402 ignores module level import not at top of file (e.g. used for imports in a notebook)
+[tool.ruff.lint.per-file-ignores]
+"docs/notebooks/*.py" = ["B018", "E402"]
 
 [tool.uv]
 package = true
