@@ -254,7 +254,7 @@ def transcripts_per_cell(
     sdata : sd.SpatialData
         A SpatialData object containing transcript and cell assignment information.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
+        Column in `sdata.tables[tables_key].obs` containing cell IDs to match with sdata.shapes[shapes_key] index.
     points_key : str, optional
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
     points_cell_id_key : str, optional
@@ -304,7 +304,7 @@ def genes_per_cell(
     sdata : object
         An object containing spatial transcriptomics data with a `points` attribute.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
+        Column in `sdata.tables[tables_key].obs` containing cell IDs to match with sdata.shapes[shapes_key] index.
     points_key : str, optional
         The key to access the transcript data within `sdata.points` (default is "transcripts").
     points_cell_id_key : str, optional
@@ -366,7 +366,7 @@ def mean_transcripts_per_gene_per_cell(
     sdata : object
         An object containing spatial transcriptomics data with a `points` attribute.
     tables_cell_id_key : str
-        Column in `sdata.tables[tables_key].obs containing cell IDs to match with sdata.shapes[shapes_key] index.
+        Column in `sdata.tables[tables_key].obs` containing cell IDs to match with sdata.shapes[shapes_key] index.
     points_key : str, optional
         The key to access the transcript data within `sdata.points` (default is "transcripts").
     points_cell_id_key : str, optional

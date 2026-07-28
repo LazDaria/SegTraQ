@@ -1,6 +1,6 @@
 [project]
 name = "segtraq"
-version = "0.0.4"
+version = "0.0.5"
 description = "SegTraQ - A Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data."
 readme = "README.md"
 authors = [
@@ -112,3 +112,8 @@ select = [
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "ghp-import>=2.1.0",
+]

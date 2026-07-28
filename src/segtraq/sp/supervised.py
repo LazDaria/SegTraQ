@@ -49,8 +49,7 @@ def mutually_exclusive_coexpression_rate(
     Returns
     -------
     pd.DataFrame
-        Columns:
-            ['gene1', 'gene2', 'odds_ratio', 'pvalue', 'a', 'b', 'c', 'd']
+        Columns: ``gene1``, ``gene2``, ``odds_ratio``, ``pvalue``, ``a``, ``b``, ``c``, ``d``,
         where (a, b, c, d) are the counts in the contingency table.
     """
     adata = sdata.tables[tables_key]
@@ -163,8 +162,8 @@ def neighbor_contamination(
 
     A gene is considered a locally relevant contamination marker for a target
     cell if it is:
-        1. a negative marker of the target cell type, and
-        2. a positive marker of at least one neighboring source cell type.
+    1. a negative marker of the target cell type, and
+    2. a positive marker of at least one neighboring source cell type.
 
     If `require_neighbor_expression=True`, the gene must additionally be detected
     in at least one neighboring cell of the corresponding source cell type.
@@ -172,7 +171,6 @@ def neighbor_contamination(
     Per-cell outputs (written to `adata.obs`):
         - contamination_counts:
             Total counts of locally relevant negative-marker genes in the focal cell.
-
         - contamination_strength:
             contamination_counts divided by the total transcript counts of the focal cell.
             This estimates the fraction of assigned transcripts that correspond to
@@ -183,12 +181,10 @@ def neighbor_contamination(
             Directed source-to-target matrix. Entry (c_src, c_tgt) is the fraction
             of evaluable target cells of type c_tgt that contain at least one locally
             relevant negative marker associated with source type c_src.
-
         - contamination_strength_matrix:
             Directed source-to-target matrix. Entry (c_src, c_tgt) is the mean
             source-specific contamination strength across evaluable target cells
             of type c_tgt with nonzero total counts.
-
         - contamination_evaluable_cells_matrix:
             Directed source-to-target matrix. Entry (c_src, c_tgt) is the number
             of target cells for which contamination from source type c_src could
@@ -434,16 +430,16 @@ def marker_purity(
     Compute per-cell marker purity using balanced accuracy.
 
     For each cell of type c:
-        - positive markers of c are expected to be expressed.
+        - positive markers of c are expected to be expressed
         - relevant negative markers are negative markers of c that are also
-          positive markers of neighboring cell types.
+          positive markers of neighboring cell types
 
     The score combines:
         - positive_marker_recall: fraction of expected positive markers expressed
-                                  (analogous to recall/sensitivity at the marker-level)
-        - negative_marker_avoidance: fraction of relevant negative markers avoided.
-                                    (analogous to specificity at the marker-level)
-        - marker_balanced_accuracy: mean of sensitivity and specificity.
+          (analogous to recall/sensitivity at the marker-level)
+        - negative_marker_avoidance: fraction of relevant negative markers avoided
+          (analogous to specificity at the marker-level)
+        - marker_balanced_accuracy: mean of sensitivity and specificity
 
     Parameters
     ----------
@@ -482,14 +478,11 @@ def marker_purity(
     -------
     pandas.DataFrame
         Columns:
-            [
-             'positive_marker_recall',
-             'negative_marker_avoidance',
-             'marker_balanced_accuracy',
-             'n_evaluated_positive_markers',
-             'n_evaluated_negative_markers'
-            ]
-        indexed by cell ID.
+            - ``positive_marker_recall``
+            - ``negative_marker_avoidance``
+            - ``marker_balanced_accuracy``
+            - ``n_evaluated_positive_markers``
+            - ``n_evaluated_negative_markers``
     """
     adata = sdata.tables[tables_key]
 

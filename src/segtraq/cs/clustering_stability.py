@@ -274,6 +274,7 @@ def purity(
 ) -> float:
     """
     Compute the clustering stability using pairwise purity on random subsets of cells.
+
     Parameters
     ----------
     sdata : sd.SpatialData
