@@ -1,0 +1,691 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Module: Plotting &#8212; SegTraQ</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/plotting';</script>
+    <link rel="icon" href="../_static/icon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Technology Focus: 10x Genomics Xenium (Simplified)" href="10x_xenium_focus_simplified.html" />
+    <link rel="prev" title="Module: Point Statistics" href="point_statistics.html" />
+    <link href="../_static/style.css" rel="stylesheet" type="text/css">
+
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
+    <script>document.write(`<img src="../_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/utils.html">Utility functions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">Module: Point Statistics</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Module: Plotting</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/plotting.py" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.py</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Module: Plotting</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Module: Plotting</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-Preparation">Data Preparation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Run-desired-metrics">Run desired metrics</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Plots-for-individual-samples">Plots for individual samples</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Comparing-between-segmentation-methods">Comparing between segmentation methods</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+</li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Module:-Plotting">
+<h1>Module: Plotting<a class="headerlink" href="#Module:-Plotting" title="Link to this heading">#</a></h1>
+<p>One of the main usecases of <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> is to compare different segmentation methods. To facilitate this task, you can make use of the plotting module (<code class="docutils literal notranslate"><span class="pre">pl</span></code>). In order to use it, you need to prepare your data in the form of a dictionary that maps the method name to the corresponding <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<section id="Data-Preparation">
+<h2>Data Preparation<a class="headerlink" href="#Data-Preparation" title="Link to this heading">#</a></h2>
+<p>First, we need to get the data into the right format. This closely follows the <a class="reference internal" href="10x_xenium_focus.html"><span class="doc">Xenium Focus</span></a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+
+import warnings
+
+warnings.filterwarnings(action=&quot;ignore&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import anndata as ad
+import matplotlib.pyplot as plt
+import scanpy as sc
+import spatialdata as sd
+import spatialdata_plot  # noqa
+
+import segtraq
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># === READING SPATIALDATA OBJECTS ===
+sdata_xenium_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/xenium.zarr&quot;)
+sdata_bidcell_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/bidcell.zarr&quot;)
+sdata_proseg_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/proseg2.zarr&quot;)
+sdata_segger_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/segger.zarr&quot;)
+
+# === CROPPING ===
+bb_xmin = 800
+bb_ymin = 1150
+bb_w = 200
+bb_h = 300
+bb_xmax = bb_xmin + bb_w
+bb_ymax = bb_ymin + bb_h
+
+
+def crop(ws):
+    return ws.query.bounding_box(
+        axes=[&quot;x&quot;, &quot;y&quot;],
+        min_coordinate=[bb_xmin, bb_ymin],
+        max_coordinate=[bb_xmax, bb_ymax],
+        target_coordinate_system=&quot;global&quot;,
+    )
+
+
+sdata_xenium = crop(sdata_xenium_ws)
+sdata_bidcell = crop(sdata_bidcell_ws)
+sdata_proseg = crop(sdata_proseg_ws)
+sdata_segger = crop(sdata_segger_ws)
+
+# === CREATING SEGTRAQ OBJECTS ===
+st_xenium = segtraq.SegTraQ(
+    sdata_xenium, images_key=&quot;image&quot;, tables_centroid_x_key=&quot;x_centroid&quot;, tables_centroid_y_key=&quot;y_centroid&quot;
+)
+st_bidcell = segtraq.SegTraQ(
+    sdata_bidcell,
+    images_key=&quot;image&quot;,
+    points_background_id=0,
+    tables_centroid_x_key=&quot;centroid_x&quot;,
+    tables_centroid_y_key=&quot;centroid_y&quot;,
+)
+st_proseg = segtraq.SegTraQ(
+    sdata_proseg,
+    images_key=&quot;image&quot;,
+    points_background_id=0,
+    tables_area_key=None,
+    tables_centroid_x_key=&quot;centroid_x&quot;,
+    tables_centroid_y_key=&quot;centroid_y&quot;,
+)
+st_segger = segtraq.SegTraQ(
+    sdata_segger, images_key=&quot;image&quot;, tables_centroid_x_key=&quot;cell_centroid_x&quot;, tables_centroid_y_key=&quot;cell_centroid_y&quot;
+)
+
+# === PUTTING EVERYTHING INTO A DICTIONARY ===
+st_dict = {&quot;xenium&quot;: st_xenium, &quot;bidcell&quot;: st_bidcell, &quot;proseg&quot;: st_proseg, &quot;segger&quot;: st_segger}
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Run-desired-metrics">
+<h2>Run desired metrics<a class="headerlink" href="#Run-desired-metrics" title="Link to this heading">#</a></h2>
+<p>Now, we can run all of the metrics we want on this dataset. For now, we simply run a label transfer and run some <code class="docutils literal notranslate"><span class="pre">scanpy</span></code> functions to compute the UMAP coordinates.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Load scRNA-seq data
+adata_ref = ad.read_h5ad(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+
+# Transfer labels
+for _method, st in st_dict.items():
+    st.run_label_transfer(adata_ref, ref_cell_type=&quot;celltype_major&quot;, ref_raw_counts_layer=&quot;raw&quot;, inplace=True)
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="Plots-for-individual-samples">
+<h1>Plots for individual samples<a class="headerlink" href="#Plots-for-individual-samples" title="Link to this heading">#</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">pl</span></code> module provides methods to plot different things: on one hand, it can be used to visualize certain characteristics of a sample, and on the other, it can be used to compare between different samples or segmentation methods. Let’s start by looking at some sample-specific plots. Specifically, we can look at the distribution of transcripts and different segmentation features across the x and y coordinate. For some technologies (such as CosMx), this can help to detect stitching artefacts.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># transcript distribution across the x and y axis of the image
+# the filter size (default: 21) can be used to get an idea for broader trends
+_ = st_xenium.pl.transcript_distribution_across_space(filter_size=21)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># features of the segmentation across the axes
+_ = st_xenium.pl.feature_distribution_across_space(features=[&quot;cell_area&quot;, &quot;nucleus_area&quot;], filter_size=21)
+</pre></div>
+</div>
+</div>
+<p>We can see two things here: for the Xenium segmentation, the right part of the image contains more transcripts. Its cells are also larger. We can use <code class="docutils literal notranslate"><span class="pre">spatialdata_plot</span></code> to have a look at the actual data.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, ax = plt.subplots(1, 2, figsize=(7, 7), dpi=100)
+st_xenium.sdata.pl.render_points(&quot;transcripts&quot;, size=0.01, color=&quot;red&quot;, method=&quot;matplotlib&quot;).pl.show(ax=ax[0])
+st_xenium.sdata.pl.render_shapes(&quot;cell_boundaries&quot;).pl.show(ax=ax[1])
+</pre></div>
+</div>
+</div>
+<p>Here, this is actually due to the structure of the tissue (large tumor cells are on the right side of the image). When applying these methods on larger tissues, they can also help to detect technical artefacts.</p>
+</section>
+<section id="Comparing-between-segmentation-methods">
+<h1>Comparing between segmentation methods<a class="headerlink" href="#Comparing-between-segmentation-methods" title="Link to this heading">#</a></h1>
+<p>We can also use the <code class="docutils literal notranslate"><span class="pre">pl</span></code> module to compare between different segmentation methods. All we need to do is pass our dictionary of <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> objects.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.celltype_proportions(st_dict, celltype_col=&quot;transferred_cell_type&quot;)
+</pre></div>
+</div>
+</div>
+<p>Before we can plot the UMAP, we need to actually compute it.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _, st in st_dict.items():
+    # extracting the anndata object from the spatialdata object and performing appropriate normalization
+    adata = st.sdata.tables[&quot;table&quot;]
+    adata.layers[&quot;raw&quot;] = adata.X.copy()
+    sc.pp.normalize_total(adata, inplace=True)
+    sc.pp.log1p(adata)
+    sc.pp.pca(adata)
+    sc.pp.neighbors(adata)
+    sc.tl.umap(adata)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.umap(st_dict, color=&quot;transferred_cell_type&quot;, legend=True, figsize=(10, 6))
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.umap(st_dict, color=&quot;transcript_count&quot;, legend=True, figsize=(10, 6))
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.boxplot(st_dict, celltype_col=&quot;transferred_cell_type&quot;, value_key=&quot;transcript_count&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.boxplot_combined(st_dict, celltype_col=&quot;transferred_cell_type&quot;, value_key=&quot;transcript_count&quot;)
+</pre></div>
+</div>
+</div>
+<section id="Session-Info">
+<h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
+print(spatialdata_plot.__version__)
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="point_statistics.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Module: Point Statistics</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="10x_xenium_focus_simplified.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Technology Focus: 10x Genomics Xenium (Simplified)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Module: Plotting</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Data-Preparation">Data Preparation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Run-desired-metrics">Run desired metrics</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Plots-for-individual-samples">Plots for individual samples</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#Comparing-between-segmentation-methods">Comparing between segmentation methods</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+</li>
+</ul>
+
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,2269 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Technology Focus: 10x Genomics Xenium &#8212; SegTraQ</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/10x_xenium_focus';</script>
+    <link rel="icon" href="../_static/icon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Technology Focus: 10x Genomics Xenium (Simplified)" href="10x_xenium_focus_simplified.html" />
+    <link href="../_static/style.css" rel="stylesheet" type="text/css">
+
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
+    <script>document.write(`<img src="../_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/utils.html">Utility functions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">Module: Point Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Module: Plotting</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Technology Focus: 10x Genomics Xenium</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/10x_xenium_focus.py" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.py</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Technology Focus: 10x Genomics Xenium</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Description-of-prior-dataset-acquisition-and-segmentation">Description of prior dataset acquisition and segmentation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Dataset-Acquisition-(10x-Genomics-Xenium)">Dataset Acquisition (10x Genomics Xenium)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Subsetting-the-Field-of-View">Subsetting the Field of View</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Cell-Segmentation-Methods">Cell Segmentation Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Reference-scRNA-seq-Dataset-for-Training-&amp;-QC">Reference scRNA-seq Dataset for Training &amp; QC</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Segmentation-Parameters">Segmentation Parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-into-SpatialData">Import into SpatialData</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-and-crop-SpatialData-objects">Read and crop SpatialData objects</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Initialize-SegTraQ-objects">Initialize SegTraQ objects</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-reference-scRNA-seq-data-and-transfer-labels">Load reference scRNA-seq data and transfer labels</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Running-SegTraQ-QC-metrics">Running SegTraQ QC metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Baseline-module">Baseline module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Clustering-stability-module">Clustering stability module</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Region-similarity-module">Region similarity module</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Supervised-module">Supervised module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#3D-Volume-Module">3D Volume Module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Point-statistic-metrics">Point statistic metrics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Metrics-orthogonolisation">Metrics orthogonolisation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Technology-Focus:-10x-Genomics-Xenium">
+<h1>Technology Focus: 10x Genomics Xenium<a class="headerlink" href="#Technology-Focus:-10x-Genomics-Xenium" title="Link to this heading">#</a></h1>
+<p>To follow along with this tutorial, you can download the data already in <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> format from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<section id="Description-of-prior-dataset-acquisition-and-segmentation">
+<h2>Description of prior dataset acquisition and segmentation<a class="headerlink" href="#Description-of-prior-dataset-acquisition-and-segmentation" title="Link to this heading">#</a></h2>
+<section id="Dataset-Acquisition-(10x-Genomics-Xenium)">
+<h3>Dataset Acquisition (10x Genomics Xenium)<a class="headerlink" href="#Dataset-Acquisition-(10x-Genomics-Xenium)" title="Link to this heading">#</a></h3>
+<p>For this tutorial, we used data from the <strong>10x Genomics Xenium Prime Breast Cancer FFPE</strong> dataset. We downloaded the data using:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-O<span class="w"> </span>https://s3-us-west-2.amazonaws.com/10x.files/samples/xenium/3.0.0/
+Xenium_Prime_Breast_Cancer_FFPE/Xenium_Prime_Breast_Cancer_FFPE_outs.zip
+</pre></div>
+</div>
+</section>
+<section id="Subsetting-the-Field-of-View">
+<h3>Subsetting the Field of View<a class="headerlink" href="#Subsetting-the-Field-of-View" title="Link to this heading">#</a></h3>
+<p>We subset the dataset using the following <strong>bounding box</strong> (X, Y coordinates):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>2631.31, 8503.97
+4150.72, 8503.97
+4150.72, 10298.85
+2631.31, 10298.85
+</pre></div>
+</div>
+</section>
+<section id="Cell-Segmentation-Methods">
+<h3>Cell Segmentation Methods<a class="headerlink" href="#Cell-Segmentation-Methods" title="Link to this heading">#</a></h3>
+<p>We applied two segmentation approaches for comparison to the <a class="reference external" href="https://www.10xgenomics.com/support/software/%20xenium-onboard-analysis/3.1/algorithms-overview/segmentation">Xenium Multi-Modal Cell Segmentation</a>:</p>
+<ol class="arabic simple">
+<li><p><strong>BIDCell</strong> — <a class="github reference external" href="https://github.com/SydneyBioX/BIDCell">SydneyBioX/BIDCell</a></p></li>
+<li><p><strong>Proseg</strong> (v2.0.5) — <a class="github reference external" href="https://github.com/dcjones/proseg">dcjones/proseg</a></p></li>
+</ol>
+</section>
+<section id="Reference-scRNA-seq-Dataset-for-Training-&amp;-QC">
+<h3>Reference scRNA-seq Dataset for Training &amp; QC<a class="headerlink" href="#Reference-scRNA-seq-Dataset-for-Training-&-QC" title="Link to this heading">#</a></h3>
+<p>For <strong>BIDCell</strong> training, as well as supervised quality control (see below in this tutorial), we used the <strong>Janesick et al.</strong> scRNA-seq breast cancer dataset following:</p>
+<ul class="simple">
+<li><p>LMWeber Script on loading Chromium data: <a class="reference external" href="https://github.com/lmweber/STexampleData/blob/devel/inst/%20scripts/make-data-Janesick-breastCancer-Chromium.R">https://github.com/lmweber/STexampleData/blob/devel/inst/scripts/ make-data-Janesick-breastCancer-Chromium.R</a></p></li>
+<li><p>OSTA Guide on processing the Chromium data: <a class="reference external" href="https://lmweber.org/OSTA/pages/%20seq-deconvolution.html#:~:text=e.%C2%A0Annogrp).-,Code,-%23%20retrieve%20dataset%20from">https://lmweber.org/OSTA/pages/seq-deconvolution.html</a></p></li>
+</ul>
+<p>Download commands:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>-O<span class="w"> </span>count_matrix.h5<span class="w"> </span><span class="s2">&quot;https://www.ncbi.nlm.nih.gov/geo/download/</span>
+<span class="s2">?acc=GSM7782698&amp;format=file&amp;file=GSM7782698%5Fcount%5Fraw%5Ffeature%5Fbc%5Fmatrix%2Eh5&quot;</span>
+wget<span class="w"> </span>-O<span class="w"> </span>Cell_Barcode_Type_Matrices.xlsx<span class="w"> </span><span class="s2">&quot;https://zenodo.org/records/10076046/files/</span>
+<span class="s2">Cell_Barcode_Type_Matrices.xlsx?download=1&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="Segmentation-Parameters">
+<h3>Segmentation Parameters<a class="headerlink" href="#Segmentation-Parameters" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Proseg</p>
+<ul>
+<li><p>Used <strong>default parameters</strong>.</p></li>
+</ul>
+</li>
+<li><p>BIDCell</p>
+<ul>
+<li><p>Annotated elongated cell types:</p>
+<ul>
+<li><p>endo</p></li>
+<li><p>stromal</p></li>
+<li><p>myoepi</p></li>
+<li><p>perivas</p></li>
+</ul>
+</li>
+<li><p>Additional settings:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_epoch</span> <span class="pre">=</span> <span class="pre">4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test_steps</span> <span class="pre">=</span> <span class="pre">100</span></code></p></li>
+</ul>
+</li>
+<li><p>All other parameters left at default.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="Import-into-SpatialData">
+<h3>Import into SpatialData<a class="headerlink" href="#Import-into-SpatialData" title="Link to this heading">#</a></h3>
+<p>After segmentation, all outputs were imported into <strong>SpatialData</strong> objects. For a demonstration on how to get data into the right format, please refer to this <a class="reference internal" href="io.html"><span class="doc">tutorial</span></a>. These processed SpatialData objects are also uploaded to the <a class="reference external" href="https://oc.embl.de/index.php/s/1JyN4Qvk4mw0T5J">tutorial repository</a> so users can directly run the workflow without repeating the preprocessing steps.</p>
+</section>
+</section>
+<section id="Read-and-crop-SpatialData-objects">
+<h2>Read and crop SpatialData objects<a class="headerlink" href="#Read-and-crop-SpatialData-objects" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import warnings
+
+import anndata as ad
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import seaborn as sns
+import spatialdata as sd
+import spatialdata_plot  # noqa
+from scipy.stats import linregress
+
+import segtraq
+
+warnings.filterwarnings(action=&quot;ignore&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_xenium_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/xenium.zarr&quot;)
+sdata_bidcell_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/bidcell.zarr&quot;)
+sdata_proseg_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/proseg2.zarr&quot;)
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> objects can be subset via <code class="docutils literal notranslate"><span class="pre">spatialdata.query.bounding_box()</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>bb_xmin = 800
+bb_ymin = 1150
+bb_w = 200
+bb_h = 300
+bb_xmax = bb_xmin + bb_w
+bb_ymax = bb_ymin + bb_h
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>f, ax = plt.subplots(figsize=(5, 5))
+sdata_xenium_ws.pl.render_shapes(&quot;cell_boundaries&quot;).pl.show(ax=ax)
+rect = patches.Rectangle((bb_xmin, bb_ymin), bb_w, bb_h, linewidth=5, edgecolor=&quot;red&quot;, facecolor=&quot;none&quot;)
+ax.add_patch(rect)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def crop(ws):
+    return ws.query.bounding_box(
+        axes=[&quot;x&quot;, &quot;y&quot;],
+        min_coordinate=[bb_xmin, bb_ymin],
+        max_coordinate=[bb_xmax, bb_ymax],
+        target_coordinate_system=&quot;global&quot;,
+    )
+
+
+sdata_xenium = crop(sdata_xenium_ws)
+sdata_bidcell = crop(sdata_bidcell_ws)
+sdata_proseg = crop(sdata_proseg_ws)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Initialize-SegTraQ-objects">
+<h2>Initialize SegTraQ objects<a class="headerlink" href="#Initialize-SegTraQ-objects" title="Link to this heading">#</a></h2>
+<p>Next, we initialize SegTraQ objects, the core interface for computing SegTraQ metrics. During initialization, all inputs are are validated via <code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code>. Don’t worry if you do not know which parameters you need up front; just put in your spatialdata object, and SegTraQ will tell you which arguments are wrong/missing.</p>
+<p>The four segmentation methods apply different filters to the points prior to segmentation. Proseg and BIDCell remove control probes (e.g. NegControlProbe, Intergenic_Region) before segmentation. In addition, Proseg and BIDCell exclude transcripts with a quality value (qv, the Xenium per-transcript decoding quality score) &lt; 20.</p>
+<p>For a fair comparison of metrics, like the percentage of unassigned transcripts, across methods, we subset the transcripts to include only gene-specific probes with qv ≥ 20. This is also compatible with the preprocessing for the cell feature matrix by <a class="reference external" href="https://cf.10xgenomics.com/supp/xenium/xenium_documentation.html">10x Genomics</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_xenium = segtraq.SegTraQ(
+    sdata_xenium, images_key=&quot;image&quot;, tables_centroid_x_key=&quot;x_centroid&quot;, tables_centroid_y_key=&quot;y_centroid&quot;
+)
+st_bidcell = segtraq.SegTraQ(
+    sdata_bidcell,
+    images_key=&quot;image&quot;,
+    points_background_id=0,
+    tables_centroid_x_key=&quot;centroid_x&quot;,
+    tables_centroid_y_key=&quot;centroid_y&quot;,
+)
+st_proseg = segtraq.SegTraQ(
+    sdata_proseg,
+    images_key=&quot;image&quot;,
+    points_background_id=0,
+    tables_area_key=None,
+    tables_centroid_x_key=&quot;centroid_x&quot;,
+    tables_centroid_y_key=&quot;centroid_y&quot;,
+)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Load-reference-scRNA-seq-data-and-transfer-labels">
+<h2>Load reference scRNA-seq data and transfer labels<a class="headerlink" href="#Load-reference-scRNA-seq-data-and-transfer-labels" title="Link to this heading">#</a></h2>
+<p>To evaluate how SegTraQ metrics differ between cell types, we first transfer labels from the reference scRNA-seq dataset to the spatial data using <code class="docutils literal notranslate"><span class="pre">segtraq.run_label_transfer</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Load scRNA-seq data
+adata_ref = ad.read_h5ad(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+</pre></div>
+</div>
+</div>
+<p>For easier access, we store the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object into a dictionary.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_dict = {&quot;xenium&quot;: st_xenium, &quot;bidcell&quot;: st_bidcell, &quot;proseg&quot;: st_proseg}
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Transfer labels
+for _method, st in st_dict.items():
+    st.run_label_transfer(adata_ref, ref_cell_type=&quot;celltype_major&quot;, ref_raw_counts_layer=&quot;raw&quot;, inplace=True)
+</pre></div>
+</div>
+</div>
+<p>We can visualize the spatial data and color cell masks by transferred labels using <code class="docutils literal notranslate"><span class="pre">spatialdata-plot</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Define color palette for plotting
+col_celltype = {
+    &quot;T&quot;: &quot;#fb8072&quot;,
+    &quot;B&quot;: &quot;#bc80bd&quot;,
+    &quot;macro&quot;: &quot;#910290&quot;,
+    &quot;dendritic&quot;: &quot;#fdb462&quot;,
+    &quot;mast&quot;: &quot;#959059&quot;,
+    &quot;perivas&quot;: &quot;#fed9a6&quot;,
+    &quot;endo&quot;: &quot;#a6cee3&quot;,
+    &quot;myoepi&quot;: &quot;#2782bb&quot;,
+    &quot;DCIS1&quot;: &quot;#3c7761&quot;,
+    &quot;DCIS2&quot;: &quot;#66a61e&quot;,
+    &quot;tumor&quot;: &quot;#66c2a5&quot;,
+    &quot;stromal&quot;: &quot;#d45943&quot;,
+    &quot;Unknown&quot;: &quot;#808080&quot;,
+}
+</pre></div>
+</div>
+</div>
+<p>Cells with a transcripts count &lt; 10 and a gene count &lt; 5 are not considered in label transfer and their returned <code class="docutils literal notranslate"><span class="pre">transferred_cell_type</span></code> returns <code class="docutils literal notranslate"><span class="pre">np.nan</span></code>, and missing values are subsequently replaced with the label “Unknown”.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Replace NaN with Unknown for plotting
+for _method, st in st_dict.items():
+    s = st.sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;]
+    if pd.api.types.is_categorical_dtype(s):
+        s = s.cat.add_categories([&quot;Unknown&quot;])
+
+    st.sdata.tables[&quot;table&quot;].obs[&quot;transferred_celltype_plot&quot;] = s.fillna(&quot;Unknown&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plt.style.use(&quot;dark_background&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def feature_spatial_plot(sdata, shapes_key, feature, col_palette, method):
+    axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+
+    # compute per-cell color
+    labels = sdata.tables[&quot;table&quot;].obs[feature].unique().astype(str).tolist()
+    cols = [col_palette[lab] for lab in labels]
+
+    # Dapi image
+    sdata.pl.render_images(&quot;image&quot;).pl.show(ax=axes[0], title=f&quot;{method}: DAPI image&quot;, coordinate_systems=&quot;global&quot;)
+
+    # Plot - Cell boundaries
+    sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = shapes_key
+    sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=shapes_key)
+
+    sdata.pl.render_shapes(shapes_key, color=feature, palette=cols, groups=labels).pl.show(
+        ax=axes[1], title=f&quot;{method}: Cell masks colored by {feature}&quot;, coordinate_systems=&quot;global&quot;
+    )
+</pre></div>
+</div>
+</div>
+<p><em>10 Xenium MultiModal Cell Segmentation</em></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>feature_spatial_plot(st_xenium.sdata, &quot;cell_boundaries&quot;, &quot;transferred_celltype_plot&quot;, col_celltype, &quot;xenium&quot;)
+</pre></div>
+</div>
+</div>
+<p><em>BIDCell Segmentation</em></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>feature_spatial_plot(st_bidcell.sdata, &quot;cell_boundaries&quot;, &quot;transferred_celltype_plot&quot;, col_celltype, &quot;BIDCell&quot;)
+</pre></div>
+</div>
+</div>
+<p><em>Proseg Segmentation</em></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>feature_spatial_plot(st_proseg.sdata, &quot;cell_boundaries_z1&quot;, &quot;transferred_celltype_plot&quot;, col_celltype, &quot;Proseg&quot;)
+</pre></div>
+</div>
+</div>
+<p>The dominant cell types are DCIS2, T and B cells. Proseg has the highest proportion of cells assigned to “Unknown”, i.e. transcript counts &lt;10 and gene_counts &lt;5.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>method_dfs = []
+for method, st in st_dict.items():
+    df = st.sdata[&quot;table&quot;].obs[&quot;transferred_celltype_plot&quot;].value_counts(normalize=True).reset_index()
+    df.columns = [&quot;celltype&quot;, &quot;proportion&quot;]
+    df[&quot;method&quot;] = method
+    method_dfs.append(df)
+
+plot_df = pd.concat(method_dfs, ignore_index=True)
+plot_wide = plot_df.pivot(index=&quot;method&quot;, columns=&quot;celltype&quot;, values=&quot;proportion&quot;).fillna(0)
+
+method_order = [&quot;xenium&quot;, &quot;bidcell&quot;, &quot;proseg&quot;]
+plot_wide = plot_wide.loc[method_order]
+
+fig, ax = plt.subplots(figsize=(2, 4))
+
+plot_wide.plot(kind=&quot;bar&quot;, stacked=True, color=[col_celltype.get(c, &quot;grey&quot;) for c in plot_wide.columns], ax=ax)
+
+ax.set_ylabel(&quot;Proportion&quot;)
+ax.set_xlabel(&quot;Method&quot;)
+
+# Legend text in white
+legend = ax.legend(title=&quot;Cell type&quot;, bbox_to_anchor=(1.05, 1), loc=&quot;upper left&quot;, frameon=False)
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Running-SegTraQ-QC-metrics">
+<h2>Running SegTraQ QC metrics<a class="headerlink" href="#Running-SegTraQ-QC-metrics" title="Link to this heading">#</a></h2>
+<p>Now the data is ready to compute SegTraQ QC metrics. Below we demonstrate how to run the individual modules.</p>
+<section id="Baseline-module">
+<h3>Baseline module<a class="headerlink" href="#Baseline-module" title="Link to this heading">#</a></h3>
+<p>The baseline (<code class="docutils literal notranslate"><span class="pre">bl</span></code>) module computes basic quality-control metrics such as the number of cells, the percentage of unassigned transcripts, and the number of transcripts and genes per cell. When <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code>, global metrics are stored in the <code class="docutils literal notranslate"><span class="pre">uns</span></code> slot, and per-cell metrics are stored in the <code class="docutils literal notranslate"><span class="pre">obs</span></code> slot of the table within the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    st.bl.num_cells(inplace=True)
+    st.bl.perc_unassigned_transcripts(inplace=True)
+    st.bl.transcripts_per_cell()
+    st.bl.genes_per_cell()
+    st.bl.mean_transcripts_per_gene_per_cell()
+
+    num_cells = st.sdata.tables[&quot;table&quot;].uns[&quot;num_cells&quot;]
+    p_unassigned = st.sdata.tables[&quot;table&quot;].uns[&quot;perc_unassigned_transcripts&quot;]
+    mean_tx = st.sdata.tables[&quot;table&quot;].obs[&quot;transcript_count&quot;].mean()
+    mean_gn = st.sdata.tables[&quot;table&quot;].obs[&quot;gene_count&quot;].mean()
+    mean_tgc = st.sdata.tables[&quot;table&quot;].obs[&quot;mean_transcripts_per_gene&quot;].mean()
+
+    print(f&quot;\n{method}&quot;)
+    print(f&quot;#cells: {num_cells}; %unassigned: {p_unassigned}&quot;)
+    print(f&quot;mean #transcripts: {mean_tx}; mean #genes: {np.mean(mean_gn)}&quot;)
+    print(f&quot;mean #transcripts per gene per cell: {mean_tgc}&quot;)
+</pre></div>
+</div>
+</div>
+<p>The number of detected cells is comparable across Xenium, BIDCell, and Proseg. Proseg leaves the smallest fraction of transcripts unassigned (0.81%). The number of transcripts and genes per cell can be visualized per cell type, as shown below.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># method for visualization
+def boxplot_per_celltype(st_dict, feature, q=1):
+    dfs = []
+    for method, st in st_dict.items():
+        obs = st.sdata[&quot;table&quot;].obs[st.sdata[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].notna()]
+        tmp = obs[[&quot;transferred_cell_type&quot;, feature]].copy()
+        tmp[&quot;method&quot;] = method
+        dfs.append(tmp)
+
+    df = pd.concat(dfs, ignore_index=True)
+    df = df[(df[feature] &lt;= df[feature].quantile(q))]
+
+    fig, ax = plt.subplots(figsize=(15, 5))
+
+    sns.boxplot(
+        data=df,
+        x=&quot;transferred_cell_type&quot;,
+        y=feature,
+        hue=&quot;method&quot;,
+        showcaps=True,
+        showfliers=False,
+        palette=&quot;Set2&quot;,
+        ax=ax,
+    )
+
+    fig.tight_layout()
+    plt.show()
+</pre></div>
+</div>
+</div>
+<p>Proseg yields the highest mean number of transcripts per cell, driven by increased transcript detection in DCIS2 and T, B and stromal cells, which constitute the dominant cell populations in the dataset. In contrast, Proseg detects fewer transcripts in some of the less abundant cell types, such as DCIS1 and myoepithelial cells.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;transcript_count&quot;)
+</pre></div>
+</div>
+</div>
+<p>The number of genes detected per cell correlates strongly with the number of transcripts per cell.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;gene_count&quot;)
+</pre></div>
+</div>
+</div>
+<p>On average, the number of transcripts per gene per cell is approximately 1, indicating that across methods we detect roughly one to two transcripts per gene per cell. Among the methods, Proseg shows the highest mean number of transcripts per gene per cell when the <em>Unknown</em> cluster (cells with transcript counts &lt; 10 and gene counts &lt; 5) is excluded.</p>
+<p>Interestingly, Proseg detects more transcripts per gene per cell across all cell types, even in cases where the total transcript and gene counts per cell are lower, e.g., DCIS1 and myoepithelial cells. This pattern suggests that transcripts are concentrated among fewer genes per cell, potentially reflecting more homogeneous within-cell expression profiles (i.e. reduced gene-level variability).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;mean_transcripts_per_gene&quot;)
+</pre></div>
+</div>
+</div>
+<p>The baseline module also facilitates the computation of <strong>morphological features</strong>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    st.bl.morphological_features(n_jobs=8)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>features = [
+    &quot;cell_area&quot;,
+    &quot;perimeter&quot;,
+    &quot;circularity&quot;,
+    &quot;solidity&quot;,
+    &quot;convexity&quot;,
+    &quot;elongation&quot;,
+    &quot;eccentricity&quot;,
+    &quot;compactness&quot;,
+]
+
+# Collect features into one dataframe
+all_feats = []
+for method, st in st_dict.items():
+    obs = st.sdata[&quot;table&quot;].obs[st.sdata[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].notna()]
+    feat = obs[features]
+    tmp = feat.copy()
+    tmp[&quot;method&quot;] = method
+    all_feats.append(tmp)
+
+df = pd.concat(all_feats, ignore_index=True)
+df[&quot;method&quot;] = df[&quot;method&quot;].astype(str)
+
+feature_cols = [c for c in df.columns if c != &quot;method&quot;]
+
+fig, ax = plt.subplots(2, 6, figsize=(6 * 4, 2 * 3))
+ax = ax.flatten()
+
+for i, feat_name in enumerate(feature_cols):
+    sns.kdeplot(data=df, x=feat_name, hue=&quot;method&quot;, palette=&quot;Set2&quot;, common_norm=False, fill=False, ax=ax[i])
+    ax[i].set_title(f&quot;Distribution of {feat_name}&quot;)
+    ax[i].set_xlabel(feat_name)
+    ax[i].set_ylabel(&quot;Density&quot;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Xenium detects rounder cells, characterized by higher circularity and solidity, while BIDCell recovers a wider distribution of cell shapes, including both low and high circularity and solidity. BIDCell incorporates a loss term enforcing cell type–specific elongation, which may explain the detection of less circular cell shapes. Notably, the same cell types specified as elongated during training (perivascular, myoepithelial, stromal, and endothelial cells) also exhibit the highest median
+elongation in the results, highlighting the strong influence of the prior on the inferred cell shapes.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>obs = st_bidcell.sdata[&quot;table&quot;].obs[st_bidcell.sdata[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].notna()]
+df = obs[[&quot;transferred_cell_type&quot;, &quot;elongation&quot;]]
+medians = df.groupby(&quot;transferred_cell_type&quot;).median()
+order = medians.sort_values(by=&quot;elongation&quot;).index
+
+fig, ax = plt.subplots(figsize=(10, 3))
+
+sns.boxplot(
+    data=df,
+    x=&quot;transferred_cell_type&quot;,
+    y=&quot;elongation&quot;,
+    order=order,
+    showcaps=True,
+    showfliers=False,
+    palette=col_celltype,
+    ax=ax,
+)
+
+ax.set_title(&quot;BIDCell - cell shape representation&quot;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Proseg, in contrast, does not rely solely on membrane stainings. Instead, it incorporates transcript positions, which may extend beyond the membrane boundary due to diffusion. This may explain why perivascular or myoepithelial cells do not appear among the most elongated cell types. Importantly, a segmentation mask that accurately delineates cell geometry may still misassign transcripts (e.g. due to diffusion or spatial overlap), while a mask that poorly represents cell shape may nonetheless
+correctly assign transcripts. Therefore, it is essential to evaluate not only the geometric accuracy of cell shapes but also the accuracy of transcript assignment to cells. We will compute metrics to evaluate transcript assignment accuracy below.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>obs = st_proseg.sdata[&quot;table&quot;].obs[st_proseg.sdata[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].notna()]
+df = obs[[&quot;transferred_cell_type&quot;, &quot;elongation&quot;]]
+medians = df.groupby(&quot;transferred_cell_type&quot;).median()
+order = medians.sort_values(by=&quot;elongation&quot;).index
+
+fig, ax = plt.subplots(figsize=(10, 3))
+
+sns.boxplot(
+    data=df,
+    x=&quot;transferred_cell_type&quot;,
+    y=&quot;elongation&quot;,
+    order=order,
+    showcaps=True,
+    showfliers=False,
+    palette=col_celltype,
+    ax=ax,
+)
+
+ax.set_title(&quot;Proseg - cell shape representation&quot;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Clustering-stability-module">
+<h3>Clustering stability module<a class="headerlink" href="#Clustering-stability-module" title="Link to this heading">#</a></h3>
+<p>The clustering stability (<code class="docutils literal notranslate"><span class="pre">cs</span></code>) module provides metrics for assessing the stability of clustering results across different resolutions and random subsets of genes.</p>
+<p>Let`s first perform Leiden clustering and visualize the clusters in the UMAP space.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+axs = axs.flatten()
+
+for i, (method, st) in enumerate(st_dict.items()):
+    adata = st.sdata.tables[&quot;table&quot;].copy()
+    adata.layers[&quot;counts&quot;] = adata.X
+    sc.pp.normalize_total(adata, inplace=True)
+    sc.pp.log1p(adata)
+    sc.pp.pca(adata)
+    sc.pp.neighbors(adata)
+    sc.tl.umap(adata)
+    sc.tl.leiden(adata, flavor=&quot;igraph&quot;, n_iterations=2)
+
+    sc.pl.umap(
+        adata,
+        color=&quot;leiden&quot;,
+        palette=&quot;Set2&quot;,
+        ax=axs[i],
+        show=False,
+        title=method,
+    )
+
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Next, we compute clustering stability metrics and plot these.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>ccds = {}
+silhouette_scores = {}
+purities = {}
+aris = {}
+
+for method, st in st_dict.items():
+    ccds[method] = st.cs.cluster_connectedness()
+    silhouette_scores[method] = st.cs.silhouette_score()
+    purities[method] = st.cs.purity()
+    aris[method] = st.cs.adjusted_rand_index()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>results_df = pd.DataFrame(
+    {
+        &quot;Method&quot;: list(ccds.keys()),
+        &quot;Connectedness&quot;: list(ccds.values()),
+        &quot;Silhouette Score&quot;: list(silhouette_scores.values()),
+        &quot;Purity&quot;: list(purities.values()),
+        &quot;ARI&quot;: list(aris.values()),
+    }
+)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, ax = plt.subplots(figsize=(4, 3))
+
+sns.scatterplot(
+    data=results_df,
+    x=&quot;Connectedness&quot;,
+    y=&quot;Silhouette Score&quot;,
+    hue=&quot;Method&quot;,
+    style=&quot;Method&quot;,
+    s=100,
+    palette=&quot;Set2&quot;,
+    ax=ax,
+)
+
+ax.set_xlabel(&quot;Connectedness (↑)&quot;)
+ax.set_ylabel(&quot;Silhouette Score (↑)&quot;)
+ax.set_title(&quot;Connectedness vs. Silhouette Score&quot;)
+ax.set_xlim(0, 1)
+ax.set_ylim(-1, 1)
+legend = ax.legend(title=&quot;Method&quot;, frameon=False, bbox_to_anchor=(1.05, 1), loc=&quot;upper left&quot;)
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, ax = plt.subplots(figsize=(4, 3))
+
+sns.scatterplot(
+    data=results_df,
+    x=&quot;Purity&quot;,
+    y=&quot;ARI&quot;,
+    hue=&quot;Method&quot;,
+    style=&quot;Method&quot;,
+    s=100,
+    palette=&quot;Set2&quot;,
+    ax=ax,
+)
+
+ax.set_xlabel(&quot;Purity (↑)&quot;)
+ax.set_ylabel(&quot;ARI (↑)&quot;)
+ax.set_title(&quot;Purity vs. ARI&quot;)
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1)
+
+legend = ax.legend(title=&quot;Method&quot;, frameon=False, bbox_to_anchor=(1.05, 1), loc=&quot;upper left&quot;)
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Proseg achieves the highest adjusted Rand index (ARI) and clustering purity, as well as the lowest mean cosine distance. Together, these results suggest that Proseg retrieves the most internally consistent expression profiles and could indicate less contaminated single cell signatures.</p>
+<p>The silhouette score can also be computed on the transferred labels. We will first visualize transferred labels in the UMAP space.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+axs = axs.flatten()
+
+for i, (method, st) in enumerate(st_dict.items()):
+    adata = st.sdata.tables[&quot;table&quot;].copy()
+
+    # normalizing and log-transforming the counts
+    sc.pp.normalize_total(adata, inplace=True)
+    sc.pp.log1p(adata)
+    # computing a PCA and neighbors
+    sc.pp.pca(adata)
+    sc.pp.neighbors(adata)
+    sc.tl.umap(adata)
+
+    sc.pl.umap(
+        adata,
+        color=&quot;transferred_cell_type&quot;,
+        palette=col_celltype,
+        ax=axs[i],
+        show=False,
+        title=method,
+    )
+
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Proseg achieves the highest silhouette score for the transferred labels, indicating higher intra-cluster coherence and improved inter-cluster separation; this is also visually consistent with the UMAP embedding.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>silhouette_scores_labels = {}
+
+for method, st in st_dict.items():
+    silhouette_scores_labels[method] = st.cs.silhouette_score(cell_type_key=&quot;transferred_cell_type&quot;)
+
+silhouette_scores_labels
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="Region-similarity-module">
+<h2>Region similarity module<a class="headerlink" href="#Region-similarity-module" title="Link to this heading">#</a></h2>
+<p>While individual genes may exhibit subcellular localization patterns, the overall distribution of transcripts, when averaged across genes, is expected to be relatively smooth and approximately uniform within a cell. Based on this assumption, the region similarity module evaluates the similarity of gene expression profiles across different subcellular compartments. Deviations from this expected intra-cellular consistency can serve as indicators of transcript contamination originating from
+neighboring cells.</p>
+<p><em>Intersection over Union (IoU)</em></p>
+<p>Proseg shows the lowest intersection over union (IoU) between the cell and nucleus. It relies on transcript assignment rather than explicit morphology-based segmentation, allowing transcripts that are repositioned outside the cell membrane (e.g. due to transcript diffusion) to be reassigned to the cell of origin. This often results in larger inferred cell areas (or perimeters, as shown above) relative to the nucleus or less aligned cell and nucleus shapes, leading to lower cell–nucleus IoU
+values.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plt.style.use(&quot;default&quot;)
+
+
+def plot_IoU(sdata, shapes_key, method, ax):
+    # note that copy.deepcopy() can have unwanted effects on the attrs, hence sd.deepcopy() is preferred
+    sdata_plot = sd.deepcopy(sdata)
+    sdata_plot[&quot;table&quot;] = sdata_plot[&quot;table&quot;][(sdata_plot[&quot;table&quot;].obs[&quot;iou&quot;].notna())]
+
+    sdata_plot.tables[&quot;table&quot;].obs[&quot;region&quot;] = shapes_key
+    sdata_plot.set_table_annotates_spatialelement(&quot;table&quot;, region=shapes_key)
+
+    sdata_plot.pl.render_shapes(
+        element=&quot;nucleus_boundaries&quot;,
+        fill_alpha=0.2,
+        outline_alpha=1.0,
+        outline_width=0.5,
+        outline_color=&quot;black&quot;,
+    ).pl.render_shapes(
+        element=shapes_key,
+        color=&quot;iou&quot;,
+        cmap=&quot;viridis&quot;,
+        fill_alpha=0.5,
+        outline_alpha=1.0,
+        outline_width=0.5,
+        outline_color=&quot;black&quot;,
+    ).pl.show(ax=ax, title=f&quot;{method}: Overlay of nuclei and cell masks colored by IoU&quot;, colorbar=True)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
+
+for i, (method, st) in enumerate(st_dict.items()):
+    st.rs.match_nuclei_to_cells(n_jobs=-1)
+    plot_IoU(st.sdata, &quot;cell_boundaries&quot;, method, axes[i])
+</pre></div>
+</div>
+</div>
+<p><em>Similarity between expression in cell and nucleus</em></p>
+<p>Once, the “best-matching” nucleus is determined for each cell based on IoU, we can compute the similarity between cell and nuclear expression.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    st.rs.similarity_nucleus_cell(n_jobs=-1)
+</pre></div>
+</div>
+</div>
+<p>When the intersection-over-union (IoU) between the cell and nucleus masks is high, a large fraction of transcripts assigned to the cell also overlap with the nucleus. Consequently, the returned similarity metric is strongly correlated with IoU.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def plot_correlation(sdata, method, ax):
+    obs = sdata.tables[&quot;table&quot;].obs
+    df = obs[[&quot;iou&quot;, &quot;similarity_nucleus_cell&quot;]].dropna()
+
+    _slope, _intercept, r_value, _p_value, _std_err = linregress(df[&quot;iou&quot;], df[&quot;similarity_nucleus_cell&quot;])
+    r_squared = r_value**2
+
+    ax = sns.regplot(
+        data=df,
+        x=&quot;iou&quot;,
+        y=&quot;similarity_nucleus_cell&quot;,
+        ax=ax,
+        scatter_kws={&quot;alpha&quot;: 0.6},
+        line_kws={&quot;color&quot;: &quot;red&quot;},
+        ci=95,
+    )
+
+    ax.text(
+        0.05,
+        0.95,
+        f&quot;$R^2 = {r_squared:.3f}$&quot;,
+        transform=ax.transAxes,
+        verticalalignment=&quot;top&quot;,
+        fontsize=12,
+        bbox=dict(boxstyle=&quot;round,pad=0.3&quot;, facecolor=&quot;white&quot;, alpha=0.8),
+    )
+
+    ax.set_xlabel(&quot;IoU&quot;)
+    ax.set_ylabel(&quot;Cosine similarity between cell and nucleus intersection&quot;)
+    ax.set_title(f&quot;{method}: Cell-nuc similarity vs. IoU with Regression Line&quot;)
+    ax.grid(True)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
+
+for i, (method, st) in enumerate(st_dict.items()):
+    plot_correlation(st.sdata, method, axes[i])
+
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>A more informative metric is therefore the similarity in gene expression between the region where the cell and nucleus overlap and the remaining cell area, corresponding to the cytoplasm.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    st.rs.similarity_nucleus_cytoplasm(n_jobs=-1)
+</pre></div>
+</div>
+</div>
+<p>This metric shows higher values for Xenium and Proseg, which may indicate reduced transcript contamination in the cytoplasmic compartment.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def density_plot_feature(sdata_dict, features):
+    all_feats = []
+    for method, st in sdata_dict.items():
+        feat = st.sdata[&quot;table&quot;].obs[features]
+        tmp = feat.copy()
+        tmp[&quot;method&quot;] = method
+        all_feats.append(tmp)
+
+    df = pd.concat(all_feats, ignore_index=True)
+    df[&quot;method&quot;] = df[&quot;method&quot;].astype(str)
+
+    feature_cols = [c for c in df.columns if c != &quot;method&quot;]
+
+    plt.style.use(&quot;dark_background&quot;)
+
+    n = len(feature_cols)
+    n_cols = min(3, n)
+    n_rows = np.ceil(n / n_cols).astype(int)
+
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(4 * n_cols, 2 * n_rows),
+    )
+    axes = np.atleast_1d(axes).ravel()
+
+    for ax, feat in zip(axes, feature_cols, strict=False):
+        sns.kdeplot(data=df, x=feat, hue=&quot;method&quot;, common_norm=False, palette=&quot;Set2&quot;, fill=False, ax=ax)
+
+    fig.tight_layout()
+    plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>features = [&quot;similarity_nucleus_cytoplasm&quot;]
+density_plot_feature(st_dict, features)
+</pre></div>
+</div>
+</div>
+<p>*Similarity of gene expression between</p>
+<ol class="arabic simple">
+<li><p>cell center and cell border and</p></li>
+<li><p>cell border and cell neighborhood*</p></li>
+</ol>
+<p>To better disentangle biology from technical contamination, we introduced a metric that evaluates expression similarity between the cell center and the cell border. The underlying assumption is that although genes may differ between nucleus and cytoplasm, their expression should not systematically differ between the interior cytoplasm and the cell periphery. To quantify potential contamination, we compare the expression similarity of</p>
+<ol class="lowerroman simple">
+<li><p>the cell border and its eroded cell center and</p></li>
+<li><p>the cell border and its local neighborhood.</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    st.rs.similarity_border_neighborhood()
+    st.rs.similarity_center_border()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>features = [&quot;similarity_center_border&quot;, &quot;similarity_border_neighborhood&quot;]
+density_plot_feature(st_dict, features)
+</pre></div>
+</div>
+</div>
+<p><em>Admixture (contamination) of the cell border</em></p>
+<p>A low <code class="docutils literal notranslate"><span class="pre">similarity_center_border</span></code> or high <code class="docutils literal notranslate"><span class="pre">similarity_border_neighborhood</span></code> does not necessarily represent contamination. To evaluate the contamination of the cell border robustly, we compute the the <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code>, which explicitly models the border as a mixture of center and neighborhood expression, and estimates how much better this mixture explains the border compared to the center alone.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    st.rs.border_admixture_score()
+</pre></div>
+</div>
+</div>
+<p>A high <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code> means the border is better explained by the mixture than by the center alone. The density plot below shows that Proseg and BIDCell shows the least contamination. It is important to note that Proseg is a transcript-assignment method, meaning that transcripts located near or even within a cell boundary are not necessarily assigned to that cell. When computing the border admixture score, transcripts in the border region that are assigned to other cells must
+therefore be excluded. This can increase sparsity and noise in the data and may lead to less stable estimates.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>features = [&quot;border_admixture_score&quot;]
+density_plot_feature(st_dict, features)
+</pre></div>
+</div>
+</div>
+<p>While it is important to consider metrics that do not depend on the availability of high-quality reference scRNA-seq data—and therefore do not rely on the performance of label transfer—a limitation of the region similarity module is that it cannot distinguish between homogeneous and heterogeneous cellular neighborhoods. In homogeneous neighborhoods, a high <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code> does not necessarily indicate contamination. Nevertheless, when comparing methods globally or on a cell-type
+level, this is a useful unsupervised contamination metric that does not rely on reference scRNA-seq data.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;border_admixture_score&quot;)
+</pre></div>
+</div>
+</div>
+<section id="Supervised-module">
+<h3>Supervised module<a class="headerlink" href="#Supervised-module" title="Link to this heading">#</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">sp</span></code> (supervised) module provides metrics to evaluate how well cell profiles in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset with cell type annotations.</p>
+<p>Unlike scRNA-seq, contamination in spatial transcriptomics measurements mostly originates from the local tissue context.</p>
+<p>By comparing spatial expression profiles to a high-quality scRNA-seq reference, the supervised module aims to quantify this mismatch. Specifically, we compute metrics that measure:</p>
+<ul class="simple">
+<li><p>how well each spatial cell matches its expected cell type,</p></li>
+<li><p>how much its expression resembles other (neighboring) cell types, and</p></li>
+<li><p>if it is possible to predict that a cell of one cell type is adjacent to a different cell type.</p></li>
+</ul>
+<p>To obtain cell-type specific marker genes, we define positive and negative markers in the annotated scRNA-seq via <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code>.</p>
+<p><em>Computing cell-type specific markers</em></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>markers = {}
+for method, st in st_dict.items():
+    markers[method] = st.markers_from_reference(
+        adata_ref,
+        ref_cell_type=&quot;celltype_major&quot;,
+        ref_raw_counts_layer=&quot;raw&quot;,
+        n_jobs=16,
+    )
+</pre></div>
+</div>
+</div>
+<p>A list of positive and negative markers computed for each cell type is shown below. We will use xenium for demonstration.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for cell_type, sign in markers[&quot;xenium&quot;].items():
+    pos = sign[&quot;positive&quot;]
+    neg = sign[&quot;negative&quot;]
+
+    print(f&quot;{cell_type}  |  positive: {&#39;, &#39;.join(pos)}&quot;)
+    print(f&quot;{cell_type}  |  negative: {&#39;, &#39;.join(neg)}\n&quot;)
+</pre></div>
+</div>
+</div>
+<p>Below, we show the number of negative markers that overlap with the positive markers of each cell type. To reliably estimate contamination, each cell type should share <strong>at least ~5 negative markers</strong> with the positive marker set of every other cell type. If these overlaps are too small, contamination estimates become unstable.</p>
+<p>In such cases, the marker definition can be relaxed by adjusting the thresholds used in <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code> above.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>ctypes = list(markers[&quot;xenium&quot;].keys())
+overlap_df = pd.DataFrame(0, index=ctypes, columns=ctypes, dtype=int)
+
+for c in ctypes:
+    neg_c = set(markers[&quot;xenium&quot;][c].get(&quot;negative&quot;, []))
+    for d in ctypes:
+        pos_d = set(markers[&quot;xenium&quot;][d].get(&quot;positive&quot;, []))
+        overlap_df.loc[d, c] = len(neg_c &amp; pos_d)
+
+overlap_df
+</pre></div>
+</div>
+</div>
+<p><em>Marker purity</em></p>
+<p>To quantify how well each segmented cell in the spatial transcriptomics data matches its annotated cell type, we defined a marker-based purity (<code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code>) score that jointly evaluates the expression of positive (<code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>) and the absence of neighborhood-associated negative markers (<code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>). The method accounts for the spatial context of each cell and is motivated by the assumption that differences between scRNA-seq and spatial
+transcriptomics-derived cell type profiles arise mainly from local contamination by neighboring cells.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    purity = st.sp.marker_purity(
+        cell_type_key=&quot;transferred_cell_type&quot;,
+        markers=markers[method],
+        inplace=True,
+    )
+</pre></div>
+</div>
+</div>
+<p>Proseg exhibits the highest <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code> across most cell types, with the exception of DCIS1. To better interpret the overall purity scores, it is informative to examine the <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> and <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> scores separately, as they capture distinct aspects of marker specificity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;marker_balanced_accuracy&quot;)
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score quantifies the extent to which a focal cell expresses positive markers of neighboring cell types, and thus reflects contamination. Overall, contamination levels are low; however, increased contamination is observed for DCIS1.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def box_strip_plot_per_celltype(
+    st_dict,
+    feature,
+    celltype_col=&quot;transferred_cell_type&quot;,
+    q=1.0,
+    figsize=(15, 5),
+    palette=&quot;Set2&quot;,
+):
+    dfs = []
+    for method, st in st_dict.items():
+        obs = st.sdata.tables[&quot;table&quot;].obs
+        tmp = obs[[celltype_col, feature]].copy()
+        tmp = tmp[tmp[celltype_col].notna()]
+        tmp[&quot;method&quot;] = method
+        dfs.append(tmp)
+
+    df = pd.concat(dfs, ignore_index=True).dropna(subset=[celltype_col, feature])
+
+    if q &lt; 1:
+        df = df[df[feature] &lt;= df[feature].quantile(q)]
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    sns.boxplot(
+        data=df,
+        x=celltype_col,
+        y=feature,
+        hue=&quot;method&quot;,
+        showcaps=True,
+        showfliers=False,
+        palette=palette,
+        ax=ax,
+    )
+
+    sns.stripplot(
+        data=df,
+        x=celltype_col,
+        y=feature,
+        hue=&quot;method&quot;,
+        dodge=True,
+        jitter=0.2,
+        alpha=0.6,
+        linewidth=0,
+        palette=palette,
+        ax=ax,
+    )
+
+    # avoid duplicate legends
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, title=&quot;method&quot;)
+
+    ax.tick_params(axis=&quot;x&quot;, rotation=45)
+    ax.set_xlabel(&quot;Cell type&quot;)
+    ax.set_ylabel(feature)
+    ax.legend(title=&quot;method&quot;, bbox_to_anchor=(1.02, 1), loc=&quot;upper left&quot;)
+    fig.tight_layout()
+    plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>box_strip_plot_per_celltype(st_dict, &quot;negative_marker_avoidance&quot;)
+</pre></div>
+</div>
+</div>
+<p>In contrast, the <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> score measures how consistently a cell expresses markers expected for its assigned cell type.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;positive_marker_recall&quot;)
+</pre></div>
+</div>
+</div>
+<p>These metrics are most informative when considered jointly. For example, we plot the mean <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> (a supervised measure of contamination) against the mean <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code>, an unsupervised contamination metric. In this combined view, we can see that the two transcript-informed methods, BIDCell and Proseg, show marginally less contamination than the transcript-agnostic segmentation method from Xenium.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>rows = []
+for _method, st in st_dict.items():
+    corr_ncv_vs_center = st.sdata.tables[&quot;table&quot;].obs[&quot;border_admixture_score&quot;].median()
+    negative_F1 = st.sdata.tables[&quot;table&quot;].obs[&quot;negative_marker_avoidance&quot;].median()
+
+    rows.append(
+        {
+            &quot;Method&quot;: _method,
+            &quot;Border_admixture_score&quot;: corr_ncv_vs_center,
+            &quot;negative_marker_avoidance&quot;: negative_F1,
+        }
+    )
+
+results_df = pd.DataFrame(rows)
+
+fig, ax = plt.subplots(figsize=(4, 3))
+
+sns.scatterplot(
+    data=results_df,
+    x=&quot;Border_admixture_score&quot;,
+    y=&quot;negative_marker_avoidance&quot;,
+    hue=&quot;Method&quot;,
+    style=&quot;Method&quot;,
+    s=100,
+    palette=&quot;Set2&quot;,
+    ax=ax,
+)
+
+ax.set_xlabel(&quot;Border_admixture_score (↓)&quot;)
+ax.set_ylabel(&quot;negative_marker_avoidance (↓)&quot;)
+ax.set_title(&quot;Border_admixture_score vs. negative_marker_avoidance&quot;)
+
+ax.set_xlim(0, 1)
+ax.set_ylim(0, 1.1)
+
+legend = ax.legend(title=&quot;Method&quot;, frameon=False, bbox_to_anchor=(1.05, 1), loc=&quot;upper left&quot;)
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p><em>Neighborhood contamination</em></p>
+<p>Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify</p>
+<ol class="lowerroman simple">
+<li><p><strong>how many contaminating transcripts</strong> are present per cell and</p></li>
+<li><p><strong>which neighboring cell types</strong> contribute to this signal. We therefore compute neighborhood contamination.</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    per_cell_df, _, cont_bin, _ = st.sp.neighbor_contamination(
+        cell_type_key=&quot;transferred_cell_type&quot;, markers=markers[method]
+    )
+</pre></div>
+</div>
+</div>
+<p>Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination. Across methods, the highest number of cells affected by contamination are found among T and B cells.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>methods_df = []
+
+for method, st in st_dict.items():
+    obs = st.sdata.tables[&quot;table&quot;].obs
+    counts = obs.loc[obs[&quot;contamination_counts&quot;] &gt; 0, &quot;transferred_cell_type&quot;].value_counts().rename(method)
+    methods_df.append(counts)
+
+merged = pd.concat(methods_df, axis=1)
+merged
+</pre></div>
+</div>
+</div>
+<p>Proseg contains the lowest number of T cells and B cells, and hence the overall contamination will be lower than for the other methods.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>methods_df = []
+
+for method, st in st_dict.items():
+    obs = st.sdata.tables[&quot;table&quot;].obs
+
+    counts = obs[&quot;transferred_cell_type&quot;].value_counts().rename(method)
+
+    methods_df.append(counts)
+
+pd.concat(methods_df, axis=1).fillna(0)
+</pre></div>
+</div>
+</div>
+<p>It therefore makes sense to compute the percentage of cells per celltype affected by contamination.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>rows = []
+
+for method, st in st_dict.items():
+    obs = st.sdata.tables[&quot;table&quot;].obs
+
+    total = obs[&quot;transferred_cell_type&quot;].value_counts()
+    contaminated = obs.loc[obs[&quot;contamination_counts&quot;] &gt; 0, &quot;transferred_cell_type&quot;].value_counts()
+
+    frac = (contaminated / total).rename(method)
+
+    rows.append(frac)
+merged_frac = pd.concat(rows, axis=1).fillna(0)
+merged_frac
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
+import seaborn as sns
+
+df_long = merged_frac.reset_index().melt(
+    id_vars=&quot;transferred_cell_type&quot;, var_name=&quot;Method&quot;, value_name=&quot;fraction_contaminated&quot;
+)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+
+sns.barplot(
+    data=df_long,
+    x=&quot;transferred_cell_type&quot;,
+    y=&quot;fraction_contaminated&quot;,
+    hue=&quot;Method&quot;,
+    ax=ax,
+)
+
+ax.set_ylabel(&quot;Fraction of contaminated cells&quot;)
+ax.set_xlabel(&quot;Cell type&quot;)
+ax.set_title(&quot;Contamination per cell type (normalized)&quot;)
+plt.xticks(rotation=45)
+
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>The spatial plot below shows the number of contaminating transcripts in each cell.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def plot_feature_labels(sdata, method, feature, axes, i):
+    labels = sdata.tables[&quot;table&quot;].obs[&quot;transferred_celltype_plot&quot;].unique().astype(str).tolist()
+    cols = [col_celltype[lab] for lab in labels]
+
+    sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+    sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+    sdata.pl.render_shapes(
+        &quot;cell_boundaries&quot;,
+        color=&quot;transferred_celltype_plot&quot;,
+        palette=cols,
+        groups=labels,
+        outline_color=&quot;white&quot;,
+        outline_width=0.5,
+    ).pl.show(ax=axes[0, i], title=f&quot;{method}:Cell boundaries colored by cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+    sdata.pl.render_shapes(
+        &quot;cell_boundaries&quot;,
+        color=feature,
+        outline_color=&quot;white&quot;,
+        outline_width=0.5,
+    ).pl.show(ax=axes[1, i], title=f&quot;{method}: {feature}&quot;, coordinate_systems=&quot;global&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axes = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
+axes = np.atleast_2d(axes)
+for i, (method, st) in enumerate(st_dict.items()):
+    plot_feature_labels(st.sdata, method, &quot;contamination_counts&quot;, axes, i)
+</pre></div>
+</div>
+</div>
+<p>The heatmap below summarizes contamination strength for each source–target cell-type pair. Each entry represents the mean contamination strength across all evaluable target cells of the given target cell type, where the source-specific contamination strength is computed as the fraction of transcripts in the target cell that correspond to contamination-relevant markers of the source cell type.</p>
+<p>The bubble plot illustrates the contamination strength (bubble color) and the number of evaluable target cells (bubble size).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from matplotlib.colors import Normalize
+
+vmax = max(st.sdata.tables[&quot;table&quot;].uns[&quot;contamination_strength_matrix&quot;].max().max() for st in st_dict.values())
+norm = Normalize(vmin=0, vmax=vmax)
+
+cell_type_order = list(next(iter(st_dict.values())).sdata.tables[&quot;table&quot;].uns[&quot;contamination_strength_matrix&quot;].columns)
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
+
+for i, (method, st) in enumerate(st_dict.items()):
+    cont_strength = st.sdata.tables[&quot;table&quot;].uns[&quot;contamination_strength_matrix&quot;]
+    cont_n = st.sdata.tables[&quot;table&quot;].uns[&quot;contamination_evaluable_cells_matrix&quot;]
+
+    # Force same source/target order and include missing rows/columns.
+    cont_strength = cont_strength.reindex(
+        index=cell_type_order,
+        columns=cell_type_order,
+    )
+    cont_n = cont_n.reindex(
+        index=cell_type_order,
+        columns=cell_type_order,
+    )
+
+    plot_df = (
+        cont_strength.stack(dropna=False)
+        .rename(&quot;contamination_strength&quot;)
+        .reset_index()
+        .rename(columns={&quot;level_0&quot;: &quot;source&quot;, &quot;level_1&quot;: &quot;target&quot;})
+    )
+
+    plot_df[&quot;n_evaluable&quot;] = cont_n.stack(dropna=False).values
+    plot_df = plot_df.dropna(subset=[&quot;n_evaluable&quot;])
+
+    plot_df[&quot;target&quot;] = pd.Categorical(
+        plot_df[&quot;target&quot;],
+        categories=cell_type_order,
+        ordered=True,
+    )
+    plot_df[&quot;source&quot;] = pd.Categorical(
+        plot_df[&quot;source&quot;],
+        categories=cell_type_order,
+        ordered=True,
+    )
+
+    sns.scatterplot(
+        data=plot_df,
+        x=&quot;target&quot;,
+        y=&quot;source&quot;,
+        size=&quot;n_evaluable&quot;,
+        hue=&quot;contamination_strength&quot;,
+        sizes=(20, 600),
+        palette=&quot;Reds&quot;,
+        hue_norm=norm,
+        edgecolor=&quot;black&quot;,
+        legend=False,
+        ax=axes[i],
+    )
+
+    axes[i].set_title(method, fontsize=12)
+    axes[i].set_xlabel(&quot;Target Cell Type&quot;)
+    axes[i].set_xlim(-0.5, len(cell_type_order) - 0.5)
+    axes[i].set_ylim(len(cell_type_order) - 0.5, -0.5)
+
+    axes[i].set_xticks(range(len(cell_type_order)))
+    axes[i].set_xticklabels(cell_type_order, rotation=45, ha=&quot;right&quot;)
+
+    axes[i].set_yticks(range(len(cell_type_order)))
+    if i == 0:
+        axes[i].set_ylabel(&quot;Source Cell Type&quot;)
+        axes[i].set_yticklabels(cell_type_order)
+    else:
+        axes[i].set_ylabel(&quot;&quot;)
+        axes[i].set_yticklabels([])
+
+plt.show()
+</pre></div>
+</div>
+</div>
+<p><em>Mutually exclusive co-expression rate (MECR)</em></p>
+<p>The mutually exclusive co-expression rate (MECR) is a measure for whether combinations of positive and negative markers (computed with a more stringent setting to increase mutual exclusivity, <code class="docutils literal notranslate"><span class="pre">vote_frac_pos=0.3</span></code>) co-occur less often than expected under independence (using Fisher’s exact test). By conditioning on the marginal detection frequencies of each gene, Fisher’s exact test does not favor methods with low overall transcript counts.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>markers = {}
+
+for method, st in st_dict.items():
+    markers[method] = st.markers_from_reference(
+        adata_ref,
+        ref_cell_type=&quot;celltype_major&quot;,
+        min_pos_frac=0.3,
+        ref_raw_counts_layer=&quot;raw&quot;,
+        n_jobs=16,
+    )
+
+    mecr = st.sp.mutually_exclusive_coexpression_rate(
+        markers=markers[method],
+    )
+</pre></div>
+</div>
+</div>
+<p>Across all methods, positive and negative markers co-occur less frequently than expected under independence, indicating a consistent depletion of co-expression. Although the differences are minor, Proseg shows the strongest depletion of co-expression of positive and negative markers.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>rows = []
+
+for method, st in st_dict.items():
+    tbl = st.sdata.tables[&quot;table&quot;]
+    mecr_df = tbl.uns[&quot;mutually_exclusive_coexpression_rate&quot;]
+
+    # Filter significant, finite odds ratios and p-values
+    df_sig = mecr_df[
+        mecr_df[&quot;odds_ratio&quot;].notna()
+        &amp; np.isfinite(mecr_df[&quot;odds_ratio&quot;])
+        &amp; mecr_df[&quot;pvalue&quot;].notna()
+        &amp; np.isfinite(mecr_df[&quot;pvalue&quot;])
+        &amp; (mecr_df[&quot;pvalue&quot;] &lt; 0.05)
+    ]
+
+    # Build rows
+    rows.extend({&quot;method&quot;: str(method), &quot;Fisher_OR&quot;: np.log2(row[&quot;odds_ratio&quot;])} for _, row in df_sig.iterrows())
+
+df = pd.DataFrame(rows)
+
+median_order = df.groupby(&quot;method&quot;)[&quot;Fisher_OR&quot;].median().sort_values().index.tolist()
+medians = df.groupby(&quot;method&quot;)[&quot;Fisher_OR&quot;].median().reindex(median_order)
+
+xtick_labels = [f&quot;{m}\nmedian:({medians[m]:.2f})&quot; for m in median_order]
+
+plt.figure(figsize=(6, 4))
+
+ax = sns.violinplot(
+    data=df,
+    x=&quot;method&quot;,
+    y=&quot;Fisher_OR&quot;,
+    order=median_order,
+    palette=&quot;Set2&quot;,
+    linewidth=2,
+)
+
+sns.stripplot(
+    data=df,
+    x=&quot;method&quot;,
+    y=&quot;Fisher_OR&quot;,
+    order=median_order,
+    color=&quot;black&quot;,
+    size=2.5,
+    alpha=0.35,
+    jitter=0.25,
+    ax=ax,
+)
+
+# Reference line: OR = 1
+ax.axhline(0, ls=&quot;--&quot;, lw=1, color=&quot;gray&quot;, alpha=0.6)
+
+ax.set_xticklabels(xtick_labels)
+
+ax.set_ylabel(&quot;log2 Fisher odds ratio&quot;)
+ax.set_xlabel(&quot;&quot;)
+ax.set_title(&quot;Significant associations among candidate mutually exclusive marker pairs&quot;)
+
+plt.grid(axis=&quot;y&quot;, alpha=0.3)
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+</section>
+<section id="3D-Volume-Module">
+<h3>3D Volume Module<a class="headerlink" href="#3D-Volume-Module" title="Link to this heading">#</a></h3>
+<p>The volume (<code class="docutils literal notranslate"><span class="pre">vl</span></code>) accessor provides metrics to assess how well a segmentation method resolves cell overlaps in 3D. Spatial transcriptomics tissue sections have a finite thickness (~4–10 µm), so cells can overlap along the z-dimension and 2D segmentation methods may introduce mixing by assigning transcripts from overlapping cells to the same mask. In this module, we introduce metrics to quantify sensitivity to 3D overlap and evaluate how well quasi-3D methods (e.g. Proseg) disentangle
+transcripts from overlapping cells.</p>
+<p>For a detailed description of this module, please refer to this <a class="reference internal" href="volume.html"><span class="doc">tutorial</span></a>.</p>
+<p><em>Top-bottom z consistency</em></p>
+<p>To detect potential z-overlap mixing within segmented cells, we split each cell’s transcripts into bottom/top z-quantiles (q=0.30), compute log-normalized gene profiles for both parts, and report their cosine similarity (NaN if either part has &lt;10 transcripts or &lt;5 genes).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    _cos_sim = st.vl.similarity_top_bottom()
+</pre></div>
+</div>
+</div>
+<p>Proseg 2 shows the highest expression similarity between top and bottom plane both overall and on a cell type level. This is also true for cell types, for which proseg has a lower per-cell transcript counts such as myoepithelial and DCIS2 cells.</p>
+<p>The other three methods have peaks at zero, which means that top and bottom parts have completely different gene compositions (genes present in one are essentially absent in the other).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>feature = [&quot;similarity_top_bottom&quot;]
+density_plot_feature(st_dict, feature)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;similarity_top_bottom&quot;)
+</pre></div>
+</div>
+</div>
+<p>In <a class="reference internal" href="volume.html"><span class="doc">volume.ipynb</span></a>, we explore the distribution of transcripts along the z-dimension in more depth and put it into context with <a class="reference external" href="https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full">ovrlpy</a>, a package for detecting 3D overlap in spatial transcriptomics.</p>
+</section>
+<section id="Point-statistic-metrics">
+<h3>Point statistic metrics<a class="headerlink" href="#Point-statistic-metrics" title="Link to this heading">#</a></h3>
+<p>The point statistics (<code class="docutils literal notranslate"><span class="pre">ps</span></code>) module is designed to compare the distribution of a set of transcripts in the cell relative to its cell centroid or cell border. The idea is to compute the distances of the transcripts to a reference point in the cell, either the cell centroid or the cell boundaries and aggregate this measure per transcript id.</p>
+<p><em>distance to membrane metric</em></p>
+<p>In this metric we compute the distance to the segmented cell membrane of each transcript coordinate and aggregate this metric per transcript id as mean.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plt.style.use(&quot;dark_background&quot;)
+
+
+def plot_metric(sdata, boundary_key, method, metric, genes, ax):
+    sdata_plot = sd.deepcopy(sdata)
+    sdata_plot[&quot;table&quot;] = sdata_plot[&quot;table&quot;][(sdata_plot[&quot;table&quot;].obs[metric].notna())]
+
+    sdata_plot.tables[&quot;table&quot;].obs[&quot;region&quot;] = boundary_key
+    sdata_plot.set_table_annotates_spatialelement(&quot;table&quot;, region=boundary_key)
+
+    sdata_plot.pl.render_shapes(
+        element=&quot;nucleus_boundaries&quot;,
+        fill_alpha=0.2,
+        outline_alpha=1.0,
+        outline_width=0.5,
+        outline_color=&quot;black&quot;,
+    ).pl.render_shapes(
+        element=&quot;cell_boundaries&quot;,
+        color=metric,
+        cmap=&quot;viridis&quot;,
+        fill_alpha=0.5,
+        outline_alpha=1.0,
+        outline_width=0.5,
+        outline_color=&quot;black&quot;,
+    ).pl.render_points(
+        &quot;transcripts&quot;,
+        color=&quot;feature_name&quot;,
+        groups=genes,
+        palette=[&quot;red&quot;] * len(genes),
+    ).pl.show(ax=ax, title=&quot;Cell/nuclei seg. for &quot; + method + &quot; &quot; + metric, colorbar=True)
+
+    return fig, axes
+</pre></div>
+</div>
+</div>
+<p>First, we compute both the average distance to the cell membrane across all previously defined negative and positive markers for the cell type “DCIS1”.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>border_distance_negative = {}
+border_distance_positive = {}
+
+for method, st in st_dict.items():
+    border_distance_negative[method] = st.ps.distance_to_membrane(
+        markers[method][&quot;DCIS1&quot;][&quot;negative&quot;],
+        cell_type_key=&quot;transferred_celltype_plot&quot;,
+        cell_type_query=[&quot;DCIS1&quot;],
+        restrict_to_within_boundary=True,
+        inplace=False,
+    )
+    border_distance_positive[method] = st.ps.distance_to_membrane(
+        markers[method][&quot;DCIS1&quot;][&quot;positive&quot;],
+        cell_type_key=&quot;transferred_celltype_plot&quot;,
+        restrict_to_within_boundary=True,
+        cell_type_query=[&quot;DCIS1&quot;],
+        inplace=False,
+    )
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>keys = []
+values = []
+
+for key, df in border_distance_negative.items():
+    for val in df[&quot;distance_to_cell_membrane_norm_165_genes&quot;]:
+        keys.append(key)
+        values.append(val)
+
+result_negative = pd.DataFrame({&quot;method&quot;: keys, &quot;distance&quot;: values, &quot;marker&quot;: &quot;negative&quot;})
+
+keys = []
+values = []
+
+for key, df in border_distance_positive.items():
+    for val in df[&quot;distance_to_cell_membrane_norm_80_genes&quot;]:
+        keys.append(key)
+        values.append(val)
+
+result_positive = pd.DataFrame({&quot;method&quot;: keys, &quot;distance&quot;: values, &quot;marker&quot;: &quot;positive&quot;})
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>result = pd.concat([result_negative, result_positive])
+result = result.dropna()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plt.figure(figsize=(6, 4))
+
+ax = sns.violinplot(
+    data=result,
+    x=&quot;method&quot;,
+    y=&quot;distance&quot;,
+    hue=&quot;marker&quot;,
+    palette=&quot;Set2&quot;,
+    linewidth=2,
+)
+
+ax.set_ylabel(&quot;distance to membrane&quot;)
+ax.set_xlabel(&quot;&quot;)
+ax.set_title(&quot;Distance to membrane across cells for DCIS1&quot;)
+
+plt.grid(axis=&quot;y&quot;, alpha=0.3)
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>We can plot now the distance to membrane for the positive and negative markers across the different segmentation algorithms and for the cell type “DCIS1”.</p>
+<p>We can also run the method inplace and plot the results in space</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
+    st.ps.distance_to_membrane(
+        markers[method][&quot;DCIS1&quot;][&quot;negative&quot;],
+        cell_type_key=&quot;transferred_celltype_plot&quot;,
+        cell_type_query=[&quot;DCIS1&quot;],
+        restrict_to_within_boundary=True,
+        inplace=True,
+    )
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axes = plt.subplots(1, 3, figsize=(15, 10), constrained_layout=True)
+
+for i, (method, st) in enumerate(st_dict.items()):
+    plot_metric(
+        st.sdata,
+        &quot;cell_boundaries&quot;,
+        method,
+        &quot;distance_to_cell_membrane_norm_165_genes&quot;,
+        markers[method][&quot;DCIS1&quot;][&quot;negative&quot;][:20],
+        axes[i],
+    )
+</pre></div>
+</div>
+</div>
+<p>We can identify cells in which the distribution of negative markers is clearly more skewed than for thers and that these values differ again greatly between the segmentation algorithms.</p>
+</section>
+<section id="Metrics-orthogonolisation">
+<h3>Metrics orthogonolisation<a class="headerlink" href="#Metrics-orthogonolisation" title="Link to this heading">#</a></h3>
+<p>In order to look at the co-linearity of the computed metrics, we will compute the correlation matrix (scaled covariance matrix) of all the metrics. Since the directionality (positively or negatively correlated) does not matter, we take the absolute value of the correlation coefficient as our orthogonality metric. Like this, we can visualise which metrics correlate</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># code adapted from claude.ai
+for method, st in st_dict.items():
+    df = st.sdata.tables[&quot;table&quot;].obs
+    df_numeric = df.select_dtypes(include=&quot;number&quot;)
+    df = pd.DataFrame(df_numeric, columns=df_numeric.columns, index=df_numeric.index)
+    # correlation does not work with NA values. Fill NA with columnwise mean
+    df = df.apply(lambda x: x.fillna(x.mean()), axis=0)
+    correlation_matrix = df.corr()
+
+    # take absolute value instead - sign is not important, only co-linearity
+    correlation_matrix = correlation_matrix.abs()
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        correlation_matrix,
+        annot=False,
+        cmap=&quot;coolwarm&quot;,
+        center=0,
+        square=True,
+        linewidths=0.5,
+        cbar_kws={&quot;shrink&quot;: 0.8},
+        vmin=0,
+        vmax=1,
+        xticklabels=correlation_matrix.columns,
+        yticklabels=correlation_matrix.columns,
+    )
+    plt.xticks(fontsize=7)
+    plt.yticks(fontsize=7)
+    plt.title(f&quot;Absolute Correlation Matrix Heatmap {method}&quot;)
+    plt.tight_layout()
+    plt.show()
+</pre></div>
+</div>
+</div>
+<p>There are quite some metrics which correlate with the segmented cell area, such as total counts of all transcripts and metrics related to this. We note as well that the correlation of metrics differs between algorithms.</p>
+</section>
+</section>
+<section id="Session-Info">
+<h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
+print(spatialdata_plot.__version__)
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="10x_xenium_focus_simplified.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Technology Focus: 10x Genomics Xenium (Simplified)</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Description-of-prior-dataset-acquisition-and-segmentation">Description of prior dataset acquisition and segmentation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Dataset-Acquisition-(10x-Genomics-Xenium)">Dataset Acquisition (10x Genomics Xenium)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Subsetting-the-Field-of-View">Subsetting the Field of View</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Cell-Segmentation-Methods">Cell Segmentation Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Reference-scRNA-seq-Dataset-for-Training-&amp;-QC">Reference scRNA-seq Dataset for Training &amp; QC</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Segmentation-Parameters">Segmentation Parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Import-into-SpatialData">Import into SpatialData</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Read-and-crop-SpatialData-objects">Read and crop SpatialData objects</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Initialize-SegTraQ-objects">Initialize SegTraQ objects</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-reference-scRNA-seq-data-and-transfer-labels">Load reference scRNA-seq data and transfer labels</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Running-SegTraQ-QC-metrics">Running SegTraQ QC metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Baseline-module">Baseline module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Clustering-stability-module">Clustering stability module</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Region-similarity-module">Region similarity module</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Supervised-module">Supervised module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#3D-Volume-Module">3D Volume Module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Point-statistic-metrics">Point statistic metrics</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Metrics-orthogonolisation">Metrics orthogonolisation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

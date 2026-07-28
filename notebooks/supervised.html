@@ -1,0 +1,1195 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Module: Supervised Metrics &#8212; SegTraQ</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/supervised';</script>
+    <link rel="icon" href="../_static/icon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Module: Point Statistics" href="point_statistics.html" />
+    <link rel="prev" title="Module: Volume (3D)" href="volume.html" />
+    <link href="../_static/style.css" rel="stylesheet" type="text/css">
+
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
+    <script>document.write(`<img src="../_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/utils.html">Utility functions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">Module: Point Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Module: Plotting</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/supervised.py" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.py</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Module: Supervised Metrics</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">Transfer labels from scRNA-seq to spatial transcriptomics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Computing-cell-type-specific-markers">Computing cell type-specific markers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-marker-purity">Compute marker purity</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#negative_marker_avoidance"><code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#positive_marker_recall"><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#marker_balanced_accuracy"><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Neighborhood-contamination">Neighborhood contamination</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_counts"><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_strength"><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_matrix"]</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_strength_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_strength_matrix"]</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#!-Important"><strong>! Important</strong></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)">Compute mutually exclusive co-expression rate (MECR)</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Module:-Supervised-Metrics">
+<h1>Module: Supervised Metrics<a class="headerlink" href="#Module:-Supervised-Metrics" title="Link to this heading">#</a></h1>
+<p>Unlike scRNA-seq, spatial transcriptomics measurements are affected by the local tissue context. Transcripts can be captured outside their cell of origin due to transcript diffusion, 3D overlap, or segmentation inaccuracies, leading to mixed or contaminated expression profiles. As a result, spatial cells may partially resemble their neighbors.</p>
+<center><p><img alt="ee6d933249e54c52866dd122ed5c5e6c" class="no-scaled-link" src="../_images/supervised.png" style="width: 90%;" /></p>
+</center><p>The <code class="docutils literal notranslate"><span class="pre">supervised</span></code> (<code class="docutils literal notranslate"><span class="pre">sp</span></code>) module provides metrics to evaluate how well cell profiles in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset with cell type annotations.</p>
+<p>By comparing spatial expression profiles to a high-quality scRNA-seq reference, the supervised module aims to quantify this mismatch. Specifically, we use the scRNA-seq dataset as a clean reference, transfer cell type labels to the spatial data, and then compute metrics that measure:</p>
+<ul class="simple">
+<li><p>how well each spatial cell matches its expected cell type,</p></li>
+<li><p>how much its expression resembles other (neighboring) cell types, and</p></li>
+<li><p>if it is possible to predict that a cell of one cell type is adjacent to a different cell type.</p></li>
+</ul>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+
+import warnings
+
+warnings.simplefilter(action=&quot;ignore&quot;, category=FutureWarning)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>from pathlib import Path
+
+import anndata as ad
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import spatialdata as sd
+import spatialdata_plot  # noqa
+
+import segtraq
+</pre></div>
+</div>
+</div>
+<section id="Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">
+<h2>Transfer labels from scRNA-seq to spatial transcriptomics<a class="headerlink" href="#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics" title="Link to this heading">#</a></h2>
+<p>We first load a spatial transcriptomics dataset (stored as a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object) and an annotated scRNA-seq reference dataset (stored as an <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object). For demonstration purposes, we subset the spatial dataset to a smaller region to reduce runtime.</p>
+<p>Next, we initialize a <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object from the SpatialData. During initialization, the <code class="docutils literal notranslate"><span class="pre">validate_spatialdata()</span></code> method is automatically run to ensure that all required attributes (e.g. <code class="docutils literal notranslate"><span class="pre">images_key</span></code>, <code class="docutils literal notranslate"><span class="pre">tables_key</span></code>) are correctly specified.</p>
+<p>We then transfer cell type labels from the scRNA-seq reference to the spatial dataset using <code class="docutils literal notranslate"><span class="pre">run_label_transfer()</span></code>. This method computes cell type–specific mean expression profiles in the reference and assigns each spatial cell to the cell type with the highest Pearson correlation to its expression profile.</p>
+<p>Finally, we define a color scheme for visualizing the transferred cell type labels.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Load spatial transcriptomics dataset
+sdata_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/xenium.zarr&quot;)
+
+# Subset the dataset to a specific bounding box
+bb_xmin = 800
+bb_ymin = 1150
+bb_w = 200
+bb_h = 300
+bb_xmax = bb_xmin + bb_w
+bb_ymax = bb_ymin + bb_h
+
+sdata = sdata_ws.query.bounding_box(
+    axes=[&quot;x&quot;, &quot;y&quot;],
+    min_coordinate=[bb_xmin, bb_ymin],
+    max_coordinate=[bb_xmax, bb_ymax],
+    target_coordinate_system=&quot;global&quot;,
+)
+
+# initialize SegTraQ object
+st = segtraq.SegTraQ(sdata, images_key=&quot;image&quot;, tables_centroid_x_key=&quot;x_centroid&quot;, tables_centroid_y_key=&quot;y_centroid&quot;)
+
+# Load scRNA-seq dataset
+scRNAseq_data_path = Path(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+adata_ref = ad.read_h5ad(scRNAseq_data_path)
+
+# Define color palette for cell types
+col_celltype = {
+    &quot;T&quot;: &quot;#fb8072&quot;,
+    &quot;B&quot;: &quot;#bc80bd&quot;,
+    &quot;macro&quot;: &quot;#910290&quot;,
+    &quot;dendritic&quot;: &quot;#fdb462&quot;,
+    &quot;mast&quot;: &quot;#959059&quot;,
+    &quot;perivas&quot;: &quot;#fed9a6&quot;,
+    &quot;endo&quot;: &quot;#a6cee3&quot;,
+    &quot;myoepi&quot;: &quot;#2782bb&quot;,
+    &quot;DCIS1&quot;: &quot;#3c7761&quot;,
+    &quot;DCIS2&quot;: &quot;#66a61e&quot;,
+    &quot;tumor&quot;: &quot;#66c2a5&quot;,
+    &quot;stromal&quot;: &quot;#d45943&quot;,
+    &quot;Unknown&quot;: &quot;#808080&quot;,
+}
+</pre></div>
+</div>
+</div>
+<p>The transferred labels are stored in <code class="docutils literal notranslate"><span class="pre">sdata.tables[tables_key].obs[&quot;transferred_cell_type&quot;]</span></code>. The column name can be changed via the <code class="docutils literal notranslate"><span class="pre">cell_type_key</span></code> argument.</p>
+<p>By default, cells with <strong>≤ 10 or ≥ 2000 transcripts</strong> and <strong>≤ 5 detected genes</strong> are filtered out. These thresholds can be adjusted using <code class="docutils literal notranslate"><span class="pre">tx_min</span></code>, <code class="docutils literal notranslate"><span class="pre">tx_max</span></code>, <code class="docutils literal notranslate"><span class="pre">gn_min</span></code>, and <code class="docutils literal notranslate"><span class="pre">gn_max</span></code>.</p>
+<p>Ensure that gene identifiers match between <code class="docutils literal notranslate"><span class="pre">adata_ref.var_names</span></code> and <code class="docutils literal notranslate"><span class="pre">sdata.tables[tables_key].var_names</span></code>. If they differ, specify the corresponding identifier columns using <code class="docutils literal notranslate"><span class="pre">ref_ensemble_key</span></code> and <code class="docutils literal notranslate"><span class="pre">query_ensemble_key</span></code>. If these are left as <code class="docutils literal notranslate"><span class="pre">None</span></code> (default), <code class="docutils literal notranslate"><span class="pre">var_names</span></code> are used.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.run_label_transfer(
+    adata_ref,
+    ref_cell_type=&quot;celltype_major&quot;,  # Reference cell type column
+    ref_raw_counts_layer=&quot;raw&quot;,  # Reference raw counts layer
+)
+</pre></div>
+</div>
+</div>
+<p>Next, cell shapes can be plotted and colored by cell type based on a defined color palette. Some cells lack a transferred cell-type label (due to filtering low-count cells before label transfer); for compatibility with <code class="docutils literal notranslate"><span class="pre">spatialdata-plot</span></code>, we replace missing values (<code class="docutils literal notranslate"><span class="pre">NaN</span></code>) with “Unknown” before plotting.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Replace NaN with Unknown
+s = st.sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;]
+if pd.api.types.is_categorical_dtype(s):
+    s = s.cat.add_categories([&quot;Unknown&quot;])
+
+st.sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type_plot&quot;] = s.fillna(&quot;Unknown&quot;)
+
+labels = st.sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type_plot&quot;].unique().astype(str).tolist()
+cols = [col_celltype[lab] for lab in labels]
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+
+# Dapi image
+st.sdata.pl.render_images(&quot;image&quot;).pl.show(ax=axes[0], title=&quot;DAPI image&quot;, coordinate_systems=&quot;global&quot;)
+
+# Add link between table and spatial element
+st.sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+st.sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;transferred_cell_type_plot&quot;,
+    palette=cols,
+    groups=labels,
+    outline_color=&quot;white&quot;,  # outlines visible on black
+    outline_width=0.5,
+).pl.show(ax=axes[1], title=&quot;Cell boundaries&quot;, coordinate_systems=&quot;global&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Computing-cell-type-specific-markers">
+<h2>Computing cell type-specific markers<a class="headerlink" href="#Computing-cell-type-specific-markers" title="Link to this heading">#</a></h2>
+<p><strong>Positive markers</strong> are genes that are consistently upregulated in one cell type relative to other cell types. To avoid composition bias arising from unequal cell type abundances, we perform <strong>pairwise comparisons between all cell types</strong> in the reference dataset. Marker detection can be performed using either differential expression (<code class="docutils literal notranslate"><span class="pre">mode=&quot;de&quot;</span></code>) or AUC-based scoring (<code class="docutils literal notranslate"><span class="pre">mode=&quot;auc&quot;</span></code>).</p>
+<p>For each cell type, genes are selected by a voting scheme: a gene must be identified as upregulated in at least a fraction of pairwise contrasts (<code class="docutils literal notranslate"><span class="pre">vote_fraction_pos</span></code>, default = 0.5). To ensure that positive markers are representative of the cell type rather than driven by a small subset of cells, we additionally require that a gene is expressed (&gt; 0) in at least <code class="docutils literal notranslate"><span class="pre">min_pos_frac</span></code> (default = 0.1) of cells of that type. To further increase specificity, we require that a positive marker is not
+shared by more than <code class="docutils literal notranslate"><span class="pre">t_pos</span> <span class="pre">×</span> <span class="pre">n_celltypes</span></code> cell types. This yields markers that are both upregulated and cell-type–specific, without bias from cell type composition in the reference data.</p>
+<p><strong>Negative markers</strong> are derived from the same pairwise contrasts but are defined as genes that are effectively off in a focal cell type while being upregulated elsewhere. For each ordered pair of cell types <code class="docutils literal notranslate"><span class="pre">(a,</span> <span class="pre">b)</span></code>, genes that are upregulated in <code class="docutils literal notranslate"><span class="pre">a</span></code> relative to <code class="docutils literal notranslate"><span class="pre">b</span></code> are considered negative-marker candidates for <code class="docutils literal notranslate"><span class="pre">b</span></code> if they are expressed (<code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code>) in at most <code class="docutils literal notranslate"><span class="pre">max_neg_frac</span></code> (default = 0.05) of cells of type b. To avoid ambiguous genes with inconsistent directionality, we further require
+that a negative marker of <code class="docutils literal notranslate"><span class="pre">b</span></code> is not identified as upregulated in <code class="docutils literal notranslate"><span class="pre">b</span></code> relative to any other cell type across all ordered contrasts.</p>
+<p>When using <code class="docutils literal notranslate"><span class="pre">mode=&quot;auc&quot;</span></code>, the minimum required AUC can be set via <code class="docutils literal notranslate"><span class="pre">auc_pos_thresh</span></code> (default = 0.9). When using <code class="docutils literal notranslate"><span class="pre">mode=&quot;de&quot;</span></code>, the differential expression method can be selected via <code class="docutils literal notranslate"><span class="pre">method</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;wilcoxon&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;t-test&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;logreg&quot;</span></code>), with thresholds defined by <code class="docutils literal notranslate"><span class="pre">logFC_pos_thresh</span></code> (default = 1.0) and <code class="docutils literal notranslate"><span class="pre">pval_adj_thresh</span></code> (default = 0.05).</p>
+<p>All computations can be parallelized by specifying the number of jobs via <code class="docutils literal notranslate"><span class="pre">n_jobs</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># get cell type-specific markers from the reference dataset
+markers = st.markers_from_reference(
+    adata_ref,
+    ref_cell_type=&quot;celltype_major&quot;,
+    ref_raw_counts_layer=&quot;raw&quot;,
+    mode=&quot;de&quot;,
+    vote_fraction_pos=0.5,
+    min_pos_frac=0.1,
+    max_neg_frac=0.05,
+    n_jobs=16,
+)
+</pre></div>
+</div>
+</div>
+<p>A list of positive and negative markers computed for each cell type is shown below.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for cell_type, sign in markers.items():
+    pos = sign[&quot;positive&quot;]
+    neg = sign[&quot;negative&quot;]
+
+    print(f&quot;{cell_type}  |  positive: {&#39;, &#39;.join(pos)}&quot;)
+    print(f&quot;{cell_type}  |  negative: {&#39;, &#39;.join(neg)}\n&quot;)
+</pre></div>
+</div>
+</div>
+<p>Below, we show the number of negative markers that overlap with the positive markers of each cell type. To reliably estimate contamination, each cell type should share <strong>at least ~5 negative markers</strong> with the positive marker set of every other cell type. If these overlaps are too small, contamination estimates become unstable.</p>
+<p>In such cases, the marker definition can be relaxed by adjusting the thresholds used in <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code> above.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>ctypes = list(markers.keys())
+overlap_df = pd.DataFrame(0, index=ctypes, columns=ctypes, dtype=int)
+
+for c in ctypes:
+    neg_c = set(markers[c].get(&quot;negative&quot;, []))
+    for d in ctypes:
+        pos_d = set(markers[d].get(&quot;positive&quot;, []))
+        overlap_df.loc[d, c] = len(pos_d &amp; neg_c)
+
+overlap_df
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Compute-marker-purity">
+<h2>Compute marker purity<a class="headerlink" href="#Compute-marker-purity" title="Link to this heading">#</a></h2>
+<p>We quantify how pure each spatial cell’s expression profile is with respect to its assigned cell type using positive and negative marker genes.</p>
+<p>We assume that differences between scRNA-seq and spatial transcriptomics profiles arise primarily from local contamination by neighboring cells (e.g. diffusion or segmentation spillover). This motivates evaluating negative markers in a neighborhood-aware manner.</p>
+<p><strong>Identity evaluation</strong></p>
+<p>For each cell of type <code class="docutils literal notranslate"><span class="pre">c</span></code>, we compute the fraction of positive marker genes (<code class="docutils literal notranslate"><span class="pre">markers[c][&quot;positive&quot;]</span></code>) that are expressed in the cell (<code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code>). This quantity, <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>, measures how consistently the cell expresses markers expected for its assigned type and is computed independently of the neighborhood.</p>
+<p><strong>Contamination (neighborhood-aware)</strong></p>
+<p>For a focal cell, we identify the cell types present in its spatial neighborhood and intersect the focal cell type’s negative markers with the positive markers of neighboring cell types. Optionally, these markers can be further restricted to genes that are expressed in at least one neighboring cell of the corresponding source type (<code class="docutils literal notranslate"><span class="pre">require_neighbor_expression=True</span></code>). These relevant negative markers represent genes that should be absent from the focal cell but present in nearby cells. The
+metric <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> is defined as the fraction of these markers that are not expressed in the focal cell.</p>
+<p>If no neighborhood graph is present (<code class="docutils literal notranslate"><span class="pre">neighbors_key</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">sdata.tables[tables_key].obsp</span></code>), it is automatically computed from cell centroids using a Delaunay graph.</p>
+<p><strong>Overall purity</strong></p>
+<p>Identity and contamination are combined using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span> <span class="pre">=</span> <span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">(positive_marker_recall</span> <span class="pre">+</span> <span class="pre">negative_marker_avoidance)</span></code></p>
+<p>This corresponds to balanced accuracy, i.e. the mean of sensitivity (positive marker recall) and specificity (negative marker avoidance). High values indicate strong expression of expected markers together with minimal expression of markers attributable to neighboring cell types.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>purity = st.sp.marker_purity(
+    cell_type_key=&quot;transferred_cell_type&quot;,
+    markers=markers,
+    require_neighbor_expression=True,
+    neighbors_key=&quot;spatial_connectivities&quot;,
+)
+</pre></div>
+</div>
+</div>
+<section id="negative_marker_avoidance">
+<h3><code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code><a class="headerlink" href="#negative_marker_avoidance" title="Link to this heading">#</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def boxplot_per_celltype(
+    sdata,
+    feature,
+    celltype_col=&quot;transferred_cell_type&quot;,
+    q=1.0,
+    figsize=(10, 5),
+    ascending=True,
+    palette=None,
+):
+    obs = sdata.tables[&quot;table&quot;].obs
+    df = obs[[celltype_col, feature]].dropna().copy()
+
+    if q &lt; 1:
+        df = df[df[feature] &lt;= df[feature].quantile(q)]
+
+    # order by median (low -&gt; high). Use .sort_values(ascending=False) for high -&gt; low
+    order = df.groupby(celltype_col)[feature].median().sort_values(ascending=ascending).index.tolist()
+
+    # ensure palette covers all categories (optional safety)
+    if palette is not None:
+        palette = {ct: palette.get(ct, &quot;#808080&quot;) for ct in order}
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    sns.boxplot(
+        data=df,
+        x=celltype_col,
+        y=feature,
+        order=order,
+        hue=celltype_col,
+        palette=palette,
+        showcaps=True,
+        showfliers=False,
+        legend=False,
+        ax=ax,
+    )
+
+    sns.stripplot(
+        data=df,
+        x=celltype_col,
+        y=feature,
+        order=order,
+        hue=celltype_col,
+        palette=palette,
+        jitter=0.25,
+        dodge=False,
+        alpha=0.6,
+        edgecolor=&quot;black&quot;,
+        linewidth=0.4,
+        legend=False,
+        ax=ax,
+    )
+
+    ax.tick_params(axis=&quot;x&quot;, rotation=45)
+    ax.set_xlabel(&quot;Cell type&quot;)
+    ax.set_ylabel(feature)
+    fig.tight_layout()
+    plt.show()
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score indicates that cells of type DCIS1 are the most contaminated.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st.sdata, feature=&quot;negative_marker_avoidance&quot;, palette=col_celltype, ascending=False)
+</pre></div>
+</div>
+</div>
+<p>This can also be visualized spatially. The <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score is only computed for cells which have a neigbhor of a different type. This clearly shows the DCIS1 cells with low <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score, i.e. contamination.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;transferred_cell_type_plot&quot;,
+    palette=cols,
+    groups=labels,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[0], title=&quot;Cell boundaries colored by cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;negative_marker_avoidance&quot;,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[1], title=&quot;Cell boundaries colored by negative_marker_avoidance&quot;, coordinate_systems=&quot;global&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="positive_marker_recall">
+<h3><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code><a class="headerlink" href="#positive_marker_recall" title="Link to this heading">#</a></h3>
+<p>Cells annotated as mast and DCIS2 show the highest <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> scores, suggesting that their cell identity is captured most consistently by positive markers.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st.sdata, feature=&quot;positive_marker_recall&quot;, palette=col_celltype)
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>score is computed globally, i.e. irrespective of the cell neighborhood, so there are fewer missing values than for <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>. The spatial plot below is in line with the boxplot above, showing that cells of type DCIS2 and mast show the highest <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;transferred_cell_type_plot&quot;,
+    palette=cols,
+    groups=labels,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[0], title=&quot;Cell boundaries colored by cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;positive_marker_recall&quot;,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[1], title=&quot;Cell boundaries colored by positive_marker_recall&quot;, coordinate_systems=&quot;global&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="marker_balanced_accuracy">
+<h3><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code><a class="headerlink" href="#marker_balanced_accuracy" title="Link to this heading">#</a></h3>
+<p>Cells of type <strong>DCIS1</strong> (which have high transcript counts) show the highest <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> and the third-highest <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>. This is expected: cells with higher transcript counts tend to capture more positive markers, but also have a higher risk of capturing negative markers. As a result, the combined metric <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code>, which balances <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> and <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>, provides a more representative measure of purity.
+Accordingly, <strong>DCIS1</strong> ranks among the cell types with the lowest purity, while <strong>DCIS2</strong> and <strong>mast</strong> cells show the highest purity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st.sdata, feature=&quot;marker_balanced_accuracy&quot;, palette=col_celltype)
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="Neighborhood-contamination">
+<h2>Neighborhood contamination<a class="headerlink" href="#Neighborhood-contamination" title="Link to this heading">#</a></h2>
+<p>Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify</p>
+<ol class="lowerroman simple">
+<li><p><strong>how many contaminating transcripts</strong> are present per cell and</p></li>
+<li><p><strong>which neighboring cell types</strong> contribute to this signal. We therefore compute neighborhood contamination.</p></li>
+</ol>
+<p>We treat a gene as contamination-relevant for a target cell type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> if it is</p>
+<ol class="lowerroman simple">
+<li><p>a <strong>negative marker of ``c_tgt``</strong>,</p></li>
+<li><p>simultaneously a <strong>positive marker of a neighboring source type ``c_src``</strong>, and</p></li>
+<li><p>actually <strong>expressed (&gt;0) in at least one of the neighboring cells of the source type</strong> (<code class="docutils literal notranslate"><span class="pre">require_neighbor_expression</span></code> , default=True).</p></li>
+</ol>
+<p>This yields two levels of output:</p>
+<p><strong>Per-cell metrics.</strong> For each cell, we compute</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code>: the total number of transcripts for contamination-relevant genes, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code>: the fraction of transcripts assigned to the cell that correspond to contamination-relevant genes, computed as <code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code> / <code class="docutils literal notranslate"><span class="pre">total_transcript_counts</span></code>.</p></li>
+</ul>
+<p><strong>Directed cell-type contamination (stored in ``.uns``):</strong> Across all cells, we additionally summarize contamination between source and target cell types:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_matrix</span></code>: the fraction of target cells of type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> that contain at least one contamination-relevant transcript originating from source cell type <code class="docutils literal notranslate"><span class="pre">c_src</span></code>, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_strength_matrix</span></code>: the mean contamination strength of target cells of type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> attributable to source cell type <code class="docutils literal notranslate"><span class="pre">c_src</span></code>, computed by averaging the source-specific contamination strength across all evaluable target cells.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_evaluable_cells_matrix</span></code> : Directed source-to-target matrix. Entry (c_src, c_tgt) is the number of target cells for which contamination from source type c_src could be evaluated.</p></li>
+</ul>
+<p>If no neighborhood graph is present (<code class="docutils literal notranslate"><span class="pre">neighbors_key</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">sdata.tables[tables_key].obsp</span></code>), it is automatically computed from cell centroids using a Delaunay graph.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_, _, _, _ = st.sp.neighbor_contamination(
+    cell_type_key=&quot;transferred_cell_type&quot;,
+    markers=markers,
+    require_neighbor_expression=True,
+    neighbors_key=&quot;spatial_connectivities&quot;,
+    inplace=True,
+)
+</pre></div>
+</div>
+</div>
+<section id="contamination_counts">
+<h3><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code><a class="headerlink" href="#contamination_counts" title="Link to this heading">#</a></h3>
+<p>The spatial plot below shows, for each target cell, the number of contaminating transcripts. If desired, this quantity can be normalized by the total number of transcripts per cell. As expected, the plot correlates with the <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>score from above.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;transferred_cell_type_plot&quot;,
+    palette=cols,
+    groups=labels,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[0], title=&quot;Cell boundaries colored by cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;contamination_counts&quot;,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[1], title=&quot;Cell boundaries colored by #contamination transcripts&quot;, coordinate_systems=&quot;global&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="contamination_strength">
+<h3><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code><a class="headerlink" href="#contamination_strength" title="Link to this heading">#</a></h3>
+<p>In addition, we can visualize <code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code>, the fraction of transcripts assigned to a cell that correspond to locally relevant contamination marker genes. A value of contamination_strength = 0 indicates that no contamination-relevant transcripts were detected, whereas larger values indicate that a greater proportion of the cell’s assigned transcripts are consistent with potential contamination from neighboring cells.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;transferred_cell_type_plot&quot;,
+    palette=cols,
+    groups=labels,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[0], title=&quot;Cell boundaries colored by cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+st.sdata.pl.render_shapes(
+    &quot;cell_boundaries&quot;,
+    color=&quot;contamination_strength&quot;,
+    outline_color=&quot;white&quot;,
+    outline_width=0.5,
+).pl.show(ax=axes[1], title=&quot;Cell boundaries colored by contamination strength&quot;, coordinate_systems=&quot;global&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id=".uns[%22contamination_matrix%22]">
+<h3><code class="docutils literal notranslate"><span class="pre">.uns[&quot;contamination_matrix&quot;]</span></code><a class="headerlink" href="#.uns[%22contamination_matrix%22]" title="Link to this heading">#</a></h3>
+<p>The heatmap below shows, for each source–target cell-type pair, the <strong>fraction of all target cells</strong> contaminated by transcripts from a neighboring source cell type.</p>
+<p>Percentages within a column may sum to more than 100% because a single target cell can be contaminated by <strong>multiple</strong> neighboring source cell types and is therefore counted for each of them.</p>
+<p>The bubble plot illustrates why both the contamination frequency (bubble color) and the number of evaluable target cells (bubble size) should be considered when interpreting directed contamination. For example, approximately 20% of evaluable T cells are contaminated by stromal cells, providing evidence for a common contamination pattern across many cells. In contrast, although 100% of evaluable T cells are contaminated by DCIS2 cells, this result is based on only a small number of evaluable T
+cells because few T cells have neighboring DCIS2 cells with relevant marker genes. Consequently, high contamination frequencies based on very few evaluable cells should be interpreted with caution.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>cont_mat = st.sdata.tables[st.tables_key].uns[&quot;contamination_matrix&quot;]
+cont_n = st.sdata.tables[st.tables_key].uns[&quot;contamination_evaluable_cells_matrix&quot;]
+
+plot_df = (
+    cont_mat.stack(dropna=False)
+    .rename(&quot;contamination&quot;)
+    .reset_index()
+    .rename(columns={&quot;level_0&quot;: &quot;source&quot;, &quot;level_1&quot;: &quot;target&quot;})
+)
+
+plot_df[&quot;n_evaluable&quot;] = cont_n.stack(dropna=False).values
+
+plt.figure(figsize=(9, 7))
+
+ax = sns.scatterplot(
+    data=plot_df,
+    x=&quot;target&quot;,
+    y=&quot;source&quot;,
+    size=&quot;n_evaluable&quot;,
+    hue=&quot;contamination&quot;,
+    sizes=(20, 600),
+    palette=&quot;Reds&quot;,
+    edgecolor=&quot;black&quot;,
+)
+
+ax.legend(
+    bbox_to_anchor=(1.02, 1),
+    loc=&quot;upper left&quot;,
+    borderaxespad=0,
+)
+
+plt.title(&quot;Directed Cell-Type Contamination&quot;)
+plt.xlabel(&quot;Target Cell Type&quot;)
+plt.ylabel(&quot;Source Cell Type&quot;)
+plt.xticks(rotation=45, ha=&quot;right&quot;)
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+</section>
+<section id=".uns[%22contamination_strength_matrix%22]">
+<h3><code class="docutils literal notranslate"><span class="pre">.uns[&quot;contamination_strength_matrix&quot;]</span></code><a class="headerlink" href="#.uns[%22contamination_strength_matrix%22]" title="Link to this heading">#</a></h3>
+<p>The heatmap below summarizes contamination strength for each source–target cell-type pair. Each entry represents the mean contamination strength across all evaluable target cells of the given target cell type, where the source-specific contamination strength is computed as the fraction of transcripts in the target cell that correspond to contamination-relevant markers of the source cell type.</p>
+<p>The bubble plot of the <code class="docutils literal notranslate"><span class="pre">contamination_strength_matrix</span></code> provides complementary information by quantifying how large the contamination signal is when it occurs. For example, although myoepithelial and DCIS2 cells are frequently neighbors, contamination from DCIS2 into myoepithelial cells is negligible. Moreover, relatively few myoepithelial cells are evaluable for DCIS2 despite their spatial proximity because the two cell types share only a small number of mutually exclusive markers (four in
+this example; see <code class="docutils literal notranslate"><span class="pre">overlap_df</span></code>), and these markers may not be expressed in the neighboring DCIS2 cells in every local neighborhood.</p>
+<p>This can have both technical and biological causes. For example, when two cell types have similar expression profiles, contamination between them is less consequential because the contaminating transcripts largely match the expected expression of the target cell.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>cont_strength_mat = st.sdata.tables[st.tables_key].uns[&quot;contamination_strength_matrix&quot;]
+
+plot_df = (
+    cont_strength_mat.stack(dropna=False)
+    .rename(&quot;contamination_strength&quot;)
+    .reset_index()
+    .rename(columns={&quot;level_0&quot;: &quot;source&quot;, &quot;level_1&quot;: &quot;target&quot;})
+)
+
+plot_df[&quot;n_evaluable&quot;] = cont_n.stack(dropna=False).values
+
+plt.figure(figsize=(9, 7))
+
+ax = sns.scatterplot(
+    data=plot_df,
+    x=&quot;target&quot;,
+    y=&quot;source&quot;,
+    size=&quot;n_evaluable&quot;,
+    hue=&quot;contamination_strength&quot;,
+    sizes=(20, 600),
+    palette=&quot;Reds&quot;,
+    edgecolor=&quot;black&quot;,
+)
+
+ax.legend(
+    bbox_to_anchor=(1.02, 1),
+    loc=&quot;upper left&quot;,
+    borderaxespad=0,
+)
+
+plt.title(&quot;Directed Cell-Type Contamination Strength&quot;)
+plt.xlabel(&quot;Target Cell Type&quot;)
+plt.ylabel(&quot;Source Cell Type&quot;)
+plt.xticks(rotation=45, ha=&quot;right&quot;)
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="!-Important">
+<h2><strong>! Important</strong><a class="headerlink" href="#!-Important" title="Link to this heading">#</a></h2>
+<p>The observed contamination between two cell types is influenced by three main factors:</p>
+<ol class="arabic simple">
+<li><p><strong>True contamination</strong>, i.e. transcript spillover or transcript misassignment between neighboring cells.</p></li>
+<li><p><strong>Spatial proximity</strong>, i.e. how frequently the two cell types occur as neighbors. The more often they are adjacent, the greater the opportunity for contamination.</p></li>
+<li><p><strong>Expression similarity</strong>, .ie. contamination between transcriptionally similar cell types is both less consequential and more difficult to detect. Because the two cell types share fewer mutually exclusive marker genes, transferred transcripts have less impact on the measured expression profile, and fewer informative genes are available for quantifying contamination.</p></li>
+</ol>
+</section>
+<section id="Compute-mutually-exclusive-co-expression-rate-(MECR)">
+<h2>Compute mutually exclusive co-expression rate (MECR)<a class="headerlink" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate</span></code> function assesses mutual exclusivity between marker genes using Fisher’s exact test on binary gene detection (expression <code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code>). Candidate pairs are constructed as unique, unordered combinations of positive and negative markers across cell types, excluding gene pairs that co-occur as positive markers in any cell type. Fisher’s exact test with <code class="docutils literal notranslate"><span class="pre">alternative=&quot;less&quot;</span></code> is used to test whether genes co-occur less often than expected under independence,
+while odds ratios are reported with a pseudocount correction to avoid infinities in sparse data. By conditioning on the marginal detection frequencies of each gene, Fisher’s exact test does not favor methods with low overall transcript counts.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>mecr = st.sp.mutually_exclusive_coexpression_rate(
+    markers=markers,
+    pseudocount=0.5,
+    inplace=True,
+)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>rows = []
+
+tbl = st.sdata.tables[&quot;table&quot;]
+mecr_df = tbl.uns[&quot;mutually_exclusive_coexpression_rate&quot;]
+
+# Filter significant, finite odds ratios and p-values
+df_sig = mecr_df[
+    mecr_df[&quot;odds_ratio&quot;].notna()
+    &amp; np.isfinite(mecr_df[&quot;odds_ratio&quot;])
+    &amp; mecr_df[&quot;pvalue&quot;].notna()
+    &amp; np.isfinite(mecr_df[&quot;pvalue&quot;])
+    &amp; (mecr_df[&quot;pvalue&quot;] &lt; 0.05)
+]
+
+# Build rows
+rows.extend({&quot;method&quot;: &quot;Xenium&quot;, &quot;Fisher_OR&quot;: np.log2(row[&quot;odds_ratio&quot;])} for _, row in df_sig.iterrows())
+
+df = pd.DataFrame(rows)
+
+median_order = df.groupby(&quot;method&quot;)[&quot;Fisher_OR&quot;].median().sort_values().index.tolist()
+
+# Compute medians in plotting order
+medians = df.groupby(&quot;method&quot;)[&quot;Fisher_OR&quot;].median().reindex(median_order)
+
+# Build x-axis labels with medians
+xtick_labels = [f&quot;{m}\nmedian:({medians[m]:.2f})&quot; for m in median_order]
+
+plt.figure(figsize=(3, 4))
+
+# --- Violin plot ---
+ax = sns.violinplot(
+    data=df,
+    x=&quot;method&quot;,
+    y=&quot;Fisher_OR&quot;,
+    order=median_order,
+    palette=&quot;Set2&quot;,
+    linewidth=2,
+)
+
+# --- Stripplot overlay ---
+sns.stripplot(
+    data=df,
+    x=&quot;method&quot;,
+    y=&quot;Fisher_OR&quot;,
+    order=median_order,
+    color=&quot;black&quot;,
+    size=2.5,
+    alpha=0.35,
+    jitter=0.25,
+    ax=ax,
+)
+
+# Reference line: OR = 1
+ax.axhline(0, ls=&quot;--&quot;, lw=1, color=&quot;gray&quot;, alpha=0.6)
+
+# Apply new x-axis labels
+ax.set_xticklabels(xtick_labels)
+
+ax.set_ylabel(&quot;log2 Fisher odds ratio&quot;)
+ax.set_xlabel(&quot;&quot;)
+ax.set_title(&quot;Significant associations among candidate mutually exclusive marker pairs&quot;)
+
+plt.grid(axis=&quot;y&quot;, alpha=0.3)
+plt.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Run all metrics.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.run_supervised(
+    adata_ref=adata_ref,
+    ref_cell_type=&quot;celltype_major&quot;,
+    ref_raw_counts_layer=&quot;raw&quot;,
+)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
+print(spatialdata_plot.__version__)
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="volume.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Module: Volume (3D)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="point_statistics.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Module: Point Statistics</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">Transfer labels from scRNA-seq to spatial transcriptomics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Computing-cell-type-specific-markers">Computing cell type-specific markers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-marker-purity">Compute marker purity</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#negative_marker_avoidance"><code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#positive_marker_recall"><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#marker_balanced_accuracy"><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Neighborhood-contamination">Neighborhood contamination</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_counts"><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_strength"><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_matrix"]</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_strength_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_strength_matrix"]</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#!-Important"><strong>! Important</strong></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)">Compute mutually exclusive co-expression rate (MECR)</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

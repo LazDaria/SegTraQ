@@ -1,0 +1,1057 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Module: Volume (3D) &#8212; SegTraQ</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/volume';</script>
+    <link rel="icon" href="../_static/icon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Module: Supervised Metrics" href="supervised.html" />
+    <link rel="prev" title="Module: Region Similarity" href="region_similarity.html" />
+    <link href="../_static/style.css" rel="stylesheet" type="text/css">
+
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
+    <script>document.write(`<img src="../_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/utils.html">Utility functions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">Module: Region Similarity</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">Module: Point Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Module: Plotting</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/volume.py" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.py</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Module: Volume (3D)</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-data-into-SegTraQ-and-run-label-transfer">Load data into SegTraQ and run label transfer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Inspect-z-distribution-of-transcripts">Inspect z distribution of transcripts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Top–bottom-z-consistency-(cosine-similarity)">Top–bottom z consistency (cosine similarity)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">Heterotypic overlap area/fraction (detecting 3D overlaps)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)">Mean VSI per cell (ovrlpy-based vertical signal integrity)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Module:-Volume-(3D)">
+<h1>Module: Volume (3D)<a class="headerlink" href="#Module:-Volume-(3D)" title="Link to this heading">#</a></h1>
+<p>Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical thickness of ~4–10 µm. Even for a relatively thin 5 µm section, cells can partially overlap along the z-dimension, depending on tissue orientation and how the sample is cut. As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination, because transcripts from overlapping cells may be assigned to the same segmentation mask.</p>
+<center><p><img alt="6a5a610042bb4838a41519b87a0bfc43" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
+</center><p>To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the <code class="docutils literal notranslate"><span class="pre">volume</span></code> (<code class="docutils literal notranslate"><span class="pre">vl</span></code>) accessor.</p>
+<p>In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap, and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg), or in other words, how well it can disentangle transcripts from overlapping cells.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+</pre></div>
+</div>
+</div>
+<section id="Load-data-into-SegTraQ-and-run-label-transfer">
+<h2>Load data into SegTraQ and run label transfer<a class="headerlink" href="#Load-data-into-SegTraQ-and-run-label-transfer" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import warnings
+
+import anndata as ad
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import spatialdata as sd
+import spatialdata_plot  # noqa
+from sklearn.metrics import r2_score
+
+import segtraq
+
+warnings.filterwarnings(action=&quot;ignore&quot;)
+</pre></div>
+</div>
+</div>
+<p>We load <a class="reference internal" href="io.html"><span class="doc">previously built</span></a> <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> objects from 10x Genomics Xenium data segmented with Xenium’s multimodal cell segmentation (<code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code>), with Proseg v2.0.5 (<code class="docutils literal notranslate"><span class="pre">sdata_proseg2</span></code>) and Proseg v3.1.0 (<code class="docutils literal notranslate"><span class="pre">sdata_proseg3</span></code>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_xenium = sd.read_zarr(&quot;../../../data/xenium_v1_data/sdata_xenium_crop.zarr&quot;)
+sdata_proseg2 = sd.read_zarr(&quot;../../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/&quot;)
+sdata_proseg3 = sd.read_zarr(&quot;../../../data/xenium_v1_data/sdata_proseg_v3_crop.zarr/&quot;)
+</pre></div>
+</div>
+</div>
+<p>Next, we initialize <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> objects.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_xenium = segtraq.SegTraQ(
+    sdata_xenium,
+    tables_centroid_x_key=None,
+    tables_centroid_y_key=None,
+    points_background_id=-1,  # &quot;UNASSIGNED&quot; for Xenium prime
+)
+
+st_proseg2 = segtraq.SegTraQ(
+    sdata_proseg2,
+    points_cell_id_key=&quot;assignment&quot;,
+    points_background_id=2**32 - 1,
+    points_gene_key=&quot;gene&quot;,
+    tables_area_key=None,
+    tables_cell_id_key=&quot;cell&quot;,
+    shapes_cell_id_key=&quot;cell&quot;,
+    tables_centroid_x_key=&quot;centroid_x&quot;,
+    tables_centroid_y_key=&quot;centroid_y&quot;,
+)
+
+st_proseg3 = segtraq.SegTraQ(
+    sdata_proseg3,
+    points_cell_id_key=&quot;assignment&quot;,
+    points_background_id=None,
+    points_gene_key=&quot;gene&quot;,
+    tables_area_key=None,
+    tables_cell_id_key=&quot;cell&quot;,
+    shapes_cell_id_key=&quot;cell&quot;,
+    tables_centroid_x_key=&quot;centroid_x&quot;,
+    tables_centroid_y_key=&quot;centroid_y&quot;,
+    filter_kwargs={&quot;min_qv&quot;: None},
+)
+</pre></div>
+</div>
+</div>
+<p>For easier access, we store the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object into a dictionary.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_dict = {&quot;xenium&quot;: st_xenium, &quot;proseg2&quot;: st_proseg2, &quot;proseg3&quot;: st_proseg3}
+</pre></div>
+</div>
+</div>
+<p>We can then transfer labels from a reference scRNA-seq dataset.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>adata_ref = ad.read_h5ad(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+
+for _method, st in st_dict.items():
+    st.run_label_transfer(adata_ref, ref_cell_type=&quot;celltype_major&quot;, ref_raw_counts_layer=&quot;raw&quot;, inplace=True)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Inspect-z-distribution-of-transcripts">
+<h2>Inspect z distribution of transcripts<a class="headerlink" href="#Inspect-z-distribution-of-transcripts" title="Link to this heading">#</a></h2>
+<p>We will first examine the z-distribution of transcripts in Xenium data. Proseg includes a correction step for z-drift, which can occur when the slide is not perfectly flat—for example due to tissue cutting and mounting—or due to imaging-related effects (e.g. microscope settings or slight unevenness of the slide and imaging surface).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def plot_transcripts_across_z_bins(sdata, method, n_z_bins, xy_bin_size=5.0):
+    df = sdata[&quot;transcripts&quot;].compute()
+
+    df[&quot;z_bin&quot;] = pd.cut(df[&quot;z&quot;], n_z_bins, labels=False)
+
+    df[&quot;x_bin&quot;] = (df[&quot;x&quot;] / xy_bin_size).astype(int)
+    df[&quot;y_bin&quot;] = (df[&quot;y&quot;] / xy_bin_size).astype(int)
+
+    x_minb, x_maxb = df[&quot;x_bin&quot;].min(), df[&quot;x_bin&quot;].max()
+    y_minb, y_maxb = df[&quot;y_bin&quot;].min(), df[&quot;y_bin&quot;].max()
+    nx = x_maxb - x_minb + 1
+    ny = y_maxb - y_minb + 1
+
+    fig, axes = plt.subplots(
+        1,
+        n_z_bins,
+        figsize=(2.2 * n_z_bins, 4),
+        sharex=True,
+        sharey=True,
+        constrained_layout=True,
+    )
+    axes = np.atleast_1d(axes)
+
+    for i in range(n_z_bins):
+        ax = axes[i]
+
+        plane = df[df[&quot;z_bin&quot;] == i]
+        counts = (
+            plane.groupby([&quot;y_bin&quot;, &quot;x_bin&quot;])
+            .size()
+            .reindex(
+                pd.MultiIndex.from_product(
+                    [range(y_minb, y_maxb + 1), range(x_minb, x_maxb + 1)], names=[&quot;y_bin&quot;, &quot;x_bin&quot;]
+                ),
+                fill_value=0,
+            )
+            .values.reshape(ny, nx)
+        )
+
+        im = ax.imshow(
+            counts,
+            origin=&quot;lower&quot;,
+            aspect=&quot;equal&quot;,
+            extent=[
+                x_minb * xy_bin_size,
+                (x_maxb + 1) * xy_bin_size,
+                y_minb * xy_bin_size,
+                (y_maxb + 1) * xy_bin_size,
+            ],
+        )
+        ax.set_title(f&quot;Z plane {i + 1}&quot;)
+        ax.set_xlabel(&quot;x&quot;)
+        if i == 0:
+            ax.set_ylabel(&quot;y&quot;)
+
+    cbar = fig.colorbar(im, ax=axes.ravel().tolist(), location=&quot;right&quot;, shrink=0.9)
+    cbar.set_label(f&quot;#transcripts per {xy_bin_size}x{xy_bin_size} bin&quot;)
+
+    fig.suptitle(f&quot;{method}: #transcripts per {xy_bin_size}x{xy_bin_size} bin&quot;, fontsize=14)
+    plt.show()
+</pre></div>
+</div>
+</div>
+<p>In the raw Xenium data, we can still observe a pronounced z-drift across the tissue. In lower z-planes (e.g. Z plane 3), transcripts are more densely detected on the left side of the field of view, whereas in higher z-planes the transcript density shifts towards the right.</p>
+<p>Prosegs explicitly corrects for this type of depth-related variation and produces normalized z values, as can be seen <a class="reference external" href="https://github.com/dcjones/proseg/blob/main/src/sampler/transcripts.rs#L162">here</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    plot_transcripts_across_z_bins(st.sdata, method, 10)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Top–bottom-z-consistency-(cosine-similarity)">
+<h2>Top–bottom z consistency (cosine similarity)<a class="headerlink" href="#Top–bottom-z-consistency-(cosine-similarity)" title="Link to this heading">#</a></h2>
+<p>To assess whether a segmented cell may contain transcripts from overlapping cells across z, we compute a top–bottom z similarity score. The intuition is that a correctly segmented single cell should have a broadly consistent expression profile across depth, while merged/overlapping cells may show depth-dependent expression shifts, lowering similarity.</p>
+<p>For each cell, we split its transcripts into:</p>
+<p>bottom: z ≤ q (default q=0.30) top: z ≥ 1−q</p>
+<p>We aggregate gene counts for both parts, normalize within each cell using the combined library size (top+bottom), apply <code class="docutils literal notranslate"><span class="pre">log1p</span></code>, and compute the cosine similarity between the two vectors (considering genes non-zero in either part). To enable fair comparisons between methods, we optionally correct for global z-drift by normalizing z coordinates before splitting transcripts into top and bottom (default <code class="docutils literal notranslate"><span class="pre">correct_z_drift=True</span></code>); Proseg already performs this normalization internally. Cells are
+set to <code class="docutils literal notranslate"><span class="pre">NaN</span></code> if either part has fewer than <code class="docutils literal notranslate"><span class="pre">min_transcripts</span></code> transcripts (default 10) or fewer than <code class="docutils literal notranslate"><span class="pre">min_genes</span></code> genes (default 5).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    if method.startswith(&quot;p&quot;):
+        _cos_sim = st.vl.similarity_top_bottom(
+            correct_z_drift=False
+        )  # correct for z drift already done internally in proseg
+    else:
+        _cos_sim = st.vl.similarity_top_bottom()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
+    all_feats = []
+    for method, st in sdata_dict.items():
+        feat = st.sdata[&quot;table&quot;].obs[feature].to_frame(feature)
+        feat[&quot;method&quot;] = method
+        all_feats.append(feat)
+
+    df = pd.concat(all_feats, ignore_index=True)
+    df[&quot;method&quot;] = df[&quot;method&quot;].astype(str)
+
+    plt.figure(figsize=figsize)
+    sns.kdeplot(data=df, x=feature, hue=&quot;method&quot;, common_norm=False, palette=&quot;Set2&quot;, fill=False)
+    plt.tight_layout()
+</pre></div>
+</div>
+</div>
+<p>Proseg version 2 and 3 show the best correlation between top and bottom z-plane overall.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>density_plot_feature(st_dict, &quot;similarity_top_bottom&quot;)
+</pre></div>
+</div>
+</div>
+<p>Even after within-cell normalization, high-count cells have less sampling noise, so their top and bottom gene profiles are estimated more reliably and tend to look more similar, which increases cosine similarity. In low-count cells, random dropout and sparse gene sampling make the two vectors noisier and artificially reduce the similarity.</p>
+<p>In addition, high-count cells are often larger in size and therefore span a larger proportion of z, which might reduce the risk of 3D overlap and hence lead to increase similarity between top and bottom plane (<code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>df = st_dict[&quot;proseg2&quot;].sdata.tables[&quot;table&quot;].obs[[&quot;similarity_top_bottom&quot;, &quot;transcript_count&quot;]].dropna()
+
+plt.figure(figsize=(5, 3))
+sns.regplot(
+    data=df,
+    x=&quot;transcript_count&quot;,
+    y=&quot;similarity_top_bottom&quot;,
+    scatter_kws={&quot;alpha&quot;: 0.6},
+    line_kws={&quot;color&quot;: &quot;red&quot;},
+    lowess=True,  # nonlinear
+    ci=95,
+)
+plt.tight_layout()
+</pre></div>
+</div>
+</div>
+<p>The relationship between <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> and <code class="docutils literal notranslate"><span class="pre">transcript_count</span></code> looks linear. The analytical Pearson residuals lead to stabilisation of the count effect on the cosine similarity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>x = df[&quot;transcript_count&quot;].to_numpy()
+y = df[&quot;similarity_top_bottom&quot;].to_numpy()
+
+# Linear fit
+coef_lin = np.polyfit(x, y, deg=1)
+y_hat_lin = np.polyval(coef_lin, x)
+r2_lin = r2_score(y, y_hat_lin)
+
+# Log fit
+x_log = np.log1p(x)
+coef_log = np.polyfit(x_log, y, deg=1)
+y_hat_log = np.polyval(coef_log, x_log)
+r2_log = r2_score(y, y_hat_log)
+
+# sqrt fit
+x_sqrt = np.sqrt(x)
+coef_sqrt = np.polyfit(x_sqrt, y, deg=1)
+y_hat_sqrt = np.polyval(coef_sqrt, x_sqrt)
+r2_sqrt = r2_score(y, y_hat_sqrt)
+
+print(f&quot;R² linear: {r2_lin:.3f}&quot;)
+print(f&quot;R² log1p:  {r2_log:.3f}&quot;)
+print(f&quot;R² sqrt:   {r2_sqrt:.3f}&quot;)
+</pre></div>
+</div>
+</div>
+<p>Thus, it makes sense to plot the expression similarity between top and bottom plane per cell type, as this have less variation in transcript counts and cell size.</p>
+<p>This confirms that Proseg 2 and 3 show the highest expression similarity between top and bottom plane for each cell type.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def boxplot_per_celltype(st_dict, feature, q=1):
+    dfs = []
+    for method, st in st_dict.items():
+        obs = st.sdata[&quot;table&quot;].obs[st.sdata[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].notna()].copy()
+        obs[&quot;transferred_cell_type&quot;] = obs[&quot;transferred_cell_type&quot;].cat.remove_unused_categories()
+        tmp = obs[[&quot;transferred_cell_type&quot;, feature]].copy()
+        tmp[&quot;method&quot;] = method
+        dfs.append(tmp)
+
+    df = pd.concat(dfs, ignore_index=True)
+    df = df[(df[feature] &lt;= df[feature].quantile(q))]
+
+    fig, ax = plt.subplots(figsize=(15, 5))
+
+    sns.boxplot(
+        data=df,
+        x=&quot;transferred_cell_type&quot;,
+        y=feature,
+        hue=&quot;method&quot;,
+        showcaps=True,
+        showfliers=False,
+        palette=&quot;Set2&quot;,
+        ax=ax,
+    )
+
+    fig.tight_layout()
+    plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;similarity_top_bottom&quot;)
+</pre></div>
+</div>
+</div>
+<p>Proseg achieves this despite having a lower mean transcript count overall, which would typically reduce the expected correlation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    print(f&quot;{method} mean transcript count: {st.sdata.tables[&#39;table&#39;].obs[&#39;transcript_count&#39;].mean()}&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">
+<h2>Heterotypic overlap area/fraction (detecting 3D overlaps)<a class="headerlink" href="#Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)" title="Link to this heading">#</a></h2>
+<p>This metric is designed to quantify where a quasi-3D method detects overlaps across z. It can only be computed for methods that output per-z-layer cell polygons (e.g. Proseg), because it explicitly compares cell boundaries between different z layers.</p>
+<p>Because each cell has can have polygons across more than one z layer (<code class="docutils literal notranslate"><span class="pre">cell_boundaries_z0</span></code>, …), we first pick a single representative polygon per cell: the polygon with the largest area across z. We then compare this representative polygon to polygons from other z layers, excluding polygons from the same cell and restricting to different cell types (based on <code class="docutils literal notranslate"><span class="pre">transferred_cell_type</span></code>). Cells for which no label could be assigned (<code class="docutils literal notranslate"><span class="pre">transferred_cell_type</span></code> is NaN) can either be treated as a
+separate category (default: <code class="docutils literal notranslate"><span class="pre">treat_as_label</span></code>) or excluded from the analysis.</p>
+<p>For each cell we report:</p>
+<p><code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code>: total area where the representative polygon overlaps with polygons of other cell types in different z layers</p>
+<p><code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_fraction</span></code>: the same overlap area normalized by the cell’s polygon area</p>
+<p>This metric is not intended as a standalone quality score, but is most informative when interpreted alongside other measures (see next chapter).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>proseg_dict = st_dict.copy()
+proseg_dict.pop(&quot;xenium&quot;, None)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in proseg_dict.items():
+    if &quot;proseg&quot; in method:
+        shapes_key_list = [&quot;cell_boundaries_z0&quot;, &quot;cell_boundaries_z1&quot;, &quot;cell_boundaries_z2&quot;, &quot;cell_boundaries_z3&quot;]
+        st.vl.fraction_heterotypic_overlap(unknown_policy=&quot;exclude&quot;, shapes_key_list=shapes_key_list)
+</pre></div>
+</div>
+</div>
+<p>Below we can see the distribution of the <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code> and <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_fraction</span></code> in proseg v2 and v3. Some cells have heterotypic overlap fractions &gt; 50%.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>density_plot_feature(proseg_dict, &quot;heterotypic_overlap_area&quot;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>density_plot_feature(proseg_dict, &quot;heterotypic_overlap_fraction&quot;)
+</pre></div>
+</div>
+</div>
+<p>Spatially, it is often more informative to visualize cells with high <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code> rather than high heterotypic_overlap_fraction. The fraction normalizes by cell size, so very small cells (often partial cells near the top or bottom z-planes due to tissue cutting) can show high values (often close to 1) even when the absolute overlap is negligible. In contrast, the overlap area highlights regions where a substantial amount of tissue is involved in cross-type overlap.</p>
+<p>Let’s have a look at a cell with a high <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code> in proseg2. It is a stromal cell that overlaps a dendritic cell (black cross marks cell centroid).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Identify cell with high heterotypic_overlap_area
+tbl = st_proseg3.sdata.tables[&quot;table&quot;]
+rank = 2
+idx = tbl.obs[&quot;heterotypic_overlap_area&quot;].nlargest(rank).index[rank - 1]
+x0, y0 = tbl.obs.loc[idx, &quot;centroid_x&quot;] / 0.2125, tbl.obs.loc[idx, &quot;centroid_y&quot;] / 0.2125
+
+# Define color palette for plotting
+col_celltype = {
+    &quot;T&quot;: &quot;#fb8072&quot;,
+    &quot;B&quot;: &quot;#bc80bd&quot;,
+    &quot;macro&quot;: &quot;#910290&quot;,
+    &quot;dendritic&quot;: &quot;#fdb462&quot;,
+    &quot;mast&quot;: &quot;#959059&quot;,
+    &quot;perivas&quot;: &quot;#fed9a6&quot;,
+    &quot;endo&quot;: &quot;#a6cee3&quot;,
+    &quot;myoepi&quot;: &quot;#2782bb&quot;,
+    &quot;DCIS1&quot;: &quot;#3c7761&quot;,
+    &quot;DCIS2&quot;: &quot;#66a61e&quot;,
+    &quot;tumor&quot;: &quot;#66c2a5&quot;,
+    &quot;stromal&quot;: &quot;#d45943&quot;,
+    &quot;Unknown&quot;: &quot;#808080&quot;,
+}
+
+axes = plt.subplots(1, 3, figsize=(21, 7), constrained_layout=True)[1].flatten()
+
+s = st_proseg3.sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;]
+if pd.api.types.is_categorical_dtype(s):
+    s = s.cat.add_categories([&quot;Unknown&quot;])
+
+st_proseg3.sdata.tables[&quot;table&quot;].obs[&quot;transferred_celltype_plot&quot;] = s.fillna(&quot;Unknown&quot;)
+
+labels = st_proseg3.sdata.tables[&quot;table&quot;].obs[&quot;transferred_celltype_plot&quot;].unique().astype(str).tolist()
+cols = [col_celltype[lab] for lab in labels]
+
+# Bottom plane
+st_proseg3.sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries_z0&quot;
+st_proseg3.sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries_z0&quot;)
+
+st_proseg3.sdata.pl.render_shapes(
+    &quot;cell_boundaries_z0&quot;, color=&quot;transferred_celltype_plot&quot;, palette=cols, groups=labels
+).pl.show(ax=axes[0], title=&quot;Bottom: Cell masks colored by transferred cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+# Top plane
+st_proseg3.sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries_z1&quot;
+st_proseg3.sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries_z1&quot;)
+
+st_proseg3.sdata.pl.render_shapes(
+    &quot;cell_boundaries_z1&quot;, color=&quot;transferred_celltype_plot&quot;, palette=cols, groups=labels
+).pl.show(ax=axes[1], title=&quot;Top: Cell masks colored by transferred cell type&quot;, coordinate_systems=&quot;global&quot;)
+
+st_proseg3.sdata.pl.render_shapes(&quot;cell_boundaries_z1&quot;, color=&quot;heterotypic_overlap_area&quot;).pl.show(
+    ax=axes[2], title=&quot;Bottom: Cell masks colored by heterotypic_overlap_area&quot;, coordinate_systems=&quot;global&quot;
+)
+
+# Add landmark at centroid of cell with high heterotypic overlap area
+for ax in axes:
+    ax.scatter([x0], [y0], marker=&quot;+&quot;, s=400, c=&quot;black&quot;, linewidths=2, zorder=10)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)">
+<h2>Mean VSI per cell (ovrlpy-based vertical signal integrity)<a class="headerlink" href="#Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full">Ovrlpy</a> is a package for detecting 3D overlap in spatial transcriptomics by using transcript coordinates. It computes a Vertical Signal Integrity (VSI) map that highlights regions where the transcriptome signal is consistent across depth versus regions that likely contain vertical mixing (e.g. overlapping cells or tissue folds). Conceptually, VSI compares local gene expression between a virtual top and virtual bottom subslice
+of the tissue: high VSI indicates strong agreement, while low VSI suggests potential 3D overlap or other depth-related artifacts.</p>
+<p>To connect this pixel-level map to our 3D metrics, we compute mean VSI per cell by sampling the VSI value at each transcript’s (x,y) position and averaging these values across all transcripts assigned to the same cell.</p>
+<p>We can run the compute the VSI map and extract the mean VSI per cell.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>n_celltypes = st_xenium.sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].nunique()
+
+for _method, st in st_dict.items():
+    _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={&quot;n_components&quot;: n_celltypes}, n_workers=8)
+</pre></div>
+</div>
+</div>
+<p>Plotting <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> against <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code> shows a weaker association in Proseg v2 (and Proseg v3) than in Xenium. One plausible explanation is that Proseg’s quasi-3D assignment reduces the impact of vertically mixed regions on per-cell expression consistency: even where <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code> is low (regions that look vertically inconsistent in the raw transcript field), Proseg can assign transcripts more coherently to individual cells, resulting in relatively high <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code>.
+In Xenium, by contrast, low-VSI regions more directly translate into lower within-cell top–bottom similarity, yielding a stronger correlation.</p>
+<p>We filter out cells with transcript counts below the 10th percentile, as low-count cells tend to produce noisier and less stable similarity estimates.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>n = len(st_dict)
+fig, axes = plt.subplots(1, n, figsize=(5 * n, 4), sharey=True)
+axes = np.atleast_1d(axes)
+
+for ax, (method, st) in zip(axes, st_dict.items(), strict=False):
+    df = (
+        st.sdata.tables[&quot;table&quot;]
+        .obs[[&quot;vertical_signal_integrity&quot;, &quot;similarity_top_bottom&quot;, &quot;transcript_count&quot;]]
+        .dropna()
+    )
+    df = df[df[&quot;transcript_count&quot;] &gt; df[&quot;transcript_count&quot;].quantile(0.1)]  # filter low count cells
+
+    r = np.corrcoef(df[&quot;vertical_signal_integrity&quot;], df[&quot;similarity_top_bottom&quot;])[0, 1]
+    r2 = r**2
+
+    sns.regplot(
+        data=df,
+        x=&quot;vertical_signal_integrity&quot;,
+        y=&quot;similarity_top_bottom&quot;,
+        scatter_kws={&quot;alpha&quot;: 0.6},
+        line_kws={&quot;color&quot;: &quot;red&quot;},
+        # lowess=True,
+        ci=95,
+        ax=ax,
+    )
+
+    ax.set_title(f&quot;{method} (R² = {r2:.3f})&quot;)
+    ax.set_xlabel(&quot;vertical_signal_integrity&quot;)
+    ax.set_ylabel(&quot;similarity_top_bottom&quot;)
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>In addition, proseg v2 and v3 shows large <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_fraction</span></code> values at low <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code>, this supports the idea that Proseg is successfully detecting substantial cross-type overlap in regions with poor vertical signal integrity. In other words, low-VSI regions (where the raw transcript field appears vertically inconsistent and prone to 3D mixing) coincide with locations where Proseg identifies strong heterotypic overlap across z-layers. This suggests that the overlap signal
+captured by ovrlpy (low VSI) corresponds to biologically and geometrically meaningful overlap events that Proseg can partially represent in its quasi-3D segmentation output.</p>
+<p>We evaluate this relation in cell types individually to reduce confounding from large cell-type–specific differences in transcript abundance.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>n = len(proseg_dict)
+fig, axes = plt.subplots(1, n, figsize=(4 * n, 3), sharex=False, sharey=False)
+axes = np.atleast_1d(axes)
+
+for j, (method, st) in enumerate(proseg_dict.items()):
+    obs = st.sdata.tables[&quot;table&quot;].obs
+
+    df = obs.loc[
+        obs[&quot;transferred_cell_type&quot;] == &quot;DCIS2&quot;, [&quot;vertical_signal_integrity&quot;, &quot;heterotypic_overlap_fraction&quot;]
+    ].dropna()
+
+    ax = axes[j]
+    r = np.corrcoef(df[&quot;vertical_signal_integrity&quot;], df[&quot;heterotypic_overlap_fraction&quot;])[0, 1]
+
+    sns.regplot(
+        data=df,
+        x=&quot;vertical_signal_integrity&quot;,
+        y=&quot;heterotypic_overlap_fraction&quot;,
+        scatter_kws={&quot;alpha&quot;: 0.6},
+        line_kws={&quot;color&quot;: &quot;red&quot;},
+        ci=95,
+        ax=ax,
+    )
+
+    ax.set_title(f&quot;{method} (R={r:.3f})&quot;)
+    ax.set_xlabel(&quot;vertical_signal_integrity&quot;)
+    ax.set_ylabel(&quot;heterotypic_overlap_fraction&quot;)
+
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<p>Wrapper to run all metrics (including label transfer).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for method, st in st_dict.items():
+    if &quot;proseg&quot; in method:
+        shapes_key_list = [&quot;cell_boundaries_z0&quot;, &quot;cell_boundaries_z1&quot;, &quot;cell_boundaries_z2&quot;, &quot;cell_boundaries_z3&quot;]
+
+        st.run_volume(
+            adata_ref=adata_ref,
+            ref_cell_type=&quot;celltype_major&quot;,
+            ref_raw_counts_layer=&quot;raw&quot;,
+            heterotypic_overlap_kwargs={&quot;shapes_key_list&quot;: shapes_key_list},
+        )
+
+    else:
+        st.run_volume(adata_ref=adata_ref, ref_cell_type=&quot;celltype_major&quot;, ref_raw_counts_layer=&quot;raw&quot;)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Session-Info">
+<h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
+print(spatialdata_plot.__version__)
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="region_similarity.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Module: Region Similarity</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="supervised.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Module: Supervised Metrics</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-data-into-SegTraQ-and-run-label-transfer">Load data into SegTraQ and run label transfer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Inspect-z-distribution-of-transcripts">Inspect z distribution of transcripts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Top–bottom-z-consistency-(cosine-similarity)">Top–bottom z consistency (cosine similarity)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">Heterotypic overlap area/fraction (detecting 3D overlaps)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)">Mean VSI per cell (ovrlpy-based vertical signal integrity)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

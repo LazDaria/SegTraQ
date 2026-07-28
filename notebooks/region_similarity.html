@@ -1,0 +1,1320 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Module: Region Similarity &#8212; SegTraQ</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/region_similarity';</script>
+    <link rel="icon" href="../_static/icon.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Module: Volume (3D)" href="volume.html" />
+    <link rel="prev" title="Module: Clustering Stability" href="clustering_stability.html" />
+    <link href="../_static/style.css" rel="stylesheet" type="text/css">
+
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
+    <script>document.write(`<img src="../_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/utils.html">Utility functions</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="io.html">Data Preparation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseline.html">Module: Baseline Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">Module: Clustering Stability</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Module: Region Similarity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="volume.html">Module: Volume (3D)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">Module: Supervised Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="point_statistics.html">Module: Point Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Module: Plotting</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/notebooks/region_similarity.py" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.py</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Module: Region Similarity</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-Nucleus-and-Cytoplasm">Similarity between Nucleus and Cytoplasm</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-cell-center-and-border">Similarity between the cell center and border</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-border-and-neighborhood">Similarity between the border and neighborhood</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Border-admixture-score">Border admixture score</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Module:-Region-Similarity">
+<h1>Module: Region Similarity<a class="headerlink" href="#Module:-Region-Similarity" title="Link to this heading">#</a></h1>
+<p>Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.</p>
+<center><p><img alt="b0cd50dc14b64e649b1fd8e97ff36132" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
+</center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module provides metrics to assess how similar the expression profiles are between subcellular regions (e.g., cell and nucleus).</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
+%autoreload 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import spatialdata as sd
+import spatialdata_plot  # noqa
+from scipy.stats import linregress
+
+import segtraq
+</pre></div>
+</div>
+</div>
+<p>We start out by loading the data into a <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata = sd.read_zarr(&quot;../../../data/xenium_v1_data/sdata_xenium_crop.zarr/&quot;)
+st = segtraq.SegTraQ(
+    sdata,
+    tables_centroid_x_key=None,
+    tables_centroid_y_key=None,
+    points_background_id=-1,  # &quot;UNASSIGNED&quot; for Xenium prime
+)
+
+sdata
+</pre></div>
+</div>
+</div>
+<p>As you can see, the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code>dataset contains cell and nuclear masks as <code class="docutils literal notranslate"><span class="pre">shapes</span></code>. It is important that you have a nuclear segmentation in your object, otherwise you will not be able to compute the metrics below.</p>
+<section id="Intersection-over-Union-between-cell-and-nucleus-masks">
+<h2>Intersection over Union between cell and nucleus masks<a class="headerlink" href="#Intersection-over-Union-between-cell-and-nucleus-masks" title="Link to this heading">#</a></h2>
+<p>First, we get the nucleus that overlaps most with each cell and compute the Intersection over Union (IoU) between cell and nuclear masks using the method <code class="docutils literal notranslate"><span class="pre">match_nuclei_to_cells()</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>results_df = st.rs.match_nuclei_to_cells()
+results_df.head()
+</pre></div>
+</div>
+</div>
+<p>For each <code class="docutils literal notranslate"><span class="pre">cell_id</span></code>, we obtain the ID (<code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>) of the nucleus mask with the highest <code class="docutils literal notranslate"><span class="pre">IoU</span></code>. If a cell does not overlap with any nucleus, the function returns a missing value for <code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>. In addition to the <code class="docutils literal notranslate"><span class="pre">IoU</span></code>, we also report the fraction of the nucleus that overlaps with the cell. If the nucleus has an invalid geometry, <code class="docutils literal notranslate"><span class="pre">IoU</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> are reported as <code class="docutils literal notranslate"><span class="pre">NA</span></code>.</p>
+<p>Let’s see what this looks like when we plot the IoU spatially.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+# plot
+sdata.pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;iou&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;nucleus_boundaries&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(title=&quot;Overlay of nuclei and cell masks colored by IoU&quot;, colorbar=True)
+</pre></div>
+</div>
+</div>
+<p>We will quickly set up some helper functions to facilitate plotting.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># helper functions for plotting
+def plot_histogram(
+    df,
+    column,
+    bins=30,
+    figsize=(6, 5),
+    color=&quot;steelblue&quot;,
+    edgecolor=&quot;black&quot;,
+    show_median=True,
+    median_kwargs=None,
+    median_color=&quot;red&quot;,
+    title=None,
+    xlabel=None,
+    ylabel=&quot;Count&quot;,
+    ax=None,
+):
+    values = df[column].dropna()
+    median_value = np.median(values)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    ax.hist(values, bins=bins, color=color, edgecolor=edgecolor)
+
+    if show_median:
+        median_kwargs = median_kwargs or {}
+        ax.axvline(
+            median_value,
+            linestyle=&quot;--&quot;,
+            linewidth=2,
+            color=median_color,
+            label=f&quot;Median = {median_value:.2f}&quot;,
+            **median_kwargs,
+        )
+        ax.legend()
+
+    ax.set_title(title or f&quot;Distribution of {column}&quot;)
+    ax.set_xlabel(xlabel or column)
+    ax.set_ylabel(ylabel)
+
+    plt.show()
+
+
+def plot_regression(
+    df,
+    x,
+    y,
+    figsize=(6, 6),
+    dropna=True,
+    ci=95,
+    scatter_kws=None,
+    line_kws=None,
+    title=None,
+    xlabel=None,
+    ylabel=None,
+    r2_loc=(0.05, 0.95),
+    r2_fmt=&quot;{:.3f}&quot;,
+    ax=None,
+):
+    data = df[[x, y]]
+    if dropna:
+        data = data.dropna()
+
+    # Regression stats
+    slope, intercept, r_value, p_value, std_err = linregress(data[x], data[y])
+    r_squared = r_value**2
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    scatter_kws = scatter_kws or {&quot;alpha&quot;: 0.6}
+    line_kws = line_kws or {&quot;color&quot;: &quot;red&quot;}
+
+    sns.regplot(
+        data=data,
+        x=x,
+        y=y,
+        ci=ci,
+        scatter_kws=scatter_kws,
+        line_kws=line_kws,
+        ax=ax,
+    )
+
+    # R² annotation
+    ax.text(
+        r2_loc[0],
+        r2_loc[1],
+        rf&quot;$R^2 = {r2_fmt.format(r_squared)}$&quot;,
+        transform=ax.transAxes,
+        verticalalignment=&quot;top&quot;,
+        fontsize=12,
+        bbox=dict(boxstyle=&quot;round,pad=0.3&quot;, facecolor=&quot;white&quot;, alpha=0.8),
+    )
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    ax.set_title(title or f&quot;{y} vs. {x}&quot;)
+    ax.grid(True)
+
+    plt.show()
+</pre></div>
+</div>
+</div>
+<p>We can now investigate what the distribution of IoUs looks like.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_histogram(
+    df=sdata[&quot;table&quot;].obs,
+    column=&quot;iou&quot;,
+    xlabel=&quot;Intersection over Union (IoU)&quot;,
+)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Expression-similarity-between-cell-and-nucleus">
+<h2>Expression similarity between cell and nucleus<a class="headerlink" href="#Expression-similarity-between-cell-and-nucleus" title="Link to this heading">#</a></h2>
+<p>Now that we have matched each cell with a nucleus, we can investigate how similar the expression profiles are between the nucleus and the whole cell (including the nucleus). For this, we use the function <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell()</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>similarity_df = st.rs.similarity_nucleus_cell()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_histogram(
+    df=sdata[&quot;table&quot;].obs,
+    column=&quot;similarity_nucleus_cell&quot;,
+    title=&quot;Cosine similarity between cell and nucleus expression&quot;,
+    xlabel=&quot;Cosine similarity&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The histogram shows the distribution of cosine similarity values across cells. It is right-skewed, with a median of 0.73. This provides intuition about possible spatial spillover: cells may be contaminated by neighboring cells, assuming that nuclei capture expression with less contamination due to their smaller radius.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_regression(
+    df=sdata[&quot;table&quot;].obs,
+    x=&quot;iou&quot;,
+    y=&quot;similarity_nucleus_cell&quot;,
+    title=&quot;Cosine sim. vs. IoU with Regression Line&quot;,
+    ylabel=&quot;Cosine similarity between cell and nucleus intersection&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The calculated R2 (coefficient of determination) is 0.428, indicating that similarity between cell and nucleus increases with their IoU.</p>
+<p>The spatial plot below shows cell boundaries colored by cosine similarity between the nucleus and the cell. Cells whose transcripts are distributed across the nucleus region tend to have higher similarity with the nucleus, while cells whose transcripts are located outside the nuclear region —potentially due to spillover from neighboring cells— tend to exhibit lower similarity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+# plot
+fig, ax = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)
+
+sdata.pl.render_shapes(
+    element=&quot;nucleus_boundaries&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;iou&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(ax=ax[0], title=&quot;Overlay of nuclei and cell masks colored by IoU&quot;, colorbar=True)
+
+sdata.pl.render_shapes(
+    element=&quot;nucleus_boundaries&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;similarity_nucleus_cell&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(ax=ax[1], title=&quot;Overlay of nuclei and cell masks colored by cosine similarity&quot;, colorbar=True)
+</pre></div>
+</div>
+</div>
+<p>Let’s have a look at some cells with a low IoU, but a high similarity between the nucleus and the whole cell.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>obs = sdata[&quot;table&quot;].obs
+df = obs[[&quot;cell_id&quot;, &quot;iou&quot;, &quot;similarity_nucleus_cell&quot;]].dropna()
+df.loc[df[&quot;iou&quot;] &lt; 0.1].sort_values(&quot;similarity_nucleus_cell&quot;, ascending=False).head()
+</pre></div>
+</div>
+</div>
+<p>We can see that there are some cells with high <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code> despite low <code class="docutils literal notranslate"><span class="pre">IoU</span></code>. Let’s investigate one of these cells in more detail. By plotting the cell (centroid marked by grey cross) with its nucleus (centroid marked by black cross) and assigned transcripts (red), we can see that for this cell, the nucleus is small in comparison to the cell, however the transcripts are still somewhat homogeneously distributed within the cell, leading to the high similarity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>cid = (
+    df.loc[df[&quot;iou&quot;] &lt; 0.1]
+    .dropna(subset=[&quot;similarity_nucleus_cell&quot;])
+    .sort_values(&quot;similarity_nucleus_cell&quot;, ascending=False)
+    .iloc[0][&quot;cell_id&quot;]
+)
+cid
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># helper function for plotting
+def plot_cell_with_nucleus_and_transcripts(
+    cid: float | int,
+    title: str,
+    pix_to_um_scale_factor: float = 0.2125,
+    repositioned_transcripts: bool = False,
+    padding=200,
+    points_gene_key=&quot;feature_name&quot;,
+    tables_cell_id_key=&quot;cell_id&quot;,
+    points_cell_id_key=&quot;cell_id&quot;,
+    genes=None,
+    center_layer=&quot;nucleus_boundaries&quot;,
+    outer_layer=&quot;cell_boundaries&quot;,
+):
+    # add annotation of this cell to .obs
+    sdata[&quot;table&quot;].obs[&quot;focal_cell&quot;] = sdata[&quot;table&quot;].obs.index == cid
+
+    # compute x,y of cell and nucleus centroids in µm space
+    centroid_x_cell_px = sdata[&quot;cell_boundaries&quot;].loc[cid].geometry.centroid.x
+    centroid_y_cell_px = sdata[&quot;cell_boundaries&quot;].loc[cid].geometry.centroid.y
+    centroid_x_cell = centroid_x_cell_px / pix_to_um_scale_factor
+    centroid_y_cell = centroid_y_cell_px / pix_to_um_scale_factor
+
+    nid = sdata[&quot;table&quot;].obs.loc[sdata[&quot;table&quot;].obs[tables_cell_id_key] == cid, &quot;nucleus_id&quot;]
+    centroid_x_nucleus = sdata[&quot;nucleus_boundaries&quot;].loc[nid].geometry.centroid.x / pix_to_um_scale_factor
+    centroid_y_nucleus = sdata[&quot;nucleus_boundaries&quot;].loc[nid].geometry.centroid.y / pix_to_um_scale_factor
+
+    # add annotation of this cell to .points and build new `PointsModel``
+    trans = sdata.points[&quot;transcripts&quot;].compute()
+    trans[&quot;focal_cell&quot;] = &quot;other_cells&quot;
+    trans.loc[trans[points_cell_id_key] == cid, &quot;focal_cell&quot;] = &quot;focal_cell&quot;
+    trans[&quot;focal_cell&quot;] = trans[&quot;focal_cell&quot;].astype(&quot;category&quot;)
+    if repositioned_transcripts:
+        trans = trans.drop(columns=[&quot;x&quot;, &quot;y&quot;, &quot;z&quot;])
+        trans = trans.rename(columns={&quot;repositioned_x&quot;: &quot;x&quot;, &quot;repositioned_y&quot;: &quot;y&quot;, &quot;repositioned_z&quot;: &quot;z&quot;})
+    sdata.points[&quot;transcripts_2&quot;] = sd.models.PointsModel.parse(trans)
+    T = sd.transformations.get_transformation(sdata.points[&quot;transcripts&quot;])
+    sd.transformations.set_transformation(sdata.points[&quot;transcripts_2&quot;], T)
+
+    # zoom in for better visibility
+    sdata_cropped = sdata.query.bounding_box(
+        axes=[&quot;x&quot;, &quot;y&quot;],
+        min_coordinate=[centroid_x_cell - padding, centroid_y_cell - padding],
+        max_coordinate=[centroid_x_cell + padding, centroid_y_cell + padding],
+        target_coordinate_system=&quot;global&quot;,
+    )
+
+    # plot cell and transcripts of that cell
+    axes = plt.subplots(1, 1, figsize=(6, 6), constrained_layout=True)[1]
+
+    plot = sdata_cropped.pl.render_shapes(
+        element=center_layer,
+        fill_alpha=0.2,
+        outline_alpha=1.0,
+        outline_width=0.5,
+        outline_color=&quot;black&quot;,
+    ).pl.render_shapes(
+        element=outer_layer,
+        color=&quot;focal_cell&quot;,
+        fill_alpha=0.1,
+        outline_alpha=1.0,
+        outline_width=0.5,
+        outline_color=&quot;blue&quot;,
+    )
+
+    if genes is None:
+        plot = plot.pl.render_points(
+            &quot;transcripts_2&quot;,
+            color=&quot;focal_cell&quot;,
+            fill_alpha=0.1,
+            groups=[&quot;focal_cell&quot;],
+            palette=[&quot;red&quot;],
+        )
+    else:
+        plot = plot.pl.render_points(
+            &quot;transcripts&quot;,
+            color=points_gene_key,
+            fill_alpha=0.1,
+            groups=genes,
+            palette=[&quot;red&quot;],
+        )
+
+    plot.pl.show(
+        ax=axes,
+        title=title,
+        colorbar=True,
+    )
+
+    # landmark for cell and nucleus centroid
+    axes.scatter([centroid_x_cell], [centroid_y_cell], marker=&quot;+&quot;, s=400, c=&quot;black&quot;, linewidths=2, zorder=10, alpha=0.4)
+    axes.scatter([centroid_x_nucleus], [centroid_y_nucleus], marker=&quot;+&quot;, s=400, c=&quot;black&quot;, linewidths=2, zorder=10)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_cell_with_nucleus_and_transcripts(cid, title=&quot;Cell with high similarity_nucleus_cell despite high IoU&quot;)
+</pre></div>
+</div>
+</div>
+<p>Just looking at the similarity between the nucleus and the entire cell isn’t specific enough. As a better metric, we therefore compute the similarity between the transcripts in the cell region intersecting the nucleus and the transcripts in the remaining cell region (we call this the cytoplasm, however with Proseg, this can also include transcripts that were originally measured outside of the cell).</p>
+</section>
+<section id="Similarity-between-Nucleus-and-Cytoplasm">
+<h2>Similarity between Nucleus and Cytoplasm<a class="headerlink" href="#Similarity-between-Nucleus-and-Cytoplasm" title="Link to this heading">#</a></h2>
+<p>The function <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm()</span></code> computes the cosine similarity between the spatial transcript feature counts within the nucleus and the cytoplasm. It is applicable only when nuclear masks are available. It returns <code class="docutils literal notranslate"><span class="pre">NaN</span></code> when the regions have no or not a sufficient number of overlapping transcripts (<code class="docutils literal notranslate"><span class="pre">min_transcripts</span></code>, <code class="docutils literal notranslate"><span class="pre">min_genes</span></code>). A low correlation/similarity may indicate that the cell boundary extension captures neighborhood or ambient signal rather than true intracellular
+expression—a concern similarly highlighted by segmentation benchmarks such as <a class="reference external" href="https://www.nature.com/articles/s41587-021-01044-w">Baysor</a>. This is based on the assumption that transcripts are homogeneously distributed within the cell and not localized in specific subcellular regions.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sim_nuc_cyto_df = st.rs.similarity_nucleus_cytoplasm()
+sim_nuc_cyto_df.head()
+</pre></div>
+</div>
+</div>
+<p>The histogram below shows that the cosine similarity between the nucleus and remaining part of the cell is 0.45.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_histogram(
+    df=sdata[&quot;table&quot;].obs,
+    column=&quot;similarity_nucleus_cytoplasm&quot;,
+    xlabel=&quot;Cosine Similarity - Nucleus vs. Cytoplasm&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The scatter plot below visualizes the cosine similarity between transcript counts in the intersection and remainder of each cell, plotted against the Intersection over Union (IoU) with the nucleus. The calculated R2 value is 0.032, indicating that <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code> less dependent on <code class="docutils literal notranslate"><span class="pre">IoU</span></code> than <code class="docutils literal notranslate"><span class="pre">similarity_cell_nucleus</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_regression(
+    df=sdata[&quot;table&quot;].obs,
+    x=&quot;iou&quot;,
+    y=&quot;similarity_nucleus_cytoplasm&quot;,
+    title=&quot;Cosine sim. vs. IoU with Regression Line&quot;,
+    ylabel=&quot;Cosine similarity between nucleus and cytoplasm&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The spatial plots below shows the spatial distribution of computed correlations. The cosine similarity between parts can be a measure of how much neighboring signal is captured.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+axes = plt.subplots(1, 3, figsize=(16, 6), constrained_layout=True)[1].flatten()
+
+sdata.pl.render_shapes(
+    element=&quot;nucleus_boundaries&quot;,
+    fill_alpha=0.2,
+    outline_width=0.5,
+    outline_alpha=1.0,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;iou&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(
+    ax=axes[0],
+    title=&quot;Intersection over Union (IoU)&quot;,
+    colorbar=True,
+    figsize=(6, 6),
+)
+
+sdata.pl.render_shapes(
+    element=&quot;nucleus_boundaries&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;similarity_nucleus_cell&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(
+    ax=axes[1],
+    title=&quot;Nucleus vs. whole cell&quot;,
+    colorbar=True,
+    figsize=(6, 6),
+)
+
+sdata.pl.render_shapes(
+    element=&quot;nucleus_boundaries&quot;,
+    fill_alpha=0.2,
+    outline_width=0.5,
+    outline_alpha=1.0,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;similarity_nucleus_cytoplasm&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(
+    ax=axes[2],
+    title=&quot;Nucleus vs. cytoplasm&quot;,
+    colorbar=True,
+    figsize=(6, 6),
+)
+</pre></div>
+</div>
+</div>
+<p>Above, we can see that there are some cells with low cosine similarity between parts despite high <code class="docutils literal notranslate"><span class="pre">IoU</span></code>.</p>
+</section>
+<section id="Similarity-between-the-cell-center-and-border">
+<h2>Similarity between the cell center and border<a class="headerlink" href="#Similarity-between-the-cell-center-and-border" title="Link to this heading">#</a></h2>
+<p>The function <code class="docutils literal notranslate"><span class="pre">similarity_center_border()</span></code> computes the cosine similarity between gene expression in the cell interior (“center”) and outer ring (“border”).</p>
+<p>Specifically, it:</p>
+<ol class="arabic simple">
+<li><p>Computes an equivalent radius for each cell and defines two erosion distances.</p></li>
+<li><p>Constructs:</p></li>
+</ol>
+<ul class="simple">
+<li><p>Border: outer ring of the cell</p></li>
+<li><p>Center: inner eroded region</p></li>
+<li><p>A buffer region between them is ignored</p></li>
+</ul>
+<ol class="arabic simple" start="3">
+<li><p>Assigns transcripts to center and border regions.</p></li>
+<li><p>Computes expression profiles and applies normalization and log transformation.</p></li>
+<li><p>Computes cosine similarity between center and border expression.</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>center_border_df = st.rs.similarity_center_border()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>center_border_df.head()
+</pre></div>
+</div>
+</div>
+<p>The histogram below shows the distribution of the similarity between the cell center and border.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_histogram(
+    df=sdata[&quot;table&quot;].obs,
+    column=&quot;similarity_center_border&quot;,
+    xlabel=&quot;Cosine Similarity - Cell center vs. border&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The spatial plots below shows the spatial distribution of computed similarity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+sdata.pl.render_shapes(
+    element=&quot;cell_centers&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_borders&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;similarity_center_border&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(
+    title=&quot;Similarity: center vs. border&quot;,
+    colorbar=True,
+    figsize=(6, 6),
+)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Similarity-between-the-border-and-neighborhood">
+<h2>Similarity between the border and neighborhood<a class="headerlink" href="#Similarity-between-the-border-and-neighborhood" title="Link to this heading">#</a></h2>
+<p>The function <code class="docutils literal notranslate"><span class="pre">similarity_border_neighborhood()</span></code> computes the cosine similarity between gene expression in the cell border and its surrounding neighborhood.</p>
+<p>Specifically, it:</p>
+<ol class="arabic simple">
+<li><p>Defines the border region as the outer ring of each cell (with an inner buffer gap).</p></li>
+<li><p>Identifies neighboring cells based on a distance threshold relative to cell size.</p></li>
+<li><p>Aggregates transcripts from neighboring cells to obtain a neighborhood expression profile.</p></li>
+<li><p>Computes expression profiles for the border and neighborhood.</p></li>
+<li><p>Applies normalization and log transformation.</p></li>
+<li><p>Computes cosine similarity between border and neighborhood expression.</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>border_nh_df = st.rs.similarity_border_neighborhood()
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>border_nh_df.head()
+</pre></div>
+</div>
+</div>
+<p>The histogram below shows the distribution of the similarity between the cell border and neighborhood.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_histogram(
+    df=sdata[&quot;table&quot;].obs,
+    column=&quot;similarity_border_neighborhood&quot;,
+    xlabel=&quot;Cosine Similarity - Cell border vs. neighborhood&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The spatial plots below shows the spatial distribution of computed similarity.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+sdata.pl.render_shapes(
+    element=&quot;cell_centers&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_borders&quot;,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.render_shapes(
+    element=&quot;cell_boundaries&quot;,
+    color=&quot;similarity_border_neighborhood&quot;,
+    cmap=&quot;viridis&quot;,
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color=&quot;black&quot;,
+).pl.show(
+    title=&quot;Similarity: border vs. neighborhood&quot;,
+    colorbar=True,
+    figsize=(6, 6),
+)
+</pre></div>
+</div>
+</div>
+<p>The border can resemble both the center and the neighborhood. A more specific indication of potential contamination can be obtained by comparing these similarities, for example via their ratio.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata.tables[&quot;table&quot;].obs[&quot;neighborhood_center_ratio&quot;] = (
+    sdata.tables[&quot;table&quot;].obs[&quot;similarity_border_neighborhood&quot;] / sdata.tables[&quot;table&quot;].obs[&quot;similarity_center_border&quot;]
+)
+sdata.tables[&quot;table&quot;].obs[&quot;neighborhood_center_ratio&quot;] = (
+    sdata.tables[&quot;table&quot;].obs[&quot;neighborhood_center_ratio&quot;].replace([np.inf, -np.inf], np.nan)
+)
+sdata.tables[&quot;table&quot;].obs[&quot;neighborhood_center_ratio_clipped&quot;] = (
+    sdata.tables[&quot;table&quot;]
+    .obs[&quot;neighborhood_center_ratio&quot;]
+    .clip(upper=sdata.tables[&quot;table&quot;].obs[&quot;neighborhood_center_ratio&quot;].quantile(q=0.95))
+)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+axes = plt.subplots(1, 4, figsize=(20, 6), constrained_layout=True)[1].flatten()
+
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;similarity_center_border&quot;).pl.show(
+    ax=axes[0], title=&quot;similarity_center_border&quot;
+)
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;similarity_border_neighborhood&quot;).pl.show(
+    ax=axes[1], title=&quot;similarity_border_neighborhood&quot;
+)
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;neighborhood_center_ratio&quot;).pl.show(
+    ax=axes[2], title=&quot;neighborhood_center_ratio&quot;
+)
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;neighborhood_center_ratio_clipped&quot;).pl.show(
+    ax=axes[3], title=&quot;neighborhood_center_ratio_clipped (95th perc)&quot;
+)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Border-admixture-score">
+<h2>Border admixture score<a class="headerlink" href="#Border-admixture-score" title="Link to this heading">#</a></h2>
+<p>The ratio between border–neighborhood and center–border similarity can be unstable, as it can become very large when the similarity between center and border is close to zero. A more robust metric is therefore the <strong>border admixture score</strong>, which explicitly models the border as a mixture of center and neighborhood expression.</p>
+<p>Specifically, the function <code class="docutils literal notranslate"><span class="pre">border_admixture_score()</span></code>:</p>
+<ol class="arabic simple">
+<li><p>Computes gene expression profiles for center, border, and neighborhood regions.</p></li>
+<li><p>Converts counts to gene proportions (with a small pseudocount).</p></li>
+<li><p>Models the border profile as a mixture:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[p_{\text{border}} \approx (1 - \alpha)\, p_{\text{center}} + \alpha\, p_{\text{neighborhood}}\]</div>
+<ol class="arabic simple" start="4">
+<li><p>Estimates the mixture weight <span class="math notranslate nohighlight">\(\alpha\)</span> using least squares.</p></li>
+<li><p>Computes how much better this mixture explains the border compared to the center alone (<code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code>).</p></li>
+<li><p>Estimates confidence intervals via bootstrap resampling.</p></li>
+</ol>
+<p>The resulting score reflects how strongly the border resembles the neighborhood beyond what is expected from the center alone.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.rs.border_admixture_score(n_jobs=-1)
+</pre></div>
+</div>
+</div>
+<p>The histogram below shows the distribution of the border_admixture_score.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>plot_histogram(
+    df=sdata[&quot;table&quot;].obs,
+    column=&quot;border_admixture_score&quot;,
+    xlabel=&quot;Border admixture score&quot;,
+)
+</pre></div>
+</div>
+</div>
+<p>The confidence interval reflects the uncertainty in the border admixture score due to limited and noisy transcript counts, estimated via bootstrap resampling. It should be considered to distinguish robust signals from effects that could arise by chance, especially in sparse data.</p>
+<p>A border_admixture_score &gt; 0 indicates that including the neighborhood improves the fit to the border compared to using the center alone. A score of 1 means that the border expression is perfectly explained by a mixture of center and neighborhood.</p>
+<p>To identify potentially contaminated cells, we use a threshold of 0.25 and require that the lower bound of the confidence interval exceeds this threshold, ensuring that only cells with a robust and consistent neighborhood contribution are selected.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>obs = sdata.tables[&quot;table&quot;].obs
+
+obs[&quot;border_admixture_score_confident_binary&quot;] = obs[&quot;border_admixture_score_ci_low&quot;] &gt; 0.25
+
+obs[&quot;border_admixture_score_confident&quot;] = obs[&quot;border_admixture_score&quot;]
+
+obs.loc[~obs[&quot;border_admixture_score_confident_binary&quot;], &quot;border_admixture_score_confident&quot;] = np.nan
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># link annotations with cell boundaries
+sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
+sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+
+axes = plt.subplots(1, 3, figsize=(20, 6), constrained_layout=True)[1].flatten()
+
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;border_admixture_score&quot;).pl.show(
+    ax=axes[0], title=&quot;Border admixture score (all cells)&quot;
+)
+
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;border_admixture_score_confident_binary&quot;).pl.show(
+    ax=axes[1], title=&quot;Cells with significant neighborhood contribution (CI &gt; 0.25)&quot;
+)
+
+sdata.pl.render_shapes(element=&quot;cell_boundaries&quot;, color=&quot;border_admixture_score_confident&quot;).pl.show(
+    ax=axes[2], title=&quot;Border admixture score (confidence-filtered)&quot;
+)
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Session-Info">
+<h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
+print(spatialdata_plot.__version__)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="clustering_stability.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Module: Clustering Stability</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="volume.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Module: Volume (3D)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-Nucleus-and-Cytoplasm">Similarity between Nucleus and Cytoplasm</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-cell-center-and-border">Similarity between the cell center and border</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-border-and-neighborhood">Similarity between the border and neighborhood</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Border-admixture-score">Border admixture score</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Daria Lazic, Matthias Meyer-Bender, Martin Emons
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Daria Lazic, Matthias Meyer-Bender, Martin Emons.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
