@@ -15,65 +15,58 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-
-  
-  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+  <link href="_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=4418a689" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
 
     <script src="_static/documentation_options.js?v=c73c0f3e"></script>
-    <script src="_static/doctools.js?v=9bcbadda"></script>
-    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="_static/icon.png"/>
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
     <link href="_static/style.css" rel="stylesheet" type="text/css">
 
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="search.html"
       method="get">
@@ -81,7 +74,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -89,15 +81,55 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
     </header>
   
 
@@ -108,7 +140,8 @@
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -138,49 +171,26 @@
     
     
     <img src="_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
-    <script>document.write(`<img src="_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+    <img src="_static/logo_dark.png" class="logo__image only-dark pst-js-only" alt="SegTraQ - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="modules/io.html">The (<code class="code docutils literal notranslate"><span class="pre">io</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/supervised.html">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/utils.html">Utility functions</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
-<ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="notebooks/io.html">Data Preparation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/baseline.html">Module: Baseline Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/clustering_stability.html">Module: Clustering Stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/region_similarity.html">Module: Region Similarity</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/volume.html">Module: Volume (3D)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/supervised.html">Module: Supervised Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/point_statistics.html">Module: Point Statistics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/plotting.html">Module: Plotting</a></li>
-
-
-<li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/nuclear_correlation.html">The nuclear correlation (<code class="code docutils literal notranslate"><span class="pre">nc</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/spillover_metrics.html">The spillover metrics (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 </ul>
 
     </div>
@@ -189,9 +199,14 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -226,7 +241,7 @@
 
 
 <button onclick="toggleFullScreen()"
-  class="btn btn-sm btn-fullscreen-button"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
   title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
@@ -240,24 +255,23 @@
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 
 </div></div>
       
@@ -287,82 +301,31 @@ document.write(`
 <h1 id="index">Index</h1>
 
 <div class="genindex-jumpbox">
- <a href="#A"><strong>A</strong></a>
- | <a href="#B"><strong>B</strong></a>
- | <a href="#C"><strong>C</strong></a>
- | <a href="#D"><strong>D</strong></a>
- | <a href="#F"><strong>F</strong></a>
+ <a href="#C"><strong>C</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
- | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
- | <a href="#U"><strong>U</strong></a>
- | <a href="#V"><strong>V</strong></a>
  
 </div>
-<h2 id="A">A</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.adjusted_rand_index">adjusted_rand_index() (in module segtraq.cs.clustering_stability)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="B">B</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.border_admixture_score">border_admixture_score() (in module segtraq.rs.region_similarity)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/plotting.html#segtraq.pl.plotting.boxplot">boxplot() (in module segtraq.pl.plotting)</a>
-</li>
-      <li><a href="modules/plotting.html#segtraq.pl.plotting.boxplot_combined">boxplot_combined() (in module segtraq.pl.plotting)</a>
-</li>
-  </ul></td>
-</tr></table>
-
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/utils.html#segtraq.cellpose">cellpose() (in module segtraq)</a>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_ari">compute_ari() (in module segtraq.cs.clustering_stability)</a>
+</li>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_mean_cosine_distance">compute_mean_cosine_distance() (in module segtraq.cs.clustering_stability)</a>
+</li>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_purity">compute_purity() (in module segtraq.cs.clustering_stability)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/plotting.html#segtraq.pl.plotting.celltype_proportions">celltype_proportions() (in module segtraq.pl.plotting)</a>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_rmsd">compute_rmsd() (in module segtraq.cs.clustering_stability)</a>
 </li>
-      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.cluster_connectedness">cluster_connectedness() (in module segtraq.cs.clustering_stability)</a>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_silhouette_score">compute_silhouette_score() (in module segtraq.cs.clustering_stability)</a>
 </li>
-  </ul></td>
-</tr></table>
-
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.distance_to_centroid">distance_to_centroid() (in module segtraq.ps.point_statistics)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.distance_to_membrane">distance_to_membrane() (in module segtraq.ps.point_statistics)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/plotting.html#segtraq.pl.plotting.feature_distribution_across_space">feature_distribution_across_space() (in module segtraq.pl.plotting)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.filter_cells">filter_cells() (segtraq.SegTraQ method)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.filter_control_and_low_quality_transcripts">filter_control_and_low_quality_transcripts() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/volume.html#segtraq.vl.volume.fraction_heterotypic_overlap">fraction_heterotypic_overlap() (in module segtraq.vl.volume)</a>
+      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.compute_z_plane_correlation">compute_z_plane_correlation() (in module segtraq.cs.clustering_stability)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -378,20 +341,6 @@ document.write(`
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.marker_purity">marker_purity() (in module segtraq.sp.supervised)</a>
-</li>
-      <li><a href="modules/utils.html#segtraq.markers_from_reference">markers_from_reference() (in module segtraq)</a>
-
-      <ul>
-        <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.markers_from_reference">(segtraq.SegTraQ method)</a>
-</li>
-      </ul></li>
-      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.match_nuclei_to_cells">match_nuclei_to_cells() (in module segtraq.rs.region_similarity)</a>
-</li>
-      <li><a href="modules/baseline.html#segtraq.bl.baseline.mean_transcripts_per_gene_per_cell">mean_transcripts_per_gene_per_cell() (in module segtraq.bl.baseline)</a>
-</li>
-      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.membrane_distance_skewness">membrane_distance_skewness() (in module segtraq.ps.point_statistics)</a>
-</li>
       <li>
     module
 
@@ -400,22 +349,10 @@ document.write(`
 </li>
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">segtraq.cs.clustering_stability</a>
 </li>
-        <li><a href="modules/plotting.html#module-segtraq.pl.plotting">segtraq.pl.plotting</a>
-</li>
-        <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">segtraq.ps.point_statistics</a>
-</li>
-        <li><a href="modules/region_similarity.html#module-segtraq.rs.region_similarity">segtraq.rs.region_similarity</a>
-</li>
-        <li><a href="modules/supervised.html#module-segtraq.sp.supervised">segtraq.sp.supervised</a>
-</li>
-        <li><a href="modules/volume.html#module-segtraq.vl.volume">segtraq.vl.volume</a>
-</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.morphological_features">morphological_features() (in module segtraq.bl.baseline)</a>
-</li>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.mutually_exclusive_coexpression_rate">mutually_exclusive_coexpression_rate() (in module segtraq.sp.supervised)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -423,8 +360,6 @@ document.write(`
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/supervised.html#segtraq.sp.supervised.neighbor_contamination">neighbor_contamination() (in module segtraq.sp.supervised)</a>
-</li>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.num_cells">num_cells() (in module segtraq.bl.baseline)</a>
 </li>
   </ul></td>
@@ -441,48 +376,12 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.perc_unassigned_transcripts">perc_unassigned_transcripts() (in module segtraq.bl.baseline)</a>
 </li>
-      <li><a href="modules/baseline.html#segtraq.bl.baseline.perc_unassigned_transcripts_per_gene">perc_unassigned_transcripts_per_gene() (in module segtraq.bl.baseline)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/point_statistics.html#segtraq.ps.point_statistics.percentage_transcripts_in_compartments">percentage_transcripts_in_compartments() (in module segtraq.ps.point_statistics)</a>
-</li>
-      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.purity">purity() (in module segtraq.cs.clustering_stability)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="R">R</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_baseline">run_baseline() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_clustering_stability">run_clustering_stability() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/utils.html#segtraq.run_label_transfer">run_label_transfer() (in module segtraq)</a>
-
-      <ul>
-        <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_label_transfer">(segtraq.SegTraQ method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_point_statistics">run_point_statistics() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_region_similarity">run_region_similarity() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_supervised">run_supervised() (segtraq.SegTraQ method)</a>
-</li>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ.run_volume">run_volume() (segtraq.SegTraQ method)</a>
-</li>
   </ul></td>
 </tr></table>
 
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/segtraq_class.html#segtraq.SegTraQ">SegTraQ (class in segtraq)</a>
-</li>
       <li>
     segtraq.bl.baseline
 
@@ -490,6 +389,8 @@ document.write(`
         <li><a href="modules/baseline.html#module-segtraq.bl.baseline">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     segtraq.cs.clustering_stability
 
@@ -497,55 +398,6 @@ document.write(`
         <li><a href="modules/clustering_stability.html#module-segtraq.cs.clustering_stability">module</a>
 </li>
       </ul></li>
-      <li>
-    segtraq.pl.plotting
-
-      <ul>
-        <li><a href="modules/plotting.html#module-segtraq.pl.plotting">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.ps.point_statistics
-
-      <ul>
-        <li><a href="modules/point_statistics.html#module-segtraq.ps.point_statistics">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.rs.region_similarity
-
-      <ul>
-        <li><a href="modules/region_similarity.html#module-segtraq.rs.region_similarity">module</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    segtraq.sp.supervised
-
-      <ul>
-        <li><a href="modules/supervised.html#module-segtraq.sp.supervised">module</a>
-</li>
-      </ul></li>
-      <li>
-    segtraq.vl.volume
-
-      <ul>
-        <li><a href="modules/volume.html#module-segtraq.vl.volume">module</a>
-</li>
-      </ul></li>
-      <li><a href="modules/clustering_stability.html#segtraq.cs.clustering_stability.silhouette_score">silhouette_score() (in module segtraq.cs.clustering_stability)</a>
-</li>
-      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_border_neighborhood">similarity_border_neighborhood() (in module segtraq.rs.region_similarity)</a>
-</li>
-      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_center_border">similarity_center_border() (in module segtraq.rs.region_similarity)</a>
-</li>
-      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_nucleus_cell">similarity_nucleus_cell() (in module segtraq.rs.region_similarity)</a>
-</li>
-      <li><a href="modules/region_similarity.html#segtraq.rs.region_similarity.similarity_nucleus_cytoplasm">similarity_nucleus_cytoplasm() (in module segtraq.rs.region_similarity)</a>
-</li>
-      <li><a href="modules/volume.html#segtraq.vl.volume.similarity_top_bottom">similarity_top_bottom() (in module segtraq.vl.volume)</a>
-</li>
   </ul></td>
 </tr></table>
 
@@ -556,29 +408,7 @@ document.write(`
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/plotting.html#segtraq.pl.plotting.transcript_distribution_across_space">transcript_distribution_across_space() (in module segtraq.pl.plotting)</a>
-</li>
       <li><a href="modules/baseline.html#segtraq.bl.baseline.transcripts_per_cell">transcripts_per_cell() (in module segtraq.bl.baseline)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="U">U</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/plotting.html#segtraq.pl.plotting.umap">umap() (in module segtraq.pl.plotting)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="V">V</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/utils.html#segtraq.validate_spatialdata">validate_spatialdata() (in module segtraq)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="modules/volume.html#segtraq.vl.volume.vertical_signal_integrity_per_cell">vertical_signal_integrity_per_cell() (in module segtraq.vl.volume)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -645,8 +475,8 @@ By Daria Lazic, Matthias Meyer-Bender, Martin Emons
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
 
   <footer class="bd-footer">
   </footer>
