@@ -2,6 +2,9 @@
 
 [![PyPI version](https://badge.fury.io/py/segtraq.svg)](https://badge.fury.io/py/segtraq)
 
+> ⚠️ On July 28th, 2026, the history of this repository was rewritten to reduce its size. If you cloned the repo before this date and intend to contribute to this project, please create a fresh clone to avoid any conflicts!
+
+
 > ⚠️ Note: SegTraQ is under active development. 
 > Features, interfaces, and functionality may change in upcoming releases. 
 > SegTraQ currently supports imaging-based spatial transcriptomics data only. 
