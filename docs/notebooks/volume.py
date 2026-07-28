@@ -23,7 +23,7 @@
 # because transcripts from overlapping cells may be assigned to the same segmentation mask.
 #
 # <center>
-#  <img src='../../_static/img/docs/volume.png' width='90%' />
+#  <img src='../_static/img/docs/volume.png' width='90%' />
 # </center>
 #
 # To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the

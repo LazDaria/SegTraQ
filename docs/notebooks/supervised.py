@@ -21,7 +21,7 @@
 # As a result, spatial cells may partially resemble their neighbors.
 #
 # <center>
-#  <img src='../../_static/img/docs/supervised.png' width='90%' />
+#  <img src='../_static/img/docs/supervised.png' width='90%' />
 # </center>
 #
 # The `supervised` (`sp`) module provides metrics to evaluate how well cell profiles in a spatial

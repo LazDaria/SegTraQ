@@ -20,7 +20,7 @@
 # If this is not the case, it can be indicative of transcript spillover from adjacent cells.
 #
 # <center>
-#  <img src='../../_static/img/docs/region_similarity.png' width='90%' />
+#  <img src='../_static/img/docs/region_similarity.png' width='90%' />
 # </center>
 #
 # The `region similarity` (`rs`) module provides metrics to assess how similar the

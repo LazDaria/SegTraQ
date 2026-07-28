@@ -20,7 +20,7 @@
 # or if they are shifted towards the membrance, which can be due to spillover from adjacent cells.
 #
 # <center>
-#  <img src='../../_static/img/docs/point_statistics.png' width='90%' />
+#  <img src='../_static/img/docs/point_statistics.png' width='90%' />
 # </center>
 #
 # This functionality is provided in the `point statistics` (`ps`) module.

@@ -529,8 +529,8 @@ def distance_to_membrane(
     For each transcript, the distance is measured to the boundary of the selected polygon:
     - `membrane_region="cell"`: uses `sdata.shapes[shapes_key]`.
     - `membrane_region="nucleus"`: matches each cell to a nucleus (see `select_by`,
-      `min_intersection_area`) and uses the boundary of that nucleus for all transcripts
-      assigned to the cell.
+    `min_intersection_area`) and uses the boundary of that nucleus for all transcripts
+    assigned to the cell.
 
     Distances can be returned as signed (positive inside/on the polygon, negative outside),
     optionally restricted to transcripts within the boundary, and aggregated per cell

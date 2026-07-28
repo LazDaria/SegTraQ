@@ -187,8 +187,6 @@ st_xenium = segtraq.SegTraQ(
     tables_centroid_x_key=None,
     tables_centroid_y_key=None,
     points_background_id=-1,  # "UNASSIGNED" for Xenium prime
-    shapes_cell_id_key=None,
-    nucleus_shapes_cell_id_key=None,
 )
 
 # %% [markdown]
@@ -495,7 +493,7 @@ sdata_proseg2_crop.pl.render_shapes(
 st_proseg2 = segtraq.SegTraQ(
     sdata_proseg2,
     shapes_cell_id_key="cell",
-    nucleus_shapes_cell_id_key="segtraq_id",
+    nucleus_shapes_cell_id_key="cell_id",
     tables_cell_id_key="cell",
     points_cell_id_key="assignment",
     points_gene_key="gene",
@@ -668,7 +666,7 @@ st_proseg3 = segtraq.SegTraQ(
     tables_area_key=None,
     tables_cell_id_key="cell",
     shapes_cell_id_key="cell",
-    nucleus_shapes_cell_id_key="segtraq_id",
+    nucleus_shapes_cell_id_key="cell_id",
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
     filter_kwargs=filter_kwargs,
@@ -781,7 +779,7 @@ st_segger = segtraq.SegTraQ(
     tables_cell_id_key="cell_id",
     tables_centroid_x_key="cell_centroid_x",
     tables_centroid_y_key="cell_centroid_y",
-    nucleus_shapes_cell_id_key="segtraq_id",
+    nucleus_shapes_cell_id_key="cell_id",
 )
 
 # %% [markdown]
