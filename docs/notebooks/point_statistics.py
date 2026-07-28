@@ -59,7 +59,7 @@ import segtraq
 
 # %%
 sdata_xenium = sd.read_zarr("../../../data/xenium_v1_data/sdata_xenium_crop.zarr")
-sdata_proseg2 = sd.read_zarr("../../../data/proseg_v2_crop.zarr")
+sdata_proseg2 = sd.read_zarr("../../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr")
 
 # %% [markdown]
 # We initialize `SegTraQ` objects.
@@ -100,6 +100,7 @@ for _method, st in st_dict.items():
     st.run_label_transfer(
         adata_ref,
         ref_cell_type="celltype_major",
+        ref_raw_counts_layer="raw",
         inplace=True,
     )
 

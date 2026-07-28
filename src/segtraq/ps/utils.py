@@ -60,6 +60,9 @@ def _get_cell_geometry_lookup(
             inplace=inplace,
         )
 
+        # re-fetching the table after in-place modification
+        tbl = sdata.tables[tables_key]
+
     match_df = tbl.obs[[tables_cell_id_key, "nucleus_id"]].copy()
 
     match_df = match_df[[tables_cell_id_key, "nucleus_id"]].dropna(subset=["nucleus_id"]).copy()

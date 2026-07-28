@@ -79,7 +79,7 @@ import segtraq
 
 # %%
 # Load spatial transcriptomics dataset
-sdata_ws = sd.read_zarr("../../../data/xenium.zarr")
+sdata_ws = sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr")
 
 # Subset the dataset to a specific bounding box
 bb_xmin = 800
@@ -100,7 +100,7 @@ sdata = sdata_ws.query.bounding_box(
 st = segtraq.SegTraQ(sdata, images_key="image", tables_centroid_x_key="x_centroid", tables_centroid_y_key="y_centroid")
 
 # Load scRNA-seq dataset
-scRNAseq_data_path = Path("../../../data/BC_scRNAseq_Janesick.h5ad")
+scRNAseq_data_path = Path("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 adata_ref = ad.read_h5ad(scRNAseq_data_path)
 
 # Define color palette for cell types
@@ -136,6 +136,7 @@ col_celltype = {
 st.run_label_transfer(
     adata_ref,
     ref_cell_type="celltype_major",  # Reference cell type column
+    ref_raw_counts_layer="raw",  # Reference raw counts layer
 )
 
 # %% [markdown]
@@ -212,6 +213,7 @@ st.sdata.pl.render_shapes(
 markers = st.markers_from_reference(
     adata_ref,
     ref_cell_type="celltype_major",
+    ref_raw_counts_layer="raw",
     mode="de",
     vote_fraction_pos=0.5,
     min_pos_frac=0.1,
@@ -773,6 +775,7 @@ plt.show()
 st.run_supervised(
     adata_ref=adata_ref,
     ref_cell_type="celltype_major",
+    ref_raw_counts_layer="raw",
 )
 
 # %% [markdown]

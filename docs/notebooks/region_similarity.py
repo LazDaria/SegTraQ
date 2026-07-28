@@ -46,9 +46,7 @@ import segtraq
 # We start out by loading the data into a `SegTraQ` object.
 
 # %%
-sdata = sd.read_zarr(
-    "/g/huber/projects/CODEX/segtraq/data/20260204_SegTraQ_sdata/xenium_v1_data/sdata_xenium_crop.zarr/"
-)
+sdata = sd.read_zarr("../../../data/xenium_v1_data/sdata_xenium_crop.zarr/")
 st = segtraq.SegTraQ(
     sdata,
     tables_centroid_x_key=None,
