@@ -12,21 +12,16 @@ SegTraQ documentation
    :maxdepth: 1
    :caption: Contents:
 
-   modules/io
    modules/baseline
    modules/clustering_stability
    modules/nuclear_correlation
-   modules/spillover_metrics
 
 .. toctree::
    :maxdepth: 1
    :caption: Tutorials:
    
-   notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
    notebooks/nuclear_correlation
    notebooks/labeling_via_correlation
    notebooks/z_plane_correlation
-   notebooks/spillover_metrics_supervised
-   notebooks/10x_xenium_focus
