@@ -998,6 +998,8 @@ def _bootstrap_mixture_fit(
     if n_boot <= 0:
         return {
             "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
+            "border_admixture_score_ci_low": np.nan,
+            "border_admixture_score_ci_high": np.nan,
         }
 
     boot_scores = []

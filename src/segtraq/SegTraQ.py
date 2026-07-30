@@ -1535,7 +1535,7 @@ class _RSFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         pseudocount: float = 0.5,
-        n_boot: int = 200,
+        n_boot: int = 0,
         ci_level: float = 0.95,
         random_state: int | None = None,
         n_jobs: int = -1,
