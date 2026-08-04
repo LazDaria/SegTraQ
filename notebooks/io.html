@@ -239,7 +239,7 @@
       
       
       
-      <li><a href="../_sources/notebooks/io.py" target="_blank"
+      <li><a href="../_sources/notebooks/io.ipynb" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -249,7 +249,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.py</span>
+<span class="btn__text-container">.ipynb</span>
 </a>
 </li>
       
@@ -355,713 +355,936 @@ document.write(`
 <p>In order to use <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code>, you first need to get your data into a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object. While <code class="docutils literal notranslate"><span class="pre">spatialdata_io</span></code> has a lot of readers for different technologies, the constantly evolving landscape of segmentation methods makes it difficult to provide up-to-date, generalizable readers. To facilitate the process of getting your data into the correct format, we provide examples for some segmentation methods.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import anndata as ad
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
 
-ad_test = ad.read_h5ad(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+<span class="n">ad_test</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import spatialdata_io  # noqa
-import spatialdata_plot  # noqa
-import segtraq
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import pandas as pd
-import anndata as ad
-import tifffile as tiff
-import numpy as np
-import geopandas as gpd
-import spatialdata as sd
-import gzip
-import shapely
-import json
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_io</span>  <span class="c1"># noqa</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.patches</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">patches</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tifffile</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tiff</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gpd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shapely</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 
-from pathlib import Path
-from rasterio.features import shapes
-from shapely.geometry import shape
-from scipy.sparse import csr_matrix
-from spatialdata.models import PointsModel
-from spatialdata.transformations import (
-    get_transformation,
-    set_transformation,
-)
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rasterio.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">shapes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">shape</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">csr_matrix</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spatialdata.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">PointsModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">spatialdata.transformations</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_transformation</span><span class="p">,</span>
+    <span class="n">set_transformation</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+</pre></div></div>
 </div>
 <p>Below, we define a few custom functions that will be required for reading data below.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def labels_to_shapes(label_img: np.ndarray, simplify_tolerance: float | None = 0.5) -&gt; gpd.GeoDataFrame:
-    if label_img.ndim != 2:
-        raise ValueError(&quot;Input label_img must be 2D.&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">labels_to_shapes</span><span class="p">(</span><span class="n">label_img</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">simplify_tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">label_img</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input label_img must be 2D.&quot;</span><span class="p">)</span>
 
-    lab = np.asarray(label_img)
-    lab = lab.astype(np.int32, copy=False)
-    mask = lab != 0
+    <span class="n">lab</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">label_img</span><span class="p">)</span>
+    <span class="n">lab</span> <span class="o">=</span> <span class="n">lab</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">lab</span> <span class="o">!=</span> <span class="mi">0</span>
 
-    geoms = []
-    ids = []
-    for geom_mapping, value in shapes(lab, mask=mask, connectivity=8):
-        ids.append(int(value))
-        geoms.append(shape(geom_mapping))
+    <span class="n">geoms</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">geom_mapping</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">shapes</span><span class="p">(</span><span class="n">lab</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
+        <span class="n">ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="n">geoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shape</span><span class="p">(</span><span class="n">geom_mapping</span><span class="p">))</span>
 
-    gdf = gpd.GeoDataFrame({&quot;cell_id&quot;: ids, &quot;geometry&quot;: geoms}).set_index(&quot;cell_id&quot;)
-    gdf = gdf.dissolve(by=&quot;cell_id&quot;, as_index=True)
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">({</span><span class="s2">&quot;cell_id&quot;</span><span class="p">:</span> <span class="n">ids</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">geoms</span><span class="p">})</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;cell_id&quot;</span><span class="p">)</span>
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">dissolve</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span> <span class="n">as_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    if simplify_tolerance and simplify_tolerance &gt; 0 and not gdf.empty:
-        gdf[&quot;geometry&quot;] = shapely.simplify(gdf.geometry.values, simplify_tolerance, preserve_topology=True)
+    <span class="k">if</span> <span class="n">simplify_tolerance</span> <span class="ow">and</span> <span class="n">simplify_tolerance</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">gdf</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">shapely</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">simplify_tolerance</span><span class="p">,</span> <span class="n">preserve_topology</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    return gdf
-
-
-def crop(ws, bb_xmin, bb_ymin, bb_xmax, bb_ymax):
-    return ws.query.bounding_box(
-        axes=[&quot;x&quot;, &quot;y&quot;],
-        min_coordinate=[bb_xmin, bb_ymin],
-        max_coordinate=[bb_xmax, bb_ymax],
-        target_coordinate_system=&quot;global&quot;,
-    )
+    <span class="k">return</span> <span class="n">gdf</span>
 
 
-def read_geojson_gz(path):
-    with gzip.open(path, &quot;rt&quot;) as f:
-        data = json.load(f)
-    return gpd.GeoDataFrame.from_features(data[&quot;features&quot;])
+<span class="k">def</span><span class="w"> </span><span class="nf">crop</span><span class="p">(</span><span class="n">ws</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ws</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">bounding_box</span><span class="p">(</span>
+        <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+        <span class="n">min_coordinate</span><span class="o">=</span><span class="p">[</span><span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">],</span>
+        <span class="n">max_coordinate</span><span class="o">=</span><span class="p">[</span><span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">],</span>
+        <span class="n">target_coordinate_system</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">read_geojson_gz</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="o">.</span><span class="n">from_features</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <p>Setting the data path:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>data_path = Path(&quot;/g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <section id="Xenium">
 <h2>Xenium<a class="headerlink" href="#Xenium" title="Link to this heading">#</a></h2>
 <p>For Xenium data, we can make use of the functions from <code class="docutils literal notranslate"><span class="pre">spatialdata_io</span></code>. We don’t need <code class="docutils literal notranslate"><span class="pre">cells_as_circles</span></code>, <code class="docutils literal notranslate"><span class="pre">cell_labels</span></code>, <code class="docutils literal notranslate"><span class="pre">nucleus_labels</span></code> and <code class="docutils literal notranslate"><span class="pre">morphology_mip</span></code> for <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code>, so we will not read these data.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_xenium = spatialdata_io.xenium(
-    data_path, cells_as_circles=False, cells_labels=False, nucleus_labels=False, morphology_mip=False
-)
-sdata_xenium
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_xenium</span> <span class="o">=</span> <span class="n">spatialdata_io</span><span class="o">.</span><span class="n">xenium</span><span class="p">(</span>
+    <span class="n">data_path</span><span class="p">,</span> <span class="n">cells_as_circles</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cells_labels</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nucleus_labels</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">morphology_mip</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+<span class="n">sdata_xenium</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
+  self.validate_table_in_spatialdata(v)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object
+├── Images
+│     └── &#39;morphology_focus&#39;: DataTree[cyx] (1, 25778, 35416), (1, 12889, 17708), (1, 6444, 8854), (1, 3222, 4427), (1, 1611, 2213)
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (8000000, 8) (3D points)
+├── Shapes
+│     ├── &#39;cell_boundaries&#39;: GeoDataFrame shape: (167780, 1) (2D shapes)
+│     └── &#39;nucleus_boundaries&#39;: GeoDataFrame shape: (167780, 1) (2D shapes)
+└── Tables
+      └── &#39;table&#39;: AnnData (167780, 313)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        morphology_focus (Images), transcripts (Points), cell_boundaries (Shapes), nucleus_boundaries (Shapes)
+</pre></div></div>
 </div>
 <p>For visualization, we crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object to zoom into a smaller region.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>bb_xmin = 10000
-bb_ymin = 12500
-bb_w = 2500
-bb_h = 2500
-bb_xmax = bb_xmin + bb_w
-bb_ymax = bb_ymin + bb_h
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">bb_xmin</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">bb_ymin</span> <span class="o">=</span> <span class="mi">12500</span>
+<span class="n">bb_w</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">bb_h</span> <span class="o">=</span> <span class="mi">2500</span>
+<span class="n">bb_xmax</span> <span class="o">=</span> <span class="n">bb_xmin</span> <span class="o">+</span> <span class="n">bb_w</span>
+<span class="n">bb_ymax</span> <span class="o">=</span> <span class="n">bb_ymin</span> <span class="o">+</span> <span class="n">bb_h</span>
 
-f, ax = plt.subplots(figsize=(5, 5))
-sdata_xenium.pl.render_shapes(&quot;cell_boundaries&quot;).pl.show(ax=ax)
-rect = patches.Rectangle((bb_xmin, bb_ymin), bb_w, bb_h, linewidth=5, edgecolor=&quot;red&quot;, facecolor=&quot;none&quot;)
-ax.add_patch(rect)
+<span class="n">f</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">sdata_xenium</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">rect</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">),</span> <span class="n">bb_w</span><span class="p">,</span> <span class="n">bb_h</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
+  self.validate_table_in_spatialdata(v)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
+  self.validate_table_in_spatialdata(v)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.patches.Rectangle at 0x7ffdecc61d10&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_io_10_2.png" src="../_images/notebooks_io_10_2.png" />
 </div>
 </div>
 <p>Cropping currently suffers from performance issues, and can take tens of minutes on large datasets. This will be improved in future releases of <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Link table to spatial element before cropping
-sdata_xenium.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
-sdata_xenium.tables[&quot;table&quot;].obs[&quot;region&quot;] = sdata_xenium.tables[&quot;table&quot;].obs[&quot;region&quot;].astype(&quot;category&quot;)
-sdata_xenium.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Link table to spatial element before cropping</span>
+<span class="n">sdata_xenium</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
+<span class="n">sdata_xenium</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+<span class="n">sdata_xenium</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_xenium_crop = crop(sdata_xenium, bb_xmin, bb_ymin, bb_xmax, bb_ymax)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_xenium_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_xenium</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> plot below shows the cell boundaries colored by cell area. Xenium version 1 uses nuclear expansion to generate cell boundaries.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-# Plot DAPI image
-sdata_xenium_crop.pl.render_images(&quot;morphology_focus&quot;).pl.show(
-    ax=axes[0], title=&quot;DAPI image&quot;, coordinate_systems=&quot;global&quot;
-)
+<span class="c1"># Plot DAPI image</span>
+<span class="n">sdata_xenium_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_images</span><span class="p">(</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;DAPI image&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span>
+<span class="p">)</span>
 
-# Plot overlay of nuclei and cell boundaries colored by cell area
-sdata_xenium_crop.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;cell_area&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.show(ax=axes[1], title=&quot;Overlay of nuclei and cell masks colored by cell area&quot;, colorbar=True)
+<span class="c1"># Plot overlay of nuclei and cell boundaries colored by cell area</span>
+<span class="n">sdata_xenium_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;cell_area&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by cell area&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_io_15_0.png" src="../_images/notebooks_io_15_0.png" />
 </div>
 </div>
 <p>Finally, we can read these into SegTraQ. Don’t worry if you do not know all of these parameters up front, you can start by simply passing an <code class="docutils literal notranslate"><span class="pre">sdata</span></code> object into the function and it will tell you exactly which parameters need to be set.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_xenium = segtraq.SegTraQ(
-    sdata_xenium,
-    tables_centroid_x_key=None,
-    tables_centroid_y_key=None,
-    points_background_id=-1,  # &quot;UNASSIGNED&quot; for Xenium prime
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_xenium</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_xenium</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># &quot;UNASSIGNED&quot; for Xenium prime</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 </section>
 <section id="BIDCell">
 <h2>BIDCell<a class="headerlink" href="#BIDCell" title="Link to this heading">#</a></h2>
 <p>Depending on the segmentation method applied to re-segment the Xenium data, the data output format will differ. No <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> readers are available for individual segmentation methods. Below, we demonstrate how to load data from the output of the segmentation method <code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> into <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code>.</p>
 <p>The single-cell expression and metadata are first loaded into an <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>csv_files = list(data_path.glob(&quot;bidcell_output/cell_gene_matrices/202*/cell*.csv&quot;))
-dfs = [pd.read_csv(f) for f in csv_files]
-merged_df = pd.concat(dfs, ignore_index=True).sort_values(&quot;cell_id&quot;).reset_index(drop=True)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">csv_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;bidcell_output/cell_gene_matrices/202*/cell*.csv&quot;</span><span class="p">))</span>
+<span class="n">dfs</span> <span class="o">=</span> <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">csv_files</span><span class="p">]</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;cell_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-meta_cols = [&quot;cell_id&quot;, &quot;cell_centroid_x&quot;, &quot;cell_centroid_y&quot;, &quot;cell_size&quot;]
-expr_cols = [c for c in merged_df.columns if c not in meta_cols]
+<span class="n">meta_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_centroid_y&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_size&quot;</span><span class="p">]</span>
+<span class="n">expr_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meta_cols</span><span class="p">]</span>
 
-obs = merged_df[meta_cols].copy()
-obs[&quot;cell_id&quot;] = obs[&quot;cell_id&quot;].astype(np.int32)
-obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
-obs[&quot;region&quot;] = obs[&quot;region&quot;].astype(&quot;category&quot;)  # required for new version of SpatialData
+<span class="n">obs</span> <span class="o">=</span> <span class="n">merged_df</span><span class="p">[</span><span class="n">meta_cols</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># required for new version of SpatialData</span>
 
-X = merged_df[expr_cols].to_numpy()
-var = pd.DataFrame(index=pd.Index(expr_cols))
+<span class="n">X</span> <span class="o">=</span> <span class="n">merged_df</span><span class="p">[</span><span class="n">expr_cols</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">expr_cols</span><span class="p">))</span>
 
-adata = ad.AnnData(X=X, obs=obs, var=var)
+<span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">var</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
+  return dispatch(args[0].__class__)(*args, **kw)
+</pre></div></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> outputs cell and nucleus boundaries as a raster (label image) rather than vector shapes (polygons). Therefore, we first convert the rasterized boundaries into polygon geometries using <code class="docutils literal notranslate"><span class="pre">labels_to_shapes</span></code>. Nucleus boundaries are not copied from Xenium, because BIDCell, re-runs nuclear segmentation internally via Cellpose.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>cell_label_files = list(data_path.glob(&quot;bidcell_output/model_outputs/202*/test_output/*_connected.tif&quot;))
-cell_labels = tiff.imread(cell_label_files[0])
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cell_label_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;bidcell_output/model_outputs/202*/test_output/*_connected.tif&quot;</span><span class="p">))</span>
+<span class="n">cell_labels</span> <span class="o">=</span> <span class="n">tiff</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">cell_label_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
-nucleus_labels = tiff.imread(data_path / &quot;bidcell_output/nuclei.tif&quot;)
+<span class="n">nucleus_labels</span> <span class="o">=</span> <span class="n">tiff</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;bidcell_output/nuclei.tif&quot;</span><span class="p">)</span>
 
-cell_shapes_gdf = labels_to_shapes(cell_labels, simplify_tolerance=0.5)
-nucleus_shapes_gdf = labels_to_shapes(nucleus_labels, simplify_tolerance=0.5)
+<span class="n">cell_shapes_gdf</span> <span class="o">=</span> <span class="n">labels_to_shapes</span><span class="p">(</span><span class="n">cell_labels</span><span class="p">,</span> <span class="n">simplify_tolerance</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">nucleus_shapes_gdf</span> <span class="o">=</span> <span class="n">labels_to_shapes</span><span class="p">(</span><span class="n">nucleus_labels</span><span class="p">,</span> <span class="n">simplify_tolerance</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> filters the Xenium transcripts file prior to segmentation by removing low-quality transcripts (qv &lt; 20) and control probes. However, the cell IDs in the processed transcripts file (<code class="docutils literal notranslate"><span class="pre">transcripts_processed.csv</span></code>) still correspond to the original Xenium segmentation. Therefore, we reassign cell IDs based on the BIDCell segmentation masks.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>transcripts_path = data_path / &quot;bidcell_output/transcripts_processed.csv&quot;
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;bidcell_output/transcripts_processed.csv&quot;</span>
 
-transcripts_df = pd.read_csv(transcripts_path, index_col=0)
-transcripts_df.rename(
-    columns={&quot;cell_id&quot;: &quot;original_cell_id&quot;, &quot;x_location&quot;: &quot;x&quot;, &quot;y_location&quot;: &quot;y&quot;, &quot;z_location&quot;: &quot;z&quot;}, inplace=True
-)
-x = np.rint(transcripts_df[&quot;x&quot;]).astype(int)
-y = np.rint(transcripts_df[&quot;y&quot;]).astype(int)
-transcripts_df[&quot;cell_id&quot;] = cell_labels[y, x]  # reassign BIDCell cell IDs
-transcripts_df[&quot;feature_name&quot;] = transcripts_df[&quot;feature_name&quot;].astype(&quot;category&quot;)
+<span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">transcripts_path</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">transcripts_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cell_id&quot;</span><span class="p">:</span> <span class="s2">&quot;original_cell_id&quot;</span><span class="p">,</span> <span class="s2">&quot;x_location&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y_location&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z_location&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_labels</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>  <span class="c1"># reassign BIDCell cell IDs</span>
+<span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object can then be built from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object, the <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code>, <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> and <code class="docutils literal notranslate"><span class="pre">transcripts</span></code>. We link the table observations to the shapes by specifying <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) containing the
 object IDs, which are matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_bidcell = sd.SpatialData(
-    points={&quot;transcripts&quot;: sd.models.PointsModel.parse(transcripts_df)},
-    shapes={
-        &quot;cell_boundaries&quot;: sd.models.ShapesModel.parse(cell_shapes_gdf),
-        &quot;nucleus_boundaries&quot;: sd.models.ShapesModel.parse(nucleus_shapes_gdf),
-    },
-    tables={
-        &quot;table&quot;: sd.models.TableModel.parse(
-            adata, region_key=&quot;region&quot;, region=&quot;cell_boundaries&quot;, instance_key=&quot;cell_id&quot;
-        )
-    },
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_bidcell</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">SpatialData</span><span class="p">(</span>
+    <span class="n">points</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;transcripts&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">transcripts_df</span><span class="p">)},</span>
+    <span class="n">shapes</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ShapesModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">cell_shapes_gdf</span><span class="p">),</span>
+        <span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ShapesModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">nucleus_shapes_gdf</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tables</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;table&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">TableModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+            <span class="n">adata</span><span class="p">,</span> <span class="n">region_key</span><span class="o">=</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">instance_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span>
+        <span class="p">)</span>
+    <span class="p">},</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>Finally, we read in the image. Here, we have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data. If you do not have an <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> object that you can read the transformations from, you can also read in the image manually using <code class="docutils literal notranslate"><span class="pre">sd.models.Image2DModel(tiff.imread(&quot;morphology_focus.ome.tif&quot;))</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_bidcell.images[&quot;morphology_focus&quot;] = sdata_xenium.images[&quot;morphology_focus&quot;]
-xenium_transformation = get_transformation(sdata_xenium.shapes[&quot;cell_boundaries&quot;])
-set_transformation(sdata_bidcell.shapes[&quot;cell_boundaries&quot;], xenium_transformation)
-set_transformation(sdata_bidcell.shapes[&quot;nucleus_boundaries&quot;], xenium_transformation)
-set_transformation(sdata_bidcell.points[&quot;transcripts&quot;], xenium_transformation)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_bidcell</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
+<span class="n">xenium_transformation</span> <span class="o">=</span> <span class="n">get_transformation</span><span class="p">(</span><span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">])</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_bidcell</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_bidcell</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_bidcell</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_bidcell_crop = crop(sdata_bidcell, bb_xmin, bb_ymin, bb_xmax, bb_ymax)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_bidcell_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_bidcell</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-# Plot DAPI image
-sdata_bidcell_crop.pl.render_images(&quot;morphology_focus&quot;).pl.show(
-    ax=axes[0], title=&quot;DAPI image&quot;, coordinate_systems=&quot;global&quot;
-)
+<span class="c1"># Plot DAPI image</span>
+<span class="n">sdata_bidcell_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_images</span><span class="p">(</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;DAPI image&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span>
+<span class="p">)</span>
 
-# Plot overlay of nuclei and cell boundaries colored by cell area
-sdata_bidcell_crop.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;cell_size&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.show(ax=axes[1], title=&quot;Overlay of nuclei and cell masks colored by cell area&quot;, colorbar=True)
+<span class="c1"># Plot overlay of nuclei and cell boundaries colored by cell area</span>
+<span class="n">sdata_bidcell_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;cell_size&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by cell area&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_io_31_0.png" src="../_images/notebooks_io_31_0.png" />
 </div>
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed. Naming will differ between segmentation methods, e.g. <code class="docutils literal notranslate"><span class="pre">cell_area</span></code> in Xenium and <code class="docutils literal notranslate"><span class="pre">cell_size</span></code> in BIDCell in addition to other settings like the <code class="docutils literal notranslate"><span class="pre">points_background_id</span></code>. Please set parameters accordingly.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_bidcell = segtraq.SegTraQ(
-    sdata_bidcell,
-    tables_area_key=&quot;cell_size&quot;,
-    tables_centroid_x_key=&quot;cell_centroid_x&quot;,
-    tables_centroid_y_key=&quot;cell_centroid_y&quot;,
-    points_background_id=0,
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_bidcell</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_bidcell</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="s2">&quot;cell_size&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_y&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 </section>
 <section id="Proseg-2">
 <h2>Proseg 2<a class="headerlink" href="#Proseg-2" title="Link to this heading">#</a></h2>
 <p>Below, we show how to read data from the older proseg version 2 into the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> format. Proseg version 2 does not output a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object, so the latter has to be built from scratch.</p>
 <p>We first build the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>counts_df = pd.read_csv(data_path / &quot;proseg_output_v2/expected-counts.csv.gz&quot;, compression=&quot;gzip&quot;)
-X = csr_matrix(np.rint(counts_df.values).astype(int, copy=False))
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">counts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/expected-counts.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">counts_df</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 
-obs = pd.read_csv(data_path / &quot;proseg_output_v2/cell-metadata.csv.gz&quot;, compression=&quot;gzip&quot;)
-obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
-obs[&quot;region&quot;] = obs[&quot;region&quot;].astype(&quot;category&quot;)  # required for new version of SpatialData
-var = pd.DataFrame(index=counts_df.columns.astype(str))
-adata = ad.AnnData(X=X, obs=obs, var=var)
+<span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/cell-metadata.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># required for new version of SpatialData</span>
+<span class="n">var</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">counts_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">var</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
+  return dispatch(args[0].__class__)(*args, **kw)
+</pre></div></div>
 </div>
 <p>Next, we read the vector shapes (polygons). These are stored in a <code class="docutils literal notranslate"><span class="pre">GeoJSON</span></code> file and can be read using <code class="docutils literal notranslate"><span class="pre">read_geojson_gz</span></code> and <code class="docutils literal notranslate"><span class="pre">to_cell_shapes</span></code>. Proseg is a quasi-3D method and provides cell boundaries for each z-layer and well as a 2D projection.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>polygons_layers_gz_path = data_path / &quot;proseg_output_v2/cell-polygons-layers.geojson.gz&quot;
-polygons_gz_path = data_path / &quot;proseg_output_v2/cell-polygons.geojson.gz&quot;
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">polygons_layers_gz_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/cell-polygons-layers.geojson.gz&quot;</span>
+<span class="n">polygons_gz_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/cell-polygons.geojson.gz&quot;</span>
 
-shapes_dict = {}
+<span class="n">shapes_dict</span> <span class="o">=</span> <span class="p">{}</span>
 
-# 3D layers
-polygons_layers_gdf = read_geojson_gz(polygons_layers_gz_path)
-for z, gdf in polygons_layers_gdf.groupby(&quot;layer&quot;, sort=True):
-    shapes_dict[f&quot;cell_boundaries_z{int(z)}&quot;] = sd.models.ShapesModel.parse(
-        gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
-    )
-    shapes_dict[f&quot;cell_boundaries_z{int(z)}&quot;].set_index(&quot;cell&quot;, drop=True, inplace=True)
-# 2D projection
-gdf = read_geojson_gz(polygons_gz_path)
-shapes_dict[&quot;cell_boundaries&quot;] = sd.models.ShapesModel.parse(gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty])
-shapes_dict[&quot;cell_boundaries&quot;].set_index(&quot;cell&quot;, drop=True, inplace=True)
+<span class="c1"># 3D layers</span>
+<span class="n">polygons_layers_gdf</span> <span class="o">=</span> <span class="n">read_geojson_gz</span><span class="p">(</span><span class="n">polygons_layers_gz_path</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">z</span><span class="p">,</span> <span class="n">gdf</span> <span class="ow">in</span> <span class="n">polygons_layers_gdf</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;layer&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">shapes_dict</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;cell_boundaries_z</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ShapesModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+        <span class="n">gdf</span><span class="p">[</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">is_empty</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">shapes_dict</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;cell_boundaries_z</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="c1"># 2D projection</span>
+<span class="n">gdf</span> <span class="o">=</span> <span class="n">read_geojson_gz</span><span class="p">(</span><span class="n">polygons_gz_path</span><span class="p">)</span>
+<span class="n">shapes_dict</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ShapesModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">gdf</span><span class="p">[</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">is_empty</span><span class="p">])</span>
+<span class="n">shapes_dict</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>Next, we load transcripts. Proseg internally filters control probes and transcripts with a <code class="docutils literal notranslate"><span class="pre">qv</span></code> &lt; 20. Thus, there will be fewer transcripts than in <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code>. <strong>In Proseg, “x”, “y” and “z” columns in the transcripts correspond to repositioned transcripts, while the “observed” columns correspond to raw input positions. For SegTraQ, we use the raw positions.</strong> We will rename these columns to avoid misalignment when cropping the data via <code class="docutils literal notranslate"><span class="pre">query.bounding_box()</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>transcripts_df = pd.read_csv(data_path / &quot;proseg_output_v2/transcript-metadata.csv.gz&quot;, compression=&quot;gzip&quot;)
-transcripts_df[&quot;gene&quot;] = transcripts_df[&quot;gene&quot;].astype(&quot;category&quot;)
-transcripts_df = transcripts_df.rename(
-    columns={
-        &quot;x&quot;: &quot;repositioned_x&quot;,
-        &quot;y&quot;: &quot;repositioned_y&quot;,
-        &quot;z&quot;: &quot;repositioned_z&quot;,
-        &quot;observed_x&quot;: &quot;x&quot;,
-        &quot;observed_y&quot;: &quot;y&quot;,
-        &quot;observed_z&quot;: &quot;z&quot;,
-    }
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/transcript-metadata.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
+<span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+<span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_x&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_z&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;observed_x&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;observed_y&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;observed_z&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object can then be built from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object, the <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code> and <code class="docutils literal notranslate"><span class="pre">transcripts</span></code>. We link the table observations to the shapes by specifying <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) containing the object IDs, which are
 matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg2 = sd.SpatialData(
-    points={&quot;transcripts&quot;: sd.models.PointsModel.parse(transcripts_df, feature_key=&quot;gene&quot;)},
-    shapes=shapes_dict,
-    tables={
-        &quot;table&quot;: sd.models.TableModel.parse(adata, region_key=&quot;region&quot;, region=&quot;cell_boundaries&quot;, instance_key=&quot;cell&quot;)
-    },
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">SpatialData</span><span class="p">(</span>
+    <span class="n">points</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;transcripts&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">transcripts_df</span><span class="p">,</span> <span class="n">feature_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">)},</span>
+    <span class="n">shapes</span><span class="o">=</span><span class="n">shapes_dict</span><span class="p">,</span>
+    <span class="n">tables</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;table&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">TableModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">region_key</span><span class="o">=</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">instance_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">)</span>
+    <span class="p">},</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">images</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> can be copied from <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> since these are not changed by proseg segmentation. We have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg2.images[&quot;morphology_focus&quot;] = sdata_xenium.images[&quot;morphology_focus&quot;]
-sdata_proseg2.shapes[&quot;nucleus_boundaries&quot;] = sdata_xenium.shapes[&quot;nucleus_boundaries&quot;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
+<span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span>
 
-xenium_transformation = get_transformation(sdata_xenium.shapes[&quot;cell_boundaries&quot;])
-set_transformation(sdata_proseg2.shapes[&quot;cell_boundaries&quot;], xenium_transformation)
+<span class="n">xenium_transformation</span> <span class="o">=</span> <span class="n">get_transformation</span><span class="p">(</span><span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">])</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 
-for k, shape_layer in sdata_proseg2.shapes.items():
-    if k.startswith(&quot;cell_boundaries_z&quot;):
-        set_transformation(shape_layer, xenium_transformation)
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">shape_layer</span> <span class="ow">in</span> <span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;cell_boundaries_z&quot;</span><span class="p">):</span>
+        <span class="n">set_transformation</span><span class="p">(</span><span class="n">shape_layer</span><span class="p">,</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 
-set_transformation(sdata_proseg2.points[&quot;transcripts&quot;], xenium_transformation)
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>Proseg applies clipping to the transcript z-coordinates and overwrites the original values in <code class="docutils literal notranslate"><span class="pre">observed_z</span></code>. To preserve the raw Xenium z-coordinates for downstream analyses, we map the original <code class="docutils literal notranslate"><span class="pre">z</span></code> values back to the Proseg transcript table using the unique <code class="docutils literal notranslate"><span class="pre">transcript_id</span></code>. See more info in this <a class="reference external" href="https://github.com/dcjones/proseg/issues/136">issue</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>proseg_tx = sdata_proseg2.points[&quot;transcripts&quot;].compute()
-proseg_tx = proseg_tx.reset_index(drop=True)
-xenium_tx = sdata_xenium.points[&quot;transcripts&quot;].compute()
-xenium_tx = xenium_tx.reset_index(drop=True)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">proseg_tx</span> <span class="o">=</span> <span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+<span class="n">proseg_tx</span> <span class="o">=</span> <span class="n">proseg_tx</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">xenium_tx</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+<span class="n">xenium_tx</span> <span class="o">=</span> <span class="n">xenium_tx</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-proseg_tx[&quot;z&quot;] = proseg_tx[&quot;transcript_id&quot;].map(xenium_tx.set_index(&quot;transcript_id&quot;)[&quot;z&quot;])
+<span class="n">proseg_tx</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">proseg_tx</span><span class="p">[</span><span class="s2">&quot;transcript_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">xenium_tx</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;transcript_id&quot;</span><span class="p">)[</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
 
-transformation = sdata_proseg2.points[&quot;transcripts&quot;].attrs[&quot;transform&quot;]
+<span class="n">transformation</span> <span class="o">=</span> <span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;transform&quot;</span><span class="p">]</span>
 
-sdata_proseg2.points[&quot;transcripts&quot;] = PointsModel.parse(
-    proseg_tx,
-    coordinates={&quot;x&quot;: &quot;x&quot;, &quot;y&quot;: &quot;y&quot;, &quot;z&quot;: &quot;z&quot;},
-)
+<span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+    <span class="n">proseg_tx</span><span class="p">,</span>
+    <span class="n">coordinates</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">},</span>
+<span class="p">)</span>
 
-sdata_proseg2.points[&quot;transcripts&quot;].attrs[&quot;transform&quot;] = transformation
+<span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;transform&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transformation</span>
 </pre></div>
 </div>
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg2_crop = crop(sdata_proseg2, bb_xmin, bb_ymin, bb_xmax, bb_ymax)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_proseg2</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-# Plot DAPI image
-sdata_proseg2_crop.pl.render_images(&quot;morphology_focus&quot;).pl.show(
-    ax=axes[0], title=&quot;DAPI image&quot;, coordinate_systems=&quot;global&quot;
-)
+<span class="c1"># Plot DAPI image</span>
+<span class="n">sdata_proseg2_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_images</span><span class="p">(</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;DAPI image&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span>
+<span class="p">)</span>
 
-# Plot overlay of nuclei and cell boundaries colored by volume (proseg measures volume instead of area)
-sdata_proseg2_crop.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;volume&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.show(ax=axes[1], title=&quot;Overlay of nuclei and cell masks colored by volume&quot;, colorbar=True)
+<span class="c1"># Plot overlay of nuclei and cell boundaries colored by volume (proseg measures volume instead of area)</span>
+<span class="n">sdata_proseg2_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;volume&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by volume&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_io_49_0.png" src="../_images/notebooks_io_49_0.png" />
 </div>
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_proseg2 = segtraq.SegTraQ(
-    sdata_proseg2,
-    shapes_cell_id_key=&quot;cell&quot;,
-    nucleus_shapes_cell_id_key=&quot;cell_id&quot;,
-    tables_cell_id_key=&quot;cell&quot;,
-    points_cell_id_key=&quot;assignment&quot;,
-    points_gene_key=&quot;gene&quot;,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-    points_background_id=2**32 - 1,  # background ID used in Proseg,
-    tables_area_key=None,
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_proseg2</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_proseg2</span><span class="p">,</span>
+    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">nucleus_shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
+    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># background ID used in Proseg,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 </section>
 <section id="Proseg-3">
 <h2>Proseg 3<a class="headerlink" href="#Proseg-3" title="Link to this heading">#</a></h2>
 <p>Proseg 3 already provides a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as output, which can be read in easily.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg3 = sd.read_zarr(data_path / &quot;proseg_output_v3/proseg-output.zarr&quot;)
-sdata_proseg3
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v3/proseg-output.zarr&quot;</span><span class="p">)</span>
+<span class="n">sdata_proseg3</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_4085382/4211026938.py:1: UserWarning: SpatialData is not stored in the most current format. If you want to use Zarr v3, please write the store to a new location using `sdata.write()`.
+  sdata_proseg3 = sd.read_zarr(data_path / &#34;proseg_output_v3/proseg-output.zarr&#34;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object, with associated Zarr store: /g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium/proseg_output_v3/proseg-output.zarr
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (172259420, 10) (3D points)
+├── Shapes
+│     └── &#39;cell_boundaries&#39;: GeoDataFrame shape: (165479, 2) (2D shapes)
+└── Tables
+      └── &#39;table&#39;: AnnData (165479, 480)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        transcripts (Points), cell_boundaries (Shapes)
+</pre></div></div>
 </div>
 <p><strong>In Proseg, “x”, “y” and “z” columns in the transcripts correspond to repositioned transcripts, while the “observed” columns correspond to raw input positions. For SegTraQ, we use the raw positions.</strong> We will rename these columns to avoid misalignment when cropping the data via “query.bounding_box`.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>pts = sdata_proseg3.points[&quot;transcripts&quot;]
-pts = pts.rename(
-    columns={
-        &quot;x&quot;: &quot;repositioned_x&quot;,
-        &quot;y&quot;: &quot;repositioned_y&quot;,
-        &quot;z&quot;: &quot;repositioned_z&quot;,
-        &quot;observed_x&quot;: &quot;x&quot;,
-        &quot;observed_y&quot;: &quot;y&quot;,
-        &quot;observed_z&quot;: &quot;z&quot;,
-    }
-)
-pts[&quot;gene&quot;] = pts[&quot;gene&quot;].astype(&quot;category&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pts</span> <span class="o">=</span> <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span>
+<span class="n">pts</span> <span class="o">=</span> <span class="n">pts</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_x&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_z&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;observed_x&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;observed_y&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;observed_z&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="n">pts</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pts</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
 
-sdata_proseg3.points[&quot;transcripts&quot;] = sd.models.PointsModel.parse(pts)
+<span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:975: UserWarning: The index of the dataframe is not monotonic increasing. It is recommended to sort the data to adjust the order of the index before calling .parse() (or call `parse(sort=True)`) to avoid possible problems due to unknown divisions.
+  return dispatch(args[0].__class__).__get__(obj, cls)(*args, **kwargs)
+</pre></div></div>
 </div>
 <p>Note that this object only contains one <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code> layer in the shapes. To make full use of the 3D metrics of <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code>, we can also read in the segmentations at different z layers.</p>
 <p>The table observations are linked to the shapes via <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (here <code class="docutils literal notranslate"><span class="pre">&quot;cell&quot;</span></code>) containing the object IDs, which are matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns
 with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg3[&quot;table&quot;].uns
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">uns</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>polygons_layers_gz_path = data_path / &quot;proseg_output_v3/cell-polygons-layers.geojson.gz&quot;
-shapes_dict = {}
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;proseg_run&#39;: {&#39;args&#39;: &#39;proseg_v3 --xenium /g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium/transcripts.csv --output-counts counts.mtx.gz --output-expected-counts expected-counts.mtx.gz --output-cell-metadata cell-metadata.csv.gz --output-transcript-metadata transcript-metadata.csv.gz --output-gene-metadata gene-metadata.csv.gz --output-cell-polygons cell-polygons.geojson.gz --output-cell-polygon-layers cell-polygons-layers.geojson.gz --nthreads 32&#39;,
+  &#39;duration&#39;: &#39;2086.29130289s&#39;,
+  &#39;version&#39;: &#39;3.1.0&#39;},
+ &#39;spatialdata_attrs&#39;: {&#39;region&#39;: &#39;cell_boundaries&#39;,
+  &#39;instance_key&#39;: &#39;cell&#39;,
+  &#39;region_key&#39;: &#39;region&#39;}}
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">polygons_layers_gz_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v3/cell-polygons-layers.geojson.gz&quot;</span>
+<span class="n">shapes_dict</span> <span class="o">=</span> <span class="p">{}</span>
 
-polygons_layers_gdf = read_geojson_gz(polygons_layers_gz_path)
-for z, gdf in polygons_layers_gdf.groupby(&quot;layer&quot;, sort=True):
-    sdata_proseg3.shapes[f&quot;cell_boundaries_z{int(z)}&quot;] = sd.models.ShapesModel.parse(
-        gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
-    )
-    sdata_proseg3.shapes[f&quot;cell_boundaries_z{int(z)}&quot;].set_index(
-        &quot;cell&quot;, drop=True, inplace=True
-    )  # make sure that index aligns with adata.obs[instance_key]
+<span class="n">polygons_layers_gdf</span> <span class="o">=</span> <span class="n">read_geojson_gz</span><span class="p">(</span><span class="n">polygons_layers_gz_path</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">z</span><span class="p">,</span> <span class="n">gdf</span> <span class="ow">in</span> <span class="n">polygons_layers_gdf</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;layer&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;cell_boundaries_z</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ShapesModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+        <span class="n">gdf</span><span class="p">[</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">is_empty</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;cell_boundaries_z</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">z</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span>
+        <span class="s2">&quot;cell&quot;</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>  <span class="c1"># make sure that index aligns with adata.obs[instance_key]</span>
 
-sdata_proseg3.shapes[&quot;cell_boundaries&quot;].set_index(
-    &quot;cell&quot;, drop=True, inplace=True
-)  # make sure that index aligns with adata.obs[instance_key]
+<span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span>
+    <span class="s2">&quot;cell&quot;</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>  <span class="c1"># make sure that index aligns with adata.obs[instance_key]</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_4085382/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
+
+To further ignore this warning, you can do:
+import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&#39;, UserWarning)
+  gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
+/tmp/ipykernel_4085382/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
+
+To further ignore this warning, you can do:
+import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&#39;, UserWarning)
+  gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
+</pre></div></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">images</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> can be copied from <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> since these are not changed by proseg segmentation. We have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg3.images[&quot;morphology_focus&quot;] = sdata_xenium.images[&quot;morphology_focus&quot;]
-sdata_proseg3.shapes[&quot;nucleus_boundaries&quot;] = sdata_xenium.shapes[&quot;nucleus_boundaries&quot;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
+<span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span>
 
-xenium_transformation = get_transformation(sdata_xenium.shapes[&quot;cell_boundaries&quot;])
-set_transformation(sdata_proseg3.shapes[&quot;cell_boundaries&quot;], xenium_transformation)
+<span class="n">xenium_transformation</span> <span class="o">=</span> <span class="n">get_transformation</span><span class="p">(</span><span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">])</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 
-for k, shape_layer in sdata_proseg3.shapes.items():
-    if k.startswith(&quot;cell_boundaries_z&quot;):
-        set_transformation(shape_layer, xenium_transformation)
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">shape_layer</span> <span class="ow">in</span> <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;cell_boundaries_z&quot;</span><span class="p">):</span>
+        <span class="n">set_transformation</span><span class="p">(</span><span class="n">shape_layer</span><span class="p">,</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 
-set_transformation(sdata_proseg3.points[&quot;transcripts&quot;], xenium_transformation)
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>Proseg applies clipping to the transcript z-coordinates and overwrites the original values in <code class="docutils literal notranslate"><span class="pre">observed_z</span></code>. To preserve the raw Xenium z-coordinates for downstream analyses, we map the original <code class="docutils literal notranslate"><span class="pre">z</span></code> values back to the Proseg transcript table using the unique <code class="docutils literal notranslate"><span class="pre">transcript_id</span></code>. See more info in this <a class="reference external" href="https://github.com/dcjones/proseg/issues/136">issue</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>proseg_tx = sdata_proseg3.points[&quot;transcripts&quot;].compute()
-proseg_tx = proseg_tx.reset_index(drop=True)
-xenium_tx = sdata_xenium.points[&quot;transcripts&quot;].compute()
-xenium_tx = xenium_tx.reset_index(drop=True)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">proseg_tx</span> <span class="o">=</span> <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+<span class="n">proseg_tx</span> <span class="o">=</span> <span class="n">proseg_tx</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">xenium_tx</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+<span class="n">xenium_tx</span> <span class="o">=</span> <span class="n">xenium_tx</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-proseg_tx[&quot;z&quot;] = proseg_tx[&quot;transcript_id&quot;].map(xenium_tx.set_index(&quot;transcript_id&quot;)[&quot;z&quot;])
+<span class="n">proseg_tx</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">proseg_tx</span><span class="p">[</span><span class="s2">&quot;transcript_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">xenium_tx</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;transcript_id&quot;</span><span class="p">)[</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
 
-transformation = sdata_proseg3.points[&quot;transcripts&quot;].attrs[&quot;transform&quot;]
+<span class="n">transformation</span> <span class="o">=</span> <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;transform&quot;</span><span class="p">]</span>
 
-sdata_proseg3.points[&quot;transcripts&quot;] = PointsModel.parse(
-    proseg_tx,
-    coordinates={&quot;x&quot;: &quot;x&quot;, &quot;y&quot;: &quot;y&quot;, &quot;z&quot;: &quot;z&quot;},
-)
+<span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+    <span class="n">proseg_tx</span><span class="p">,</span>
+    <span class="n">coordinates</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">},</span>
+<span class="p">)</span>
 
-sdata_proseg3.points[&quot;transcripts&quot;].attrs[&quot;transform&quot;] = transformation
+<span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;transform&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transformation</span>
 </pre></div>
 </div>
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_proseg3_crop = crop(sdata_proseg3, bb_xmin, bb_ymin, bb_xmax, bb_ymax)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_proseg3</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-# Plot DAPI image
-sdata_proseg3_crop.pl.render_images(&quot;morphology_focus&quot;).pl.show(
-    ax=axes[0], title=&quot;DAPI image&quot;, coordinate_systems=&quot;global&quot;
-)
+<span class="c1"># Plot DAPI image</span>
+<span class="n">sdata_proseg3_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_images</span><span class="p">(</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;DAPI image&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span>
+<span class="p">)</span>
 
-# Plot overlay of nuclei and cell boundaries colored by volume (proseg measures volume instead of area)
-sdata_proseg3_crop.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;volume&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.show(ax=axes[1], title=&quot;Overlay of nuclei and cell masks colored by volume&quot;, colorbar=True)
+<span class="c1"># Plot overlay of nuclei and cell boundaries colored by volume (proseg measures volume instead of area)</span>
+<span class="n">sdata_proseg3_crop</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;volume&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by volume&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_io_65_0.png" src="../_images/notebooks_io_65_0.png" />
 </div>
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>filter_kwargs = {
-    &quot;min_qv&quot;: None,
-    &quot;control_prefixes&quot;: (
-        &quot;NegControlProbe_&quot;,
-        &quot;antisense_&quot;,
-        &quot;NegControlCodeword&quot;,
-        &quot;BLANK_&quot;,
-        &quot;Blank-&quot;,
-        &quot;NegPrb&quot;,
-        &quot;DeprecatedCodeword_&quot;,
-        &quot;UnassignedCodeword_&quot;,
-        &quot;Intergenic_Region_&quot;,
-    ),
-    &quot;control_genes&quot;: (),
-    &quot;inplace&quot;: True,
-}
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;min_qv&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">&quot;control_prefixes&quot;</span><span class="p">:</span> <span class="p">(</span>
+        <span class="s2">&quot;NegControlProbe_&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;antisense_&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NegControlCodeword&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;BLANK_&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Blank-&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;NegPrb&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;DeprecatedCodeword_&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;UnassignedCodeword_&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Intergenic_Region_&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;control_genes&quot;</span><span class="p">:</span> <span class="p">(),</span>
+    <span class="s2">&quot;inplace&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">}</span>
 
-st_proseg3 = segtraq.SegTraQ(
-    sdata_proseg3,
-    points_cell_id_key=&quot;assignment&quot;,
-    points_background_id=None,
-    points_gene_key=&quot;gene&quot;,
-    tables_area_key=None,
-    tables_cell_id_key=&quot;cell&quot;,
-    shapes_cell_id_key=&quot;cell&quot;,
-    nucleus_shapes_cell_id_key=&quot;cell_id&quot;,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-    filter_kwargs=filter_kwargs,
-)
+<span class="n">st_proseg3</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_proseg3</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">nucleus_shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+    <span class="n">filter_kwargs</span><span class="o">=</span><span class="n">filter_kwargs</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 </section>
 <section id="Segger">
@@ -1069,125 +1292,156 @@ st_proseg3 = segtraq.SegTraQ(
 <p><strong>Segger is still under very active development, so output formats might change in the future.</strong></p>
 <p>Segger outputs single-cell data already in <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> format. The <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object does not contain a cell ID column. We will add it, to be able to link the <code class="docutils literal notranslate"><span class="pre">table</span></code> to the <code class="docutils literal notranslate"><span class="pre">shapes</span></code> in the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object created below.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>adata = ad.read_h5ad(
-    data_path / &quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20260114/segger_adata.h5ad&quot;
-)
-adata.obs[&quot;cell_id&quot;] = adata.obs_names
-adata.obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
-adata.obs[&quot;region&quot;] = adata.obs[&quot;region&quot;].astype(&quot;category&quot;)  # required for new version of SpatialData
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span>
+    <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20260114/segger_adata.h5ad&quot;</span>
+<span class="p">)</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs_names</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># required for new version of SpatialData</span>
 </pre></div>
 </div>
 </div>
 <p>Next, we read the vector shapes (polygons). We filter out cells with invalid shapes from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object and the <code class="docutils literal notranslate"><span class="pre">shapes</span></code>. In addition, we filter out cell IDs that exist in the <code class="docutils literal notranslate"><span class="pre">shapes</span></code> but not in the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object (probably due to filtering during Segger processing).</p>
 <p>The table observations are linked to the shapes via <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) containing the object IDs, which are matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns
 with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>gdf = gpd.read_parquet(
-    data_path / &quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20260114/segger_boundaries.parquet&quot;
-)
-gdf = gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span>
+    <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20260114/segger_boundaries.parquet&quot;</span>
+<span class="p">)</span>
+<span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="p">[</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">is_empty</span><span class="p">]</span>
 
-adata = adata[adata.obs[&quot;cell_id&quot;].isin(gdf[&quot;cell_id&quot;])].copy()
-gdf = gdf[gdf[&quot;cell_id&quot;].isin(adata.obs[&quot;cell_id&quot;])]
-gdf.set_index(&quot;cell_id&quot;, inplace=True, drop=True)
+<span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">])]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="p">[</span><span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">])]</span>
+<span class="n">gdf</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_4085382/1139085374.py:4: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
+
+To further ignore this warning, you can do:
+import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&#39;, UserWarning)
+  gdf = gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
+</pre></div></div>
 </div>
 <p>We load <code class="docutils literal notranslate"><span class="pre">segger_transcripts.parquet</span></code>, which contains transcripts assigned to cell IDs by segger (<code class="docutils literal notranslate"><span class="pre">segger_cell_id</span></code>). The original cell ID is renamed from <code class="docutils literal notranslate"><span class="pre">cell_id</span></code> to <code class="docutils literal notranslate"><span class="pre">original_cell_id</span></code> to avoid confusion. Segger applies a more stringent filtering with <code class="docutils literal notranslate"><span class="pre">min_qv</span> <span class="pre">=</span> <span class="pre">30</span></code> as compared to other methods, so the number of transcripts will be lower.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>transcripts = pd.read_parquet(
-    data_path / &quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20260114/segger_transcripts.parquet&quot;
-)
-transcripts = transcripts.rename(columns={&quot;cell_id&quot;: &quot;original_cell_id&quot;})  # to avoid confusion with segger_cell_id
-transcripts.rename(
-    columns={&quot;x_location&quot;: &quot;x&quot;, &quot;y_location&quot;: &quot;y&quot;, &quot;z_location&quot;: &quot;z&quot;}, inplace=True
-)  # required for building SpatialData
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span>
+    <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;segger_output/benchmarks/segger_output_0.5_False_4_12_15_3_20260114/segger_transcripts.parquet&quot;</span>
+<span class="p">)</span>
+<span class="n">transcripts</span> <span class="o">=</span> <span class="n">transcripts</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cell_id&quot;</span><span class="p">:</span> <span class="s2">&quot;original_cell_id&quot;</span><span class="p">})</span>  <span class="c1"># to avoid confusion with segger_cell_id</span>
+<span class="n">transcripts</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;x_location&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y_location&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z_location&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>  <span class="c1"># required for building SpatialData</span>
 
-# set transcripts that do not exist in adata to UNASSIGNED
-transcripts.loc[~transcripts[&quot;segger_cell_id&quot;].isin(adata.obs[&quot;cell_id&quot;]), &quot;segger_cell_id&quot;] = &quot;UNASSIGNED&quot;
-transcripts[&quot;feature_name&quot;] = transcripts[&quot;feature_name&quot;].str.decode(&quot;utf-8&quot;)
-transcripts[&quot;feature_name&quot;] = transcripts[&quot;feature_name&quot;].astype(&quot;category&quot;)
+<span class="c1"># set transcripts that do not exist in adata to UNASSIGNED</span>
+<span class="n">transcripts</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">transcripts</span><span class="p">[</span><span class="s2">&quot;segger_cell_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]),</span> <span class="s2">&quot;segger_cell_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;UNASSIGNED&quot;</span>
+<span class="n">transcripts</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+<span class="n">transcripts</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object can then be built from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object, the <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code>, <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> and <code class="docutils literal notranslate"><span class="pre">transcripts</span></code>. We also link the table observations to the shapes by setting the <code class="docutils literal notranslate"><span class="pre">region_key</span></code> and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>, as explained above.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_segger = sd.SpatialData(
-    points={&quot;transcripts&quot;: sd.models.PointsModel.parse(transcripts)},
-    shapes={&quot;cell_boundaries&quot;: sd.models.ShapesModel.parse(gdf)},
-    tables={
-        &quot;table&quot;: sd.models.TableModel.parse(
-            adata, region_key=&quot;region&quot;, region=&quot;cell_boundaries&quot;, instance_key=&quot;cell_id&quot;
-        )
-    },
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_segger</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">SpatialData</span><span class="p">(</span>
+    <span class="n">points</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;transcripts&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">transcripts</span><span class="p">)},</span>
+    <span class="n">shapes</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ShapesModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">gdf</span><span class="p">)},</span>
+    <span class="n">tables</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;table&quot;</span><span class="p">:</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">TableModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+            <span class="n">adata</span><span class="p">,</span> <span class="n">region_key</span><span class="o">=</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">instance_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span>
+        <span class="p">)</span>
+    <span class="p">},</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">images</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> can be copied from <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> since these are not changed by segger segmentation. We have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_segger.images[&quot;morphology_focus&quot;] = sdata_xenium.images[&quot;morphology_focus&quot;]
-sdata_segger.shapes[&quot;nucleus_boundaries&quot;] = sdata_xenium.shapes[&quot;nucleus_boundaries&quot;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_segger</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
+<span class="n">sdata_segger</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span>
 
-xenium_transformation = get_transformation(sdata_xenium.shapes[&quot;cell_boundaries&quot;])
-set_transformation(sdata_segger.shapes[&quot;cell_boundaries&quot;], xenium_transformation)
-set_transformation(sdata_segger.points[&quot;transcripts&quot;], xenium_transformation)
+<span class="n">xenium_transformation</span> <span class="o">=</span> <span class="n">get_transformation</span><span class="p">(</span><span class="n">sdata_xenium</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">])</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_segger</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
+<span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata_segger</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">],</span> <span class="n">xenium_transformation</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_segger_crop = crop(sdata_segger, bb_xmin, bb_ymin, bb_xmax, bb_ymax)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_segger_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_segger</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_segger = segtraq.SegTraQ(
-    sdata_segger,
-    points_cell_id_key=&quot;segger_cell_id&quot;,
-    points_background_id=&quot;UNASSIGNED&quot;,
-    tables_area_key=&quot;cell_area&quot;,
-    tables_cell_id_key=&quot;cell_id&quot;,
-    tables_centroid_x_key=&quot;cell_centroid_x&quot;,
-    tables_centroid_y_key=&quot;cell_centroid_y&quot;,
-    nucleus_shapes_cell_id_key=&quot;cell_id&quot;,
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_segger</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_segger</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;segger_cell_id&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="s2">&quot;UNASSIGNED&quot;</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="s2">&quot;cell_area&quot;</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_y&quot;</span><span class="p">,</span>
+    <span class="n">nucleus_shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 </section>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[44]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
-print(spatialdata_plot.__version__)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">spatialdata_plot</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.8.0
+0.4.0
+</pre></div></div>
 </div>
 </section>
 </section>

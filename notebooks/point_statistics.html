@@ -239,7 +239,7 @@
       
       
       
-      <li><a href="../_sources/notebooks/point_statistics.py" target="_blank"
+      <li><a href="../_sources/notebooks/point_statistics.ipynb" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -249,7 +249,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.py</span>
+<span class="btn__text-container">.ipynb</span>
 </a>
 </li>
       
@@ -353,96 +353,120 @@ document.write(`
   <section id="Module:-Point-Statistics">
 <h1>Module: Point Statistics<a class="headerlink" href="#Module:-Point-Statistics" title="Link to this heading">#</a></h1>
 <p>We can check whether transcripts are distributed equally within the cell, or if they are shifted towards the membrance, which can be due to spillover from adjacent cells.</p>
-<center><p><img alt="14fd4729fdd94ee98b5a6b3e51f5a73c" class="no-scaled-link" src="../_images/point_statistics.png" style="width: 90%;" /></p>
+<center><p><img alt="079dbb385a244b30bc092c9480e538cb" class="no-scaled-link" src="../_images/point_statistics.png" style="width: 90%;" /></p>
 </center><p>This functionality is provided in the <code class="docutils literal notranslate"><span class="pre">point</span> <span class="pre">statistics</span></code> (<code class="docutils literal notranslate"><span class="pre">ps</span></code>) module. The idea of this module is to provide an intuition whether transcripts are distributed unequally, meaning they are more likely to have resulted from a spillover from neighbouring cells. This can happen due to imperfect boundaries, dense packing, partial overlaps, and other sources of “spillover” between adjacent cells.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">ps</span></code> module summarizes transcript localization relative to cell (and optionally nucleus) geometry, providing intuitive signals for potential contamination or biased spatial distributions. Metrics can be returned as a table and, if desired, stored in place in the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
-%autoreload 2
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 </pre></div>
 </div>
 </div>
 <section id="Load-data-into-SegTraQ-and-run-label-transfer">
 <h2>Load data into SegTraQ and run label transfer<a class="headerlink" href="#Load-data-into-SegTraQ-and-run-label-transfer" title="Link to this heading">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import anndata as ad
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import spatialdata as sd
-import spatialdata_plot  # noqa
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa</span>
 
-import segtraq
+<span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+</pre></div></div>
 </div>
 <p>We load <a class="reference internal" href="io.html"><span class="doc">previously built</span></a> <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> objects from 10x Genomics Xenium data segmented with Xenium’s multimodal cell segmentation (<code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code>) and with Proseg v2.0.5 (<code class="docutils literal notranslate"><span class="pre">sdata_proseg2</span></code>).</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata_xenium = sd.read_zarr(&quot;../../../data/xenium_v1_data/sdata_xenium_crop.zarr&quot;)
-sdata_proseg2 = sd.read_zarr(&quot;../../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_xenium</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_v1_data/sdata_xenium_crop.zarr&quot;</span><span class="p">)</span>
+<span class="n">sdata_proseg2</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <p>We initialize <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> objects.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_xenium = segtraq.SegTraQ(
-    sdata_xenium,
-    tables_centroid_x_key=None,
-    tables_centroid_y_key=None,
-    points_background_id=-1,  # &quot;UNASSIGNED&quot; for Xenium prime
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_xenium</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_xenium</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># &quot;UNASSIGNED&quot; for Xenium prime</span>
+<span class="p">)</span>
 
-st_proseg2 = segtraq.SegTraQ(
-    sdata_proseg2,
-    points_cell_id_key=&quot;assignment&quot;,
-    points_background_id=None,
-    points_gene_key=&quot;gene&quot;,
-    tables_area_key=None,
-    tables_cell_id_key=&quot;cell&quot;,
-    shapes_cell_id_key=&quot;cell&quot;,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-)
+<span class="n">st_proseg2</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_proseg2</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 <p>For easier access, we store the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object into a dictionary.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_dict = {&quot;xenium&quot;: st_xenium, &quot;proseg2&quot;: st_proseg2}
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;xenium&quot;</span><span class="p">:</span> <span class="n">st_xenium</span><span class="p">,</span> <span class="s2">&quot;proseg2&quot;</span><span class="p">:</span> <span class="n">st_proseg2</span><span class="p">}</span>
 </pre></div>
 </div>
 </div>
 <p>We can then transfer labels from a reference scRNA-seq dataset.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>adata_ref = ad.read_h5ad(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata_ref</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
 
-for _method, st in st_dict.items():
-    st.run_label_transfer(
-        adata_ref,
-        ref_cell_type=&quot;celltype_major&quot;,
-        ref_raw_counts_layer=&quot;raw&quot;,
-        inplace=True,
-    )
+<span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span>
+        <span class="n">adata_ref</span><span class="p">,</span>
+        <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
+        <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+        <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -457,137 +481,228 @@ for _method, st in st_dict.items():
 <p>The metric can be computed for a single gene, a selected set of genes, or for all transcripts jointly. Larger values indicate a stronger spatial bias of transcripts toward one side of the cell (or nucleus), which may reflect polarized expression patterns, boundary leakage, or spillover from neighboring cells.</p>
 <p>We first compute this metric on Proseg-segmented data, which allows transcript repositioning—meaning that transcripts assigned to a cell may lie outside its segmented boundary. We focus on transcripts of the gene ERBB2 and compare the average normalized centroid–mean distance (<code class="docutils literal notranslate"><span class="pre">distance_to_cell_centroid__norm_ERBB2</span></code>) when transcripts are restricted to lie within the cell boundary (<code class="docutils literal notranslate"><span class="pre">restrict_to_within_boundary=True</span></code>) versus when all assigned transcripts are used.</p>
 <p>As expected, restricting the calculation to transcripts inside the cell leads to a lower mean distance to the centroid.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># restricting to boundary
-_distance_to_centroid = st_proseg2.ps.distance_to_centroid(genes=&quot;ERBB2&quot;, restrict_to_within_boundary=True)
-st_proseg2.sdata[&quot;table&quot;].obs[&quot;distance_to_cell_centroid_norm_ERBB2&quot;].mean()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># restricting to boundary</span>
+<span class="n">_distance_to_centroid</span> <span class="o">=</span> <span class="n">st_proseg2</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_centroid</span><span class="p">(</span><span class="n">genes</span><span class="o">=</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">,</span> <span class="n">restrict_to_within_boundary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;distance_to_cell_centroid_norm_ERBB2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># not restricting to boundary
-_distance_to_centroid = st_proseg2.ps.distance_to_centroid(genes=&quot;ERBB2&quot;, restrict_to_within_boundary=False)
-st_proseg2.sdata[&quot;table&quot;].obs[&quot;distance_to_cell_centroid_norm_ERBB2&quot;].mean()
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+np.float64(0.2773040946565106)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># not restricting to boundary</span>
+<span class="n">_distance_to_centroid</span> <span class="o">=</span> <span class="n">st_proseg2</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_centroid</span><span class="p">(</span><span class="n">genes</span><span class="o">=</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">,</span> <span class="n">restrict_to_within_boundary</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;distance_to_cell_centroid_norm_ERBB2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+np.float64(0.3898535647020474)
+</pre></div></div>
 </div>
 <p>We can visualise these results in space for the gene ERBB2</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_proseg2.sdata.pl.render_shapes(
-    &quot;cell_boundaries&quot;,
-    color=&quot;distance_to_cell_centroid_norm_ERBB2&quot;,
-).pl.render_points(
-    &quot;transcripts&quot;,
-    color=&quot;gene&quot;,
-    groups=[&quot;ERBB2&quot;],
-    palette=[&quot;orange&quot;],
-).pl.show(
-    title=&quot;ERBB2 transcript locations in relation to the cell centroid&quot;,
-    coordinate_systems=&quot;global&quot;,
-    figsize=(10, 5),
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;distance_to_cell_centroid_norm_ERBB2&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+    <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">],</span>
+    <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">],</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;ERBB2 transcript locations in relation to the cell centroid&quot;</span><span class="p">,</span>
+    <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+<span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">991</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/legacy_api_wrap/__init__.py:88: FutureWarning: The dtype argument is deprecated and will be removed in late 2024.
+  return fn(*args_all, **kw)
+/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
+  return dispatch(args[0].__class__)(*args, **kw)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata_plot/pl/render.py:1384: UserWarning: No data for colormapping provided via &#39;c&#39;. Parameters &#39;cmap&#39;, &#39;norm&#39; will be ignored
+  cax = ax.scatter(
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_21_2.png" src="../_images/notebooks_point_statistics_21_2.png" />
 </div>
 </div>
 <p>We can do the same for Xenium-segmented data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_distance_to_centroid = st_xenium.ps.distance_to_centroid(genes=&quot;ERBB2&quot;, restrict_to_within_boundary=True)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_distance_to_centroid</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_centroid</span><span class="p">(</span><span class="n">genes</span><span class="o">=</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">,</span> <span class="n">restrict_to_within_boundary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_xenium.sdata.pl.render_shapes(
-    &quot;cell_boundaries&quot;,
-    color=&quot;distance_to_cell_centroid_norm_ERBB2&quot;,
-).pl.render_points(
-    &quot;transcripts&quot;,
-    color=&quot;feature_name&quot;,
-    groups=[&quot;ERBB2&quot;],
-    palette=[&quot;orange&quot;],
-).pl.show(
-    title=&quot;ERBB2 transcript locations in relation to the cell centroid&quot;,
-    coordinate_systems=&quot;global&quot;,
-    figsize=(10, 5),
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;distance_to_cell_centroid_norm_ERBB2&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+    <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;feature_name&quot;</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">],</span>
+    <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">],</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;ERBB2 transcript locations in relation to the cell centroid&quot;</span><span class="p">,</span>
+    <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+<span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">562</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/legacy_api_wrap/__init__.py:88: FutureWarning: The dtype argument is deprecated and will be removed in late 2024.
+  return fn(*args_all, **kw)
+/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
+  return dispatch(args[0].__class__)(*args, **kw)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata_plot/pl/render.py:1384: UserWarning: No data for colormapping provided via &#39;c&#39;. Parameters &#39;cmap&#39;, &#39;norm&#39; will be ignored
+  cax = ax.scatter(
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_24_2.png" src="../_images/notebooks_point_statistics_24_2.png" />
 </div>
 </div>
 <p>When computing the distance across all transcripts (<code class="docutils literal notranslate"><span class="pre">genes=None</span></code>), the average <code class="docutils literal notranslate"><span class="pre">distance_all_genes</span></code> is close to zero, as the mean transcript position converges toward the cell centroid when many points are averaged.</p>
 <p>We might also be interested in whether a gene’s transcripts are further away from the cell than the nucleus centroid.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
-    st.ps.distance_to_centroid(centroid_region=&quot;nucleus&quot;, genes=&quot;ERBB2&quot;, restrict_to_within_boundary=True)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_centroid</span><span class="p">(</span><span class="n">centroid_region</span><span class="o">=</span><span class="s2">&quot;nucleus&quot;</span><span class="p">,</span> <span class="n">genes</span><span class="o">=</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">,</span> <span class="n">restrict_to_within_boundary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>axes = plt.subplots(2, 1, figsize=(15, 15), constrained_layout=True)[1].flatten()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-st_proseg2.sdata.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;distance_to_cell_centroid_norm_ERBB2&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_points(
-    &quot;transcripts&quot;,
-    color=&quot;gene&quot;,
-    groups=[&quot;ERBB2&quot;],
-    palette=[&quot;orange&quot;],
-).pl.show(ax=axes[0], title=&quot;Nuclei, cells (colored by distance to cell centroid) and ERBB2 transcripts&quot;, colorbar=True)
+<span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;distance_to_cell_centroid_norm_ERBB2&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+    <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">],</span>
+    <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">],</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nuclei, cells (colored by distance to cell centroid) and ERBB2 transcripts&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-st_proseg2.sdata.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;distance_to_nucleus_centroid_norm_ERBB2&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_points(
-    &quot;transcripts&quot;,
-    color=&quot;gene&quot;,
-    groups=[&quot;ERBB2&quot;],
-    palette=[&quot;orange&quot;],
-).pl.show(
-    ax=axes[1], title=&quot;Nuclei, cells (colored by distance to nucleus centroid) and ERBB2 transcripts&quot;, colorbar=True
-)
+<span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;distance_to_nucleus_centroid_norm_ERBB2&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+    <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">],</span>
+    <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">],</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nuclei, cells (colored by distance to nucleus centroid) and ERBB2 transcripts&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">991</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">1100</span> NaN values in color data. These observations will be colored with the
+         <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_28_1.png" src="../_images/notebooks_point_statistics_28_1.png" />
 </div>
 </div>
 </section>
@@ -600,266 +715,339 @@ st_proseg2.sdata.pl.render_shapes(
 \[d_{membrane} = \frac{\mu(d(m,t))}{\sqrt{|B|}}\]</div>
 <p>Let’s investigate the distance of MS4A1 (a B-cell marker) in B cells. Below it looks like MS4A1 is mostly expressed in the nucleus.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
-    st.ps.distance_to_membrane(genes=&quot;MS4A1&quot;, cell_type_query=&quot;B&quot;, restrict_to_within_boundary=True)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_membrane</span><span class="p">(</span><span class="n">genes</span><span class="o">=</span><span class="s2">&quot;MS4A1&quot;</span><span class="p">,</span> <span class="n">cell_type_query</span><span class="o">=</span><span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="n">restrict_to_within_boundary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_xenium.sdata.pl.render_shapes(
-    element=&quot;nucleus_boundaries&quot;,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_shapes(
-    element=&quot;cell_boundaries&quot;,
-    color=&quot;distance_to_cell_membrane_norm_MS4A1&quot;,
-    cmap=&quot;viridis&quot;,
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color=&quot;black&quot;,
-).pl.render_points(
-    &quot;transcripts&quot;,
-    color=&quot;feature_name&quot;,
-    groups=[&quot;MS4A1&quot;],
-    palette=[&quot;orange&quot;],
-).pl.show(
-    figsize=(10, 10), title=&quot;Nuclei, cells (colored by distance to cell membrane) and MS4A1 transcripts&quot;, colorbar=True
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;distance_to_cell_membrane_norm_MS4A1&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+    <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;feature_name&quot;</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;MS4A1&quot;</span><span class="p">],</span>
+    <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">],</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nuclei, cells (colored by distance to cell membrane) and MS4A1 transcripts&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">1534</span> NaN values in color data. These observations will be colored with the
+         <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_34_1.png" src="../_images/notebooks_point_statistics_34_1.png" />
 </div>
 </div>
 <p>Let’s compute the mean distance to the nucleus and cell membrane to verify this. This confirms that MS4A1 transcripts are located closer to the nuclear than to the cell membrane.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
-    st.ps.distance_to_membrane(
-        genes=&quot;MS4A1&quot;, cell_type_query=&quot;B&quot;, membrane_region=&quot;nucleus&quot;, restrict_to_within_boundary=True
-    )
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">distance_to_membrane</span><span class="p">(</span>
+        <span class="n">genes</span><span class="o">=</span><span class="s2">&quot;MS4A1&quot;</span><span class="p">,</span> <span class="n">cell_type_query</span><span class="o">=</span><span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="n">membrane_region</span><span class="o">=</span><span class="s2">&quot;nucleus&quot;</span><span class="p">,</span> <span class="n">restrict_to_within_boundary</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>xenium_cell_membrane = st_xenium.sdata.tables[&quot;table&quot;].obs[&quot;distance_to_cell_membrane_norm_MS4A1&quot;].mean()
-xenium_nucleus_membrane = st_xenium.sdata.tables[&quot;table&quot;].obs[&quot;distance_to_nucleus_membrane_norm_MS4A1&quot;].mean()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">xenium_cell_membrane</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;distance_to_cell_membrane_norm_MS4A1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">xenium_nucleus_membrane</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;distance_to_nucleus_membrane_norm_MS4A1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 
-print(&quot;Xenium:&quot;)
-print(f&quot;Mean distance of MS4A1 transcripts to cell membrane: {xenium_cell_membrane}.&quot;)
-print(f&quot;Mean distance of MS4A1 transcripts to nucleus membrane: {xenium_nucleus_membrane}.&quot;)
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Xenium:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean distance of MS4A1 transcripts to cell membrane: </span><span class="si">{</span><span class="n">xenium_cell_membrane</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean distance of MS4A1 transcripts to nucleus membrane: </span><span class="si">{</span><span class="n">xenium_nucleus_membrane</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Xenium:
+Mean distance of MS4A1 transcripts to cell membrane: 0.2300415820010295.
+Mean distance of MS4A1 transcripts to nucleus membrane: 0.09583002424833813.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>proseg_cell_membrane = st_proseg2.sdata.tables[&quot;table&quot;].obs[&quot;distance_to_cell_membrane_norm_MS4A1&quot;].mean()
-proseg_nucleus_membrane = st_proseg2.sdata.tables[&quot;table&quot;].obs[&quot;distance_to_nucleus_membrane_norm_MS4A1&quot;].mean()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">proseg_cell_membrane</span> <span class="o">=</span> <span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;distance_to_cell_membrane_norm_MS4A1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">proseg_nucleus_membrane</span> <span class="o">=</span> <span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;distance_to_nucleus_membrane_norm_MS4A1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 
-print(&quot;Xenium:&quot;)
-print(f&quot;Mean distance of MS4A1 transcripts to cell membrane: {proseg_cell_membrane}.&quot;)
-print(f&quot;Mean distance of MS4A1 transcripts to nucleus membrane: {proseg_nucleus_membrane}.&quot;)
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Xenium:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean distance of MS4A1 transcripts to cell membrane: </span><span class="si">{</span><span class="n">proseg_cell_membrane</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mean distance of MS4A1 transcripts to nucleus membrane: </span><span class="si">{</span><span class="n">proseg_nucleus_membrane</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Xenium:
+Mean distance of MS4A1 transcripts to cell membrane: 0.16538876358577967.
+Mean distance of MS4A1 transcripts to nucleus membrane: 0.10380236462779702.
+</pre></div></div>
 </div>
 </section>
 <section id="Percentage-of-points-in-compartments">
 <h2>Percentage of points in compartments<a class="headerlink" href="#Percentage-of-points-in-compartments" title="Link to this heading">#</a></h2>
 <p>To determine the percentage of transcripts of a cell that localize to cell nulceus, the cell cytoplasm and those that are outside the cell membrane, we can provide the <code class="docutils literal notranslate"><span class="pre">percentage_points_compartments</span></code> function.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>gene = &quot;MS4A1&quot;
-celltype = &quot;B&quot;
-for _method, st in st_dict.items():
-    st.ps.percentage_transcripts_in_compartments(genes=gene, cell_type_query=celltype)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gene</span> <span class="o">=</span> <span class="s2">&quot;MS4A1&quot;</span>
+<span class="n">celltype</span> <span class="o">=</span> <span class="s2">&quot;B&quot;</span>
+<span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">percentage_transcripts_in_compartments</span><span class="p">(</span><span class="n">genes</span><span class="o">=</span><span class="n">gene</span><span class="p">,</span> <span class="n">cell_type_query</span><span class="o">=</span><span class="n">celltype</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>rows = []
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
 
-for method, st in st_dict.items():
-    obs = st.sdata.tables[&quot;table&quot;].obs
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
 
-    df = obs[[f&quot;perc_nucleus_{gene}&quot;, f&quot;perc_cytoplasm_{gene}&quot;, f&quot;perc_outside_cell_{gene}&quot;]].copy()
+    <span class="n">df</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[[</span><span class="sa">f</span><span class="s2">&quot;perc_nucleus_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_cytoplasm_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_outside_cell_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-    df[&quot;method&quot;] = method
-    rows.append(df)
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 
-df_all = pd.concat(rows, axis=0, ignore_index=True)
+<span class="n">df_all</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-df_long = df_all.melt(
-    id_vars=[&quot;method&quot;],
-    value_vars=[f&quot;perc_nucleus_{gene}&quot;, f&quot;perc_cytoplasm_{gene}&quot;, f&quot;perc_outside_cell_{gene}&quot;],
-    var_name=&quot;compartment&quot;,
-    value_name=&quot;percentage&quot;,
-)
+<span class="n">df_long</span> <span class="o">=</span> <span class="n">df_all</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span>
+    <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">],</span>
+    <span class="n">value_vars</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;perc_nucleus_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_cytoplasm_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_outside_cell_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span>
+    <span class="n">var_name</span><span class="o">=</span><span class="s2">&quot;compartment&quot;</span><span class="p">,</span>
+    <span class="n">value_name</span><span class="o">=</span><span class="s2">&quot;percentage&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-plt.figure(figsize=(7, 4))
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
 
-sns.boxplot(
-    data=df_long,
-    x=&quot;compartment&quot;,
-    y=&quot;percentage&quot;,
-    hue=&quot;method&quot;,
-    showfliers=False,  # usually nicer for percentages
-)
+<span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">df_long</span><span class="p">,</span>
+    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;compartment&quot;</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="s2">&quot;percentage&quot;</span><span class="p">,</span>
+    <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
+    <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># usually nicer for percentages</span>
+<span class="p">)</span>
 
-plt.ylabel(&quot;Percentage of transcripts (%)&quot;)
-plt.xlabel(&quot;&quot;)
-plt.title(f&quot;{gene} transcripts in {celltype} cells&quot;)
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Percentage of transcripts (%)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> transcripts in </span><span class="si">{</span><span class="n">celltype</span><span class="si">}</span><span class="s2"> cells&quot;</span><span class="p">)</span>
 
-plt.legend(title=&quot;Method&quot;, bbox_to_anchor=(1.02, 1), loc=&quot;upper left&quot;)
-plt.tight_layout()
-plt.show()
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.02</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_42_0.png" src="../_images/notebooks_point_statistics_42_0.png" />
 </div>
 </div>
 <p>We might be interested in the distribution of transcripts of gene “ERBB2” (a DCIS2 marker) in all cell types.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
-    st.ps.percentage_transcripts_in_compartments(genes=&quot;ERBB2&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">percentage_transcripts_in_compartments</span><span class="p">(</span><span class="n">genes</span><span class="o">=</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>gene = &quot;ERBB2&quot;
-cell_type_key = &quot;transferred_cell_type&quot;
-tables_key = &quot;table&quot;
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gene</span> <span class="o">=</span> <span class="s2">&quot;ERBB2&quot;</span>
+<span class="n">cell_type_key</span> <span class="o">=</span> <span class="s2">&quot;transferred_cell_type&quot;</span>
+<span class="n">tables_key</span> <span class="o">=</span> <span class="s2">&quot;table&quot;</span>
 
-for method, st in st_dict.items():
-    obs = st.sdata.tables[tables_key].obs
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
 
-    df = obs[[cell_type_key, f&quot;perc_nucleus_{gene}&quot;, f&quot;perc_cytoplasm_{gene}&quot;, f&quot;perc_outside_cell_{gene}&quot;]].copy()
-    df = df.dropna(subset=[cell_type_key])
+    <span class="n">df</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[[</span><span class="n">cell_type_key</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_nucleus_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_cytoplasm_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_outside_cell_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">cell_type_key</span><span class="p">])</span>
 
-    df_long = df.melt(
-        id_vars=[cell_type_key],
-        value_vars=[f&quot;perc_nucleus_{gene}&quot;, f&quot;perc_cytoplasm_{gene}&quot;, f&quot;perc_outside_cell_{gene}&quot;],
-        var_name=&quot;compartment&quot;,
-        value_name=&quot;percentage&quot;,
-    )
+    <span class="n">df_long</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span>
+        <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="n">cell_type_key</span><span class="p">],</span>
+        <span class="n">value_vars</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;perc_nucleus_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_cytoplasm_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;perc_outside_cell_</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span>
+        <span class="n">var_name</span><span class="o">=</span><span class="s2">&quot;compartment&quot;</span><span class="p">,</span>
+        <span class="n">value_name</span><span class="o">=</span><span class="s2">&quot;percentage&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
 
-    plt.figure(figsize=(8, 3))
-    ax = sns.boxplot(
-        data=df_long,
-        x=cell_type_key,
-        y=&quot;percentage&quot;,
-        hue=&quot;compartment&quot;,
-        showfliers=False,
-    )
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">df_long</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">cell_type_key</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="s2">&quot;percentage&quot;</span><span class="p">,</span>
+        <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;compartment&quot;</span><span class="p">,</span>
+        <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
 
-    ax.set_title(f&quot;{method} — {gene} transcript compartment percentages by cell type&quot;)
-    ax.set_xlabel(&quot;Cell type&quot;)
-    ax.set_ylabel(&quot;Percentage of transcripts (%)&quot;)
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> transcript compartment percentages by cell type&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Cell type&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Percentage of transcripts (%)&quot;</span><span class="p">)</span>
 
-    # rotate x labels if many cell types
-    plt.xticks(rotation=45, ha=&quot;right&quot;)
+    <span class="c1"># rotate x labels if many cell types</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
 
-    # put legend outside
-    plt.legend(title=&quot;Compartment&quot;, bbox_to_anchor=(1.02, 1), loc=&quot;upper left&quot;)
-    plt.tight_layout()
-    plt.show()
+    <span class="c1"># put legend outside</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Compartment&quot;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.02</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_45_0.png" src="../_images/notebooks_point_statistics_45_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_45_1.png" src="../_images/notebooks_point_statistics_45_1.png" />
 </div>
 </div>
 <p>These results show that ERBB2 transcripts are present at comparable percentages in the cytoplasm and nucleus of DCIS2 cells, whereas in all other cell types they are predominantly cytoplasmic (suggesting contamination). Notably, ERBB2 transcripts are also enriched in the nuclear compartment of myoepithelial cells, which frequently border DCIS2 cells. This likely reflects neighborhood contamination rather than myoepithelial expression. Also stromal cells show a high cytoplasmic expression of
 ERBB2. As expected, Proseg shows a higher fraction of transcripts outside the cell, consistent with its transcript repositioning mechanism.</p>
 <p>Let’s visualize this spatially.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Define color palette for plotting
-col_celltype = {
-    &quot;T&quot;: &quot;#fb8072&quot;,
-    &quot;B&quot;: &quot;#bc80bd&quot;,
-    &quot;macro&quot;: &quot;#910290&quot;,
-    &quot;dendritic&quot;: &quot;#fdb462&quot;,
-    &quot;mast&quot;: &quot;#959059&quot;,
-    &quot;perivas&quot;: &quot;#fed9a6&quot;,
-    &quot;endo&quot;: &quot;#a6cee3&quot;,
-    &quot;myoepi&quot;: &quot;#2782bb&quot;,
-    &quot;DCIS1&quot;: &quot;#3c7761&quot;,
-    &quot;DCIS2&quot;: &quot;#66a61e&quot;,
-    &quot;tumor&quot;: &quot;#66c2a5&quot;,
-    &quot;stromal&quot;: &quot;#d45943&quot;,
-    &quot;nan&quot;: &quot;#808080&quot;,
-}
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define color palette for plotting</span>
+<span class="n">col_celltype</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;T&quot;</span><span class="p">:</span> <span class="s2">&quot;#fb8072&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;#bc80bd&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;macro&quot;</span><span class="p">:</span> <span class="s2">&quot;#910290&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dendritic&quot;</span><span class="p">:</span> <span class="s2">&quot;#fdb462&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mast&quot;</span><span class="p">:</span> <span class="s2">&quot;#959059&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;perivas&quot;</span><span class="p">:</span> <span class="s2">&quot;#fed9a6&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;endo&quot;</span><span class="p">:</span> <span class="s2">&quot;#a6cee3&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;myoepi&quot;</span><span class="p">:</span> <span class="s2">&quot;#2782bb&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DCIS1&quot;</span><span class="p">:</span> <span class="s2">&quot;#3c7761&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;DCIS2&quot;</span><span class="p">:</span> <span class="s2">&quot;#66a61e&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tumor&quot;</span><span class="p">:</span> <span class="s2">&quot;#66c2a5&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;stromal&quot;</span><span class="p">:</span> <span class="s2">&quot;#d45943&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;nan&quot;</span><span class="p">:</span> <span class="s2">&quot;#808080&quot;</span><span class="p">,</span>
+<span class="p">}</span>
 
 
-def plot_feature_labels(sdata, method, feature, axes, i):
-    labels = sdata.tables[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].unique().astype(str).tolist()
-    cols = [col_celltype[lab] for lab in labels]
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_feature_labels</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col_celltype</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span> <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
 
-    sdata.tables[&quot;table&quot;].obs[&quot;region&quot;] = &quot;cell_boundaries&quot;
-    sdata.set_table_annotates_spatialelement(&quot;table&quot;, region=&quot;cell_boundaries&quot;)
+    <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
 
-    sdata.pl.render_shapes(
-        &quot;cell_boundaries&quot;,
-        color=&quot;transferred_cell_type&quot;,
-        palette=cols,
-        groups=labels,
-        outline_color=&quot;white&quot;,
-        outline_width=0.5,
-    ).pl.show(ax=axes[0, i], title=f&quot;{method}:Cell boundaries colored by cell type&quot;, coordinate_systems=&quot;global&quot;)
+    <span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+        <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span>
+        <span class="n">groups</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">:Cell boundaries colored by cell type&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
 
-    sdata.pl.render_shapes(
-        element=&quot;nucleus_boundaries&quot;,
-        fill_alpha=0.2,
-        outline_alpha=1.0,
-        outline_width=0.5,
-        outline_color=&quot;black&quot;,
-    ).pl.render_shapes(
-        element=&quot;cell_boundaries&quot;,
-        color=feature,
-        cmap=&quot;viridis&quot;,
-        fill_alpha=0.5,
-        outline_alpha=1.0,
-        outline_width=0.5,
-        outline_color=&quot;black&quot;,
-    ).pl.render_points(
-        &quot;transcripts&quot;,
-        color=st.points_gene_key,
-        groups=[&quot;ERBB2&quot;],
-        palette=[&quot;orange&quot;],
-    ).pl.show(ax=axes[1, i], title=f&quot;{method}: {feature}&quot;, coordinate_systems=&quot;global&quot;)
+    <span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+        <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
+        <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+        <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+        <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+        <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">points_gene_key</span><span class="p">,</span>
+        <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">],</span>
+        <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;orange&quot;</span><span class="p">],</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axes = plt.subplots(2, 2, figsize=(10, 7), constrained_layout=True)
-axes = np.atleast_2d(axes)
-for i, (method, st) in enumerate(st_dict.items()):
-    plot_feature_labels(st.sdata, method, &quot;num_in_cytoplasm_ERBB2&quot;, axes, i)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="n">plot_feature_labels</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="s2">&quot;num_in_cytoplasm_ERBB2&quot;</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">538</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">991</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_49_1.png" src="../_images/notebooks_point_statistics_49_1.png" />
 </div>
 </div>
 <p>The plots above show high ERBB2 transcript abundance in DCIS2 and myoepithelial cells, as well as high levels in stromal cells, where ERBB2 transcripts are largely excluded from the nuclear compartment.</p>
@@ -870,97 +1058,129 @@ for i, (method, st) in enumerate(st_dict.items()):
 (<code class="docutils literal notranslate"><span class="pre">min_transcripts</span></code>) to ensure robust skewness estimates.</p>
 <p>Let’s evaluate the skewness of ERBB2 transcripts within cells. The <code class="docutils literal notranslate"><span class="pre">min_transcripts</span></code> set to 5 will exclude a lot of cells.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_skew = st_proseg2.ps.membrane_distance_skewness([&quot;ERBB2&quot;], min_transcripts=5)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_skew</span> <span class="o">=</span> <span class="n">st_proseg2</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">membrane_distance_skewness</span><span class="p">([</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">],</span> <span class="n">min_transcripts</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_proseg2.sdata.pl.render_shapes(
-    &quot;cell_boundaries&quot;,
-    color=&quot;skew_dist_to_cell_membrane_ERBB2&quot;,
-).pl.render_points(
-    &quot;transcripts&quot;,
-    color=&quot;gene&quot;,
-    groups=&quot;ERBB2&quot;,
-    palette=&quot;orange&quot;,
-).pl.show(
-    title=&quot;ERBB2 locations in relation to the cell membrane&quot;,
-    coordinate_systems=&quot;global&quot;,
-    figsize=(6, 5),
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;skew_dist_to_cell_membrane_ERBB2&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
+    <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="s2">&quot;ERBB2&quot;</span><span class="p">,</span>
+    <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;ERBB2 locations in relation to the cell membrane&quot;</span><span class="p">,</span>
+    <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+<span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">1440</span> NaN values in color data. These observations will be colored with the
+         <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_55_1.png" src="../_images/notebooks_point_statistics_55_1.png" />
 </div>
 </div>
 <p>Let’s evaluate the membrane distance skewness across all genes and plot the results in per-cell type boxplots.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _method, st in st_dict.items():
-    st.ps.membrane_distance_skewness(min_transcripts=5)
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def boxplot_per_celltype(st_dict, feature, q=1):
-    dfs = []
-    for method, st in st_dict.items():
-        obs = st.sdata[&quot;table&quot;].obs[st.sdata[&quot;table&quot;].obs[&quot;transferred_cell_type&quot;].notna()].copy()
-        obs[&quot;transferred_cell_type&quot;] = obs[&quot;transferred_cell_type&quot;].cat.remove_unused_categories()
-        tmp = obs[[&quot;transferred_cell_type&quot;, feature]].copy()
-        tmp[&quot;method&quot;] = method
-        dfs.append(tmp)
-
-    df = pd.concat(dfs, ignore_index=True)
-    df = df[(df[feature] &lt;= df[feature].quantile(q))]
-
-    fig, ax = plt.subplots(figsize=(15, 5))
-
-    sns.boxplot(
-        data=df,
-        x=&quot;transferred_cell_type&quot;,
-        y=feature,
-        hue=&quot;method&quot;,
-        showcaps=True,
-        showfliers=False,
-        palette=&quot;Set2&quot;,
-        ax=ax,
-    )
-
-    fig.tight_layout()
-    plt.show()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">membrane_distance_skewness</span><span class="p">(</span><span class="n">min_transcripts</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>boxplot_per_celltype(st_dict, &quot;skew_dist_to_cell_membrane_all_genes&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">dfs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="n">dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">q</span><span class="p">))]</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+    <span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
+        <span class="n">showcaps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;skew_dist_to_cell_membrane_all_genes&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_point_statistics_59_0.png" src="../_images/notebooks_point_statistics_59_0.png" />
 </div>
 </div>
 <p>This shows the the transcripts are slightly more enriched close to the membrane for xenium, however, the differences are minor.</p>
 </section>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
-print(spatialdata_plot.__version__)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">spatialdata_plot</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.8.0
+0.4.0
+</pre></div></div>
 </div>
 </section>
 </section>

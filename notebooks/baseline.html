@@ -239,7 +239,7 @@
       
       
       
-      <li><a href="../_sources/notebooks/baseline.py" target="_blank"
+      <li><a href="../_sources/notebooks/baseline.ipynb" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -249,7 +249,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.py</span>
+<span class="btn__text-container">.ipynb</span>
 </a>
 </li>
       
@@ -348,342 +348,1093 @@ document.write(`
   <section id="Module:-Baseline-Metrics">
 <h1>Module: Baseline Metrics<a class="headerlink" href="#Module:-Baseline-Metrics" title="Link to this heading">#</a></h1>
 <p>When assessing the quality of a segmentation, the first thing one usually looks at are summary metrics such as the number of segmented cells, number of transcripts/genes per cell, the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.</p>
-<center><p><img alt="c9552dce458342cdb65f619ddcbe8928" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
+<center><p><img alt="79ebb7095ba441bc9b5e142e48f40cf5" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">baseline</span></code> (<code class="docutils literal notranslate"><span class="pre">bl</span></code>) module contains several metrics that can help you to assess the quality of your segmentation. The methods all return their corresponding values or dataframes, and also write them into the spatialdata object.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
-%autoreload 2
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import math
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
-import matplotlib.pyplot as plt
-import spatialdata as sd
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
 
-import segtraq
+<span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 
-sdata = sd.read_zarr(&quot;../../../data/xenium_5K_data/proseg2.zarr&quot;)
+<span class="n">sdata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">)</span>
 
-# putting the spatialdata object into a SegTraQ constructor
-# this has the advantage that we only need to set keywords like cell IDs or transcript IDs once
-st = segtraq.SegTraQ(
-    sdata,
-    images_key=None,
-    tables_area_key=None,
-    points_background_id=0,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-)
+<span class="c1"># putting the spatialdata object into a SegTraQ constructor</span>
+<span class="c1"># this has the advantage that we only need to set keywords like cell IDs or transcript IDs once</span>
+<span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata</span><span class="p">,</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe485541a0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4857a990&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4857ad50&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe48598180&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe48598640&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 4 cell IDs in shapes: [np.int64(11273), np.int64(10307), np.int64(10308), np.int64(6870)]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:1769: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+  nucleus_shapes = _ensure_index(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 <p>To get a first impression of the quality of the data, we can check how many cells there are in the data. We can also check how many transcripts were measured in total, how many genes they map to, and how many transcripts were not assigned to a cell.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.bl.num_cells()
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.bl.num_transcripts()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">num_cells</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.bl.num_genes()
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+17885
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">num_transcripts</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.bl.perc_unassigned_transcripts()
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+2189801
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">num_genes</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+5095
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">perc_unassigned_transcripts</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+2.0661238167303786
+</pre></div></div>
 </div>
 <p>Next, let’s see how many transcripts were detected per cell. We can do this using the <code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code> method.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>transcripts_per_cell = st.bl.transcripts_per_cell()
-transcripts_per_cell.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_per_cell</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">transcripts_per_cell</span><span class="p">()</span>
+<span class="n">transcripts_per_cell</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>transcript_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>3446</td>
+      <td>2345</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1097</td>
+      <td>1777</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2722</td>
+      <td>1458</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2006</td>
+      <td>1407</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2100</td>
+      <td>1314</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 <p>We can plot the median and distribution of this to see how the number of transcripts differs across cells.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># plotting the number of transcripts per cell
-plt.figure(figsize=(10, 6))
-plt.hist(transcripts_per_cell[&quot;transcript_count&quot;], bins=100)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># plotting the number of transcripts per cell</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">transcripts_per_cell</span><span class="p">[</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-# adding a line for the median
-plt.axvline(
-    transcripts_per_cell[&quot;transcript_count&quot;].median(),
-    color=&quot;black&quot;,
-    linestyle=&quot;dashed&quot;,
-    linewidth=1,
-)
-plt.text(
-    transcripts_per_cell[&quot;transcript_count&quot;].median() + 5,
-    50,
-    f&quot;Median: {transcripts_per_cell[&#39;transcript_count&#39;].median():.2f}&quot;,
-    color=&quot;black&quot;,
-)
+<span class="c1"># adding a line for the median</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span>
+    <span class="n">transcripts_per_cell</span><span class="p">[</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">(),</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;dashed&quot;</span><span class="p">,</span>
+    <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="n">transcripts_per_cell</span><span class="p">[</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span> <span class="o">+</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="mi">50</span><span class="p">,</span>
+    <span class="sa">f</span><span class="s2">&quot;Median: </span><span class="si">{</span><span class="n">transcripts_per_cell</span><span class="p">[</span><span class="s1">&#39;transcript_count&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-# adding labels and title
-plt.xlabel(&quot;Number of Transcripts&quot;)
-plt.ylabel(&quot;Count&quot;)
-plt.title(&quot;Distribution of Transcripts per Cell&quot;)
-plt.show()
+<span class="c1"># adding labels and title</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Number of Transcripts&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Distribution of Transcripts per Cell&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_11_0.png" src="../_images/notebooks_baseline_11_0.png" />
 </div>
 </div>
 <p>We can also do the same thing for the number of genes per cell, since there are often multiple transcripts measured per gene.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>genes_per_cell = st.bl.genes_per_cell()
-genes_per_cell.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">genes_per_cell</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">genes_per_cell</span><span class="p">()</span>
+<span class="n">genes_per_cell</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># plotting the number of genes per cell
-plt.figure(figsize=(10, 6))
-plt.hist(genes_per_cell[&quot;gene_count&quot;], bins=100)
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
-# adding a line for the median
-plt.axvline(
-    genes_per_cell[&quot;gene_count&quot;].median(),
-    color=&quot;black&quot;,
-    linestyle=&quot;dashed&quot;,
-    linewidth=1,
-)
-plt.text(
-    genes_per_cell[&quot;gene_count&quot;].median() + 5,
-    50,
-    f&quot;Median: {genes_per_cell[&#39;gene_count&#39;].median():.2f}&quot;,
-    color=&quot;black&quot;,
-)
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
 
-# adding labels and title
-plt.xlabel(&quot;Number of Genes&quot;)
-plt.ylabel(&quot;Count&quot;)
-plt.title(&quot;Distribution of Genes per Cell&quot;)
-plt.show()
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>gene_count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>389</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>45</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>120</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>41</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># plotting the number of genes per cell</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">genes_per_cell</span><span class="p">[</span><span class="s2">&quot;gene_count&quot;</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="c1"># adding a line for the median</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span>
+    <span class="n">genes_per_cell</span><span class="p">[</span><span class="s2">&quot;gene_count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">(),</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;dashed&quot;</span><span class="p">,</span>
+    <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="n">genes_per_cell</span><span class="p">[</span><span class="s2">&quot;gene_count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span> <span class="o">+</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="mi">50</span><span class="p">,</span>
+    <span class="sa">f</span><span class="s2">&quot;Median: </span><span class="si">{</span><span class="n">genes_per_cell</span><span class="p">[</span><span class="s1">&#39;gene_count&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># adding labels and title</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Number of Genes&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Distribution of Genes per Cell&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_14_0.png" src="../_images/notebooks_baseline_14_0.png" />
 </div>
 </div>
 <p>Next to the number of transcripts per cell, we can also investigate the transcript density, which is computed as the number of transcripts divided by the cell area. Note that the background does not appear in this data frame.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>transcript_density = st.bl.transcript_density()
-transcript_density.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcript_density</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">transcript_density</span><span class="p">()</span>
+<span class="n">transcript_density</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>x = transcript_density[&quot;transcript_density&quot;].dropna()
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
-p99 = x.quantile(0.99)
-x_clip = x[x &lt;= p99]
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
 
-plt.figure(figsize=(10, 6))
-plt.hist(x_clip, bins=100)
-
-# median from full distribution
-med = x.median()
-
-plt.axvline(med, color=&quot;black&quot;, linestyle=&quot;dashed&quot;, linewidth=1)
-plt.text(
-    med + 0.05,
-    plt.ylim()[1] * 0.9,
-    f&quot;Median: {med:.2f}&quot;,
-    color=&quot;black&quot;,
-)
-
-# adding labels and title
-plt.xlabel(&quot;Transcript Density (transcripts per area)&quot;)
-plt.ylabel(&quot;Count&quot;)
-plt.title(&quot;Distribution of Transcript Density per Cell&quot;)
-plt.show()
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>transcript_density</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>2.391061</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>0.989691</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>0.171429</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>1.993355</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>0.508108</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">transcript_density</span><span class="p">[</span><span class="s2">&quot;transcript_density&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+<span class="n">p99</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.99</span><span class="p">)</span>
+<span class="n">x_clip</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">p99</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">x_clip</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="c1"># median from full distribution</span>
+<span class="n">med</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">med</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;dashed&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="n">med</span> <span class="o">+</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">,</span>
+    <span class="sa">f</span><span class="s2">&quot;Median: </span><span class="si">{</span><span class="n">med</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># adding labels and title</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Transcript Density (transcripts per area)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Distribution of Transcript Density per Cell&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_17_0.png" src="../_images/notebooks_baseline_17_0.png" />
 </div>
 </div>
 <p>We can also compute the mean number of transcripts per detected gene per cell, which is computed by averaging per-gene transcript counts across genes observed in each cell. Note that only detected genes are considered and background transcripts are excluded.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>mean_transcripts_per_gene_per_cell = st.bl.mean_transcripts_per_gene_per_cell()
-mean_transcripts_per_gene_per_cell.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mean_transcripts_per_gene_per_cell</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">mean_transcripts_per_gene_per_cell</span><span class="p">()</span>
+<span class="n">mean_transcripts_per_gene_per_cell</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>x = mean_transcripts_per_gene_per_cell[&quot;mean_transcripts_per_gene&quot;].dropna()
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
-p99 = x.quantile(0.99)
-x_clip = x[x &lt;= p99]
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
 
-plt.figure(figsize=(10, 6))
-plt.hist(x_clip, bins=100)
-
-# median from full distribution
-med = x.median()
-
-plt.axvline(med, color=&quot;black&quot;, linestyle=&quot;dashed&quot;, linewidth=1)
-plt.text(
-    med + 0.05,
-    plt.ylim()[1] * 0.9,
-    f&quot;Median: {med:.2f}&quot;,
-    color=&quot;black&quot;,
-)
-
-# adding labels and title
-plt.xlabel(&quot;Transcript Density (transcripts per area)&quot;)
-plt.ylabel(&quot;Count&quot;)
-plt.title(&quot;Distribution of Transcript Density per Cell&quot;)
-plt.show()
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>mean_transcripts_per_gene</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1.375321</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>1.066667</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>1.200000</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>1.250000</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>1.146341</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">mean_transcripts_per_gene_per_cell</span><span class="p">[</span><span class="s2">&quot;mean_transcripts_per_gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+<span class="n">p99</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.99</span><span class="p">)</span>
+<span class="n">x_clip</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">p99</span><span class="p">]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">x_clip</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="c1"># median from full distribution</span>
+<span class="n">med</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">med</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;dashed&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="n">med</span> <span class="o">+</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">,</span>
+    <span class="sa">f</span><span class="s2">&quot;Median: </span><span class="si">{</span><span class="n">med</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># adding labels and title</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Transcript Density (transcripts per area)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Distribution of Transcript Density per Cell&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_20_0.png" src="../_images/notebooks_baseline_20_0.png" />
 </div>
 </div>
 <p>Finally, let’s look at some morphological features, such as the cell area, circularity, elongation, etc. We can get those with the function <code class="docutils literal notranslate"><span class="pre">morphological_features()</span></code>. If you only want to compute certain features, you can select them with the <code class="docutils literal notranslate"><span class="pre">features_to_compute</span></code> argument. This can drastically reduce the runtime, as especially the features <code class="docutils literal notranslate"><span class="pre">elongation</span></code> and <code class="docutils literal notranslate"><span class="pre">eccentricity</span></code> can take a while to compute.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>morphological_features = st.bl.morphological_features()
-morphological_features.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">morphological_features</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">morphological_features</span><span class="p">()</span>
+<span class="n">morphological_features</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>num_polygons</th>
+      <th>cell_area</th>
+      <th>perimeter</th>
+      <th>circularity</th>
+      <th>solidity</th>
+      <th>convexity</th>
+      <th>elongation</th>
+      <th>eccentricity</th>
+      <th>compactness</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>3</td>
+      <td>223.75</td>
+      <td>77.291274</td>
+      <td>0.470665</td>
+      <td>0.874023</td>
+      <td>0.867660</td>
+      <td>2.153846</td>
+      <td>0.885685</td>
+      <td>26.699178</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>1</td>
+      <td>48.50</td>
+      <td>28.825554</td>
+      <td>0.733494</td>
+      <td>0.906542</td>
+      <td>0.955507</td>
+      <td>1.090909</td>
+      <td>0.399653</td>
+      <td>17.132217</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>1</td>
+      <td>35.00</td>
+      <td>27.756656</td>
+      <td>0.570878</td>
+      <td>0.853659</td>
+      <td>0.914635</td>
+      <td>1.368421</td>
+      <td>0.682625</td>
+      <td>22.012341</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>3</td>
+      <td>75.25</td>
+      <td>42.007644</td>
+      <td>0.535870</td>
+      <td>0.817935</td>
+      <td>0.865989</td>
+      <td>1.130435</td>
+      <td>0.466321</td>
+      <td>23.450394</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>1</td>
+      <td>92.50</td>
+      <td>44.342251</td>
+      <td>0.591175</td>
+      <td>0.864486</td>
+      <td>0.863819</td>
+      <td>1.119565</td>
+      <td>0.449652</td>
+      <td>21.256597</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 <p>Let’s plot all of the distributions in one plot using subplots.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># exclude &#39;cell_id&#39; from the features to plot
-features = [f for f in morphological_features.columns if f != &quot;cell_id&quot;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># exclude &#39;cell_id&#39; from the features to plot</span>
+<span class="n">features</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">morphological_features</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">f</span> <span class="o">!=</span> <span class="s2">&quot;cell_id&quot;</span><span class="p">]</span>
 
-# define grid layout
-num_features = len(features)
-cols = 3
-rows = math.ceil(num_features / cols)
+<span class="c1"># define grid layout</span>
+<span class="n">num_features</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+<span class="n">cols</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">rows</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">num_features</span> <span class="o">/</span> <span class="n">cols</span><span class="p">)</span>
 
-# create subplots
-fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 3))
-axes = axes.flatten()
+<span class="c1"># create subplots</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">cols</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">rows</span> <span class="o">*</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-for i, feature in enumerate(features):
-    ax = axes[i]
-    data = morphological_features[feature]
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">feature</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">features</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">morphological_features</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span>
 
-    ax.hist(data, bins=100)
-    median_val = data.median()
-    ax.axvline(median_val, color=&quot;black&quot;, linestyle=&quot;dashed&quot;, linewidth=1)
-    ax.text(
-        median_val + 0.05,
-        ax.get_ylim()[1] * 0.9,
-        f&quot;Median: {median_val:.2f}&quot;,
-        color=&quot;black&quot;,
-        fontsize=8,
-    )
+    <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">median_val</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">median_val</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;dashed&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+        <span class="n">median_val</span> <span class="o">+</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;Median: </span><span class="si">{</span><span class="n">median_val</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="p">)</span>
 
-    ax.set_title(feature, fontsize=10)
-    ax.set_xlabel(&quot;Value&quot;, fontsize=8)
-    ax.set_ylabel(&quot;Count&quot;, fontsize=8)
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Value&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 
-# hide unused subplots
-for j in range(i + 1, len(axes)):
-    fig.delaxes(axes[j])
+<span class="c1"># hide unused subplots</span>
+<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">)):</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
 
-fig.tight_layout()
-plt.show()
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_baseline_24_0.png" src="../_images/notebooks_baseline_24_0.png" />
 </div>
 </div>
 <p>Instead of measures per cell, we can also compute some metrics per gene. For example, we can see the percentage of how often a gene was not assigned to any cell. This can help to detect potential biases in our segmentation.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>perc_unassigned_transcripts_per_gene = st.bl.perc_unassigned_transcripts_per_gene()
-perc_unassigned_transcripts_per_gene.sort_values(by=&quot;perc_unassigned&quot;, ascending=False).head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">perc_unassigned_transcripts_per_gene</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">bl</span><span class="o">.</span><span class="n">perc_unassigned_transcripts_per_gene</span><span class="p">()</span>
+<span class="n">perc_unassigned_transcripts_per_gene</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;perc_unassigned&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>total</th>
+      <th>unassigned</th>
+      <th>perc_unassigned</th>
+    </tr>
+    <tr>
+      <th>feature_name</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>HPV16-E7</th>
+      <td>1</td>
+      <td>1</td>
+      <td>100.000000</td>
+    </tr>
+    <tr>
+      <th>CIDEC</th>
+      <td>169</td>
+      <td>105</td>
+      <td>62.130178</td>
+    </tr>
+    <tr>
+      <th>GHR</th>
+      <td>118</td>
+      <td>69</td>
+      <td>58.474576</td>
+    </tr>
+    <tr>
+      <th>PLIN1</th>
+      <td>240</td>
+      <td>137</td>
+      <td>57.083333</td>
+    </tr>
+    <tr>
+      <th>SLC1A1</th>
+      <td>22</td>
+      <td>12</td>
+      <td>54.545455</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 <p>In our example, most transcripts were assigned to a cell. However, if you detected that a large number of transcripts were unassigned, you could follow up with a gene set enrichment analysis (GSEA) to look for specific biases.</p>
 <p>Finally, we can check the anndata object to verify that all of our metrics are stored in there.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata.tables[&quot;table&quot;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+AnnData object with n_obs × n_vars = 17885 × 5095
+    obs: &#39;cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;, &#39;volume&#39;, &#39;label_id&#39;, &#39;region&#39;, &#39;gene_count&#39;, &#39;transcript_count&#39;, &#39;transcript_density&#39;, &#39;mean_transcripts_per_gene&#39;, &#39;num_polygons&#39;, &#39;cell_area&#39;, &#39;perimeter&#39;, &#39;circularity&#39;, &#39;solidity&#39;, &#39;convexity&#39;, &#39;elongation&#39;, &#39;eccentricity&#39;, &#39;compactness&#39;
+    var: &#39;total&#39;, &#39;unassigned&#39;, &#39;perc_unassigned&#39;
+    uns: &#39;spatialdata_attrs&#39;, &#39;num_cells&#39;, &#39;num_transcripts&#39;, &#39;num_genes&#39;, &#39;perc_unassigned_transcripts&#39;
+    layers: &#39;X_estimated&#39;
+</pre></div></div>
 </div>
 <p>Alternatively, all <code class="docutils literal notranslate"><span class="pre">bl</span></code> metrics can be computed in one run via <code class="docutils literal notranslate"><span class="pre">run_baseline</span></code>.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.run_baseline()
-sdata.tables[&quot;table&quot;].obs.head()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">run_baseline</span><span class="p">()</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>sdata.tables[&quot;table&quot;].var.head()
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>centroid_x</th>
+      <th>centroid_y</th>
+      <th>centroid_z</th>
+      <th>volume</th>
+      <th>label_id</th>
+      <th>region</th>
+      <th>gene_count</th>
+      <th>mean_transcripts_per_gene</th>
+      <th>transcript_count</th>
+      <th>transcript_density</th>
+      <th>num_polygons</th>
+      <th>cell_area</th>
+      <th>perimeter</th>
+      <th>circularity</th>
+      <th>solidity</th>
+      <th>convexity</th>
+      <th>elongation</th>
+      <th>eccentricity</th>
+      <th>compactness</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>154.66340</td>
+      <td>1053.59360</td>
+      <td>-0.115346</td>
+      <td>1131.67400</td>
+      <td>1</td>
+      <td>cell_boundaries</td>
+      <td>389.0</td>
+      <td>1.375321</td>
+      <td>535.0</td>
+      <td>2.391061</td>
+      <td>3.0</td>
+      <td>223.75</td>
+      <td>77.291274</td>
+      <td>0.470665</td>
+      <td>0.874023</td>
+      <td>0.867660</td>
+      <td>2.153846</td>
+      <td>0.885685</td>
+      <td>26.699178</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>348.67285</td>
+      <td>287.59875</td>
+      <td>0.524985</td>
+      <td>256.04938</td>
+      <td>2</td>
+      <td>cell_boundaries</td>
+      <td>45.0</td>
+      <td>1.066667</td>
+      <td>48.0</td>
+      <td>0.989691</td>
+      <td>1.0</td>
+      <td>48.50</td>
+      <td>28.825554</td>
+      <td>0.733494</td>
+      <td>0.906542</td>
+      <td>0.955507</td>
+      <td>1.090909</td>
+      <td>0.399653</td>
+      <td>17.132217</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>720.20215</td>
+      <td>1218.87230</td>
+      <td>0.660745</td>
+      <td>148.57190</td>
+      <td>3</td>
+      <td>cell_boundaries</td>
+      <td>5.0</td>
+      <td>1.200000</td>
+      <td>6.0</td>
+      <td>0.171429</td>
+      <td>1.0</td>
+      <td>35.00</td>
+      <td>27.756656</td>
+      <td>0.570878</td>
+      <td>0.853659</td>
+      <td>0.914635</td>
+      <td>1.368421</td>
+      <td>0.682625</td>
+      <td>22.012341</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>877.44590</td>
+      <td>1707.41210</td>
+      <td>-0.980020</td>
+      <td>233.92108</td>
+      <td>4</td>
+      <td>cell_boundaries</td>
+      <td>120.0</td>
+      <td>1.250000</td>
+      <td>150.0</td>
+      <td>1.993355</td>
+      <td>3.0</td>
+      <td>75.25</td>
+      <td>42.007644</td>
+      <td>0.535870</td>
+      <td>0.817935</td>
+      <td>0.865989</td>
+      <td>1.130435</td>
+      <td>0.466321</td>
+      <td>23.450394</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>1253.77540</td>
+      <td>1426.49510</td>
+      <td>0.859675</td>
+      <td>327.17487</td>
+      <td>5</td>
+      <td>cell_boundaries</td>
+      <td>41.0</td>
+      <td>1.146341</td>
+      <td>47.0</td>
+      <td>0.508108</td>
+      <td>1.0</td>
+      <td>92.50</td>
+      <td>44.342251</td>
+      <td>0.591175</td>
+      <td>0.864486</td>
+      <td>0.863819</td>
+      <td>1.119565</td>
+      <td>0.449652</td>
+      <td>21.256597</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>total</th>
+      <th>unassigned</th>
+      <th>perc_unassigned</th>
+    </tr>
+    <tr>
+      <th>gene_symbol</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>EEF1G</th>
+      <td>29662</td>
+      <td>568</td>
+      <td>1.914908</td>
+    </tr>
+    <tr>
+      <th>XBP1</th>
+      <td>24838</td>
+      <td>42</td>
+      <td>0.169096</td>
+    </tr>
+    <tr>
+      <th>TIMP3</th>
+      <td>18879</td>
+      <td>74</td>
+      <td>0.391970</td>
+    </tr>
+    <tr>
+      <th>RAB11FIP1</th>
+      <td>15609</td>
+      <td>24</td>
+      <td>0.153757</td>
+    </tr>
+    <tr>
+      <th>H3F3B</th>
+      <td>13492</td>
+      <td>368</td>
+      <td>2.727542</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.8.0
+</pre></div></div>
 </div>
 </section>
 </section>

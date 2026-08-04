@@ -239,7 +239,7 @@
       
       
       
-      <li><a href="../_sources/notebooks/plotting.py" target="_blank"
+      <li><a href="../_sources/notebooks/plotting.ipynb" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -249,7 +249,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.py</span>
+<span class="btn__text-container">.ipynb</span>
 </a>
 </li>
       
@@ -363,107 +363,126 @@ document.write(`
 <h2>Data Preparation<a class="headerlink" href="#Data-Preparation" title="Link to this heading">#</a></h2>
 <p>First, we need to get the data into the right format. This closely follows the <a class="reference internal" href="10x_xenium_focus.html"><span class="doc">Xenium Focus</span></a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
-%autoreload 2
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 
-import warnings
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
-warnings.filterwarnings(action=&quot;ignore&quot;)
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import anndata as ad
-import matplotlib.pyplot as plt
-import scanpy as sc
-import spatialdata as sd
-import spatialdata_plot  # noqa
-
-import segtraq
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># === READING SPATIALDATA OBJECTS ===
-sdata_xenium_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/xenium.zarr&quot;)
-sdata_bidcell_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/bidcell.zarr&quot;)
-sdata_proseg_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/proseg2.zarr&quot;)
-sdata_segger_ws = sd.read_zarr(&quot;../../../data/xenium_5K_data/segger.zarr&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scanpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa</span>
 
-# === CROPPING ===
-bb_xmin = 800
-bb_ymin = 1150
-bb_w = 200
-bb_h = 300
-bb_xmax = bb_xmin + bb_w
-bb_ymax = bb_ymin + bb_h
-
-
-def crop(ws):
-    return ws.query.bounding_box(
-        axes=[&quot;x&quot;, &quot;y&quot;],
-        min_coordinate=[bb_xmin, bb_ymin],
-        max_coordinate=[bb_xmax, bb_ymax],
-        target_coordinate_system=&quot;global&quot;,
-    )
-
-
-sdata_xenium = crop(sdata_xenium_ws)
-sdata_bidcell = crop(sdata_bidcell_ws)
-sdata_proseg = crop(sdata_proseg_ws)
-sdata_segger = crop(sdata_segger_ws)
-
-# === CREATING SEGTRAQ OBJECTS ===
-st_xenium = segtraq.SegTraQ(
-    sdata_xenium, images_key=&quot;image&quot;, tables_centroid_x_key=&quot;x_centroid&quot;, tables_centroid_y_key=&quot;y_centroid&quot;
-)
-st_bidcell = segtraq.SegTraQ(
-    sdata_bidcell,
-    images_key=&quot;image&quot;,
-    points_background_id=0,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-)
-st_proseg = segtraq.SegTraQ(
-    sdata_proseg,
-    images_key=&quot;image&quot;,
-    points_background_id=0,
-    tables_area_key=None,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-)
-st_segger = segtraq.SegTraQ(
-    sdata_segger, images_key=&quot;image&quot;, tables_centroid_x_key=&quot;cell_centroid_x&quot;, tables_centroid_y_key=&quot;cell_centroid_y&quot;
-)
-
-# === PUTTING EVERYTHING INTO A DICTIONARY ===
-st_dict = {&quot;xenium&quot;: st_xenium, &quot;bidcell&quot;: st_bidcell, &quot;proseg&quot;: st_proseg, &quot;segger&quot;: st_segger}
+<span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 </pre></div>
 </div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># === READING SPATIALDATA OBJECTS ===</span>
+<span class="n">sdata_xenium_ws</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/xenium.zarr&quot;</span><span class="p">)</span>
+<span class="n">sdata_bidcell_ws</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/bidcell.zarr&quot;</span><span class="p">)</span>
+<span class="n">sdata_proseg_ws</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">)</span>
+<span class="n">sdata_segger_ws</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/segger.zarr&quot;</span><span class="p">)</span>
+
+<span class="c1"># === CROPPING ===</span>
+<span class="n">bb_xmin</span> <span class="o">=</span> <span class="mi">800</span>
+<span class="n">bb_ymin</span> <span class="o">=</span> <span class="mi">1150</span>
+<span class="n">bb_w</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">bb_h</span> <span class="o">=</span> <span class="mi">300</span>
+<span class="n">bb_xmax</span> <span class="o">=</span> <span class="n">bb_xmin</span> <span class="o">+</span> <span class="n">bb_w</span>
+<span class="n">bb_ymax</span> <span class="o">=</span> <span class="n">bb_ymin</span> <span class="o">+</span> <span class="n">bb_h</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">crop</span><span class="p">(</span><span class="n">ws</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ws</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">bounding_box</span><span class="p">(</span>
+        <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
+        <span class="n">min_coordinate</span><span class="o">=</span><span class="p">[</span><span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">],</span>
+        <span class="n">max_coordinate</span><span class="o">=</span><span class="p">[</span><span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">],</span>
+        <span class="n">target_coordinate_system</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">sdata_xenium</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_xenium_ws</span><span class="p">)</span>
+<span class="n">sdata_bidcell</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_bidcell_ws</span><span class="p">)</span>
+<span class="n">sdata_proseg</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_proseg_ws</span><span class="p">)</span>
+<span class="n">sdata_segger</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_segger_ws</span><span class="p">)</span>
+
+<span class="c1"># === CREATING SEGTRAQ OBJECTS ===</span>
+<span class="n">st_xenium</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_xenium</span><span class="p">,</span> <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;x_centroid&quot;</span><span class="p">,</span> <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;y_centroid&quot;</span>
+<span class="p">)</span>
+<span class="n">st_bidcell</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_bidcell</span><span class="p">,</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">st_proseg</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_proseg</span><span class="p">,</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">st_segger</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_segger</span><span class="p">,</span> <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span> <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_y&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># === PUTTING EVERYTHING INTO A DICTIONARY ===</span>
+<span class="n">st_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;xenium&quot;</span><span class="p">:</span> <span class="n">st_xenium</span><span class="p">,</span> <span class="s2">&quot;bidcell&quot;</span><span class="p">:</span> <span class="n">st_bidcell</span><span class="p">,</span> <span class="s2">&quot;proseg&quot;</span><span class="p">:</span> <span class="n">st_proseg</span><span class="p">,</span> <span class="s2">&quot;segger&quot;</span><span class="p">:</span> <span class="n">st_segger</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42322cf0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4236a990&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4226c550&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe422b2ea0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42bcb100&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe422a69f0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe423cf790&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe423cf460&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42251250&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42252f50&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42677200&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42675c70&gt;: None
+</pre></div></div>
 </div>
 </section>
 <section id="Run-desired-metrics">
 <h2>Run desired metrics<a class="headerlink" href="#Run-desired-metrics" title="Link to this heading">#</a></h2>
 <p>Now, we can run all of the metrics we want on this dataset. For now, we simply run a label transfer and run some <code class="docutils literal notranslate"><span class="pre">scanpy</span></code> functions to compute the UMAP coordinates.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Load scRNA-seq data
-adata_ref = ad.read_h5ad(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load scRNA-seq data</span>
+<span class="n">adata_ref</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
 
-# Transfer labels
-for _method, st in st_dict.items():
-    st.run_label_transfer(adata_ref, ref_cell_type=&quot;celltype_major&quot;, ref_raw_counts_layer=&quot;raw&quot;, inplace=True)
+<span class="c1"># Transfer labels</span>
+<span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -472,34 +491,55 @@ for _method, st in st_dict.items():
 <section id="Plots-for-individual-samples">
 <h1>Plots for individual samples<a class="headerlink" href="#Plots-for-individual-samples" title="Link to this heading">#</a></h1>
 <p>The <code class="docutils literal notranslate"><span class="pre">pl</span></code> module provides methods to plot different things: on one hand, it can be used to visualize certain characteristics of a sample, and on the other, it can be used to compare between different samples or segmentation methods. Let’s start by looking at some sample-specific plots. Specifically, we can look at the distribution of transcripts and different segmentation features across the x and y coordinate. For some technologies (such as CosMx), this can help to detect stitching artefacts.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># transcript distribution across the x and y axis of the image
-# the filter size (default: 21) can be used to get an idea for broader trends
-_ = st_xenium.pl.transcript_distribution_across_space(filter_size=21)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># transcript distribution across the x and y axis of the image</span>
+<span class="c1"># the filter size (default: 21) can be used to get an idea for broader trends</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">transcript_distribution_across_space</span><span class="p">(</span><span class="n">filter_size</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_8_0.png" src="../_images/notebooks_plotting_8_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># features of the segmentation across the axes
-_ = st_xenium.pl.feature_distribution_across_space(features=[&quot;cell_area&quot;, &quot;nucleus_area&quot;], filter_size=21)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># features of the segmentation across the axes</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">feature_distribution_across_space</span><span class="p">(</span><span class="n">features</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;cell_area&quot;</span><span class="p">,</span> <span class="s2">&quot;nucleus_area&quot;</span><span class="p">],</span> <span class="n">filter_size</span><span class="o">=</span><span class="mi">21</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_9_0.png" src="../_images/notebooks_plotting_9_0.png" />
 </div>
 </div>
 <p>We can see two things here: for the Xenium segmentation, the right part of the image contains more transcripts. Its cells are also larger. We can use <code class="docutils literal notranslate"><span class="pre">spatialdata_plot</span></code> to have a look at the actual data.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, ax = plt.subplots(1, 2, figsize=(7, 7), dpi=100)
-st_xenium.sdata.pl.render_points(&quot;transcripts&quot;, size=0.01, color=&quot;red&quot;, method=&quot;matplotlib&quot;).pl.show(ax=ax[0])
-st_xenium.sdata.pl.render_shapes(&quot;cell_boundaries&quot;).pl.show(ax=ax[1])
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span><span class="s2">&quot;transcripts&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;matplotlib&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_11_0.png" src="../_images/notebooks_plotting_11_0.png" />
 </div>
 </div>
 <p>Here, this is actually due to the structure of the tissue (large tumor cells are on the right side of the image). When applying these methods on larger tissues, they can also help to detect technical artefacts.</p>
@@ -507,73 +547,117 @@ st_xenium.sdata.pl.render_shapes(&quot;cell_boundaries&quot;).pl.show(ax=ax[1])
 <section id="Comparing-between-segmentation-methods">
 <h1>Comparing between segmentation methods<a class="headerlink" href="#Comparing-between-segmentation-methods" title="Link to this heading">#</a></h1>
 <p>We can also use the <code class="docutils literal notranslate"><span class="pre">pl</span></code> module to compare between different segmentation methods. All we need to do is pass our dictionary of <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> objects.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.celltype_proportions(st_dict, celltype_col=&quot;transferred_cell_type&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">celltype_proportions</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">celltype_col</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_14_0.png" src="../_images/notebooks_plotting_14_0.png" />
 </div>
 </div>
 <p>Before we can plot the UMAP, we need to actually compute it.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>for _, st in st_dict.items():
-    # extracting the anndata object from the spatialdata object and performing appropriate normalization
-    adata = st.sdata.tables[&quot;table&quot;]
-    adata.layers[&quot;raw&quot;] = adata.X.copy()
-    sc.pp.normalize_total(adata, inplace=True)
-    sc.pp.log1p(adata)
-    sc.pp.pca(adata)
-    sc.pp.neighbors(adata)
-    sc.tl.umap(adata)
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.umap(st_dict, color=&quot;transferred_cell_type&quot;, legend=True, figsize=(10, 6))
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="c1"># extracting the anndata object from the spatialdata object and performing appropriate normalization</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
+    <span class="n">adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">&quot;raw&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">umap</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.umap(st_dict, color=&quot;transcript_count&quot;, legend=True, figsize=(10, 6))
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.boxplot(st_dict, celltype_col=&quot;transferred_cell_type&quot;, value_key=&quot;transcript_count&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">umap</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_17_0.png" src="../_images/notebooks_plotting_17_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>_ = segtraq.pl.boxplot_combined(st_dict, celltype_col=&quot;transferred_cell_type&quot;, value_key=&quot;transcript_count&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">umap</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_18_0.png" src="../_images/notebooks_plotting_18_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">celltype_col</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span> <span class="n">value_key</span><span class="o">=</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_19_0.png" src="../_images/notebooks_plotting_19_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">boxplot_combined</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">celltype_col</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span> <span class="n">value_key</span><span class="o">=</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_plotting_20_0.png" src="../_images/notebooks_plotting_20_0.png" />
 </div>
 </div>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(sd.__version__)  # spatialdata
-print(spatialdata_plot.__version__)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">spatialdata_plot</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.8.0
+0.4.0
+</pre></div></div>
 </div>
 </section>
 </section>

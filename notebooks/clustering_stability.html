@@ -239,7 +239,7 @@
       
       
       
-      <li><a href="../_sources/notebooks/clustering_stability.py" target="_blank"
+      <li><a href="../_sources/notebooks/clustering_stability.ipynb" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -249,7 +249,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.py</span>
+<span class="btn__text-container">.ipynb</span>
 </a>
 </li>
       
@@ -355,144 +355,222 @@ document.write(`
   <section id="Module:-Clustering-Stability">
 <h1>Module: Clustering Stability<a class="headerlink" href="#Module:-Clustering-Stability" title="Link to this heading">#</a></h1>
 <p>When analyzing (spatial) transcriptomics data, cells are typically clustered into cell types based on their RNA expression. If the segmentation of a spatial transcriptomics dataset went well, we would assume that this clustering is somewhat stable, even if we only cluster on parts of the data. The <code class="docutils literal notranslate"><span class="pre">clustering</span> <span class="pre">stability</span></code> (<code class="docutils literal notranslate"><span class="pre">cs</span></code>) module includes some functions to apply clustering and assess its robustness. The figure below shows a bad clustering (lots of overlap) vs. a good clustering.</p>
-<center><p><img alt="a708c029300d433bac668ab3409e995e" class="no-scaled-link" src="../_images/clustering_stability.png" style="width: 90%;" /></p>
+<center><p><img alt="542b784de414410fa39bbab183d582e7" class="no-scaled-link" src="../_images/clustering_stability.png" style="width: 90%;" /></p>
 </center><p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>%load_ext autoreload
-%autoreload 2
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 
-import warnings
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
-warnings.simplefilter(action=&quot;ignore&quot;, category=FutureWarning)
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scanpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa: F401</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>import importlib
-from pathlib import Path
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">filter_zero_count_cells</span><span class="p">(</span><span class="n">adata</span><span class="p">:</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a view of adata excluding cells with zero total counts.</span>
+<span class="sd">    Does NOT modify the original object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">sp</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">total_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">total_counts</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-import anndata as ad
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import scanpy as sc
-import scipy.sparse as sp
-import seaborn as sns
-import spatialdata as sd
-import spatialdata_plot  # noqa: F401
-
-import segtraq
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>def filter_zero_count_cells(adata: ad.AnnData) -&gt; ad.AnnData:
-    &quot;&quot;&quot;
-    Return a view of adata excluding cells with zero total counts.
-    Does NOT modify the original object.
-    &quot;&quot;&quot;
-    if sp.issparse(adata.X):
-        total_counts = np.array(adata.X.sum(axis=1)).flatten()
-    else:
-        total_counts = adata.X.sum(axis=1)
-
-    mask = total_counts &gt; 0
-    return adata[mask, :]
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">total_counts</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">adata</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="p">:]</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># example datasets on which we can compare performance
-st_bidcell = segtraq.SegTraQ(
-    sd.read_zarr(&quot;../../../data/xenium_5K_data/bidcell.zarr&quot;),
-    images_key=&quot;image&quot;,
-    points_background_id=0,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># example datasets on which we can compare performance</span>
+<span class="n">st_bidcell</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/bidcell.zarr&quot;</span><span class="p">),</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-st_segger = segtraq.SegTraQ(
-    sd.read_zarr(&quot;../../../data/xenium_5K_data/segger.zarr&quot;),
-    images_key=&quot;image&quot;,
-    tables_centroid_x_key=&quot;cell_centroid_x&quot;,
-    tables_centroid_y_key=&quot;cell_centroid_y&quot;,
-)
+<span class="n">st_segger</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/segger.zarr&quot;</span><span class="p">),</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-st_xenium = segtraq.SegTraQ(
-    sd.read_zarr(&quot;../../../data/xenium_5K_data/xenium.zarr&quot;),
-    images_key=&quot;image&quot;,
-    tables_centroid_x_key=&quot;x_centroid&quot;,
-    tables_centroid_y_key=&quot;x_centroid&quot;,
-)
+<span class="n">st_xenium</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/xenium.zarr&quot;</span><span class="p">),</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;x_centroid&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;x_centroid&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-st_proseg2 = segtraq.SegTraQ(
-    sd.read_zarr(&quot;../../../data/xenium_5K_data/proseg2.zarr&quot;),
-    images_key=&quot;image&quot;,
-    points_background_id=0,
-    tables_area_key=None,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_x&quot;,
-)
+<span class="n">st_proseg2</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">),</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-st_dict = {&quot;bidcell&quot;: st_bidcell, &quot;segger&quot;: st_segger, &quot;xenium&quot;: st_xenium, &quot;proseg2&quot;: st_proseg2}
+<span class="n">st_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;bidcell&quot;</span><span class="p">:</span> <span class="n">st_bidcell</span><span class="p">,</span> <span class="s2">&quot;segger&quot;</span><span class="p">:</span> <span class="n">st_segger</span><span class="p">,</span> <span class="s2">&quot;xenium&quot;</span><span class="p">:</span> <span class="n">st_xenium</span><span class="p">,</span> <span class="s2">&quot;proseg2&quot;</span><span class="p">:</span> <span class="n">st_proseg2</span><span class="p">}</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe423d7230&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4235a210&gt;: None
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe28d825d0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe282d5810&gt;: None
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 23 cell IDs in shapes: [&#39;ibiifmpi-1&#39;, &#39;afnajpkp-1&#39;, &#39;ipnffmib-1&#39;, &#39;ocnlagnn-1&#39;, &#39;hlhfagon-1&#39;]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:1769: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+  nucleus_shapes = _ensure_index(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe282d4b00&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe428fbbf0&gt;: None
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:1769: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+  nucleus_shapes = _ensure_index(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe5f267130&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe422b7350&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe28205750&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe28205050&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42cf3a70&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42a3f5c0&gt;: None
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 4 cell IDs in shapes: [np.int64(11273), np.int64(10307), np.int64(10308), np.int64(6870)]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:1769: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+  nucleus_shapes = _ensure_index(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 <section id="The-problem">
 <h2>The problem<a class="headerlink" href="#The-problem" title="Link to this heading">#</a></h2>
 <p>Segmentation errors affect downstream analysis in spatial transcriptomics datasets. For example, let’s consider the UMAPs of four different segmentations. You can see below that they differ substantially.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(1, 4, figsize=(8, 2))
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
 
-# Flatten axs in case of single row/column
-axs = axs.flatten()
+<span class="c1"># Flatten axs in case of single row/column</span>
+<span class="n">axs</span> <span class="o">=</span> <span class="n">axs</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-for i, (method, st) in enumerate(st_dict.items()):
-    # here, we do not want to alter the original data, so we create a deep copy
-    sdata = st.sdata
-    adata = sd.deepcopy(sdata.tables[&quot;table&quot;])
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="c1"># here, we do not want to alter the original data, so we create a deep copy</span>
+    <span class="n">sdata</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">])</span>
 
-    # this is all done internally by SegTraQ as well before computing the cs metrics,
-    # so you are not required to run this manually
-    # normalizing and log-transforming the counts
-    sc.pp.normalize_total(adata, inplace=True)
-    sc.pp.log1p(adata)
-    # computing a PCA and neighbors
-    sc.pp.pca(adata)
-    sc.pp.neighbors(adata)
+    <span class="c1"># this is all done internally by SegTraQ as well before computing the cs metrics,</span>
+    <span class="c1"># so you are not required to run this manually</span>
+    <span class="c1"># normalizing and log-transforming the counts</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="c1"># computing a PCA and neighbors</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
 
-    adata = filter_zero_count_cells(adata)
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">filter_zero_count_cells</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
 
-    sc.tl.umap(adata)
-    sc.tl.leiden(adata, flavor=&quot;igraph&quot;, n_iterations=2)
+    <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">umap</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+    <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">leiden</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="s2">&quot;igraph&quot;</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-    sc.pl.umap(
-        adata,
-        color=&quot;leiden&quot;,
-        ax=axs[i],
-        show=False,
-        title=method,
-        legend_loc=None,
-    )
+    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">umap</span><span class="p">(</span>
+        <span class="n">adata</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">&quot;leiden&quot;</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+        <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+        <span class="n">legend_loc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
 
-plt.tight_layout()
-plt.show()
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_4064666/4287800528.py:14: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(adata, inplace=True)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
+  adata.uns[key_uns] = dict(params=dict(a=a, b=b))
+/tmp/ipykernel_4064666/4287800528.py:14: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(adata, inplace=True)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
+  adata.uns[key_uns] = dict(params=dict(a=a, b=b))
+/tmp/ipykernel_4064666/4287800528.py:14: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(adata, inplace=True)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
+  adata.uns[key_uns] = dict(params=dict(a=a, b=b))
+/tmp/ipykernel_4064666/4287800528.py:14: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(adata, inplace=True)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
+  adata.uns[key_uns] = dict(params=dict(a=a, b=b))
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_clustering_stability_6_1.png" src="../_images/notebooks_clustering_stability_6_1.png" />
 </div>
 </div>
 </section>
@@ -500,32 +578,71 @@ plt.show()
 <h2>Cluster Connectedness<a class="headerlink" href="#Cluster-Connectedness" title="Link to this heading">#</a></h2>
 <p>The cluster connectedness (CC) is a measure that looks at the compactness of clusters. To compute it, we use the neighborhood graph we computed with scanpy earlier. The connectedness then iterates over all cells and computes the number of neighbors with the same cluster assignment and divides it by the number of total neighbors.</p>
 <p>By default, we compute this metric for Leiden clustering at resolution 0.2. You can adjust this with the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> parameter.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>ccs = {}
-for method, st in st_dict.items():
-    ccs[method] = st.cs.cluster_connectedness(use_weights=True, leiden_kwargs={&quot;flavor&quot;: &quot;igraph&quot;})
-ccs
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ccs</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">ccs</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">cluster_connectedness</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">leiden_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;flavor&quot;</span><span class="p">:</span> <span class="s2">&quot;igraph&quot;</span><span class="p">})</span>
+<span class="n">ccs</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:339: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(tmp, target_sum=target_sum)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:339: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(tmp, target_sum=target_sum)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:339: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(tmp, target_sum=target_sum)
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:339: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(tmp, target_sum=target_sum)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: 0.8559109403453248,
+ &#39;segger&#39;: 0.8480683994811192,
+ &#39;xenium&#39;: 0.8532126183915808,
+ &#39;proseg2&#39;: 0.9184322233371705}
+</pre></div></div>
 </div>
 </section>
 <section id="Silhouette-Score">
 <h2>Silhouette Score<a class="headerlink" href="#Silhouette-Score" title="Link to this heading">#</a></h2>
 <p>A slightly more elaborate metric is the silhouette score. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). Values range from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.</p>
 <p>By default, we compute this metric for Leiden clustering at resolution 0.2. You can adjust this with the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> parameter.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>silhouette_scores = {}
-for method, st in st_dict.items():
-    silhouette_scores[method] = st.cs.silhouette_score(leiden_kwargs={&quot;flavor&quot;: &quot;igraph&quot;})
-silhouette_scores
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">silhouette_scores</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">silhouette_scores</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">(</span><span class="n">leiden_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;flavor&quot;</span><span class="p">:</span> <span class="s2">&quot;igraph&quot;</span><span class="p">})</span>
+<span class="n">silhouette_scores</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: -0.03909246250987053,
+ &#39;segger&#39;: -0.022603241726756096,
+ &#39;xenium&#39;: -0.04288879409432411,
+ &#39;proseg2&#39;: -0.009192694909870625}
+</pre></div></div>
 </div>
 </section>
 <section id="Purity">
@@ -535,149 +652,261 @@ silhouette_scores
 <p>A purity value of 1 means that the clusters are completely pure, whereas a value closer to 0 means that they are more mixed.</p>
 <p>We randomly select 63% of cells, perform clustering on them, and do this five times, to obtain five different clusterings. Then we compare them using the purity score.</p>
 <p><strong>Note:</strong> this method will recompute the PCA based on a subset of features. If you will be using the PCA in the anndata later, you should recompute it on the whole data.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>purities = {}
-for method, st in st_dict.items():
-    purities[method] = st.cs.purity(leiden_kwargs={&quot;flavor&quot;: &quot;igraph&quot;})
-purities
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">purities</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">purities</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">purity</span><span class="p">(</span><span class="n">leiden_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;flavor&quot;</span><span class="p">:</span> <span class="s2">&quot;igraph&quot;</span><span class="p">})</span>
+<span class="n">purities</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: 0.7608360021904563,
+ &#39;segger&#39;: 0.7680787868650978,
+ &#39;xenium&#39;: 0.7706210831559697,
+ &#39;proseg2&#39;: 0.7968477473271355}
+</pre></div></div>
 </div>
 </section>
 <section id="Adjusted-Rand-Index-(ARI)">
 <h2>Adjusted Rand Index (ARI)<a class="headerlink" href="#Adjusted-Rand-Index-(ARI)" title="Link to this heading">#</a></h2>
 <p>The adjusted rand index (ARI) is another metric to determine the similarity of different clusterings (again, we create five clusterings based on random subsets of 63% of cells each). Just like the purity, its values range from 0 (no similarity, not a robust clustering) to 1 (exactly the same clusters, high robustness).</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>aris = {}
-for method, st in st_dict.items():
-    aris[method] = st.cs.adjusted_rand_index(leiden_kwargs={&quot;flavor&quot;: &quot;igraph&quot;})
-aris
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">aris</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">aris</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">adjusted_rand_index</span><span class="p">(</span><span class="n">leiden_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;flavor&quot;</span><span class="p">:</span> <span class="s2">&quot;igraph&quot;</span><span class="p">})</span>
+<span class="n">aris</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;bidcell&#39;: 0.6095132723594076,
+ &#39;segger&#39;: 0.6322723778410019,
+ &#39;xenium&#39;: 0.6371819876775503,
+ &#39;proseg2&#39;: 0.6671121926793079}
+</pre></div></div>
 </div>
 <p>At the end, all of our metrics are stored in the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code> object.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st_dict[&quot;proseg2&quot;].sdata.tables[&quot;table&quot;]
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_dict</span><span class="p">[</span><span class="s2">&quot;proseg2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+AnnData object with n_obs × n_vars = 17885 × 5095
+    obs: &#39;cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;, &#39;volume&#39;, &#39;label_id&#39;, &#39;region&#39;, &#39;cell_area&#39;, &#39;leiden_subset_cells16364_res0.6_seed42&#39;, &#39;leiden_subset_cells16364_res0.8_seed42&#39;, &#39;leiden_subset_cells16364_res1.0_seed42&#39;, &#39;leiden_subset_cells10309_res1.0_seed0&#39;, &#39;leiden_subset_cells10309_res1.0_seed1&#39;, &#39;leiden_subset_cells10309_res1.0_seed2&#39;, &#39;leiden_subset_cells10309_res1.0_seed3&#39;, &#39;leiden_subset_cells10309_res1.0_seed4&#39;
+    uns: &#39;spatialdata_attrs&#39;, &#39;neighbors_segtraq&#39;, &#39;cluster_connectedness&#39;, &#39;silhouette_score&#39;, &#39;mean_purity&#39;, &#39;mean_ari&#39;
+    obsm: &#39;X_pca_segtraq&#39;
+    layers: &#39;X_estimated&#39;, &#39;norm_log_segtraq&#39;
+    obsp: &#39;connectivities_segtraq&#39;, &#39;distances_segtraq&#39;
+</pre></div></div>
 </div>
 </section>
 <section id="Visualization">
 <h2>Visualization<a class="headerlink" href="#Visualization" title="Link to this heading">#</a></h2>
 <p>Looking at numbers is one thing, but interpretation will be a lot easier if we visualize our results. The following couple of codeblocks demonstrate how the four methods compare.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># putting everything into a dataframe for easier plotting
-results_df = pd.DataFrame(
-    {
-        &quot;Method&quot;: list(ccs.keys()),
-        &quot;Connectedness&quot;: list(ccs.values()),
-        &quot;Silhouette Score&quot;: list(silhouette_scores.values()),
-        &quot;Purity&quot;: list(purities.values()),
-        &quot;ARI&quot;: list(aris.values()),
-    }
-)
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># plotting the connectedness vs. silhouette score
-plt.figure(figsize=(4, 3))
-sns.scatterplot(data=results_df, x=&quot;Connectedness&quot;, y=&quot;Silhouette Score&quot;, hue=&quot;Method&quot;, style=&quot;Method&quot;, s=100)
-plt.xlabel(&quot;Connectedness (↑)&quot;)
-plt.ylabel(&quot;Silhouette Score (↑)&quot;)
-plt.title(&quot;Connectedness vs. Silhouette Score&quot;)
-plt.xlim(0, 1)
-plt.ylim(-1, 1)
-plt.legend(title=&quot;Method&quot;)
-plt.show()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># putting everything into a dataframe for easier plotting</span>
+<span class="n">results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;Method&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ccs</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+        <span class="s2">&quot;Connectedness&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ccs</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="s2">&quot;Silhouette Score&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">silhouette_scores</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="s2">&quot;Purity&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">purities</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="s2">&quot;ARI&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">aris</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># plotting the purity vs. ARI
-plt.figure(figsize=(4, 3))
-sns.scatterplot(data=results_df, x=&quot;Purity&quot;, y=&quot;ARI&quot;, hue=&quot;Method&quot;, style=&quot;Method&quot;, s=100)
-plt.xlabel(&quot;Purity (↑)&quot;)
-plt.ylabel(&quot;ARI (↑)&quot;)
-plt.title(&quot;Purity vs. ARI&quot;)
-plt.legend(title=&quot;Method&quot;)
-plt.xlim(0, 1)
-plt.ylim(0, 1)
-plt.show()
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># plotting the connectedness vs. silhouette score</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">scatterplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">results_df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;Connectedness&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;Silhouette Score&quot;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Connectedness (↑)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Silhouette Score (↑)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Connectedness vs. Silhouette Score&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_clustering_stability_19_0.png" src="../_images/notebooks_clustering_stability_19_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># plotting the purity vs. ARI</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">scatterplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">results_df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;Purity&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;ARI&quot;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Purity (↑)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;ARI (↑)&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Purity vs. ARI&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Method&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_clustering_stability_20_0.png" src="../_images/notebooks_clustering_stability_20_0.png" />
 </div>
 </div>
 </section>
 <section id="Supervised-cluster-stability">
 <h2>Supervised cluster stability<a class="headerlink" href="#Supervised-cluster-stability" title="Link to this heading">#</a></h2>
 <p>If you already have labels for your cells, e. g. from performing label transfer on your data, you might want to check how compact those clusters are. Here, we assess Cluster Connectedness and Silhouette score on clusters obtained via label transfer. We do this by simply specifying a <code class="docutils literal notranslate"><span class="pre">label_key</span></code> in the respective functions.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span># Running label transfer from an scRNA-seq dataset
-scRNAseq_data_path = Path(&quot;../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;)
-adata_ref = ad.read_h5ad(scRNAseq_data_path)
-st = segtraq.SegTraQ(
-    sd.read_zarr(&quot;../../../data/xenium_5K_data/proseg2.zarr&quot;),
-    images_key=None,
-    tables_area_key=None,
-    points_background_id=0,
-    tables_centroid_x_key=&quot;centroid_x&quot;,
-    tables_centroid_y_key=&quot;centroid_y&quot;,
-)
-st.run_label_transfer(adata_ref, ref_cell_type=&quot;celltype_major&quot;, ref_raw_counts_layer=&quot;raw&quot;)
-sc.pp.pca(st.sdata.tables[&quot;table&quot;])
-sc.pp.neighbors(st.sdata.tables[&quot;table&quot;])
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.cs.cluster_connectedness(cell_type_key=&quot;transferred_cell_type&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Running label transfer from an scRNA-seq dataset</span>
+<span class="n">scRNAseq_data_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
+<span class="n">adata_ref</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="n">scRNAseq_data_path</span><span class="p">)</span>
+<span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">),</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">])</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffde4c85710&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffdd4308ad0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe426e0050&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffdd46fa5d0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffdd46fabd0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffdd4786360&gt;: None
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 4 cell IDs in shapes: [np.int64(11273), np.int64(10307), np.int64(10308), np.int64(6870)]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:1769: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+  nucleus_shapes = _ensure_index(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:339: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(tmp, target_sum=target_sum)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>st.cs.silhouette_score(cell_type_key=&quot;transferred_cell_type&quot;)
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">cluster_connectedness</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:339: UserWarning: Some cells have zero counts
+  sc.pp.normalize_total(tmp, target_sum=target_sum)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.7293014107420828
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-0.007167918607592583
+</pre></div></div>
 </div>
 </section>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>print(importlib.metadata.version(&quot;spatialdata&quot;))
-print(importlib.metadata.version(&quot;spatialdata_plot&quot;))
-print(importlib.metadata.version(&quot;scanpy&quot;))
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="s2">&quot;spatialdata&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="s2">&quot;spatialdata_plot&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="s2">&quot;scanpy&quot;</span><span class="p">))</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.8.0
+0.4.0
+1.12.3
+</pre></div></div>
 </div>
 </section>
 </section>
