@@ -40,7 +40,7 @@ import spatialdata as sd
 
 import segtraq
 
-sdata = sd.read_zarr("../../../data/xenium_5K_data/proseg2.zarr")
+sdata = sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr")
 
 # putting the spatialdata object into a SegTraQ constructor
 # this has the advantage that we only need to set keywords like cell IDs or transcript IDs once

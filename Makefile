@@ -77,30 +77,31 @@ coverage: ## check code coverage quickly with the default Python
 	$(BROWSER) htmlcov/index.html
 
 NOTEBOOK_SRCS := $(wildcard docs/notebooks/*.py)
-NOTEBOOK_OUTS := $(patsubst docs/notebooks/%.py,docs/_build/notebooks/%.ipynb,$(NOTEBOOK_SRCS))
+NOTEBOOK_OUTS := $(patsubst docs/notebooks/%.py,docs/notebooks/%.ipynb,$(NOTEBOOK_SRCS))
 
 .PHONY: ensure-kernel
 ensure-kernel:
 	@uv run --extra docs jupyter kernelspec list 2>/dev/null | grep -q python3 || \
-	uv run --extra docs python -m ipykernel install --user --name python3 --display-name "Python 3 (.venv)"
+	    uv run --extra docs python -m ipykernel install --user --name python3 --display-name "Python 3 (.venv)"
 
-docs/_build/notebooks/%.ipynb: docs/notebooks/%.py ensure-kernel
-	mkdir -p docs/_build/notebooks docs/_build/.hashes
+docs/notebooks/%.ipynb: docs/notebooks/%.py ensure-kernel
+	mkdir -p docs/_build/.hashes
 	@current_hash=$$(sha256sum $< | cut -d' ' -f1); \
 	stored_hash=$$(cat docs/_build/.hashes/$*.hash 2>/dev/null || echo ""); \
 	if [ "$$current_hash" = "$$stored_hash" ] && [ -f $@ ]; then \
-		echo "Skipping $@ (content unchanged)"; \
+	    echo "Skipping $@ (content unchanged)"; \
 	else \
-		uv run --extra docs jupytext --to ipynb -o $@ $< && \
-		uv run --extra docs jupyter nbconvert --to notebook --execute --inplace $@ && \
-		echo "$$current_hash" > docs/_build/.hashes/$*.hash; \
+	    uv run --extra docs jupytext --to ipynb -o $@ $< && \
+	    uv run --extra docs jupyter nbconvert --to notebook --execute --inplace \
+	        --ExecutePreprocessor.kernel_name=python3 $@ && \
+	    echo "$$current_hash" > docs/_build/.hashes/$*.hash; \
 	fi
 
 .PHONY: docs
 ifdef NOTEBOOK
-docs: docs/_build/notebooks/$(NOTEBOOK).ipynb ## build docs, only executing the specified notebook
+docs: docs/notebooks/$(NOTEBOOK).ipynb
 else
-docs: $(NOTEBOOK_OUTS) ## build docs, only re-executing notebooks whose .py source changed
+docs: $(NOTEBOOK_OUTS)
 endif
 	uv run --extra docs sphinx-build -b html docs docs/_build/html
 

@@ -63,7 +63,7 @@ warnings.filterwarnings(
 dask.config.set({"dataframe.query-planning": True})
 
 # %%
-sdata = sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr")
+sdata = sd.read_zarr("../../data/xenium_5K_data/xenium.zarr")
 
 # %% [markdown]
 # Let's have a quick look at the data.
@@ -256,7 +256,7 @@ st.rs.border_admixture_score().head()
 # in the annotated scRNA-seq via `markers_from_reference`.
 
 # %%
-adata_ref = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # %% [markdown]
 # ### Computing cell-type specific markers

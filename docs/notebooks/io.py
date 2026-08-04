@@ -26,7 +26,7 @@
 # %%
 import anndata as ad
 
-ad_test = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+ad_test = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # %%
 import spatialdata_io  # noqa

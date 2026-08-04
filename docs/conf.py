@@ -20,26 +20,27 @@ author = "Daria Lazic, Matthias Meyer-Bender, Martin Emons"
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",  # Optional but useful for Google/Numpy-style docstrings
+    "sphinx.ext.napoleon",
     "nbsphinx",
     "myst_parser",
     "IPython.sphinxext.ipython_console_highlighting",
 ]
 
-nbsphinx_custom_formats = {
-    ".py": ["jupytext.reads", {"fmt": "py:percent"}],
-}
-nbsphinx_execute = "never"
+nbsphinx_execute = "never"  # notebooks arrive pre-executed
 nbsphinx_execute_arguments = [
     "--InlineBackend.print_figure_kwargs={'bbox_inches': 'tight', 'transparent': True}",
 ]
+
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "conf.py", "notebooks/*.py"]
+
+nbsphinx_custom_formats = {
+    ".py": ["jupytext.reads", {"fmt": "py:percent"}],
+}
 
 # Show both the class docstring and __init__ docstring
 autoclass_content = "both"
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "conf.py"]
-
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
