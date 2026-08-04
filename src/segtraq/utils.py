@@ -2178,7 +2178,7 @@ def _filter_control_and_low_quality_transcripts(
     recompute_expression: bool = True,
     inplace: bool = True,
 ) -> sd.SpatialData:
-    """
+    r"""
     Filter control and low-quality transcripts from the SpatialData object.
     This is always done in place.
 
@@ -2190,15 +2190,15 @@ def _filter_control_and_low_quality_transcripts(
         Minimum quality value (qv) threshold for transcripts to be considered valid.
         If None, no filtering is applied based on quality.
     control_prefixes : tuple | list, default=(
-        "NegControlProbe_",
-        "antisense_",
+        "NegControlProbe\_",
+        "antisense\_",
         "NegControlCodeword",
         "BLANK_",
         "Blank-",
         "NegPrb",
-        "DeprecatedCodeword_",
-        "UnassignedCodeword_",
-        "Intergenic_Region_",
+        "DeprecatedCodeword\_",
+        "UnassignedCodeword\_",
+        "Intergenic_Region\_",
     )
         Control prefixes to identify control probes in gene names.
         Transcripts with gene names starting with any of these prefixes will be considered

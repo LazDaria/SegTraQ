@@ -79,7 +79,7 @@ import segtraq
 
 # %%
 # Load spatial transcriptomics dataset
-sdata_ws = sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr")
+sdata_ws = sd.read_zarr("../../data/xenium_5K_data/xenium.zarr")
 
 # Subset the dataset to a specific bounding box
 bb_xmin = 800
@@ -100,7 +100,7 @@ sdata = sdata_ws.query.bounding_box(
 st = segtraq.SegTraQ(sdata, images_key="image", tables_centroid_x_key="x_centroid", tables_centroid_y_key="y_centroid")
 
 # Load scRNA-seq dataset
-scRNAseq_data_path = Path("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+scRNAseq_data_path = Path("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 adata_ref = ad.read_h5ad(scRNAseq_data_path)
 
 # Define color palette for cell types

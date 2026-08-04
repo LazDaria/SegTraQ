@@ -47,10 +47,10 @@ import segtraq
 
 # %%
 # === READING SPATIALDATA OBJECTS ===
-sdata_xenium_ws = sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr")
-sdata_bidcell_ws = sd.read_zarr("../../../data/xenium_5K_data/bidcell.zarr")
-sdata_proseg_ws = sd.read_zarr("../../../data/xenium_5K_data/proseg2.zarr")
-sdata_segger_ws = sd.read_zarr("../../../data/xenium_5K_data/segger.zarr")
+sdata_xenium_ws = sd.read_zarr("../../data/xenium_5K_data/xenium.zarr")
+sdata_bidcell_ws = sd.read_zarr("../../data/xenium_5K_data/bidcell.zarr")
+sdata_proseg_ws = sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr")
+sdata_segger_ws = sd.read_zarr("../../data/xenium_5K_data/segger.zarr")
 
 # === CROPPING ===
 bb_xmin = 800
@@ -108,7 +108,7 @@ st_dict = {"xenium": st_xenium, "bidcell": st_bidcell, "proseg": st_proseg, "seg
 
 # %%
 # Load scRNA-seq data
-adata_ref = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # Transfer labels
 for _method, st in st_dict.items():

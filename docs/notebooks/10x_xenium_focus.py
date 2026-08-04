@@ -116,9 +116,9 @@ import segtraq
 warnings.filterwarnings(action="ignore")
 
 # %%
-sdata_xenium_ws = sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr")
-sdata_bidcell_ws = sd.read_zarr("../../../data/xenium_5K_data/bidcell.zarr")
-sdata_proseg_ws = sd.read_zarr("../../../data/xenium_5K_data/proseg2.zarr")
+sdata_xenium_ws = sd.read_zarr("../../data/xenium_5K_data/xenium.zarr")
+sdata_bidcell_ws = sd.read_zarr("../../data/xenium_5K_data/bidcell.zarr")
+sdata_proseg_ws = sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr")
 
 # %% [markdown]
 # The `SpatialData` objects can be subset via `spatialdata.query.bounding_box()`.
@@ -200,7 +200,7 @@ st_proseg = segtraq.SegTraQ(
 
 # %%
 # Load scRNA-seq data
-adata_ref = ad.read_h5ad("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # %% [markdown]
 # For easier access, we store the `SpatialData` object into a dictionary.

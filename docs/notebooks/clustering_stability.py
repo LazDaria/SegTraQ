@@ -72,7 +72,7 @@ def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
 # %%
 # example datasets on which we can compare performance
 st_bidcell = segtraq.SegTraQ(
-    sd.read_zarr("../../../data/xenium_5K_data/bidcell.zarr"),
+    sd.read_zarr("../../data/xenium_5K_data/bidcell.zarr"),
     images_key="image",
     points_background_id=0,
     tables_centroid_x_key="centroid_x",
@@ -80,21 +80,21 @@ st_bidcell = segtraq.SegTraQ(
 )
 
 st_segger = segtraq.SegTraQ(
-    sd.read_zarr("../../../data/xenium_5K_data/segger.zarr"),
+    sd.read_zarr("../../data/xenium_5K_data/segger.zarr"),
     images_key="image",
     tables_centroid_x_key="cell_centroid_x",
     tables_centroid_y_key="cell_centroid_y",
 )
 
 st_xenium = segtraq.SegTraQ(
-    sd.read_zarr("../../../data/xenium_5K_data/xenium.zarr"),
+    sd.read_zarr("../../data/xenium_5K_data/xenium.zarr"),
     images_key="image",
     tables_centroid_x_key="x_centroid",
     tables_centroid_y_key="x_centroid",
 )
 
 st_proseg2 = segtraq.SegTraQ(
-    sd.read_zarr("../../../data/xenium_5K_data/proseg2.zarr"),
+    sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr"),
     images_key="image",
     points_background_id=0,
     tables_area_key=None,
@@ -278,10 +278,10 @@ plt.show()
 
 # %%
 # Running label transfer from an scRNA-seq dataset
-scRNAseq_data_path = Path("../../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+scRNAseq_data_path = Path("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 adata_ref = ad.read_h5ad(scRNAseq_data_path)
 st = segtraq.SegTraQ(
-    sd.read_zarr("../../../data/xenium_5K_data/proseg2.zarr"),
+    sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr"),
     images_key=None,
     tables_area_key=None,
     points_background_id=0,

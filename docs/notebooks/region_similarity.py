@@ -46,7 +46,7 @@ import segtraq
 # We start out by loading the data into a `SegTraQ` object.
 
 # %%
-sdata = sd.read_zarr("../../../data/xenium_v1_data/sdata_xenium_crop.zarr/")
+sdata = sd.read_zarr("../../data/xenium_v1_data/sdata_xenium_crop.zarr/")
 st = segtraq.SegTraQ(
     sdata,
     tables_centroid_x_key=None,
@@ -401,7 +401,7 @@ def plot_cell_with_nucleus_and_transcripts(
         plot = plot.pl.render_points(
             "transcripts_2",
             color="focal_cell",
-            fill_alpha=0.1,
+            alpha=0.1,
             groups=["focal_cell"],
             palette=["red"],
         )
@@ -409,7 +409,7 @@ def plot_cell_with_nucleus_and_transcripts(
         plot = plot.pl.render_points(
             "transcripts",
             color=points_gene_key,
-            fill_alpha=0.1,
+            alpha=0.1,
             groups=genes,
             palette=["red"],
         )

@@ -3185,6 +3185,7 @@ dependencies = [
     { name = "scanpy" },
     { name = "setuptools" },
     { name = "spatialdata" },
+    { name = "spatialdata-plot" },
     { name = "squidpy" },
     { name = "tqdm" },
     { name = "typer" },
@@ -3250,6 +3251,7 @@ requires-dist = [
     { name = "scanpy", specifier = ">=1.12" },
     { name = "setuptools", specifier = "<82.0.0" },
     { name = "spatialdata", specifier = ">=0.8.0" },
+    { name = "spatialdata-plot", specifier = ">=0.4.0" },
     { name = "sphinx", marker = "extra == 'docs'" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'" },
@@ -3426,7 +3428,7 @@ wheels = [
 
 [[package]]
 name = "spatialdata-plot"
-version = "0.2.13"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
@@ -3435,9 +3437,9 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "spatialdata" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/02/d93fbf0e31a441e17ba03f7e2cada47bff3b4d686e969444c754579e364f/spatialdata_plot-0.2.13.tar.gz", hash = "sha256:d243bfebcd47ee58b2e16d3c82eeebe62be06665314134b1721a3dbba7a7f71c", size = 9261333, upload-time = "2025-10-30T13:43:50.171Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/4c/cf5b141a624d09f6dbcae67d4fac611824a8c922834a5afb5d31b236dbdc/spatialdata_plot-0.4.0.tar.gz", hash = "sha256:2f92664fdfe7b6e91d1d1563a5468a78fd980e3369e85ae7dd8bd812ab16e0ed", size = 18971339, upload-time = "2026-05-27T15:19:45.291Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/92/4d9f07a97fba85d2db59bde27621d7c243efbe95250498c9aa2efdbf1cf3/spatialdata_plot-0.2.13-py3-none-any.whl", hash = "sha256:ffa8fdba1225945224bc4ad95b4ab92daf2ea37f8cf231832a78ef100b11acf4", size = 54533, upload-time = "2025-10-30T13:43:49.124Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/b8/ab2141c09b5eda2b13c727d8ddaff56f364f41a2127f30260199629c65dc/spatialdata_plot-0.4.0-py3-none-any.whl", hash = "sha256:e64b713e97d05caf84516007002739c38b84bbd59450424f0c2d83593179b1ed", size = 114794, upload-time = "2026-05-27T15:19:43.436Z" },
 ]
 
 [[package]]
