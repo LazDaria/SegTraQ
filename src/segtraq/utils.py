@@ -780,26 +780,42 @@ def _pairwise_de(
     pval_adj_thresh: float,
     logfc_pos_thresh: float,
     min_cells_per_celltype: int,
+    max_cells_per_celltype: int,
+    random_state: int,
 ) -> tuple[tuple[str, str, list[str], bool], tuple[str, str, list[str], bool]]:
     """
     Helper: run DE for one pair (ct_a, ct_b) and return genes up in ct_a.
     """
     # for logreg, the symmetry assumption does not hold, hence we do not support it
-    assert method in ('t-test', 'wilcoxon', 't-test_overestim_var'), f"Invalid DE method: {method}. " \
-        f"Please choose from 't-test', 'wilcoxon', or 't-test_overestim_var'."
-    mask = ctypes.isin([ct_a, ct_b])
-    if mask.sum() < 2 * min_cells_per_celltype:
-        # too few cells total -> skip
+    assert method in (
+        "t-test",
+        "wilcoxon",
+        "t-test_overestim_var",
+    ), f"Invalid DE method: {method}. Please choose from 't-test', 'wilcoxon', or 't-test_overestim_var'."
+    rng = np.random.default_rng(random_state)
+
+    idx_a = np.flatnonzero(ctypes == ct_a)
+    idx_b = np.flatnonzero(ctypes == ct_b)
+
+    # need enough cells in each type before sampling
+    if len(idx_a) < min_cells_per_celltype or len(idx_b) < min_cells_per_celltype:
         return (ct_a, ct_b, [], False), (ct_b, ct_a, [], False)
 
-    ad_pair = adata[mask].copy()
+    # downsample each cell type independently if needed
+    if len(idx_a) > max_cells_per_celltype:
+        idx_a = rng.choice(idx_a, size=max_cells_per_celltype, replace=False)
+    if len(idx_b) > max_cells_per_celltype:
+        idx_b = rng.choice(idx_b, size=max_cells_per_celltype, replace=False)
+
+    pair_idx = np.concatenate([idx_a, idx_b])
+    ad_pair = adata[pair_idx].copy()
 
     # drop genes with zero expression across the whole pair — they can never pass thresholds
     if sparse.issparse(ad_pair.X):
         gene_mask = ad_pair.X.getnnz(axis=0) > 0
     else:
         gene_mask = (ad_pair.X > 0).any(axis=0)
-        
+
     ad_pair = ad_pair[:, gene_mask].copy()
 
     sc.tl.rank_genes_groups(ad_pair, groupby=ref_cell_type, groups=[ct_a], reference=ct_b, method=method)
@@ -831,6 +847,8 @@ def markers_from_reference(
     t_pos: float = 0.25,
     t_neg: float = 1.0,
     min_cells_per_celltype: int = 10,
+    max_cells_per_celltype: int = 1000,
+    random_state: int = 42,
     n_jobs: int = 1,
 ) -> dict[str, dict[str, list[str]]]:
     """
@@ -905,6 +923,11 @@ def markers_from_reference(
     min_cells_per_celltype : int, optional (default: 10)
         Minimum number of cells required per cell type to be included in pairwise
         computations.
+    max_cells_per_celltype : int, optional (default: 1000)
+        Maximum number of cells to include per cell type in pairwise computations.
+        Only relevant for DE mode, where downsampling is performed to limit computation time.
+    random_state : int, optional (default: 42)
+        Random seed for reproducibility of downsampling in DE mode.
     n_jobs : int, optional (default: 1)
         Number of parallel jobs for running pairwise computations.
 
@@ -948,8 +971,8 @@ def markers_from_reference(
     # ordered cell type pairs (a, b), a != b
     celltype_pairs = [(ct_a, ct_b) for ct_a in usable_celltypes for ct_b in usable_celltypes if ct_a != ct_b]
     # unordered pairs (a, b) with a < b to avoid duplicate computation
-    unordered_pairs = [(a, b) for i, a in enumerate(usable_celltypes) for b in usable_celltypes[i+1:]]
-    
+    unordered_pairs = [(a, b) for i, a in enumerate(usable_celltypes) for b in usable_celltypes[i + 1 :]]
+
     # Precompute fraction of cells with counts > 0 per type
     # This dictionary maps cell type to an array of shape (n_genes,)
     # with the fraction of cells of that type expressing each gene.
@@ -994,6 +1017,8 @@ def markers_from_reference(
                 pval_adj_thresh=pval_adj_thresh,
                 logfc_pos_thresh=logfc_pos_thresh,
                 min_cells_per_celltype=min_cells_per_celltype,
+                max_cells_per_celltype=max_cells_per_celltype,
+                random_state=random_state,
             )
 
     else:
@@ -1008,10 +1033,7 @@ def markers_from_reference(
             results.append(r_ab)
             results.append(r_ba)
     else:
-        pair_results = Parallel(n_jobs=n_jobs)(
-            joblib_delayed(worker)(ct_a, ct_b)
-            for ct_a, ct_b in unordered_pairs
-        )
+        pair_results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in unordered_pairs)
 
         results = [r for pair in pair_results for r in pair]
 

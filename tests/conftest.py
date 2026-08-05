@@ -129,3 +129,12 @@ def test_segtraq_obj(sdata_labeled):
         tables_cell_id_key="cell_id_2",
         filter_kwargs={"inplace": False},
     )
+
+
+@pytest.fixture(scope="session", name="markers")
+def test_markers(adata_ref):
+    return st.markers_from_reference(
+        adata_ref.copy(),
+        ref_cell_type="celltype",
+        ref_raw_counts_layer="raw",
+    )

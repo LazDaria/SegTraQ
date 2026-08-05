@@ -3,12 +3,10 @@ import pandas as pd
 import segtraq as st
 
 
-def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref):
+def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref, markers):
     assert "celltype" in adata_ref.obs.columns
     n_types = adata_ref.obs["celltype"].nunique()
     assert n_types >= 2, "Need >= 2 types for differential markers"
-
-    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
 
     # Basic structure
     assert isinstance(markers, dict)
