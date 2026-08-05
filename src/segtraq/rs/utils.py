@@ -434,7 +434,7 @@ def _join_points_regions(
     ).drop(columns=["index_right"])
 
     # if a point intersects multiple polygons, keep the first match
-    pts_joined = pts_joined.sort_values("point_id").groupby("point_id", observed=True, as_index=False).first()
+    pts_joined = pts_joined.sort_values("point_id").drop_duplicates(subset="point_id", keep="first")
 
     # optionally restrict to points whose region id matches another point column
     if require_points_region_ID_match:
