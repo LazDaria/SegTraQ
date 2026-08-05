@@ -780,33 +780,38 @@ def _pairwise_de(
     pval_adj_thresh: float,
     logfc_pos_thresh: float,
     min_cells_per_celltype: int,
-) -> tuple[str, str, list[str], bool]:
+) -> tuple[tuple[str, str, list[str], bool], tuple[str, str, list[str], bool]]:
     """
     Helper: run DE for one pair (ct_a, ct_b) and return genes up in ct_a.
     """
+    # for logreg, the symmetry assumption does not hold, hence we do not support it
+    assert method in ('t-test', 'wilcoxon', 't-test_overestim_var'), f"Invalid DE method: {method}. " \
+        f"Please choose from 't-test', 'wilcoxon', or 't-test_overestim_var'."
     mask = ctypes.isin([ct_a, ct_b])
     if mask.sum() < 2 * min_cells_per_celltype:
-        # too few cells total, skip
-        return (ct_a, ct_b, [], False)
+        # too few cells total -> skip
+        return (ct_a, ct_b, [], False), (ct_b, ct_a, [], False)
 
     ad_pair = adata[mask].copy()
 
-    # DE: ct_a vs ct_b
-    sc.tl.rank_genes_groups(
-        ad_pair,
-        groupby=ref_cell_type,
-        groups=[ct_a],
-        reference=ct_b,
-        method=method,
-    )
+    # drop genes with zero expression across the whole pair — they can never pass thresholds
+    if sparse.issparse(ad_pair.X):
+        gene_mask = ad_pair.X.getnnz(axis=0) > 0
+    else:
+        gene_mask = (ad_pair.X > 0).any(axis=0)
+        
+    ad_pair = ad_pair[:, gene_mask].copy()
+
+    sc.tl.rank_genes_groups(ad_pair, groupby=ref_cell_type, groups=[ct_a], reference=ct_b, method=method)
     df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
 
-    pos_df = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
-    pos_df = pos_df.sort_values("logfoldchanges", ascending=False).head(200)
+    pos_a = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
+    pos_a = pos_a.sort_values("logfoldchanges", ascending=False).head(200)
 
-    pos_genes_a = pos_df["names"].tolist()
+    pos_b = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] < -logfc_pos_thresh)]
+    pos_b = pos_b.sort_values("logfoldchanges", ascending=True).head(200)
 
-    return (ct_a, ct_b, pos_genes_a, True)
+    return (ct_a, ct_b, pos_a["names"].tolist(), True), (ct_b, ct_a, pos_b["names"].tolist(), True)
 
 
 def markers_from_reference(
@@ -942,7 +947,9 @@ def markers_from_reference(
 
     # ordered cell type pairs (a, b), a != b
     celltype_pairs = [(ct_a, ct_b) for ct_a in usable_celltypes for ct_b in usable_celltypes if ct_a != ct_b]
-
+    # unordered pairs (a, b) with a < b to avoid duplicate computation
+    unordered_pairs = [(a, b) for i, a in enumerate(usable_celltypes) for b in usable_celltypes[i+1:]]
+    
     # Precompute fraction of cells with counts > 0 per type
     # This dictionary maps cell type to an array of shape (n_genes,)
     # with the fraction of cells of that type expressing each gene.
@@ -993,10 +1000,20 @@ def markers_from_reference(
         raise ValueError(f"Unknown mode '{mode}'. Use 'auc' or 'de'.")
 
     # Run over all pairs, possibly in parallel
+    # We exploit the symmetry of the pairwise computation: (a, b) and (b, a) are computed together
     if n_jobs == 1:
-        results = [worker(ct_a, ct_b) for ct_a, ct_b in celltype_pairs]
+        results = []
+        for ct_a, ct_b in unordered_pairs:
+            r_ab, r_ba = worker(ct_a, ct_b)
+            results.append(r_ab)
+            results.append(r_ba)
     else:
-        results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
+        pair_results = Parallel(n_jobs=n_jobs)(
+            joblib_delayed(worker)(ct_a, ct_b)
+            for ct_a, ct_b in unordered_pairs
+        )
+
+        results = [r for pair in pair_results for r in pair]
 
     # the ok column indicates whether the pairwise computation was valid (enough cells, etc.)
     # we filter out invalid pairs before building the up_by_pair dictionary
