@@ -353,7 +353,7 @@ document.write(`
   <section id="Module:-Volume-(3D)">
 <h1>Module: Volume (3D)<a class="headerlink" href="#Module:-Volume-(3D)" title="Link to this heading">#</a></h1>
 <p>Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical thickness of ~4–10 µm. Even for a relatively thin 5 µm section, cells can partially overlap along the z-dimension, depending on tissue orientation and how the sample is cut. As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination, because transcripts from overlapping cells may be assigned to the same segmentation mask.</p>
-<center><p><img alt="c21977ba628f4899be18e942e477bfde" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
+<center><p><img alt="28a1749e8da24ffebe258e84eb96cddd" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
 </center><p>To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the <code class="docutils literal notranslate"><span class="pre">volume</span></code> (<code class="docutils literal notranslate"><span class="pre">vl</span></code>) accessor.</p>
 <p>In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap, and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg), or in other words, how well it can disentangle transcripts from overlapping cells.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
@@ -957,7 +957,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.03it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.44it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -974,7 +974,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.21it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.26it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -994,7 +994,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.38it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.47it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1011,7 +1011,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.25it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.19it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1031,7 +1031,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.88it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.81it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1048,7 +1048,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.11it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.28it/s]
 </pre></div></div>
 </div>
 <p>Plotting <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> against <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code> shows a weaker association in Proseg v2 (and Proseg v3) than in Xenium. One plausible explanation is that Proseg’s quasi-3D assignment reduces the impact of vertically mixed regions on per-cell expression consistency: even where <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code> is low (regions that look vertically inconsistent in the raw transcript field), Proseg can assign transcripts more coherently to individual cells, resulting in relatively high <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code>.
@@ -1147,8 +1147,8 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
 <img alt="../_images/notebooks_volume_45_0.png" src="../_images/notebooks_volume_45_0.png" />
 </div>
 </div>
-<p>Wrapper to run all metrics (including label transfer).</p>
-<div class="nbinput docutils container">
+<p>Wrapper to run all metrics (including label transfer). By default, this does not run <code class="docutils literal notranslate"><span class="pre">ovrlpy</span></code> to reduce runtime, but it can be enabled with <code class="docutils literal notranslate"><span class="pre">run_ovrlpy=True</span></code>.</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
@@ -1167,117 +1167,6 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
         <span class="n">st</span><span class="o">.</span><span class="n">run_volume</span><span class="p">(</span><span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Running vertical adjustment
-Creating gene expression embeddings for visualization
-determining pseudocells
-found 371 pseudocells
-sampling expression:
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:01&lt;00:00,  1.72s/it]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Modeling 10 pseudo-celltype clusters;
-Creating signal integrity map
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:10&lt;00:00,  2.69s/it]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Running vertical adjustment
-Creating gene expression embeddings for visualization
-determining pseudocells
-found 378 pseudocells
-sampling expression:
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:01&lt;00:00,  1.29s/it]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Modeling 11 pseudo-celltype clusters;
-Creating signal integrity map
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:12&lt;00:00,  3.01s/it]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Running vertical adjustment
-Creating gene expression embeddings for visualization
-determining pseudocells
-found 364 pseudocells
-sampling expression:
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  1.60it/s]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Modeling 10 pseudo-celltype clusters;
-Creating signal integrity map
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:10&lt;00:00,  2.63s/it]
-</pre></div></div>
 </div>
 </section>
 <section id="Session-Info">
