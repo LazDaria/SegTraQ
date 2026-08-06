@@ -870,8 +870,9 @@ def markers_from_reference(
 
     Overlap filtering:
     Overlap filtering is applied separately to positive and negative markers:
-        - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
-        - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
+
+    - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
+    - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
 
     Parameters
     ----------
@@ -2232,7 +2233,7 @@ def _filter_control_and_low_quality_transcripts(
         "NegControlProbe\_",
         "antisense\_",
         "NegControlCodeword",
-        "BLANK_",
+        "BLANK\_",
         "Blank-",
         "NegPrb",
         "DeprecatedCodeword\_",

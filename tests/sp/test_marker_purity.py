@@ -3,7 +3,7 @@ import pandas as pd
 import segtraq as st
 
 
-def test_marker_purity_values_are_in_unit_interval(sdata_labeled, adata_ref, markers):
+def test_marker_purity_values_are_in_unit_interval(sdata_labeled, markers):
     df = st.sp.marker_purity(
         sdata=sdata_labeled,
         cell_type_key="transferred_cell_type",
@@ -23,7 +23,7 @@ def test_marker_purity_values_are_in_unit_interval(sdata_labeled, adata_ref, mar
         assert ((vals >= 0) & (vals <= 1)).all()
 
 
-def test_marker_purity_realdata_inplace_writes_obs(sdata_labeled, adata_ref, markers):
+def test_marker_purity_realdata_inplace_writes_obs(sdata_labeled, markers):
     df = st.sp.marker_purity(
         sdata=sdata_labeled,
         cell_type_key="transferred_cell_type",

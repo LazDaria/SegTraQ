@@ -600,6 +600,7 @@ plt.show()
 
 # %% [markdown]
 # Wrapper to run all metrics (including label transfer).
+# By default, this does not run `ovrlpy` to reduce runtime, but it can be enabled with `run_ovrlpy=True`.
 
 # %%
 for method, st in st_dict.items():
