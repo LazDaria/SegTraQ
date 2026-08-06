@@ -6,8 +6,8 @@ from pandas import DataFrame
 
 from ..utils import _get_count_matrix, _get_genes, merge_into_obs
 from .utils import (
-    _border_admixture_permutation_metrics,
-    _two_profile_permutation_metrics,
+    _bootstrap_mixture_fit,
+    _cosine_similarity_two_vectors,
     _get_center_border_counts,
     _get_neighborhood_counts,
     _join_points_regions,
@@ -118,22 +118,6 @@ def match_nuclei_to_cells(
     return match_df
 
 
-
-def _rename_pair_metrics(metrics: dict, prefix: str) -> dict:
-    """Attach a public metric prefix to shared two-profile outputs."""
-    return {
-        f"{prefix}_cosine_residual_perm": metrics["cosine_residual_perm"],
-        f"{prefix}_cosine_p_value_perm": metrics["cosine_p_value_perm"],
-        f"{prefix}_g_statistic_bias_corrected": metrics["g_statistic_bias_corrected"],
-        f"{prefix}_g_p_value_perm": metrics["g_p_value_perm"],
-    }
-
-
-def _cell_seeds(n: int, random_state: int | None) -> np.ndarray:
-    rng = np.random.default_rng(random_state)
-    return rng.integers(0, np.iinfo(np.uint32).max, size=n, dtype=np.uint32)
-
-
 def similarity_nucleus_cell(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -157,10 +141,13 @@ def similarity_nucleus_cell(
     scale: float = 1e4,
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """Compare whole-cell and matched-nucleus profiles with two null-calibrated statistics.
+    """
+    Compute the cosine similarity between whole-cell and matched nucleus
+    expression profiles for each cell.
 
-    Returns a cosine residual and bias-corrected G statistic, together with
-    conditional-permutation p-values for both.
+    The point estimate is computed from cell and nucleus count matrices using
+    genes detected in at least one of the two regions, followed by row-wise
+    library-size normalization and log1p transformation.
 
     Parameters
     ----------
@@ -220,11 +207,12 @@ def similarity_nucleus_cell(
     -------
     pd.DataFrame
         DataFrame with columns:
+            - cell id column
+            - `nucleus_id`
+            - `iou`
+            - `nucleus_fraction`
+            - `similarity_nucleus_cell`
     """
-    # move up later
-    n_permutations: int = 200
-    random_state: int | None = 42
-
     assert nucleus_shapes_key is not None, (
         "Cannot compute nucleus-cell similarity: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer before running this metric."
@@ -288,45 +276,47 @@ def similarity_nucleus_cell(
     common_genes = expr_nucleus.columns.intersection(expr_cells.columns)
     expr_nucleus = expr_nucleus[common_genes]
     expr_cells = expr_cells[common_genes]
-    seeds = _cell_seeds(len(match_df), random_state)
 
     rows = []
-    for (_, row), seed in zip(match_df.iterrows(), seeds, strict=False):
+    for _, row in match_df.iterrows():
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
-        if pd.isna(nid):
-            metrics = _rename_pair_metrics(
-                {key: np.nan for key in ("cosine_residual_perm", "cosine_p_value_perm", "g_statistic_bias_corrected", "g_p_value_perm")},
-                "similarity_nucleus_cell",
-            )
-        else:
-            metrics = _rename_pair_metrics(
-                _two_profile_permutation_metrics(
-                    expr_cells.loc[cid].to_numpy(),
-                    expr_nucleus.loc[nid].to_numpy(),
-                    n_permutations=n_permutations,
-                    min_transcripts=min_transcripts,
-                    min_genes=min_genes,
-                    scale=scale,
-                    rng=np.random.default_rng(int(seed)),
-                ),
-                "similarity_nucleus_cell",
-            )
-        rows.append(
-            {tables_cell_id_key: cid, 
-            "nucleus_id": nid, 
-            "iou": row.iou, 
-            "nucleus_fraction": row.nucleus_fraction, 
-            **metrics})
 
-    out = pd.DataFrame(rows)
+        if pd.isna(nid):
+            sim = np.nan
+        else:
+            x = expr_cells.loc[cid].to_numpy()
+            y = expr_nucleus.loc[nid].to_numpy()
+
+            sim = _cosine_similarity_two_vectors(
+                x,
+                y,
+                min_transcripts=min_transcripts,
+                min_genes=min_genes,
+                scale=scale,
+            )
+
+        rows.append(
+            {
+                tables_cell_id_key: cid,
+                "nucleus_id": nid,
+                "iou": row.iou,
+                "nucleus_fraction": row.nucleus_fraction,
+                "similarity_nucleus_cell": sim,
+            }
+        )
+
+    corr_df = pd.DataFrame(rows)
+
     if inplace:
         merge_into_obs(
-            sdata=sdata, 
-            tables_key=tables_key, 
-            df_to_merge=out, 
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=corr_df,
             tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=tables_cell_id_key)
-    return out
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return corr_df
 
 
 def similarity_nucleus_cytoplasm(
@@ -351,8 +341,16 @@ def similarity_nucleus_cytoplasm(
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """Compare matched nuclear and cytoplasmic profiles using cosine and G statistics.
-        Parameters
+    """
+    Compute the cosine similarity between nuclear and cytoplasmic
+    expression profiles for each cell.
+
+    The point estimate is computed from count matrices for the part of the cell
+    overlapping the matched nucleus and the remaining part of the cell, using
+    genes detected in at least one of the two regions, followed by row-wise
+    library-size normalization and log1p transformation.
+
+    Parameters
     ----------
     sdata : SpatialData
         A `SpatialData` object containing segmented and transcript-assigned
@@ -408,12 +406,12 @@ def similarity_nucleus_cytoplasm(
     -------
     pd.DataFrame
         DataFrame with columns:
+            - cell id column
+            - `nucleus_id`
+            - `iou`
+            - `nucleus_fraction`
+            - `similarity_nucleus_cytoplasm`
     """
-
-    # move up later
-    n_permutations: int = 200
-    random_state: int | None = 42
-
     assert nucleus_shapes_key is not None, (
         "Cannot compute nucleus-cytoplasm similarity: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer before running this metric."
@@ -511,30 +509,44 @@ def similarity_nucleus_cytoplasm(
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
 
-    seeds = _cell_seeds(len(all_cells), random_state)
     rows = []
-    
-    for cid, seed in zip(all_cells, seeds, strict=False):
-        if pd.isna(best_nuc_map.get(cid)):
-            base = {key: np.nan for key in ("cosine_residual_perm", "cosine_p_value_perm", "g_statistic_bias_corrected", "g_p_value_perm")}
+    for cid in all_cells:
+        nid = best_nuc_map.get(cid)
+
+        if pd.isna(nid):
+            sim = np.nan
         else:
-            base = _two_profile_permutation_metrics(
-                counts_intersection.loc[cid].to_numpy(dtype=int),
-                counts_cytoplasm.loc[cid].to_numpy(dtype=int),
-                n_permutations=n_permutations, min_transcripts=min_transcripts,
-                min_genes=min_genes, scale=scale, rng=np.random.default_rng(int(seed)),
+            x = counts_intersection.loc[cid].to_numpy(dtype=float)
+            y = counts_cytoplasm.loc[cid].to_numpy(dtype=float)
+
+            sim = _cosine_similarity_two_vectors(
+                x,
+                y,
+                min_transcripts=min_transcripts,
+                min_genes=min_genes,
+                scale=scale,
             )
-        rows.append({id_key: cid, **_rename_pair_metrics(base, "similarity_nucleus_cytoplasm")})
+
+        rows.append(
+            {
+                id_key: cid,
+                "similarity_nucleus_cytoplasm": sim,
+            }
+        )
 
     sim_df = pd.DataFrame(rows)
-    out = match_df.reset_index(drop=True).merge(sim_df, on=id_key, how="left")
+    match_df = match_df.reset_index(drop=True)
+    out = match_df.merge(sim_df, on=id_key, how="left")
+
     if inplace:
         merge_into_obs(
-            sdata=sdata, 
-            tables_key=tables_key, 
-            df_to_merge=out, 
-            tables_cell_id_key=tables_cell_id_key, 
-            df_cell_id_key=id_key)
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
     return out
 
 
@@ -557,8 +569,14 @@ def similarity_center_border(
     scale: float = 1e4,
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """Compare center and border profiles using null-corrected cosine and G statistics.
-    
+    """
+    Compute the cosine similarity between the center and border expression
+    profiles of each cell.
+
+    The point estimate is computed from center and border count matrices
+    obtained via `_get_center_border_counts`, using row-wise library-size
+    normalization followed by log1p.
+
     Parameters
     ----------
     sdata : SpatialData
@@ -604,12 +622,9 @@ def similarity_center_border(
     -------
     pd.DataFrame
         DataFrame with columns:
+            - cell id column
+            - `similarity_center_border`
     """
-
-    # move up later
-    n_permutations: int = 200
-    random_state: int | None = 42
-
     id_key = sdata.shapes[shapes_key].index.name
 
     expr_center, expr_border = _get_center_border_counts(
@@ -638,20 +653,44 @@ def similarity_center_border(
     expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
     expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
-    seeds = _cell_seeds(len(all_cells), random_state)
     rows = []
-    for cid, seed in zip(all_cells, seeds, strict=False):
-        metrics = _two_profile_permutation_metrics(
-            expr_center.loc[cid].to_numpy(dtype=int), expr_border.loc[cid].to_numpy(dtype=int),
-            n_permutations=n_permutations, min_transcripts=min_transcripts,
-            min_genes=min_genes, scale=scale, rng=np.random.default_rng(int(seed)),
+    for cid in all_cells:
+        x_center = expr_center.loc[cid].to_numpy()
+        x_border = expr_border.loc[cid].to_numpy()
+
+        sim = _cosine_similarity_two_vectors(
+            x_center,
+            x_border,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
         )
-        rows.append({id_key: cid, **_rename_pair_metrics(metrics, "similarity_center_border")})
+
+        rows.append(
+            {
+                id_key: cid,
+                "similarity_center_border": sim,
+            }
+        )
+
     out = pd.DataFrame(rows)
+
     if out.empty:
-        raise ValueError("Could not compute center-border profile comparisons. " f"You used {border_fraction_of_radius=}.")
+        raise ValueError(
+            "Could not compute center-border cosine similarities. "
+            "Try different parameters for border_fraction_of_radius. "
+            f"You used {border_fraction_of_radius=}."
+        )
+
     if inplace:
-        merge_into_obs(sdata=sdata, tables_key=tables_key, df_to_merge=out, tables_cell_id_key=tables_cell_id_key, df_cell_id_key=id_key)
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
     return out
 
 
@@ -675,8 +714,15 @@ def similarity_border_neighborhood(
     scale: float = 1e4,
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """Compare border and neighborhood profiles using null-corrected cosine and G statistics.
-    
+    """
+    Compute the cosine similarity between the border and neighborhood expression
+    profiles of each cell.
+
+    The point estimate is computed from the border count matrix obtained via
+    `_get_center_border_counts` and the neighborhood count matrix obtained via
+    `_get_neighborhood_counts`, using row-wise library-size normalization
+    followed by log1p.
+
     Parameters
     ----------
     sdata : SpatialData
@@ -723,11 +769,10 @@ def similarity_border_neighborhood(
     Returns
     -------
     pd.DataFrame
+        DataFrame with columns:
+            - cell id column
+            - `similarity_border_neighborhood`
     """
-
-    random_state: int | None = 42
-    n_permutations: int = 200
-
     id_key = sdata.shapes[shapes_key].index.name
 
     _, expr_border = _get_center_border_counts(
@@ -769,23 +814,40 @@ def similarity_border_neighborhood(
     expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
     expr_neighborhood = expr_neighborhood.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
-    seeds = _cell_seeds(len(all_cells), random_state)
     rows = []
-    for cid, seed in zip(all_cells, seeds, strict=False):
-        metrics = _two_profile_permutation_metrics(
-            expr_border.loc[cid].to_numpy(dtype=int), expr_neighborhood.loc[cid].to_numpy(dtype=int),
-            n_permutations=n_permutations, min_transcripts=min_transcripts,
-            min_genes=min_genes, scale=scale, rng=np.random.default_rng(int(seed)),
+    for cid in all_cells:
+        x_border = expr_border.loc[cid].to_numpy()
+        x_neighborhood = expr_neighborhood.loc[cid].to_numpy()
+
+        sim = _cosine_similarity_two_vectors(
+            x_border,
+            x_neighborhood,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
         )
-        rows.append({id_key: cid, **_rename_pair_metrics(metrics, "similarity_border_neighborhood")})
+
+        rows.append({id_key: cid, "similarity_border_neighborhood": sim})
+
     out = pd.DataFrame(rows)
+
     if out.empty:
         raise ValueError(
-            "Could not compute border-neighborhood profile comparisons. "
-            f"You used {border_fraction_of_radius=} and {neighborhood_radius_factor=}."
+            "Could not compute border-neighborhood cosine similarities. "
+            "Try different parameters for border_fraction_of_radius or "
+            "neighborhood_radius_factor. You used "
+            f"{border_fraction_of_radius=} and {neighborhood_radius_factor=}."
         )
+
     if inplace:
-        merge_into_obs(sdata=sdata, tables_key=tables_key, df_to_merge=out, tables_cell_id_key=tables_cell_id_key, df_cell_id_key=id_key)
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
     return out
 
 
@@ -807,15 +869,32 @@ def border_admixture_score(
     min_transcripts: int = 10,
     min_genes: int = 5,
     pseudocount: float = 0.5,
-    n_boot: int = 200,
-    ci_level: int = 95, #remove later
-    random_state: int | None = 42,
+    n_boot: int = 0,
+    ci_level: float = 0.95,
+    random_state: int | None = None,
     n_jobs: int = -1,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """Return null-corrected border admixture improvement and permutation p-value.
-    
+    """
+    Compute a per-cell border admixture score with bootstrap confidence
+    intervals.
+
+    For each focal cell, transcripts are grouped into center, border, and
+    neighborhood regions. The border profile is compared against a center-only
+    model and a fitted center-neighborhood mixture model. The reported score is
+    the relative improvement of the mixture model over the center-only model.
+
+    If `n_boot` is set, bootstrap confidence intervals are obtained by multinomial resampling of
+    the observed per-region gene count vectors within each focal cell.
+
+    Notes
+    -----
+    - The center and border count matrices are computed using
+      `_get_center_border_counts`.
+    - Neighborhood counts are computed by summing transcript count vectors of
+      neighboring cells returned by `_find_neighbors_by_distance`.
+
     Parameters
     ----------
     sdata
@@ -872,10 +951,12 @@ def border_admixture_score(
     Returns
     -------
     pd.DataFrame
+        One row per cell with columns:
+        - cell id column
+        - `border_admixture_score`
+        - `border_admixture_score_ci_low`
+        - `border_admixture_score_ci_high`
     """
-
-    n_permutations = n_boot
-
     id_key = sdata.shapes[shapes_key].index.name
 
     expr_center, expr_border = _get_center_border_counts(
@@ -913,29 +994,60 @@ def border_admixture_score(
     expr_center = expr_center.loc[common_cells]
     expr_border = expr_border.loc[common_cells]
     expr_neighborhood = expr_neighborhood.loc[common_cells]
-    
-    seeds = _cell_seeds(len(common_cells), random_state)
 
-    def _one_cell(cid, seed):
-        result = _border_admixture_permutation_metrics(
+    seed_rng = np.random.default_rng(random_state)
+
+    # independent RNG seeds per cell for reproducible parallel bootstrap
+    seeds = seed_rng.integers(
+        0,
+        np.iinfo(np.uint32).max,
+        size=len(common_cells),
+        dtype=np.uint32,
+    )
+
+    def _bootstrap_mixture_fit_one_cell(cid, seed):
+        rng = np.random.default_rng(int(seed))
+
+        res = _bootstrap_mixture_fit(
             x_center=expr_center.loc[cid].to_numpy(dtype=int),
             x_border=expr_border.loc[cid].to_numpy(dtype=int),
             x_neighborhood=expr_neighborhood.loc[cid].to_numpy(dtype=int),
-            n_permutations=n_permutations, min_transcripts=min_transcripts,
-            min_genes=min_genes, pseudocount=pseudocount,
-            rng=np.random.default_rng(int(seed)),
+            n_boot=n_boot,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
+            ci_level=ci_level,
+            rng=rng,
         )
-        return {id_key: cid, **result}
+
+        return {
+            id_key: cid,
+            "border_admixture_score": res["border_admixture_score"],
+            "border_admixture_score_ci_low": res["border_admixture_score_ci_low"],
+            "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
+        }
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_one_cell)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
+        delayed(_bootstrap_mixture_fit_one_cell)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
     )
+
     out = pd.DataFrame(rows)
+
     if out.empty:
         raise ValueError(
             "Could not compute border admixture scores. "
-            f"You used {border_fraction_of_radius=} and {neighborhood_radius_factor=}."
+            "Try different parameters for border_fraction_of_radius or neighborhood_radius_factor. "
+            "You used "
+            f"{border_fraction_of_radius=} and {neighborhood_radius_factor=}."
         )
+
     if inplace:
-        merge_into_obs(sdata=sdata, tables_key=tables_key, df_to_merge=out, tables_cell_id_key=tables_cell_id_key, df_cell_id_key=id_key)
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
     return out

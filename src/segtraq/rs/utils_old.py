@@ -594,16 +594,15 @@ def _cosine_similarity_two_vectors(
     min_genes: int,
     scale: float,
 ) -> float:
-    """Compute normalized-log cosine similarity for two count vectors."""
-    x_a = np.rint(np.asarray(x_a)).astype(int)
-    x_b = np.rint(np.asarray(x_b)).astype(int)
+    """
+    Compute cosine similarity between two expression vectors after filtering,
+    masking zero entries, and applying log-normalization.
+
+    Returns NaN if minimum gene or transcript thresholds are not met.
+    """
     mask = (x_a != 0) | (x_b != 0)
 
-    if (
-        mask.sum() < min_genes
-        or x_a[mask].sum() < min_transcripts
-        or x_b[mask].sum() < min_transcripts
-    ):
+    if mask.sum() < min_genes or x_a[mask].sum() < min_transcripts or x_b[mask].sum() < min_transcripts:
         return np.nan
 
     sim = _cosine_sim(
@@ -612,125 +611,6 @@ def _cosine_similarity_two_vectors(
     )
     return float(sim) if np.isfinite(sim) else np.nan
 
-
-def _g_statistic_two_vectors(x_a: np.ndarray, x_b: np.ndarray) -> tuple[float, int, int]:
-    """Return raw G statistic, number of expressed genes, and pooled count."""
-    x_a = np.rint(np.asarray(x_a)).astype(int)
-    x_b = np.rint(np.asarray(x_b)).astype(int)
-    mask = (x_a + x_b) > 0
-    x_a = x_a[mask].astype(float)
-    x_b = x_b[mask].astype(float)
-
-    n_a = int(x_a.sum())
-    n_b = int(x_b.sum())
-    n_total = n_a + n_b
-    k = int(mask.sum())
-    if n_a == 0 or n_b == 0 or k == 0:
-        return np.nan, k, n_total
-
-    pooled = x_a + x_b
-    expected_a = n_a * pooled / n_total
-    expected_b = n_b * pooled / n_total
-
-    terms_a = np.zeros_like(x_a)
-    terms_b = np.zeros_like(x_b)
-    positive_a = x_a > 0
-    positive_b = x_b > 0
-    terms_a[positive_a] = x_a[positive_a] * np.log(x_a[positive_a] / expected_a[positive_a])
-    terms_b[positive_b] = x_b[positive_b] * np.log(x_b[positive_b] / expected_b[positive_b])
-    return float(2.0 * (terms_a.sum() + terms_b.sum())), k, n_total
-
-
-def _two_profile_permutation_metrics(
-    x_a: np.ndarray,
-    x_b: np.ndarray,
-    *,
-    n_permutations: int = 200,
-    min_transcripts: int = 10,
-    min_genes: int = 5,
-    scale: float = 1e4,
-    rng: np.random.Generator | None = None,
-) -> dict:
-    """Compute cosine residual, bias-corrected G statistic, and permutation p-values.
-
-    The conditional null fixes the pooled gene counts and both region totals,
-    then reallocates transcripts between the two profiles with a multivariate
-    hypergeometric draw.
-    """
-    if n_permutations <= 0:
-        raise ValueError("`n_permutations` must be > 0.")
-    if rng is None:
-        rng = np.random.default_rng()
-
-    x_a = np.rint(np.asarray(x_a)).astype(int)
-    x_b = np.rint(np.asarray(x_b)).astype(int)
-    mask = (x_a + x_b) > 0
-    x_a = x_a[mask]
-    x_b = x_b[mask]
-
-    n_a = int(x_a.sum())
-    n_b = int(x_b.sum())
-    k = int(mask.sum())
-    n_total = n_a + n_b
-
-    empty = {
-        "cosine_residual_perm": np.nan,
-        "cosine_p_value_perm": np.nan,
-        "g_statistic_bias_corrected": np.nan,
-        "g_p_value_perm": np.nan,
-    }
-    if k < min_genes or n_a < min_transcripts or n_b < min_transcripts:
-        return empty
-
-    cosine_observed = _cosine_similarity_two_vectors(
-        x_a,
-        x_b,
-        min_transcripts=min_transcripts,
-        min_genes=min_genes,
-        scale=scale,
-    )
-    g_observed, _, _ = _g_statistic_two_vectors(x_a, x_b)
-    if not np.isfinite(cosine_observed) or not np.isfinite(g_observed) or n_total == 0:
-        return empty
-
-    pooled = x_a + x_b
-    cosine_null = np.empty(n_permutations, dtype=float)
-    g_null = np.empty(n_permutations, dtype=float)
-
-    for i in range(n_permutations):
-        x_a_null = rng.multivariate_hypergeometric(pooled, n_a)
-        x_b_null = pooled - x_a_null
-        cosine_null[i] = _cosine_similarity_two_vectors(
-            x_a_null,
-            x_b_null,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-        )
-        g_null[i], _, _ = _g_statistic_two_vectors(x_a_null, x_b_null)
-
-    valid_cosine = np.isfinite(cosine_null)
-    valid_g = np.isfinite(g_null)
-    if not valid_cosine.any() or not valid_g.any():
-        return empty
-
-    cosine_null = cosine_null[valid_cosine]
-    g_null = g_null[valid_g]
-
-    # Lower cosine and larger G indicate stronger profile differences.
-    cosine_residual = cosine_observed - float(cosine_null.mean())
-    cosine_p = (1 + np.count_nonzero(cosine_null <= cosine_observed)) / (len(cosine_null) + 1)
-    g_p = (1 + np.count_nonzero(g_null >= g_observed)) / (len(g_null) + 1)
-
-    # Leading-order finite-count correction used in the simulation notebook.
-    g_effect = (g_observed - (k - 1)) / (2.0 * n_total)
-
-    return {
-        "cosine_residual_perm": float(cosine_residual),
-        "cosine_p_value_perm": float(cosine_p),
-        "g_statistic_bias_corrected": float(g_effect),
-        "g_p_value_perm": float(g_p),
-    }
 
 def _get_neighborhood_counts(
     sdata,
@@ -1044,28 +924,54 @@ def _border_admixture_score_one_cell(
     return float((err_center_only - err_mixture) / err_center_only)
 
 
-def _border_admixture_permutation_metrics(
+def _bootstrap_mixture_fit(
     x_center: np.ndarray,
     x_border: np.ndarray,
     x_neighborhood: np.ndarray,
-    *,
-    n_permutations: int = 200,
+    n_boot: int = 0,
     min_transcripts: int = 10,
     min_genes: int = 5,
     pseudocount: float = 0.5,
+    ci_level: float = 0.95,
     rng: np.random.Generator | None = None,
 ) -> dict:
-    """Return null-corrected admixture improvement and its permutation p-value."""
-    if n_permutations <= 0:
-        raise ValueError("`n_permutations` must be > 0.")
-    if rng is None:
-        rng = np.random.default_rng()
+    """
+    Bootstrap the border admixture score for one cell using multinomial
+    resampling of the observed per-region gene count vectors.
 
+    Parameters
+    ----------
+    x_center, x_border, x_neighborhood : np.ndarray
+        Gene count vectors for the center, border, and neighborhood regions.
+    n_boot : int, default=0
+        Number of bootstrap replicates.
+    min_transcripts : int, default=10
+        Minimum number of transcripts required in each region.
+    min_genes : int, default=5
+        Minimum number of genes required across the three regions combined.
+    pseudocount : float, default=0.5
+        Pseudocount used when converting counts to proportions.
+    ci_level : float, default=0.95
+        Percentile confidence interval level.
+    rng : np.random.Generator | None, default=None
+        Random number generator. If None, a new generator is created.
+
+    Returns
+    -------
+    dict
+        Dictionary with:
+        - `border_admixture_score`
+        - `border_admixture_score_ci_low`
+        - `border_admixture_score_ci_high`
+    """
     x_center = np.rint(np.asarray(x_center)).astype(int)
     x_border = np.rint(np.asarray(x_border)).astype(int)
     x_neighborhood = np.rint(np.asarray(x_neighborhood)).astype(int)
 
-    observed = _border_admixture_score_one_cell(
+    if rng is None:
+        rng = np.random.default_rng()
+
+    score = _border_admixture_score_one_cell(
         x_center=x_center,
         x_border=x_border,
         x_neighborhood=x_neighborhood,
@@ -1073,37 +979,63 @@ def _border_admixture_permutation_metrics(
         min_genes=min_genes,
         pseudocount=pseudocount,
     )
-    empty = {
-        "border_admixture_score_residual_perm": np.nan,
-        "border_admixture_p_value_perm": np.nan,
-    }
-    if not np.isfinite(observed):
-        return empty
 
-    pooled = x_center + x_border
     n_center = int(x_center.sum())
-    null_scores = np.empty(n_permutations, dtype=float)
+    n_border = int(x_border.sum())
+    n_neighborhood = int(x_neighborhood.sum())
 
-    for i in range(n_permutations):
-        center_null = rng.multivariate_hypergeometric(pooled, n_center)
-        border_null = pooled - center_null
-        null_scores[i] = _border_admixture_score_one_cell(
-            x_center=center_null,
-            x_border=border_null,
-            x_neighborhood=x_neighborhood,
+    if n_center == 0 or n_border == 0 or n_neighborhood == 0:
+        return {
+            "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
+            "border_admixture_score_ci_low": np.nan,
+            "border_admixture_score_ci_high": np.nan,
+        }
+
+    p_center = x_center / n_center
+    p_border = x_border / n_border
+    p_neighborhood = x_neighborhood / n_neighborhood
+
+    if n_boot <= 0:
+        return {
+            "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
+            "border_admixture_score_ci_low": np.nan,
+            "border_admixture_score_ci_high": np.nan,
+        }
+
+    boot_scores = []
+
+    for _ in range(n_boot):
+        # resample counts under multinomial model preserving library size
+        xb_center = rng.multinomial(n_center, p_center)
+        xb_border = rng.multinomial(n_border, p_border)
+        xb_neighborhood = rng.multinomial(n_neighborhood, p_neighborhood)
+
+        boot_score = _border_admixture_score_one_cell(
+            x_center=xb_center,
+            x_border=xb_border,
+            x_neighborhood=xb_neighborhood,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             pseudocount=pseudocount,
         )
 
-    null_scores = null_scores[np.isfinite(null_scores)]
-    if len(null_scores) == 0:
-        return empty
+        if np.isfinite(boot_score):
+            boot_scores.append(boot_score)
 
-    residual = observed - float(null_scores.mean())
-    p_value = (1 + np.count_nonzero(null_scores >= observed)) / (len(null_scores) + 1)
+    boot_scores = np.asarray(boot_scores, dtype=float)
+
+    if len(boot_scores) == 0:
+        ci_low = np.nan
+        ci_high = np.nan
+    else:
+        alpha = 1.0 - ci_level
+        ci_low, ci_high = np.quantile(
+            boot_scores,
+            [alpha / 2, 1 - alpha / 2],
+        )
+
     return {
-        "border_admixture_score_residual_perm": float(residual),
-        "border_admixture_p_value_perm": float(p_value),
+        "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
+        "border_admixture_score_ci_low": float(ci_low) if np.isfinite(ci_low) else np.nan,
+        "border_admixture_score_ci_high": float(ci_high) if np.isfinite(ci_high) else np.nan,
     }
-
