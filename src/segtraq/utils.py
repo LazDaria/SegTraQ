@@ -21,6 +21,7 @@ from packaging import version as pkg_version
 from rasterio.features import shapes
 from scipy import sparse
 from scipy.spatial.distance import cdist
+from scipy.stats import rankdata
 from shapely.affinity import affine_transform, translate
 from shapely.geometry import shape
 from sklearn.metrics import roc_auc_score
@@ -710,64 +711,83 @@ def _pairwise_auc(
     max_fpr: float | None,
     auc_pos_thresh: float,
     min_cells_per_celltype: int,
-) -> tuple[str, str, list[str], bool]:
+) -> tuple[tuple[str, str, list[str], bool], tuple[str, str, list[str], bool]]:
     """
-    Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b)
-    and return genes up in ct_a vs ct_b.
+    Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b) and return
+    genes up in ct_a vs ct_b AND genes up in ct_b vs ct_a.
+
+    For full AUC (max_fpr=None) the ROC AUC is symmetric under swapping the
+    positive class (AUC_b = 1 - AUC_a), so a single per-gene pass suffices.
+    For partial AUC (max_fpr set) this symmetry does not hold - the FPR range
+    being standardized over is defined relative to the positive class - so
+    both directions must be computed explicitly.
     """
-    # Restrict to cells of ct_a and ct_b
+    empty = lambda: ((ct_a, ct_b, [], False), (ct_b, ct_a, [], False))  # noqa: E731
+
     mask = ctypes.isin([ct_a, ct_b])
     if mask.sum() < 2 * min_cells_per_celltype:
-        # too few cells total -> skip
-        return (ct_a, ct_b, [], False)
+        return empty()
 
     ad_pair = adata[mask]
-    X_pair = ad_pair.X
-    if hasattr(X_pair, "toarray"):
-        X_pair = X_pair.toarray()
+
+    # if not enough cells in either type, skip this pair
+    labels_a = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
+    if labels_a.sum() == 0 or labels_a.sum() == labels_a.size:
+        return empty()
+
+    # drop genes with zero expression across the whole pair - AUC is 0.5
+    # for them regardless (constant score), so skip the per-gene ROC call
+    if sparse.issparse(ad_pair.X):
+        gene_mask = ad_pair.X.getnnz(axis=0) > 0
     else:
-        X_pair = np.asarray(X_pair)  # (n_cells_pair, n_genes)
+        gene_mask = (ad_pair.X > 0).any(axis=0)
+    ad_pair = ad_pair[:, gene_mask]
 
-    genes = _get_genes(ad_pair, gene_key)
-    genes = np.asarray(genes)
+    X_pair = ad_pair.X
+    X_pair = X_pair.toarray() if hasattr(X_pair, "toarray") else np.asarray(X_pair)
 
-    labels = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
-    if labels.sum() == 0 or labels.sum() == labels.size:
-        # Only one class present -> skip
-        return (ct_a, ct_b, [], False)
+    genes = np.asarray(_get_genes(ad_pair, gene_key))
 
-    # Precompute means per group to enforce directionality
-    mask_a = labels == 1
-    mask_b = labels == 0
+    mask_a = labels_a == 1
+    mask_b = ~mask_a
     mean_a = X_pair[mask_a].mean(axis=0)
     mean_b = X_pair[mask_b].mean(axis=0)
 
-    # Compute AUC/pAUC per gene (non-vectorized, one roc_auc_score per gene)
-    aucs = np.zeros(genes.size, dtype=float)
-    for j in range(genes.size):
-        scores = X_pair[:, j]
-        # If all scores identical, AUC is undefined -> treat as 0.5
-        if np.all(scores == scores[0]):
-            aucs[j] = 0.5
-        else:
-            aucs[j] = roc_auc_score(labels, scores, max_fpr=max_fpr)
+    n_genes = genes.size
+    n_a = int(mask_a.sum())
+    n_b = int(mask_b.sum())
 
-    # Identify genes up in ct_a vs ct_b
-    #   high AUC and higher mean in ct_a
-    up_mask = (aucs >= auc_pos_thresh) & (mean_a > mean_b)
+    if max_fpr is None:
+        # full AUC == tie-corrected Mann-Whitney rank-sum statistic.
+        # One vectorized ranking over all genes replaces n_genes separate
+        # roc_auc_score calls, and the reverse direction is free (AUC_b = 1 - AUC_a).
+        ranks = rankdata(X_pair, axis=0)
+        rank_sum_a = ranks[mask_a].sum(axis=0)
+        aucs_a = (rank_sum_a - n_a * (n_a + 1) / 2) / (n_a * n_b)
+        aucs_b = 1.0 - aucs_a
+    else:
+        # partial AUC has no equivalent closed-form rank-sum shortcut and is not
+        # symmetric under swapping the positive class, so both directions still
+        # need an explicit per-gene call here.
+        aucs_a = np.full(n_genes, 0.5, dtype=float)
+        aucs_b = np.full(n_genes, 0.5, dtype=float)
+        labels_b = 1 - labels_a
+        for j in range(n_genes):
+            scores = X_pair[:, j]
+            if not np.all(scores == scores[0]):
+                aucs_a[j] = roc_auc_score(labels_a, scores, max_fpr=max_fpr)
+                aucs_b[j] = roc_auc_score(labels_b, scores, max_fpr=max_fpr)
 
-    # get indices of candidate genes
-    idx = np.where(up_mask)[0]
+    def _select(aucs, mean_pos, mean_neg):
+        up_mask = (aucs >= auc_pos_thresh) & (mean_pos > mean_neg)
+        idx = np.where(up_mask)[0]
+        idx = idx[np.argsort(-aucs[idx])][:200]
+        return genes[idx].tolist()
 
-    # sort candidates by AUC descending
-    idx = idx[np.argsort(-aucs[idx])]
+    pos_genes_a = _select(aucs_a, mean_a, mean_b)
+    pos_genes_b = _select(aucs_b, mean_b, mean_a)
 
-    # cap at 200 genes
-    idx = idx[:200]
-
-    pos_genes_a = genes[idx].tolist()
-
-    return (ct_a, ct_b, pos_genes_a, True)
+    return (ct_a, ct_b, pos_genes_a, True), (ct_b, ct_a, pos_genes_b, True)
 
 
 def _pairwise_de(

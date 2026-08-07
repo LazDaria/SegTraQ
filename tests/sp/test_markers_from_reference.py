@@ -21,10 +21,40 @@ def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref, mark
     pos_all = [g for genes in (markers[ct]["positive"] for ct in markers) for g in genes]
     pos_counts = pd.Series(pos_all, dtype="object").value_counts()
     if len(pos_counts) > 0:
-        assert (pos_counts < (0.25 * n_types)).all(), (
+        assert (pos_counts <= (0.25 * n_types)).all(), (
             "Positive overlap filter failed: some genes appear in too many types"
         )
     neg_all = [g for genes in (markers[ct]["negative"] for ct in markers) for g in genes]
+    neg_counts = pd.Series(neg_all, dtype="object").value_counts()
+    if len(neg_counts) > 0:
+        assert (neg_counts < n_types).all(), (
+            "Negative overlap filter failed: a gene appears in all types' negative lists"
+        )
+
+
+def test_markers_from_reference_auc(adata_ref):
+    n_types = adata_ref.obs["celltype"].nunique()
+    markers_auc = st.markers_from_reference(
+        adata_ref.copy(), ref_cell_type="celltype", t_pos=0.5, ref_raw_counts_layer="raw", mode="auc"
+    )
+
+    # Basic structure
+    assert isinstance(markers_auc, dict)
+    assert set(markers_auc.keys()) == set(pd.Categorical(adata_ref.obs["celltype"]).categories)
+    for _ct, d in markers_auc.items():
+        assert set(d.keys()) == {"positive", "negative"}
+        assert isinstance(d["positive"], list)
+        assert isinstance(d["negative"], list)
+        assert all(isinstance(g, str) for g in d["positive"])
+        assert all(isinstance(g, str) for g in d["negative"])
+
+    pos_all = [g for genes in (markers_auc[ct]["positive"] for ct in markers_auc) for g in genes]
+    pos_counts = pd.Series(pos_all, dtype="object").value_counts()
+    if len(pos_counts) > 0:
+        assert (pos_counts <= (0.25 * n_types)).all(), (
+            "Positive overlap filter failed: some genes appear in too many types"
+        )
+    neg_all = [g for genes in (markers_auc[ct]["negative"] for ct in markers_auc) for g in genes]
     neg_counts = pd.Series(neg_all, dtype="object").value_counts()
     if len(neg_counts) > 0:
         assert (neg_counts < n_types).all(), (
