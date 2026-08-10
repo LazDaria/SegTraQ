@@ -1644,6 +1644,34 @@ def validate_spatialdata(
                     UserWarning,
                     stacklevel=2,
                 )
+        else:
+            # points_background_id=None is treated as matching None, np.nan, and pd.NA.
+            # Ensure there actually are missing values among the point cell IDs -- otherwise
+            # this silently means "no background filtering happens at all".
+            has_missing_id = points_df[points_cell_id_key].isna().any()
+            most_common_points_id = points_df[points_cell_id_key].mode(dropna=False).iloc[0]
+            if not has_missing_id:
+                warnings.warn(
+                    "points_background_id is None, but no missing values (None/np.nan/pd.NA) were "
+                    "found among point cell IDs. "
+                    "If your background points are denoted with an explicit value (e.g. 0, -1, 'background'), "
+                    "pass that value as 'points_background_id' instead."
+                    f"The most common cell ID among points is '{most_common_points_id}'. ",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            else:
+                # as a more stringent check, warn if missing values are not the most common cell ID
+                if pd.notna(most_common_points_id):
+                    warnings.warn(
+                        "points_background_id is None, but the most common cell ID among points is "
+                        f"'{most_common_points_id}', not a missing value. "
+                        "This may indicate that 'points_background_id' "
+                        "should be set explicitly rather than left as None. "
+                        "If you are sure that 'points_background_id=None' is correct, you can ignore this warning.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
 
         # missing_in_polygons = { #TODO - after querying sdata objects, this breaks
         #     x
