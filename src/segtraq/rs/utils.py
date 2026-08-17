@@ -573,56 +573,100 @@ def _get_center_border_counts(
     return expr_center, expr_border
 
 
-def _g_statistic_two_vectors(x_a: np.ndarray, x_b: np.ndarray) -> tuple[float, int, int]:
-    """Return raw G statistic, number of expressed genes, and pooled count."""
+def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
+    """Compute cosine similarity between two numeric vectors."""
+    x_norm = np.linalg.norm(x)
+    y_norm = np.linalg.norm(y)
+    if x_norm == 0.0 or y_norm == 0.0:
+        return np.nan
+    return float(np.dot(x, y) / (x_norm * y_norm))
+
+
+def _pf_log1p_pf(
+    x: np.ndarray,
+    scale: float = 1e4,
+) -> np.ndarray:
+    """Apply PFlog1pPF (shifted CLR) to one count vector.
+
+    Counts are first converted to proportions and scaled, followed by `log1p`.
+    The transformed profile is then centered by subtracting its mean across
+    genes. A zero-depth profile is returned as zeros.
+    """
+    if scale <= 0:
+        raise ValueError("`scale` must be > 0.")
+
+    x = np.asarray(x, dtype=float)
+
+    if x.ndim != 1:
+        raise ValueError("`x` must be a one-dimensional array.")
+
+    total = x.sum()
+    if total <= 0:
+        return np.zeros_like(x, dtype=float)
+
+    transformed = np.log1p(scale * x / total)
+    transformed -= transformed.mean()
+
+    return transformed
+
+
+def _cosine_similarity_two_vectors(
+    x_a: np.ndarray,
+    x_b: np.ndarray,
+    min_transcripts: int,
+    min_genes: int,
+    scale: float,
+) -> float:
+    """Compute cosine similarity between PFlog1pPF-transformed count profiles."""
     x_a = np.rint(np.asarray(x_a)).astype(int)
     x_b = np.rint(np.asarray(x_b)).astype(int)
-    mask = (x_a + x_b) > 0
-    x_a = x_a[mask].astype(float)
-    x_b = x_b[mask].astype(float)
 
-    n_a = int(x_a.sum())
-    n_b = int(x_b.sum())
-    n_total = n_a + n_b
-    k = int(mask.sum())
-    if n_a == 0 or n_b == 0 or k == 0:
-        return np.nan, k, n_total
+    mask = (x_a != 0) | (x_b != 0)
 
-    pooled = x_a + x_b
-    expected_a = n_a * pooled / n_total
-    expected_b = n_b * pooled / n_total
+    if (
+        mask.sum() < min_genes
+        or x_a[mask].sum() < min_transcripts
+        or x_b[mask].sum() < min_transcripts
+    ):
+        return np.nan
 
-    terms_a = np.zeros_like(x_a)
-    terms_b = np.zeros_like(x_b)
-    positive_a = x_a > 0
-    positive_b = x_b > 0
-    terms_a[positive_a] = x_a[positive_a] * np.log(x_a[positive_a] / expected_a[positive_a])
-    terms_b[positive_b] = x_b[positive_b] * np.log(x_b[positive_b] / expected_b[positive_b])
-    return float(2.0 * (terms_a.sum() + terms_b.sum())), k, n_total
+    x_a_transformed = _pf_log1p_pf(x_a[mask], scale=scale)
+    x_b_transformed = _pf_log1p_pf(x_b[mask], scale=scale)
+
+    sim = _cosine_sim(x_a_transformed, x_b_transformed)
+
+    return float(sim) if np.isfinite(sim) else np.nan
 
 
-def _two_profile_permutation_metrics(
+def _two_profile_similarity_metrics(
     x_a: np.ndarray,
     x_b: np.ndarray,
     *,
     n_permutations: int = 200,
     min_transcripts: int = 10,
     min_genes: int = 5,
+    scale: float = 1e4,
     rng: np.random.Generator | None = None,
 ) -> dict:
-    """Compute a G-statistic difference score and optional permutation p-value.
+    """Compute permutation-corrected PFlog1pPF cosine similarity.
 
-    The returned `difference` is the bias-corrected, count-normalized G statistic;
-    larger values indicate stronger compositional differences between the two
-    expression profiles. If `n_permutations > 0`, a conditional null fixes the
-    pooled gene counts and both region totals and reallocates transcripts between
-    the two profiles with a multivariate hypergeometric draw to obtain a p-value.
+    The reported similarity is the observed PFlog1pPF cosine similarity minus
+    the mean cosine similarity under a conditional permutation null. The null
+    fixes the pooled gene counts and both region totals and reallocates
+    transcripts between profiles using multivariate hypergeometric draws.
+
+    A lower-tail permutation p-value quantifies whether the observed similarity
+    is smaller than expected under the shared-composition null.
     """
-    if n_permutations < 0:
-        raise ValueError("`n_permutations` must be >= 0.")
+    if n_permutations < 100:
+        raise ValueError(
+            f"`n_permutations` must be >= 100 to compute "
+            "the permutation-corrected similarity residual."
+        )
 
     x_a = np.rint(np.asarray(x_a)).astype(int)
     x_b = np.rint(np.asarray(x_b)).astype(int)
+
     mask = (x_a + x_b) > 0
     x_a = x_a[mask]
     x_b = x_b[mask]
@@ -630,49 +674,64 @@ def _two_profile_permutation_metrics(
     n_a = int(x_a.sum())
     n_b = int(x_b.sum())
     k = int(mask.sum())
-    n_total = n_a + n_b
 
-    empty = {"difference": np.nan}
-    if n_permutations > 0:
-        empty["difference_p_value"] = np.nan
+    empty = {
+        "similarity": np.nan,
+        "similarity_p_value": np.nan,
+    }
 
     if k < min_genes or n_a < min_transcripts or n_b < min_transcripts:
         return empty
 
-    g_observed, _, _ = _g_statistic_two_vectors(x_a, x_b)
-    if not np.isfinite(g_observed) or n_total == 0:
+    similarity_observed = _cosine_similarity_two_vectors(
+        x_a,
+        x_b,
+        min_transcripts=min_transcripts,
+        min_genes=min_genes,
+        scale=scale,
+    )
+
+    if not np.isfinite(similarity_observed):
         return empty
-
-    # Remove the leading finite-count expectation and normalize by total counts.
-    difference = (g_observed - (k - 1)) / (2.0 * n_total)
-    out = {"difference": float(difference)}
-
-    # No permutation test requested: return the effect-size-like score only.
-    if n_permutations == 0:
-        return out
 
     if rng is None:
         rng = np.random.default_rng()
 
     pooled = x_a + x_b
-    g_null = np.empty(n_permutations, dtype=float)
+    similarity_null = np.empty(n_permutations, dtype=float)
 
     for i in range(n_permutations):
         x_a_null = rng.multivariate_hypergeometric(pooled, n_a)
         x_b_null = pooled - x_a_null
-        g_null[i], _, _ = _g_statistic_two_vectors(x_a_null, x_b_null)
 
-    valid_g = np.isfinite(g_null)
-    if not valid_g.any():
-        out["difference_p_value"] = np.nan
-        return out
+        similarity_null[i] = _cosine_similarity_two_vectors(
+            x_a_null,
+            x_b_null,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            scale=scale,
+        )
 
-    g_null = g_null[valid_g]
-    # Larger G indicates a stronger difference between the two gene compositions.
-    out["difference_p_value"] = float(
-        (1 + np.count_nonzero(g_null >= g_observed)) / (len(g_null) + 1)
+    valid = np.isfinite(similarity_null)
+
+    if not valid.any():
+        return empty
+
+    similarity_null = similarity_null[valid]
+
+    similarity_residual = (
+        similarity_observed - similarity_null.mean()
     )
-    return out
+
+    similarity_p_value = (
+        1 + np.count_nonzero(similarity_null <= similarity_observed)
+    ) / (len(similarity_null) + 1)
+
+    return {
+        "similarity": float(similarity_residual),
+        "similarity_p_value": float(similarity_p_value),
+    }
+
 
 def _get_neighborhood_counts(
     sdata: sd.SpatialData,

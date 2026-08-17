@@ -11,7 +11,7 @@ from .utils import (
     _get_neighborhood_counts,
     _join_points_regions,
     _match_nucleus_one_cell,
-    _two_profile_permutation_metrics,
+    _two_profile_similarity_metrics,
 )
 
 
@@ -125,11 +125,11 @@ def match_nuclei_to_cells(
 
 
 
-def _rename_difference_metrics(metrics: dict, prefix: str) -> dict:
+def _rename_similarity_metrics(metrics: dict, prefix: str) -> dict:
     """Rename shared outputs to their public metric names."""
-    out = {prefix: metrics["difference"]}
-    if "difference_p_value" in metrics:
-        out[f"{prefix}_p_value"] = metrics["difference_p_value"]
+    out = {prefix: metrics["similarity"]}
+    if "similarity_p_value" in metrics:
+        out[f"{prefix}_p_value"] = metrics["similarity_p_value"]
     return out
 
 
@@ -139,7 +139,7 @@ def _cell_seeds(n: int, random_state: int | None) -> np.ndarray:
     return rng.integers(0, np.iinfo(np.uint32).max, size=n, dtype=np.uint32)
 
 
-def nucleus_cell_difference(
+def similarity_nucleus_cell(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -155,6 +155,7 @@ def nucleus_cell_difference(
     tables_raw_counts_layer: str | None = None,
     min_transcripts: int = 10,
     min_genes: int = 5,
+    scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
@@ -163,14 +164,13 @@ def nucleus_cell_difference(
     n_permutations: int = 200,
     random_state: int | None = 42,
 ) -> pd.DataFrame:
-    """Compare whole-cell and matched-nucleus profiles using a G-statistic difference score.
+    """Compare whole-cell and matched-nucleus profiles using PFlog1pPF cosine similarity.
 
     The whole-cell expression profile is compared with the transcript profile
-    inside its matched nucleus. The returned difference score is a
-    bias-corrected, count-normalized G statistic, with larger values indicating
-    stronger differences in gene composition. When `n_permutations > 0`, a
-    permutation p-value is computed from a conditional null that preserves pooled
-    gene counts and both region totals.
+    inside its matched nucleus after PFlog1pPF transformation. Larger cosine
+    similarity values indicate more similar transcript composition. When
+    `n_permutations >= 100`, a lower-tail permutation p-value tests whether the
+    observed similarity is smaller than expected under a shared-profile null.
 
     Parameters
     ----------
@@ -208,6 +208,8 @@ def nucleus_cell_difference(
         Minimum number of transcripts required in both cell and nucleus.
     min_genes : int, default=5
         Minimum number of non-zero genes required across cell and nucleus.
+    scale : float, default=1e4
+        Common target sum used for the first and second proportional-fitting steps.
     select_by : str, default="nucleus_fraction"
         Score used to select the best-matching nucleus per cell. Options:
         - "iou": maximize Intersection-over-Union (cell vs nucleus).
@@ -224,7 +226,7 @@ def nucleus_cell_difference(
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
+        Number of conditional permutations per cell. Must be >= 100 .
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
 
@@ -232,11 +234,14 @@ def nucleus_cell_difference(
     -------
     pd.DataFrame
         One row per cell with nucleus-match information, the difference
-        score and, when `n_permutations > 0`, its permutation p-value.
+        score and its permutation p-value.
     """
 
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
+
     assert nucleus_shapes_key is not None, (
-        "Cannot compute nucleus-cell difference: `nucleus_shapes_key` is None. "
+        "Cannot compute nucleus-cell similarity: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer before running this metric."
     )
 
@@ -308,16 +313,17 @@ def nucleus_cell_difference(
     def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
         if pd.isna(nid):
-            base_metrics = {"difference": np.nan}
+            base_metrics = {"similarity": np.nan}
             if n_permutations > 0:
-                base_metrics["difference_p_value"] = np.nan
+                base_metrics["similarity_p_value"] = np.nan
         else:
-            base_metrics = _two_profile_permutation_metrics(
+            base_metrics = _two_profile_similarity_metrics(
                 _cell_count_vector(cid),
                 expr_nucleus.loc[nid].to_numpy(),
                 n_permutations=n_permutations,
                 min_transcripts=min_transcripts,
                 min_genes=min_genes,
+                scale=scale,
                 rng=np.random.default_rng(int(seed)),
             )
 
@@ -326,7 +332,7 @@ def nucleus_cell_difference(
             "nucleus_id": nid,
             "iou": row.iou,
             "nucleus_fraction": row.nucleus_fraction,
-            **_rename_difference_metrics(base_metrics, "nucleus_cell_difference"),
+            **_rename_similarity_metrics(base_metrics, "similarity_nucleus_cell"),
         }
 
     # Permutations are independent across cells, so parallelize at the cell level.
@@ -346,7 +352,7 @@ def nucleus_cell_difference(
     return out
 
 
-def nucleus_cytoplasm_difference(
+def similarity_nucleus_cytoplasm(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -361,6 +367,7 @@ def nucleus_cytoplasm_difference(
     points_y_key: str = "y",
     min_transcripts: int = 10,
     min_genes: int = 5,
+    scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
     n_jobs: int = -1,
@@ -369,14 +376,13 @@ def nucleus_cytoplasm_difference(
     n_permutations: int = 200,
     random_state: int | None = 42,
 ) -> pd.DataFrame:
-    """Compare matched nuclear and cytoplasmic profiles using a G-statistic difference score.
+    """Compare matched nuclear and cytoplasmic profiles using PFlog1pPF cosine similarity.
 
     For each cell, transcripts are separated into those inside the matched
-    nucleus and those in the remaining cytoplasmic region. Their expression
-    profiles are compared using the bias-corrected, count-normalized G statistic.
-    When `n_permutations > 0`, a conditional permutation null additionally quantifies
-    whether the two compartments differ more than expected by chance while preserving
-    their different transcript totals.
+    nucleus and those in the remaining cytoplasmic region. The two count profiles
+    are PFlog1pPF-transformed before cosine similarity is computed. When
+    `n_permutations >= 100`, a lower-tail permutation p-value tests whether the
+    observed similarity is smaller than expected under a shared-profile null.
 
     Parameters
     ----------
@@ -412,6 +418,8 @@ def nucleus_cytoplasm_difference(
     min_genes : int, default=5
         Minimum number of non-zero genes required across nuclear and
         cytoplasmic regions.
+    scale : float, default=1e4
+        Common target sum used for the first and second proportional-fitting steps.
     select_by : str, default="nucleus_fraction"
         Score used to select the best-matching nucleus per cell. Options:
         - "iou": maximize Intersection-over-Union (cell vs nucleus).
@@ -427,7 +435,7 @@ def nucleus_cytoplasm_difference(
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
+        Number of conditional permutations per cell. Must be >= 100.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
 
@@ -435,11 +443,14 @@ def nucleus_cytoplasm_difference(
     -------
     pd.DataFrame
         One row per cell with nucleus-match information and null-calibrated
-        nucleus-cytoplasm difference score and, when `n_permutations > 0`, its permutation p-value.
+        nucleus-cytoplasm similarity score and its permutation p-value.
     """
 
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
+
     assert nucleus_shapes_key is not None, (
-        "Cannot compute nucleus-cytoplasm difference: `nucleus_shapes_key` is None. "
+        "Cannot compute nucleus-cytoplasm similarity: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer before running this metric."
     )
 
@@ -539,21 +550,22 @@ def nucleus_cytoplasm_difference(
 
     def _compute_one(cid, seed: np.uint32) -> dict:
         if pd.isna(best_nuc_map.get(cid)):
-            base_metrics = {"difference": np.nan}
+            base_metrics = {"similarity": np.nan}
             if n_permutations > 0:
-                base_metrics["difference_p_value"] = np.nan
+                base_metrics["similarity_p_value"] = np.nan
         else:
-            base_metrics = _two_profile_permutation_metrics(
+            base_metrics = _two_profile_similarity_metrics(
                 counts_intersection.loc[cid].to_numpy(dtype=int),
                 counts_cytoplasm.loc[cid].to_numpy(dtype=int),
                 n_permutations=n_permutations,
                 min_transcripts=min_transcripts,
                 min_genes=min_genes,
+                scale=scale,
                 rng=np.random.default_rng(int(seed)),
             )
         return {
             id_key: cid,
-            **_rename_difference_metrics(base_metrics, "nucleus_cytoplasm_difference"),
+            **_rename_similarity_metrics(base_metrics, "similarity_nucleus_cytoplasm"),
         }
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
@@ -573,7 +585,7 @@ def nucleus_cytoplasm_difference(
     return out
 
 
-def center_border_difference(
+def similarity_center_border(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -589,20 +601,21 @@ def center_border_difference(
     buffer_fraction_of_radius: float = 0.1,
     min_transcripts: int = 10,
     min_genes: int = 5,
+    scale: float = 1e4,
     inplace: bool = True,
     n_permutations: int = 200,
     random_state: int | None = 42,
     n_jobs: int = -1,
     parallel_backend: str = "threading",
 ) -> pd.DataFrame:
-    """Compare center and border profiles using a G-statistic difference score.
+    """Compare center and border profiles using PFlog1pPF cosine similarity.
 
     Each cell is partitioned into an inner center and an outer border, separated
-    by an optional buffer region. The corresponding transcript profiles are
-    compared against a conditional permutation null to quantify within-cell
-    expression differences while accounting for finite transcript counts. The
-    buffer prevents transcripts close to the center-border boundary from contributing
-    to either profile, reducing sensitivity to the exact geometric split.
+    by an optional buffer region. The corresponding count profiles are PFlog1pPF-
+    transformed before cosine similarity is computed. When permutations are
+    requested, a lower-tail p-value tests whether the observed similarity is
+    smaller than expected under a shared-profile null. The buffer reduces
+    sensitivity to the exact geometric split.
 
     Parameters
     ----------
@@ -640,10 +653,12 @@ def center_border_difference(
         Minimum number of transcripts required in both center and border.
     min_genes : int, default=5
         Minimum number of non-zero genes required across center and border.
+    scale : float, default=1e4
+        Common target sum used for the first and second proportional-fitting steps.
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
+        Number of conditional permutations per cell. Must be >= 100.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
     n_jobs : int, default=-1
@@ -654,8 +669,11 @@ def center_border_difference(
     Returns
     -------
     pd.DataFrame
-        One row per cell with difference score and permutation p-value.
+        One row per cell with similarity score and permutation p-value.
     """
+
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
 
     id_key = sdata.shapes[shapes_key].index.name
 
@@ -688,15 +706,16 @@ def center_border_difference(
     seeds = _cell_seeds(len(all_cells), random_state)
 
     def _compute_one(cid, seed: np.uint32) -> dict:
-        metrics = _two_profile_permutation_metrics(
+        metrics = _two_profile_similarity_metrics(
             expr_center.loc[cid].to_numpy(dtype=int),
             expr_border.loc[cid].to_numpy(dtype=int),
             n_permutations=n_permutations,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
+            scale=scale,
             rng=np.random.default_rng(int(seed)),
         )
-        return {id_key: cid, **_rename_difference_metrics(metrics, "center_border_difference")}
+        return {id_key: cid, **_rename_similarity_metrics(metrics, "similarity_center_border")}
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_compute_one)(cid, seed)
@@ -718,7 +737,7 @@ def center_border_difference(
     return out
 
 
-def border_neighborhood_difference(
+def similarity_border_neighborhood(
     sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -735,20 +754,20 @@ def border_neighborhood_difference(
     neighborhood_radius_factor: float = 1.0,
     min_transcripts: int = 10,
     min_genes: int = 5,
+    scale: float = 1e4,
     inplace: bool = True,
     n_permutations: int = 200,
     random_state: int | None = 42,
     n_jobs: int = -1,
     parallel_backend: str = "threading",
 ) -> pd.DataFrame:
-    """Compare border and neighborhood profiles using a G-statistic difference score.
+    """Compare border and neighborhood profiles using PFlog1pPF cosine similarity.
 
     For each cell, the expression profile of its border is compared with the
-    aggregate profile of nearby cells defined by the neighborhood radius. A
-    conditional permutation null is used to distinguish systematic similarity
-    or differences from effects expected from finite transcript sampling. This
-    comparison can reveal whether transcripts near a cell boundary resemble the
-    surrounding cellular environment rather than the interior of the focal cell.
+    aggregate profile of nearby cells defined by the neighborhood radius after
+    PFlog1pPF transformation. Larger cosine values indicate more similar transcript
+    composition. When permutations are requested, a lower-tail p-value tests
+    whether the observed similarity is smaller than expected under a shared-profile null.
 
     Parameters
     ----------
@@ -788,10 +807,12 @@ def border_neighborhood_difference(
         Minimum number of transcripts required in both border and neighborhood.
     min_genes : int, default=5
         Minimum number of non-zero genes required across border and neighborhood.
+    scale : float, default=1e4
+        Common target sum used for the first and second proportional-fitting steps.
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
+        Number of conditional permutations per cell. Must be >= 100.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
     n_jobs : int, default=-1
@@ -802,8 +823,11 @@ def border_neighborhood_difference(
     Returns
     -------
     pd.DataFrame
-        One row per cell with difference score and permutation p-value.
+        One row per cell with similarity score and permutation p-value.
     """
+
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
 
     id_key = sdata.shapes[shapes_key].index.name
 
@@ -849,17 +873,18 @@ def border_neighborhood_difference(
     seeds = _cell_seeds(len(all_cells), random_state)
 
     def _compute_one(cid, seed: np.uint32) -> dict:
-        metrics = _two_profile_permutation_metrics(
+        metrics = _two_profile_similarity_metrics(
             expr_border.loc[cid].to_numpy(dtype=int),
             expr_neighborhood.loc[cid].to_numpy(dtype=int),
             n_permutations=n_permutations,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
+            scale=scale,
             rng=np.random.default_rng(int(seed)),
         )
         return {
             id_key: cid,
-            **_rename_difference_metrics(metrics, "border_neighborhood_difference"),
+            **_rename_similarity_metrics(metrics, "similarity_border_neighborhood"),
         }
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
@@ -958,9 +983,8 @@ def border_admixture_score(
         Minimum number of genes required across the three regions combined.
     pseudocount : float, default=0.5
         Pseudocount used when converting counts to proportions.
-    n_boot : int, default=200
-        Number of permutations per cell. Retained under the existing parameter
-        name for API compatibility.
+    n_permutations : int, default=200
+        Number of permutations per cell. Must be >= 100.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
     n_jobs : int, default=-1
@@ -976,6 +1000,9 @@ def border_admixture_score(
         One row per cell with null-corrected border-admixture score and
         permutation p-value.
     """
+
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
 
     id_key = sdata.shapes[shapes_key].index.name
 

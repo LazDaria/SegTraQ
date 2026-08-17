@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
 
-from ..rd.utils import _two_profile_permutation_metrics
+from ..rs.utils import _two_profile_similarity_metrics
 from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs
 from .utils import _correct_z_drift, _run_ovrlpy
 
@@ -127,7 +127,7 @@ def vertical_signal_integrity_per_cell(
     return vsi_per_cell
 
 
-def top_bottom_difference(
+def similarity_top_bottom(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -143,6 +143,7 @@ def top_bottom_difference(
     max_points: int = 1_000_000,
     seed: int | None = 0,
     q: float = 0.30,
+    scale: float = 1e4,
     min_genes: int = 5,
     min_transcripts: int = 10,
     n_permutations: int = 200,
@@ -151,17 +152,17 @@ def top_bottom_difference(
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """Compute the expression-profile difference between the bottom and top of each cell.
+    """Compute PFlog1pPF cosine similarity between the bottom and top of each cell.
 
     Transcripts are split into bottom and top regions using within-cell z-quantiles,
     optionally after correcting global z-drift. The resulting count profiles are
-    compared using the same bias-corrected G-statistic used by the region-difference
-    metrics: larger values indicate stronger differences in transcript composition.
+    transformed with PFlog1pPF (shifted CLR) and compared using cosine similarity;
+    larger values indicate more similar transcript composition across cell depth.
 
-    A conditional permutation test pools the bottom and top counts and reallocates
-    transcripts while preserving both region totals. The accompanying permutation
-    p-value therefore quantifies how surprising the observed compositional difference
-    is under a shared-profile null model.
+    If `n_permutations >= 100`, a conditional permutation test pools the bottom and
+    top counts and reallocates transcripts while preserving both region totals.
+    The lower-tail p-value quantifies whether the observed similarity is smaller
+    than expected under a shared-composition null model. 
 
     Parameters
     ----------
@@ -198,14 +199,15 @@ def top_bottom_difference(
         sampling is not reproducible.
     q : float, default=0.30
         Quantile defining the bottom and top parts: bottom <= q and top >= 1 - q.
+    scale : float, default=1e4
+        Scale factor used in the PFlog1pPF transformation.
     min_genes : int, default=5
         Minimum number of genes with nonzero counts across bottom and top required
         to score a cell.
     min_transcripts : int, default=10
         Minimum number of transcripts required in each part to score a cell.
     n_permutations : int, default=200
-        Number of conditional permutations used to compute the p-value. Set to 0
-        to compute only `top_bottom_difference` without a p-value.
+        Number of conditional permutations used to compute the p-value. Must be >= 100.
     random_state : int or None, default=42
         Random seed used to generate reproducible per-cell permutation streams.
     n_jobs : int, default=-1
@@ -218,11 +220,13 @@ def top_bottom_difference(
     Returns
     -------
     pd.DataFrame
-        DataFrame with `tables_cell_id_key` and `top_bottom_difference`. If
-        `n_permutations > 0`, `top_bottom_difference_p_value` is also included.
+        DataFrame with `tables_cell_id_key` and `similarity_top_bottom`. If
+        `n_permutations >= 100`, `similarity_top_bottom_p_value` is also returned.
     """
     if not (0.0 < q < 0.5):
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
 
     # Subset points and drop rows with missing cell identifiers, genes, or coordinates.
     pts = sdata.points[points_key]
@@ -279,22 +283,34 @@ def top_bottom_difference(
     counts_bottom = counts_bottom.reindex(index=all_cells, columns=all_genes, fill_value=0)
     counts_top = counts_top.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
-    rng = np.random.default_rng(random_state)
-    seeds = rng.integers(0, np.iinfo(np.uint32).max, size=len(all_cells), dtype=np.uint32)
+    # Seeds are needed only when a permutation p-value is requested.
+    if n_permutations > 0:
+        rng = np.random.default_rng(random_state)
+        seeds = rng.integers(0, np.iinfo(np.uint32).max, size=len(all_cells), dtype=np.uint32)
+    else:
+        seeds = [None] * len(all_cells)
 
     def _score_cell(cid, cell_seed):
-        metrics = _two_profile_permutation_metrics(
+        metrics = _two_profile_similarity_metrics(
             counts_bottom.loc[cid].to_numpy(dtype=int),
             counts_top.loc[cid].to_numpy(dtype=int),
             n_permutations=n_permutations,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            rng=np.random.default_rng(int(cell_seed)),
+            scale=scale,
+            rng=(
+                np.random.default_rng(int(cell_seed))
+                if cell_seed is not None
+                else None
+            ),
         )
-        return {
+        row = {
             tables_cell_id_key: cid,
-            **{f"top_bottom_{key}": value for key, value in metrics.items()},
+            "similarity_top_bottom": metrics["similarity"],
         }
+        if "similarity_p_value" in metrics:
+            row["similarity_top_bottom_p_value"] = metrics["similarity_p_value"]
+        return row
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_score_cell)(cid, cell_seed)
@@ -303,7 +319,10 @@ def top_bottom_difference(
     out = pd.DataFrame(rows)
 
     if out.empty:
-        raise ValueError(f"Could not compute top-bottom profile differences. Try a different quantile. You used q={q}.")
+        raise ValueError(
+            f"Could not compute top-bottom profile similarities. "
+            f"Try a different quantile. You used q={q}."
+        )
 
     if inplace:
         merge_into_obs(
@@ -315,7 +334,6 @@ def top_bottom_difference(
         )
 
     return out
-
 
 def fraction_heterotypic_overlap(
     sdata: sd.SpatialData,
