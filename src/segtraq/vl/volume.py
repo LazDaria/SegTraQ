@@ -5,10 +5,11 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import spatialdata as sd
+from joblib import Parallel, delayed
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
 
-from ..rs.utils import _cosine_similarity_two_vectors
+from ..rd.utils import _two_profile_permutation_metrics
 from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs
 from .utils import _correct_z_drift, _run_ovrlpy
 
@@ -126,7 +127,7 @@ def vertical_signal_integrity_per_cell(
     return vsi_per_cell
 
 
-def similarity_top_bottom(
+def top_bottom_difference(
     sdata,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -142,27 +143,25 @@ def similarity_top_bottom(
     max_points: int = 1_000_000,
     seed: int | None = 0,
     q: float = 0.30,
-    scale: float = 1e4,
     min_genes: int = 5,
     min_transcripts: int = 10,
+    n_permutations: int = 200,
+    random_state: int | None = 42,
+    n_jobs: int = -1,
+    parallel_backend: str = "threading",
     inplace: bool = True,
-):
-    """
-    Compute the cosine similarity between the bottom and top expression
-    profiles of each cell along the z-axis.
+) -> pd.DataFrame:
+    """Compute the expression-profile difference between the bottom and top of each cell.
 
-    Optionally, a global z-drift correction is applied before computing
-    within-cell z quantiles. This is useful when raw z coordinates exhibit
-    global tilt or warping across the field of view.
+    Transcripts are split into bottom and top regions using within-cell z-quantiles,
+    optionally after correcting global z-drift. The resulting count profiles are
+    compared using the same bias-corrected G-statistic used by the region-difference
+    metrics: larger values indicate stronger differences in transcript composition.
 
-    For each cell, transcripts are split into:
-        - bottom: transcripts with z <= q-quantile
-        - top: transcripts with z >= (1 - q)-quantile
-
-    The point estimate is computed from bottom and top count matrices
-    using `_cosine_similarity_two_vectors`, which applies transcript/gene
-    filtering, library-size normalization, log1p transformation, and
-    cosine similarity calculation.
+    A conditional permutation test pools the bottom and top counts and reallocates
+    transcripts while preserving both region totals. The accompanying permutation
+    p-value therefore quantifies how surprising the observed compositional difference
+    is under a shared-profile null model.
 
     Parameters
     ----------
@@ -193,52 +192,56 @@ def similarity_top_bottom(
         If True, correct global z-drift before computing within-cell z-quantiles.
         The corrected values are used only for defining top/bottom subsets.
     max_points : int, default=1_000_000
-        Max. number of points used to fit the regression (random subsampling) in z drift correction.
+        Maximum number of points used to fit the regression for z-drift correction.
     seed : int or None, default=0
-        Random seed used for subsampling in z drift correction. If None, sampling is not reproducible.
+        Random seed used for subsampling during z-drift correction. If `None`,
+        sampling is not reproducible.
     q : float, default=0.30
-        Quantile defining bottom and top parts. bottom = q, top = 1-q.
-    scale : float, default=1e4
-        Scale for within-cell library size normalization (bottom+top).
+        Quantile defining the bottom and top parts: bottom <= q and top >= 1 - q.
     min_genes : int, default=5
-        Minimum number of genes with nonzero counts in (bottom OR top) required to score a cell.
+        Minimum number of genes with nonzero counts across bottom and top required
+        to score a cell.
     min_transcripts : int, default=10
-        Minimum number of transcripts required in EACH part (bottom and top) to score a cell.
+        Minimum number of transcripts required in each part to score a cell.
+    n_permutations : int, default=200
+        Number of conditional permutations used to compute the p-value. Set to 0
+        to compute only `top_bottom_difference` without a p-value.
+    random_state : int or None, default=42
+        Random seed used to generate reproducible per-cell permutation streams.
+    n_jobs : int, default=-1
+        Number of parallel jobs used for per-cell profile comparisons.
+    parallel_backend : str, default="threading"
+        Parallelization backend passed to joblib.
     inplace : bool, default=True
         Whether to add the results to `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [tables_cell_id_key, "similarity_top_bottom"].
+        DataFrame with `tables_cell_id_key` and `top_bottom_difference`. If
+        `n_permutations > 0`, `top_bottom_difference_p_value` is also included.
     """
     if not (0.0 < q < 0.5):
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
 
-    # subset points and drop rows with missing cell identifiers, genes or coordinates
+    # Subset points and drop rows with missing cell identifiers, genes, or coordinates.
     pts = sdata.points[points_key]
     cols = [points_cell_id_key, points_gene_key, points_x_key, points_y_key, points_z_key]
+    tx = pts[cols].dropna(subset=cols)
 
-    tx = pts[cols]
-    tx = tx.dropna(subset=cols)
-
-    # remove background transcripts
+    # Remove background transcripts and genes that are absent from the cell table.
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
-
-    # ensure genes match table var_names from the anndata object
     all_genes = _get_genes(
         adata=sdata.tables[tables_key],
         gene_key=tables_gene_key,
     )
-
     tx = tx[tx[points_gene_key].isin(all_genes)]
 
-    # cast into pandas Dataframe if Dask Array
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
 
-    # Optionally correct z-drift before defining top/bottom subsets
+    # Corrected z values are used only to define the top/bottom subsets.
     if correct_z_drift:
         tx["_z_for_split"] = _correct_z_drift(
             tx=tx,
@@ -251,56 +254,56 @@ def similarity_top_bottom(
     else:
         tx["_z_for_split"] = tx[points_z_key].to_numpy(dtype=float)
 
-    # compute per-cell quantile cutoffs
-    tx["_z_bottom"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(lambda s: s.quantile(q))
-    tx["_z_top"] = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"].transform(
-        lambda s: s.quantile(1.0 - q)
-    )
-
+    # Compute within-cell quantile cutoffs and exclude cells without a valid z range.
+    grouped_z = tx.groupby(points_cell_id_key, observed=True)["_z_for_split"]
+    tx["_z_bottom"] = grouped_z.transform(lambda s: s.quantile(q))
+    tx["_z_top"] = grouped_z.transform(lambda s: s.quantile(1.0 - q))
     valid_split = tx["_z_bottom"] < tx["_z_top"]
-
     tx["_is_bottom"] = valid_split & (tx["_z_for_split"] <= tx["_z_bottom"])
-
     tx["_is_top"] = valid_split & (tx["_z_for_split"] >= tx["_z_top"])
 
-    # counts per part
     counts_bottom = (
-        tx[tx["_is_bottom"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
+        tx[tx["_is_bottom"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
     )
     counts_top = (
-        tx[tx["_is_top"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
+        tx[tx["_is_top"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
     )
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-
-    # ensure all cells/genes from table are evaluated
     counts_bottom = counts_bottom.reindex(index=all_cells, columns=all_genes, fill_value=0)
     counts_top = counts_top.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
-    rows = []
-    for cid in all_cells:
-        x_bottom = counts_bottom.loc[cid].to_numpy()
-        x_top = counts_top.loc[cid].to_numpy()
+    rng = np.random.default_rng(random_state)
+    seeds = rng.integers(0, np.iinfo(np.uint32).max, size=len(all_cells), dtype=np.uint32)
 
-        sim = _cosine_similarity_two_vectors(
-            x_bottom,
-            x_top,
+    def _score_cell(cid, cell_seed):
+        metrics = _two_profile_permutation_metrics(
+            counts_bottom.loc[cid].to_numpy(dtype=int),
+            counts_top.loc[cid].to_numpy(dtype=int),
+            n_permutations=n_permutations,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            scale=scale,
+            rng=np.random.default_rng(int(cell_seed)),
         )
+        return {
+            tables_cell_id_key: cid,
+            **{f"top_bottom_{key}": value for key, value in metrics.items()},
+        }
 
-        rows.append(
-            {
-                tables_cell_id_key: cid,
-                "similarity_top_bottom": sim,
-            }
-        )
-
+    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+        delayed(_score_cell)(cid, cell_seed)
+        for cid, cell_seed in zip(all_cells, seeds, strict=False)
+    )
     out = pd.DataFrame(rows)
 
     if out.empty:
-        raise ValueError(f"Could not compute top-bottom cosine similarities. Try a different quantile. You used q={q}.")
+        raise ValueError(f"Could not compute top-bottom profile differences. Try a different quantile. You used q={q}.")
 
     if inplace:
         merge_into_obs(

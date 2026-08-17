@@ -21,7 +21,7 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
 
    modules/baseline
    modules/clustering_stability
-   modules/region_similarity
+   modules/region_difference
    modules/supervised
    modules/point_statistics
    modules/volume
@@ -36,7 +36,7 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
-   notebooks/region_similarity
+   notebooks/region_difference
    notebooks/volume
    notebooks/supervised
    notebooks/point_statistics

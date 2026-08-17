@@ -126,11 +126,11 @@ def match_nuclei_to_cells(
 
 
 def _rename_difference_metrics(metrics: dict, prefix: str) -> dict:
-    """Attach a public metric prefix to shared two-profile outputs."""
-    return {
-        f"{prefix}_difference": metrics["difference"],
-        f"{prefix}_difference_p_value": metrics["difference_p_value"],
-    }
+    """Rename shared outputs to their public metric names."""
+    out = {prefix: metrics["difference"]}
+    if "difference_p_value" in metrics:
+        out[f"{prefix}_p_value"] = metrics["difference_p_value"]
+    return out
 
 
 def _cell_seeds(n: int, random_state: int | None) -> np.ndarray:
@@ -168,8 +168,9 @@ def nucleus_cell_difference(
     The whole-cell expression profile is compared with the transcript profile
     inside its matched nucleus. The returned difference score is a
     bias-corrected, count-normalized G statistic, with larger values indicating
-    stronger differences in gene composition. Its permutation p-value is computed
-    from a conditional null that preserves pooled gene counts and both region totals.
+    stronger differences in gene composition. When `n_permutations > 0`, a
+    permutation p-value is computed from a conditional null that preserves pooled
+    gene counts and both region totals.
 
     Parameters
     ----------
@@ -223,7 +224,7 @@ def nucleus_cell_difference(
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell.
+        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
 
@@ -231,7 +232,7 @@ def nucleus_cell_difference(
     -------
     pd.DataFrame
         One row per cell with nucleus-match information, the difference
-        score, and its permutation p-value.
+        score and, when `n_permutations > 0`, its permutation p-value.
     """
 
     assert nucleus_shapes_key is not None, (
@@ -307,13 +308,9 @@ def nucleus_cell_difference(
     def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
         if pd.isna(nid):
-            base_metrics = {
-                key: np.nan
-                for key in (
-                    "difference",
-                    "difference_p_value",
-                )
-            }
+            base_metrics = {"difference": np.nan}
+            if n_permutations > 0:
+                base_metrics["difference_p_value"] = np.nan
         else:
             base_metrics = _two_profile_permutation_metrics(
                 _cell_count_vector(cid),
@@ -376,10 +373,10 @@ def nucleus_cytoplasm_difference(
 
     For each cell, transcripts are separated into those inside the matched
     nucleus and those in the remaining cytoplasmic region. Their expression
-    profiles are then compared against a conditional permutation null to
-    quantify whether the two compartments differ more than expected by chance.
-    This specifically tests intracellular compartmentalization of transcripts while
-    controlling for the different numbers of transcripts in nucleus and cytoplasm.
+    profiles are compared using the bias-corrected, count-normalized G statistic.
+    When `n_permutations > 0`, a conditional permutation null additionally quantifies
+    whether the two compartments differ more than expected by chance while preserving
+    their different transcript totals.
 
     Parameters
     ----------
@@ -430,7 +427,7 @@ def nucleus_cytoplasm_difference(
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell.
+        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
 
@@ -438,7 +435,7 @@ def nucleus_cytoplasm_difference(
     -------
     pd.DataFrame
         One row per cell with nucleus-match information and null-calibrated
-        nucleus-cytoplasm comparison metrics.
+        nucleus-cytoplasm difference score and, when `n_permutations > 0`, its permutation p-value.
     """
 
     assert nucleus_shapes_key is not None, (
@@ -542,13 +539,9 @@ def nucleus_cytoplasm_difference(
 
     def _compute_one(cid, seed: np.uint32) -> dict:
         if pd.isna(best_nuc_map.get(cid)):
-            base_metrics = {
-                key: np.nan
-                for key in (
-                    "difference",
-                    "difference_p_value",
-                )
-            }
+            base_metrics = {"difference": np.nan}
+            if n_permutations > 0:
+                base_metrics["difference_p_value"] = np.nan
         else:
             base_metrics = _two_profile_permutation_metrics(
                 counts_intersection.loc[cid].to_numpy(dtype=int),
@@ -650,7 +643,7 @@ def center_border_difference(
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell.
+        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
     n_jobs : int, default=-1
@@ -798,7 +791,7 @@ def border_neighborhood_difference(
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
     n_permutations : int, default=200
-        Number of conditional permutations per cell.
+        Number of conditional permutations per cell. Set to 0 to compute the difference score without a p-value.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
     n_jobs : int, default=-1

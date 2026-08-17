@@ -610,18 +610,16 @@ def _two_profile_permutation_metrics(
     min_genes: int = 5,
     rng: np.random.Generator | None = None,
 ) -> dict:
-    """Compute a G-statistic difference score and permutation p-value.
+    """Compute a G-statistic difference score and optional permutation p-value.
 
-    The conditional null fixes the pooled gene counts and both region totals,
-    then reallocates transcripts between the two profiles with a multivariate
-    hypergeometric draw. The returned `difference` is the bias-corrected,
-    count-normalized G statistic; larger values indicate stronger compositional
-    differences between the two expression profiles.
+    The returned `difference` is the bias-corrected, count-normalized G statistic;
+    larger values indicate stronger compositional differences between the two
+    expression profiles. If `n_permutations > 0`, a conditional null fixes the
+    pooled gene counts and both region totals and reallocates transcripts between
+    the two profiles with a multivariate hypergeometric draw to obtain a p-value.
     """
-    if n_permutations <= 0:
-        raise ValueError("`n_permutations` must be > 0.")
-    if rng is None:
-        rng = np.random.default_rng()
+    if n_permutations < 0:
+        raise ValueError("`n_permutations` must be >= 0.")
 
     x_a = np.rint(np.asarray(x_a)).astype(int)
     x_b = np.rint(np.asarray(x_b)).astype(int)
@@ -634,16 +632,27 @@ def _two_profile_permutation_metrics(
     k = int(mask.sum())
     n_total = n_a + n_b
 
-    empty = {
-        "difference": np.nan,
-        "difference_p_value": np.nan,
-    }
+    empty = {"difference": np.nan}
+    if n_permutations > 0:
+        empty["difference_p_value"] = np.nan
+
     if k < min_genes or n_a < min_transcripts or n_b < min_transcripts:
         return empty
 
     g_observed, _, _ = _g_statistic_two_vectors(x_a, x_b)
     if not np.isfinite(g_observed) or n_total == 0:
         return empty
+
+    # Remove the leading finite-count expectation and normalize by total counts.
+    difference = (g_observed - (k - 1)) / (2.0 * n_total)
+    out = {"difference": float(difference)}
+
+    # No permutation test requested: return the effect-size-like score only.
+    if n_permutations == 0:
+        return out
+
+    if rng is None:
+        rng = np.random.default_rng()
 
     pooled = x_a + x_b
     g_null = np.empty(n_permutations, dtype=float)
@@ -655,19 +664,15 @@ def _two_profile_permutation_metrics(
 
     valid_g = np.isfinite(g_null)
     if not valid_g.any():
-        return empty
+        out["difference_p_value"] = np.nan
+        return out
 
     g_null = g_null[valid_g]
     # Larger G indicates a stronger difference between the two gene compositions.
-    g_p = (1 + np.count_nonzero(g_null >= g_observed)) / (len(g_null) + 1)
-
-    # Remove the leading finite-count expectation and normalize by total counts.
-    difference = (g_observed - (k - 1)) / (2.0 * n_total)
-
-    return {
-        "difference": float(difference),
-        "difference_p_value": float(g_p),
-    }
+    out["difference_p_value"] = float(
+        (1 + np.count_nonzero(g_null >= g_observed)) / (len(g_null) + 1)
+    )
+    return out
 
 def _get_neighborhood_counts(
     sdata: sd.SpatialData,

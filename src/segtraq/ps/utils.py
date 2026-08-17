@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 
-from ..rs.region_difference import match_nuclei_to_cells
+from ..rd.region_difference import match_nuclei_to_cells
 
 
 def _get_cell_geometry_lookup(

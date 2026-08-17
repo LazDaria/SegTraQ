@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 
-from ..rs.region_difference import match_nuclei_to_cells
-from ..rs.utils import _get_filtered_points_df, _join_points_regions
+from ..rd.region_difference import match_nuclei_to_cells
+from ..rd.utils import _get_filtered_points_df, _join_points_regions
 from ..utils import merge_into_obs, xy_scale
 from .utils import _fisher_pearson_sample_skew, _get_cell_geometry_lookup
 

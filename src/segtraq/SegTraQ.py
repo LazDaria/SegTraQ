@@ -412,7 +412,7 @@ class SegTraQ:
         cell_type_key: str | None = None,
         inplace: bool = True,
         label_transfer_kwargs: dict[str, Any] | None = None,
-        similarity_kwargs: dict[str, Any] | None = None,
+        difference_kwargs: dict[str, Any] | None = None,
         heterotypic_overlap_kwargs: dict[str, Any] | None = None,
         vsi_kwargs: dict[str, Any] | None = None,
     ):
@@ -436,7 +436,7 @@ class SegTraQ:
 
         Runs, in order:
 
-        1) similarity_top_bottom
+        1) top_bottom_difference
         2) label transfer, if needed and possible
         3) vertical_signal_integrity_per_cell
         4) fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available
@@ -471,8 +471,8 @@ class SegTraQ:
         label_transfer_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `self.run_label_transfer()`. Do not include
             `adata_ref` or `ref_cell_type` here; pass them directly to `run_volume`.
-        similarity_kwargs : dict or None, optional
-            Extra keyword arguments forwarded to `vl.similarity_top_bottom`.
+        difference_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `vl.top_bottom_difference`.
         heterotypic_overlap_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `vl.fraction_heterotypic_overlap`.
         vsi_kwargs : dict or None, optional
@@ -493,14 +493,14 @@ class SegTraQ:
         )
 
         label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
-        similarity_kwargs = {} if similarity_kwargs is None else dict(similarity_kwargs)
+        difference_kwargs = {} if difference_kwargs is None else dict(difference_kwargs)
         heterotypic_overlap_kwargs = {} if heterotypic_overlap_kwargs is None else dict(heterotypic_overlap_kwargs)
         vsi_kwargs = {} if vsi_kwargs is None else dict(vsi_kwargs)
 
-        # similarity_top_bottom
-        sim = self.vl.similarity_top_bottom(
+        # top_bottom_difference
+        diff = self.vl.top_bottom_difference(
             inplace=inplace,
-            **similarity_kwargs,
+            **difference_kwargs,
         )
 
         # label transfer, if needed and possible
@@ -584,7 +584,7 @@ class SegTraQ:
             return None
 
         out = {
-            "similarity_top_bottom": sim,
+            "top_bottom_difference": diff,
             "vertical_signal_integrity_per_cell": vsi,
         }
 
@@ -1399,7 +1399,7 @@ class _RDFacade:
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         inplace: bool = True,
-        n_permutations: int = 200,
+        n_permutations: int = 0,
         random_state: int | None = 42,
     ):
         return rd.nucleus_cell_difference(
@@ -1438,7 +1438,7 @@ class _RDFacade:
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         inplace: bool = True,
-        n_permutations: int = 200,
+        n_permutations: int = 0,
         random_state: int | None = 42,
     ):
         return rd.nucleus_cytoplasm_difference(
@@ -1474,7 +1474,7 @@ class _RDFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         inplace: bool = True,
-        n_permutations: int = 200,
+        n_permutations: int = 0,
         random_state: int | None = 42,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
@@ -1512,7 +1512,7 @@ class _RDFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         inplace: bool = True,
-        n_permutations: int = 200,
+        n_permutations: int = 0,
         random_state: int | None = 42,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
@@ -1551,7 +1551,7 @@ class _RDFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         pseudocount: float = 0.5,
-        n_permutations: int = 200,
+        n_permutations: int = 0,
         random_state: int | None = None,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
@@ -1943,18 +1943,21 @@ class _VLFacade:
     def __init__(self, parent: "SegTraQ") -> None:
         self._p = parent
 
-    def similarity_top_bottom(
+    def top_bottom_difference(
         self,
         correct_z_drift: bool = True,
         max_points: int = 1_000_000,
         seed: int | None = 0,
         q: float = 0.30,
-        scale: float = 1e4,
         min_genes: int = 5,
         min_transcripts: int = 10,
+        n_permutations: int = 0,
+        random_state: int | None = 42,
+        n_jobs: int = -1,
+        parallel_backend: str = "threading",
         inplace: bool = True,
     ):
-        return vl.similarity_top_bottom(
+        return vl.top_bottom_difference(
             self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1970,13 +1973,16 @@ class _VLFacade:
             max_points=max_points,
             seed=seed,
             q=q,
-            scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
+            n_permutations=n_permutations,
+            random_state=random_state,
+            n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
-    similarity_top_bottom.__doc__ = vl.similarity_top_bottom.__doc__
+    top_bottom_difference.__doc__ = vl.top_bottom_difference.__doc__
 
     def fraction_heterotypic_overlap(
         self,
