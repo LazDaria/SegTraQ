@@ -3,7 +3,7 @@
 __author__ = """Daria Lazic, Matthias Meyer-Bender, Martin Emons"""
 __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh.ch"
 
-from . import bl, cs, pl, ps, rs, sp, vl
+from . import bl, cs, pl, ps, rd, sp, vl
 from .SegTraQ import SegTraQ
 from .utils import (
     bins_to_transcripts,
@@ -28,7 +28,7 @@ for _f in (
 __all__ = [
     "bl",
     "cs",
-    "rs",
+    "rd",
     "sp",
     "pl",
     "vl",

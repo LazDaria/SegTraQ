@@ -6,7 +6,7 @@ import ovrlpy
 import spatialdata as sd
 from anndata import AnnData
 
-from . import bl, cs, pl, ps, rs, sp, vl
+from . import bl, cs, pl, ps, rd, sp, vl
 from .constants import SEGTRAQ_CELL_ID_KEY
 from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
 from .utils import filter_cells as _filter_cells
@@ -236,7 +236,7 @@ class SegTraQ:
         )
 
         self.bl = _BLFacade(self)
-        self.rs = _RSFacade(self)
+        self.rd = _RDFacade(self)
         self.cs = _CSFacade(self)
         self.vl = _VLFacade(self)
         self.sp = _SPFacade(self)
@@ -322,27 +322,27 @@ class SegTraQ:
             "transcript_density": dens,
         }
 
-    def run_region_similarity(
+    def run_region_difference(
         self,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         inplace: bool = True,
         iou_kwargs: dict = None,
-        similarity_nucleus_cell_kwargs: dict = None,
-        similarity_nucleus_cytoplasm_kwargs: dict = None,
-        similarity_center_border_kwargs: dict = None,
-        similarity_border_neighborhood_kwargs: dict = None,
+        nucleus_cell_difference_kwargs: dict = None,
+        nucleus_cytoplasm_difference_kwargs: dict = None,
+        center_border_difference_kwargs: dict = None,
+        border_neighborhood_difference_kwargs: dict = None,
         border_admixture_score_kwargs: dict = None,
     ):
         """
-        Compute region similarity metrics and optionally merge them into the cell table.
+        Compute region difference metrics and optionally merge them into the cell table.
 
         This runs, in order:
         1) matching between each cell and its best-matching nucleus
-        2) similarity between per-cell expression and its matched nucleus
-        3) similarity between the cell's nucleus-overlapping and cytoplasmic expression
-        4) similarity between center and border expression
-        5) similarity between border and neighborhood expression
+        2) difference between per-cell expression and its matched nucleus
+        3) difference between the cell's nucleus-overlapping and cytoplasmic expression
+        4) difference between center and border expression
+        5) difference between border and neighborhood expression
         6) border admixture score
 
         Returns
@@ -358,28 +358,28 @@ class SegTraQ:
             **(iou_kwargs or {}),
         )
 
-        similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
+        difference_nucleus_cell = self.rs.difference_nucleus_cell(
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             inplace=inplace,
-            **(similarity_nucleus_cell_kwargs or {}),
+            **(nucleus_cell_difference_kwargs or {}),
         )
 
-        similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
+        difference_nucleus_cytoplasm = self.rs.difference_nucleus_cytoplasm(
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             inplace=inplace,
-            **(similarity_nucleus_cytoplasm_kwargs or {}),
+            **(nucleus_cytoplasm_difference_kwargs or {}),
         )
 
-        similarity_center_border = self.rs.similarity_center_border(
+        difference_center_border = self.rs.difference_center_border(
             inplace=inplace,
-            **(similarity_center_border_kwargs or {}),
+            **(center_border_difference_kwargs or {}),
         )
 
-        similarity_border_neighborhood = self.rs.similarity_border_neighborhood(
+        difference_border_neighborhood = self.rs.difference_border_neighborhood(
             inplace=inplace,
-            **(similarity_border_neighborhood_kwargs or {}),
+            **(border_neighborhood_difference_kwargs or {}),
         )
 
         border_admixture_score = self.rs.border_admixture_score(
@@ -394,10 +394,10 @@ class SegTraQ:
 
         return {
             "ious": ious,
-            "similarity_nucleus_cell": similarity_nucleus_cell,
-            "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
-            "similarity_center_border": similarity_center_border,
-            "similarity_border_neighborhood": similarity_border_neighborhood,
+            "difference_nucleus_cell": difference_nucleus_cell,
+            "difference_nucleus_cytoplasm": difference_nucleus_cytoplasm,
+            "difference_center_border": difference_center_border,
+            "difference_border_neighborhood": difference_border_neighborhood,
             "border_admixture_score": border_admixture_score,
         }
 
@@ -1357,9 +1357,9 @@ class _BLFacade:
     transcript_density.__doc__ = bl.transcript_density.__doc__
 
 
-class _RSFacade:
+class _RDFacade:
     """
-    Bound region-similarity (rs) metrics interface for a SegTraQ instance.
+    Bound region-difference (rd) metrics interface for a SegTraQ instance.
     Methods use the parent's `sdata` and configured keys.
     No per-call overrides are allowed.
     """
@@ -1375,7 +1375,7 @@ class _RSFacade:
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
-        return rs.match_nuclei_to_cells(
+        return rd.match_nuclei_to_cells(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1388,9 +1388,9 @@ class _RSFacade:
             inplace=inplace,
         )
 
-    match_nuclei_to_cells.__doc__ = rs.match_nuclei_to_cells.__doc__
+    match_nuclei_to_cells.__doc__ = rd.match_nuclei_to_cells.__doc__
 
-    def similarity_nucleus_cell(
+    def nucleus_cell_difference(
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
@@ -1398,10 +1398,11 @@ class _RSFacade:
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
-        scale: float = 1e4,
         inplace: bool = True,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
     ):
-        return rs.similarity_nucleus_cell(
+        return rd.nucleus_cell_difference(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1421,24 +1422,26 @@ class _RSFacade:
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
-            scale=scale,
             inplace=inplace,
+            n_permutations=n_permutations,
+            random_state=random_state,
         )
 
-    similarity_nucleus_cell.__doc__ = rs.similarity_nucleus_cell.__doc__
+    nucleus_cell_difference.__doc__ = rd.nucleus_cell_difference.__doc__
 
-    def similarity_nucleus_cytoplasm(
+    def nucleus_cytoplasm_difference(
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
-        scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         inplace: bool = True,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
     ):
-        return rs.similarity_nucleus_cytoplasm(
+        return rd.nucleus_cytoplasm_difference(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1453,26 +1456,30 @@ class _RSFacade:
             points_y_key=self._p.points_y_key,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            scale=scale,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             inplace=inplace,
+            n_permutations=n_permutations,
+            random_state=random_state,
         )
 
-    similarity_nucleus_cytoplasm.__doc__ = rs.similarity_nucleus_cytoplasm.__doc__
+    nucleus_cytoplasm_difference.__doc__ = rd.nucleus_cytoplasm_difference.__doc__
 
-    def similarity_center_border(
+    def center_border_difference(
         self,
         border_fraction_of_radius: float = 0.2,
         buffer_fraction_of_radius: float = 0.2,
         min_transcripts: int = 10,
         min_genes: int = 5,
-        scale: float = 1e4,
         inplace: bool = True,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
+        n_jobs: int = -1,
+        parallel_backend: str = "threading",
     ):
-        return rs.similarity_center_border(
+        return rd.center_border_difference(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1488,23 +1495,29 @@ class _RSFacade:
             buffer_fraction_of_radius=buffer_fraction_of_radius,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            scale=scale,
             inplace=inplace,
+            n_permutations=n_permutations,
+            random_state=random_state,
+            n_jobs=n_jobs,
+            parallel_backend=parallel_backend
         )
 
-    similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
+    center_border_difference.__doc__ = rd.center_border_difference.__doc__
 
-    def similarity_border_neighborhood(
+    def border_neighborhood_difference(
         self,
         border_fraction_of_radius: float = 0.2,
         buffer_fraction_of_radius: float = 0.1,
         neighborhood_radius_factor: float = 1.0,
         min_transcripts: int = 10,
         min_genes: int = 5,
-        scale: float = 1e4,
         inplace: bool = True,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
+        n_jobs: int = -1,
+        parallel_backend: str = "threading",
     ):
-        return rs.similarity_border_neighborhood(
+        return rd.border_neighborhood_difference(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1521,11 +1534,14 @@ class _RSFacade:
             neighborhood_radius_factor=neighborhood_radius_factor,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
-            scale=scale,
             inplace=inplace,
+            n_permutations=n_permutations,
+            random_state=random_state,
+            n_jobs=n_jobs,
+            parallel_backend=parallel_backend
         )
 
-    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
+    border_neighborhood_difference.__doc__ = rd.border_neighborhood_difference.__doc__
 
     def border_admixture_score(
         self,
@@ -1535,14 +1551,13 @@ class _RSFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         pseudocount: float = 0.5,
-        n_boot: int = 0,
-        ci_level: float = 0.95,
+        n_permutations: int = 200,
         random_state: int | None = None,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
-        return rs.border_admixture_score(
+        return rd.border_admixture_score(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
@@ -1560,15 +1575,14 @@ class _RSFacade:
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             pseudocount=pseudocount,
-            n_boot=n_boot,
-            ci_level=ci_level,
+            n_permutations=n_permutations,
             random_state=random_state,
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
-    border_admixture_score.__doc__ = rs.border_admixture_score.__doc__
+    border_admixture_score.__doc__ = rd.border_admixture_score.__doc__
 
 
 class _SPFacade:
