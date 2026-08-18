@@ -71,205 +71,6 @@ sdata_xenium = sd.read_zarr("../../data/xenium_v1_data/sdata_xenium_crop.zarr")
 sdata_proseg2 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")
 sdata_proseg3 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v3_crop.zarr/")
 
-# %%
-sdata_proseg_sim = sd.read_zarr("../../data/sdata_proseg2_similarity.zarr/")
-sdata_proseg_g = sd.read_zarr("../../data/sdata_proseg2_G.zarr/")
-
-
-# %%
-def plot_regression(
-    df,
-    x,
-    y,
-    figsize=(6, 6),
-    dropna=True,
-    ci=95,
-    scatter_kws=None,
-    line_kws=None,
-    title=None,
-    xlabel=None,
-    ylabel=None,
-    r2_loc=(0.05, 0.95),
-    r2_fmt="{:.3f}",
-    ax=None,
-):
-    data = df[[x, y]]
-    if dropna:
-        data = data.dropna()
-
-    # Regression stats
-    slope, intercept, r_value, p_value, std_err = linregress(data[x], data[y])
-    r_squared = r_value**2
-
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-
-    scatter_kws = scatter_kws or {"alpha": 0.6}
-    line_kws = line_kws or {"color": "red"}
-
-    sns.regplot(
-        data=data,
-        x=x,
-        y=y,
-        ci=ci,
-        scatter_kws=scatter_kws,
-        line_kws=line_kws,
-        ax=ax,
-    )
-
-    # R² annotation
-    ax.text(
-        r2_loc[0],
-        r2_loc[1],
-        rf"$R^2 = {r2_fmt.format(r_squared)}$",
-        transform=ax.transAxes,
-        verticalalignment="top",
-        fontsize=12,
-        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
-    )
-
-    ax.set_xlabel(xlabel or x)
-    ax.set_ylabel(ylabel or y)
-    ax.set_title(title or f"{y} vs. {x}")
-    ax.grid(True)
-
-    plt.show()
-
-
-# %%
-from scipy.stats import false_discovery_control, linregress
-
-df = pd.DataFrame({
-    "top_bottom_difference": (
-        sdata_proseg_g.tables["table"].obs["top_bottom_difference"]
-    ),
-    "similarity_top_bottom": (
-        sdata_proseg_sim.tables["table"].obs["similarity_top_bottom"]
-    ),
-}).dropna()
-
-print(f"Number of matched cells: {len(df)}")
-
-plot_regression(
-    df=df,
-    x="top_bottom_difference",
-    y="similarity_top_bottom",
-    title="G-statistic difference vs. cosine similarity residual",
-    xlabel="Top–bottom difference (G-statistic)",
-    ylabel="Top–bottom similarity residual (cosine)",
-)
-
-# %%
-sdata_proseg_g.tables["table"].obs.columns
-
-# %%
-fig, axes = plt.subplots(2, 2, figsize=(12, 10), constrained_layout=True)
-
-# ------------------------------------------------------------------
-# G-statistic approach
-# ------------------------------------------------------------------
-obs_g = sdata_proseg_g.tables["table"].obs.copy()
-
-# Transcript-count rank across all evaluable cells
-df_g = obs_g.loc[
-    obs_g["top_bottom_difference"].notna()
-    & obs_g["transcript_count"].notna()
-].copy()
-
-df_g["transcript_count_rank"] = df_g["transcript_count"].rank()
-
-# All cells
-plot_regression(
-    df=df_g,
-    x="transcript_count_rank",
-    y="top_bottom_difference",
-    title="G-statistic residual: all cells",
-    xlabel="Transcript count rank",
-    ylabel="Top–bottom difference",
-    ax=axes[0, 0],
-)
-
-# Significant cells
-df_g_sig = df_g.loc[
-    df_g["top_bottom_difference_p_value"] < 0.05
-].copy()
-
-plot_regression(
-    df=df_g_sig,
-    x="transcript_count_rank",
-    y="top_bottom_difference",
-    title="G-statistic residual: p < 0.05",
-    xlabel="Transcript count rank",
-    ylabel="Top–bottom difference",
-    ax=axes[0, 1],
-)
-
-
-# ------------------------------------------------------------------
-# Cosine-similarity approach
-# ------------------------------------------------------------------
-obs_sim = sdata_proseg_similarity.tables["table"].obs.copy()
-
-# Transcript-count rank across all evaluable cells
-df_sim = obs_sim.loc[
-    obs_sim["similarity_top_bottom"].notna()
-    & obs_sim["transcript_count"].notna()
-].copy()
-
-df_sim["transcript_count_rank"] = df_sim["transcript_count"].rank()
-
-# All cells
-plot_regression(
-    df=df_sim,
-    x="transcript_count_rank",
-    y="similarity_top_bottom",
-    title="Cosine similarity residual: all cells",
-    xlabel="Transcript count rank",
-    ylabel="Top–bottom similarity residual",
-    ax=axes[1, 0],
-)
-
-# Significant cells
-df_sim_sig = df_sim.loc[
-    df_sim["similarity_top_bottom_p_value"] < 0.05
-].copy()
-
-plot_regression(
-    df=df_sim_sig,
-    x="transcript_count_rank",
-    y="similarity_top_bottom",
-    title="Cosine similarity residual: p < 0.05",
-    xlabel="Transcript count rank",
-    ylabel="Top–bottom similarity residual",
-    ax=axes[1, 1],
-)
-
-plt.show()
-
-# %%
-obs = st_dict["proseg2"].sdata.tables["table"].obs
-
-obs["transcript_count_rank"] = obs["transcript_count"].rank()
-
-df = obs.loc[
-    obs["similarity_top_bottom_p_value"] < 0.05,
-    ["similarity_top_bottom", "transcript_count"],
-].dropna()
-
-df = obs
-
-plt.figure(figsize=(5, 3))
-sns.regplot(
-    data=df,
-    x="transcript_count_rank",
-    y="similarity_top_bottom",
-    scatter_kws={"alpha": 0.6},
-    line_kws={"color": "red"},
-    lowess=True,  # nonlinear
-    ci=95,
-)
-plt.tight_layout()
-
 # %% [markdown]
 # Next, we initialize `SegTraQ` objects.
 
@@ -410,30 +211,24 @@ for method, st in st_dict.items():
     plot_transcripts_across_z_bins(st.sdata, method, 10)
 
 # %% [markdown]
-# ## Top–bottom z consistency (cosine similarity)
+# ## Top–bottom z consistency
 #
-# To assess whether a segmented cell may contain transcripts from overlapping
-# cells across z, we compute a top–bottom z similarity score.
-# The intuition is that a correctly segmented single cell should have a broadly
-# consistent expression profile across depth, while merged/overlapping cells may
-# show depth-dependent expression shifts, lowering similarity.
+# To identify cells that may contain transcripts from overlapping cells across the z-axis, we compare
+# the transcript composition at the top and bottom of each cell. A single, correctly segmented cell is
+# expected to have broadly consistent expression across depth, whereas overlapping or incorrectly merged
+# cells may contain different expression profiles at different z positions.
 #
-# For each cell, we split its transcripts into:
+# For each cell, transcripts are taken from the bottom and top fractions of its z-range (default: 30% each).
+# Their gene-expression profiles are transformed with PFlog1pPF and compared using cosine similarity.
+# Because profiles with fewer transcripts tend to appear less similar due to finite-count sampling, the
+# observed similarity is compared with a permutation-based expectation. The reported
+# `similarity_top_bottom` is the residual from this expectation: values around zero indicate the expected
+# similarity, while negative values indicate that the top and bottom are less similar than expected.
+# The accompanying lower-tail p-value identifies cells with evidence for unusually low similarity.
 #
-# bottom: z ≤ q (default  q=0.30)
-# top: z ≥ 1−q
-#
-# We aggregate gene counts for both parts, apply PFlog1pPF (shifted CLR), and compute
-# their cosine similarity. A conditional permutation null then accounts for finite-count
-# sampling effects; `similarity_top_bottom` is the observed cosine similarity minus the
-# mean null similarity. The accompanying lower-tail permutation p-value identifies cells
-# whose top and bottom profiles are significantly less similar than expected under the null.
-# To enable fair comparisons between methods, we optionally correct for global
-# z-drift by normalizing z coordinates before splitting transcripts into top
-# and bottom (default `correct_z_drift=True`); Proseg already performs this
-# normalization internally. Cells are set to `NaN` if either part has fewer
-# than `min_transcripts` transcripts (default 10) or fewer than `min_genes`
-# genes (default 5).
+# Optionally, global z-drift can be corrected before defining the top and bottom regions
+# (`correct_z_drift=True`). Cells without sufficient transcripts or detected genes in both regions are
+# not evaluated.
 
 # %%
 for method, st in st_dict.items():
@@ -445,14 +240,29 @@ for method, st in st_dict.items():
         _cos_sim = st.vl.similarity_top_bottom()
 
 
+# %% [markdown]
+# Below, we compare the top–bottom similarity residual only among cells with a significant
+# lower-tail permutation p-value (`similarity_top_bottom_p_value < 0.05`). These cells have
+# top and bottom profiles that are less similar than expected under the conditional null.
+
 # %%
-def density_plot_feature(sdata_dict, feature, figsize=(5, 3), significant_only=False):
+def histogram_feature(
+    sdata_dict,
+    feature,
+    figsize=(5, 3),
+    significant_only=True,
+    bins=60,
+):
     all_feats = []
+
     for method, st in sdata_dict.items():
-        obs = st.sdata["table"].obs
+        obs = st.sdata[st.tables_key].obs
+
         if (feature == "similarity_top_bottom") and significant_only:
-            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05]
-            print(f"{method}: {obs.index.__len__()}")
+            obs = obs.loc[
+                obs["similarity_top_bottom_p_value"] < 0.05
+            ]
+
         feat = obs[feature].to_frame(feature)
         feat["method"] = method
         all_feats.append(feat)
@@ -460,106 +270,76 @@ def density_plot_feature(sdata_dict, feature, figsize=(5, 3), significant_only=F
     df = pd.concat(all_feats, ignore_index=True)
     df["method"] = df["method"].astype(str)
 
-    plt.figure(figsize=figsize)
-    sns.kdeplot(data=df, x=feature, hue="method", common_norm=False, palette="Set2", fill=False)
+    methods = list(sdata_dict.keys())
+    palette = dict(zip(methods, sns.color_palette("Set2", len(methods))))
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    sns.histplot(
+        data=df,
+        x=feature,
+        hue="method",
+        bins=bins,
+        stat="count",
+        element="step",
+        fill=False,
+        palette=palette,
+        ax=ax,
+        kde=True,
+    )
+
+    # Median for each method
+    for method in methods:
+        median = df.loc[df["method"] == method, feature].median()
+
+        ax.axvline(
+            median,
+            color=palette[method],
+            linestyle="--",
+            linewidth=2,
+        )
+
+    ax.set_ylabel("Number of cells")
     plt.tight_layout()
 
 
 # %% [markdown]
-# Below, we compare the top–bottom similarity residual only among cells with a significant
-# lower-tail permutation p-value (`similarity_top_bottom_p_value < 0.05`). These cells have
-# top and bottom profiles that are less similar than expected under the conditional null.
+# Although the median residual among significant cells is similar across methods, Xenium has more cells that deviate significantly from the null expectation, suggesting that these deviations occur more frequently rather than being stronger in magnitude.
 
 # %%
-density_plot_feature(st_dict, "similarity_top_bottom")
-
-# %%
-density_plot_feature(st_dict, "similarity_top_bottom", significant_only=True)
-
-# %% [markdown]
-# Because `similarity_top_bottom` is permutation-null corrected, we assess any remaining
-# relationship with transcript count only among cells whose top–bottom dissimilarity is
-# significant (`p < 0.05`). This focuses the diagnostic on cells with evidence for a
-# depth-dependent expression shift rather than cells compatible with the null.
-
-# %%
-obs = st_dict["proseg2"].sdata.tables["table"].obs
-
-obs["transcript_count_rank"] = obs["transcript_count"].rank()
-
-df = obs.loc[
-    obs["similarity_top_bottom_p_value"] < 0.05,
-    ["similarity_top_bottom", "transcript_count"],
-].dropna()
-
-df = obs
-
-plt.figure(figsize=(5, 3))
-sns.regplot(
-    data=df,
-    x="transcript_count_rank",
-    y="similarity_top_bottom",
-    scatter_kws={"alpha": 0.6},
-    line_kws={"color": "red"},
-    lowess=True,  # nonlinear
-    ci=95,
+histogram_feature(
+    st_dict,
+    feature="similarity_top_bottom",
+    significant_only=True,
 )
-plt.tight_layout()
-
-# %%
-st_dict["proseg2"].sdata.write("../../data/sdata_proseg2_similarity.zarr", overwrite=True)
 
 # %% [markdown]
-# The regression above is restricted to cells with significant top–bottom dissimilarity.
-# Comparing linear, log, and square-root count relationships can reveal whether a residual
-# count dependence remains after permutation-null correction.
-
-# %%
-x = df["transcript_count"].to_numpy()
-y = df["similarity_top_bottom"].to_numpy()
-
-# Linear fit
-coef_lin = np.polyfit(x, y, deg=1)
-y_hat_lin = np.polyval(coef_lin, x)
-r2_lin = r2_score(y, y_hat_lin)
-
-# Log fit
-x_log = np.log1p(x)
-coef_log = np.polyfit(x_log, y, deg=1)
-y_hat_log = np.polyval(coef_log, x_log)
-r2_log = r2_score(y, y_hat_log)
-
-# sqrt fit
-x_sqrt = np.sqrt(x)
-coef_sqrt = np.polyfit(x_sqrt, y, deg=1)
-y_hat_sqrt = np.polyval(coef_sqrt, x_sqrt)
-r2_sqrt = r2_score(y, y_hat_sqrt)
-
-print(f"R² linear: {r2_lin:.3f}")
-print(f"R² log1p:  {r2_log:.3f}")
-print(f"R² sqrt:   {r2_sqrt:.3f}")
-
-
-# %% [markdown]
-# We next compare the top–bottom similarity residual by transferred cell type, again using
-# only cells with a significant lower-tail permutation p-value. Stratifying by cell type
-# additionally reduces variation associated with cell-type-specific transcript abundance and size.
+# We next compare top–bottom similarity residuals across transferred cell types, considering only cells with a significant lower-tail p-value to reduce variation related to cell-type-specific composition.
 
 
 # %%
-def boxplot_per_celltype(st_dict, feature, q=1, significant_only=False):
+def boxplot_per_celltype(st_dict, feature, q=1, significant_only=True):
     dfs = []
     for method, st in st_dict.items():
-        obs = st.sdata["table"].obs[st.sdata["table"].obs["transferred_cell_type"].notna()].copy()
+        obs = st.sdata[st.tables_key].obs[
+            st.sdata[st.tables_key].obs["transferred_cell_type"].notna()
+        ].copy()
+
         if (feature == "similarity_top_bottom") and significant_only:
-            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05].copy()
-        obs["transferred_cell_type"] = obs["transferred_cell_type"].cat.remove_unused_categories()
+            obs = obs.loc[
+                obs["similarity_top_bottom_p_value"] < 0.05
+            ].copy()
+
+        obs["transferred_cell_type"] = (
+            obs["transferred_cell_type"].cat.remove_unused_categories()
+        )
+
         tmp = obs[["transferred_cell_type", feature]].copy()
         tmp["method"] = method
         dfs.append(tmp)
 
     df = pd.concat(dfs, ignore_index=True)
-    df = df[(df[feature] <= df[feature].quantile(q))]
+    df = df[df[feature] <= df[feature].quantile(q)]
 
     fig, ax = plt.subplots(figsize=(15, 5))
 
@@ -571,26 +351,70 @@ def boxplot_per_celltype(st_dict, feature, q=1, significant_only=False):
         showcaps=True,
         showfliers=False,
         palette="Set2",
+        boxprops={"alpha": 0.5},
         ax=ax,
     )
+
+    sns.stripplot(
+        data=df,
+        x="transferred_cell_type",
+        y=feature,
+        hue="method",
+        dodge=True,
+        jitter=True,
+        palette="Set2",
+        alpha=1,
+        size=3,
+        legend=False,
+        ax=ax,
+    )
+
+    celltypes = df["transferred_cell_type"].unique()
+    methods = list(st_dict.keys())
+
+    n_methods = len(methods)
+    box_width = 0.8
+    offsets = np.linspace(
+        -box_width / 2 + box_width / (2 * n_methods),
+        box_width / 2 - box_width / (2 * n_methods),
+        n_methods,
+    )
+
+    # Position labels slightly above the data
+    ymin, ymax = ax.get_ylim()
+    y_text = ymax + 0.02 * (ymax - ymin)
+
+    for i, celltype in enumerate(celltypes):
+        for j, method in enumerate(methods):
+            n = len(
+                df.loc[
+                    (df["transferred_cell_type"] == celltype)
+                    & (df["method"] == method)
+                ]
+            )
+
+            ax.text(
+                i + offsets[j],
+                y_text,
+                f"n={n}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+                rotation=90,
+            )
+
+    # Make room for annotations
+    ax.set_ylim(ymin, ymax + 0.12 * (ymax - ymin))
 
     fig.tight_layout()
     plt.show()
 
 
+# %% [markdown]
+# `similarity_top_bottom` differs between cell types, with B cells accounting for much of the difference in the number of significant cells across methods (309 in Xenium, 139 in Proseg v2, and 106 in Proseg v3).
+
 # %%
 boxplot_per_celltype(st_dict, "similarity_top_bottom")
-
-# %%
-boxplot_per_celltype(st_dict, "similarity_top_bottom", significant_only=True)
-
-# %% [markdown]
-# The comparison above concerns the subset of cells with significant top–bottom dissimilarity;
-# overall transcript counts are shown below as additional context across segmentation methods.
-
-# %%
-for method, st in st_dict.items():
-    print(f"{method} mean transcript count: {st.sdata.tables['table'].obs['transcript_count'].mean()}")
 
 # %% [markdown]
 # ## Heterotypic overlap area/fraction (detecting 3D overlaps)
@@ -627,9 +451,27 @@ for _method, st in proseg_dict.items():
         shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
         st.vl.fraction_heterotypic_overlap(unknown_policy="exclude", shapes_key_list=shapes_key_list)
 
+
 # %% [markdown]
 # Below we can see the distribution of the `heterotypic_overlap_area` and
 # `heterotypic_overlap_fraction` in proseg v2 and v3. Some cells have heterotypic overlap fractions > 50%.
+
+# %%
+def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
+    all_feats = []
+    for method, st in sdata_dict.items():
+        obs = st.sdata[st.tables_key].obs
+        feat = obs[feature].to_frame(feature)
+        feat["method"] = method
+        all_feats.append(feat)
+
+    df = pd.concat(all_feats, ignore_index=True)
+    df["method"] = df["method"].astype(str)
+
+    plt.figure(figsize=figsize)
+    sns.kdeplot(data=df, x=feature, hue="method", common_norm=False, palette="Set2", fill=False)
+    plt.tight_layout()
+
 
 # %%
 density_plot_feature(proseg_dict, "heterotypic_overlap_area")
@@ -650,10 +492,10 @@ density_plot_feature(proseg_dict, "heterotypic_overlap_fraction")
 
 # %%
 # Identify cell with high heterotypic_overlap_area
-tbl = st_proseg3.sdata.tables["table"]
+tbl = st_proseg3.sdata.tables[st_proseg3.tables_key]
 rank = 2
 idx = tbl.obs["heterotypic_overlap_area"].nlargest(rank).index[rank - 1]
-x0, y0 = tbl.obs.loc[idx, "centroid_x"] / 0.2125, tbl.obs.loc[idx, "centroid_y"] / 0.2125
+x0, y0 = tbl.obs.loc[idx, st_proseg3.tables_centroid_x_key] / 0.2125, tbl.obs.loc[idx, st_proseg3.tables_centroid_y_key] / 0.2125
 
 # Define color palette for plotting
 col_celltype = {
@@ -674,26 +516,26 @@ col_celltype = {
 
 axes = plt.subplots(1, 3, figsize=(21, 7), constrained_layout=True)[1].flatten()
 
-s = st_proseg3.sdata.tables["table"].obs["transferred_cell_type"]
+s = st_proseg3.sdata.tables[st_proseg3.tables_key].obs["transferred_cell_type"]
 if pd.api.types.is_categorical_dtype(s):
     s = s.cat.add_categories(["Unknown"])
 
-st_proseg3.sdata.tables["table"].obs["transferred_celltype_plot"] = s.fillna("Unknown")
+st_proseg3.sdata.tables[st_proseg3.tables_key].obs["transferred_celltype_plot"] = s.fillna("Unknown")
 
-labels = st_proseg3.sdata.tables["table"].obs["transferred_celltype_plot"].unique().astype(str).tolist()
+labels = st_proseg3.sdata.tables[st_proseg3.tables_key].obs["transferred_celltype_plot"].unique().astype(str).tolist()
 cols = [col_celltype[lab] for lab in labels]
 
 # Bottom plane
-st_proseg3.sdata.tables["table"].obs["region"] = "cell_boundaries_z0"
-st_proseg3.sdata.set_table_annotates_spatialelement("table", region="cell_boundaries_z0")
+st_proseg3.sdata.tables[st_proseg3.tables_key].obs["region"] = "cell_boundaries_z0"
+st_proseg3.sdata.set_table_annotates_spatialelement(st_proseg3.tables_key, region="cell_boundaries_z0")
 
 st_proseg3.sdata.pl.render_shapes(
     "cell_boundaries_z0", color="transferred_celltype_plot", palette=cols, groups=labels
 ).pl.show(ax=axes[0], title="Bottom: Cell masks colored by transferred cell type", coordinate_systems="global")
 
 # Top plane
-st_proseg3.sdata.tables["table"].obs["region"] = "cell_boundaries_z1"
-st_proseg3.sdata.set_table_annotates_spatialelement("table", region="cell_boundaries_z1")
+st_proseg3.sdata.tables[st_proseg3.tables_key].obs["region"] = "cell_boundaries_z1"
+st_proseg3.sdata.set_table_annotates_spatialelement(st_proseg3.tables_key, region="cell_boundaries_z1")
 
 st_proseg3.sdata.pl.render_shapes(
     "cell_boundaries_z1", color="transferred_celltype_plot", palette=cols, groups=labels
@@ -725,7 +567,7 @@ for ax in axes:
 # We can run the compute the VSI map and extract the mean VSI per cell.
 
 # %%
-n_celltypes = st_xenium.sdata.tables["table"].obs["transferred_cell_type"].nunique()
+n_celltypes = st_xenium.sdata.tables[st_xenium.tables_key].obs["transferred_cell_type"].nunique()
 
 for _method, st in st_dict.items():
     _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes}, n_workers=8)
@@ -745,7 +587,7 @@ axes = np.atleast_1d(axes)
 
 for ax, (method, st) in zip(axes, st_dict.items(), strict=False):
     df = (
-        st.sdata.tables["table"]
+        st.sdata.tables[st.tables_key]
         .obs[[
             "vertical_signal_integrity",
             "similarity_top_bottom",
@@ -795,7 +637,7 @@ fig, axes = plt.subplots(1, n, figsize=(4 * n, 3), sharex=False, sharey=False)
 axes = np.atleast_1d(axes)
 
 for j, (method, st) in enumerate(proseg_dict.items()):
-    obs = st.sdata.tables["table"].obs
+    obs = st.sdata.tables[st.tables_key].obs
 
     df = obs.loc[
         obs["transferred_cell_type"] == "DCIS2", ["vertical_signal_integrity", "heterotypic_overlap_fraction"]
@@ -825,19 +667,30 @@ plt.show()
 # Wrapper to run all metrics (including label transfer).
 
 # %%
-for method, st in st_dict.items():
-    if "proseg" in method:
-        shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
+sdata_proseg2 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")
 
-        st.run_volume(
-            adata_ref=adata_ref,
-            ref_cell_type="celltype_major",
-            ref_raw_counts_layer="raw",
-            heterotypic_overlap_kwargs={"shapes_key_list": shapes_key_list},
-        )
+st_proseg2 = segtraq.SegTraQ(
+    sdata_proseg2,
+    points_cell_id_key="assignment",
+    points_background_id=2**32 - 1,
+    points_gene_key="gene",
+    tables_area_key=None,
+    tables_cell_id_key="cell",
+    shapes_cell_id_key="cell",
+    tables_centroid_x_key="centroid_x",
+    tables_centroid_y_key="centroid_y",
+)
 
-    else:
-        st.run_volume(adata_ref=adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw")
+shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
+
+st_proseg2.run_volume(
+    adata_ref=adata_ref,
+    ref_cell_type="celltype_major",
+    ref_raw_counts_layer="raw",
+    heterotypic_overlap_kwargs={"shapes_key_list": shapes_key_list},
+)
+
+st_proseg2.sdata.tables[st_proseg2.tables_key].obs.columns
 
 # %% [markdown]
 # ## Session Info

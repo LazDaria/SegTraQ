@@ -1,15 +1,17 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
+#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: segtraq2_env
+#     display_name: allen (3.13.5)
 #     language: python
-#     name: segtraq2_env
+#     name: python3
 # ---
 
 # %% [markdown]
@@ -187,51 +189,44 @@ st.cs.purity()
 # %% [markdown]
 # ## Region similarity module
 #
-# While individual genes may exhibit subcellular localization patterns,
-# the overall distribution of transcripts, when averaged across genes,
-# is expected to be relatively smooth and approximately uniform within a cell.
-# Based on this assumption, the region similarity module evaluates the similarity of
-# gene expression profiles across different subcellular compartments.
-# Deviations from this expected intra-cellular consistency can serve as indicators of
-# transcript contamination originating from neighboring cells.
+# The `region similarity` (`rs`) module evaluates morphological and molecular
+# consistency across different regions of a cell. Transcript-based metrics are
+# corrected for finite-count effects using permutation-based null expectations.
 
 # %% [markdown]
-# ### Similarity between nucleus and cytoplasm
-# First, we look at the correlation between a cell's nucleus and the rest of the cell.
-# A high similarity here means that there is little contamination,
-# whereas a low correlation can hint towards spillover from adjacent cells.
+# ### Matching nuclei to cells
+#
+# `match_nuclei_to_cells()` matches each cell to its most overlapping nucleus.
+# `iou` measures their overall overlap, while `nucleus_fraction` measures how much
+# of the nucleus is contained within the cell.
 
+# %%
+st.rs.match_nuclei_to_cells().head()
+
+# %% [markdown]
+# ### Nucleus–cell similarity
+#
+# `similarity_nucleus_cell` measures whether the final cell-level transcript profile
+# is molecularly consistent with its matched nucleus. Negative residuals indicate
+# lower similarity than expected.
+
+# %%
+st.rs.similarity_nucleus_cell().head()
+
+# %% [markdown]
+# ### Nucleus–cytoplasm similarity
+#
+# `similarity_nucleus_cytoplasm` directly compares nuclear and non-nuclear transcript
+# composition. Low residuals may indicate transcript misassignment.
 # %%
 st.rs.similarity_nucleus_cytoplasm().head()
 
 # %% [markdown]
-# ### Similarity between a cell's center and border
-#
-# We can also compute the similarity between a cells center and outer shell
-# (transcripts close to the cell membrane).
-
-# %%
-st.rs.similarity_center_border().head()
-
-# %% [markdown]
-# ### Similarity between a cell's border the cellular neighborhood
-#
-# Next to that, we can also compute the similarity between a cells outer shell
-# (transcripts close to the cell membrane) and its surrounding cells.
-
-# %%
-st.rs.similarity_border_neighborhood().head()
-
-# %% [markdown]
 # ### Border admixture score
 #
-# A low `similarity_center_border` or high `similarity_border_neighborhood`
-# does not necessarily represent contamination.
-# To evaluate the contamination of the cell border robustly,
-# we compute the the `border_admixture_score`,
-# which explicitly models the border as a mixture of center and neighborhood expression,
-# and estimates how much better this mixture explains the border compared to the center alone.
-#
+# `border_admixture_score` asks whether the cell border resembles a mixture of the
+# cell center and its neighborhood. Positive residuals indicate stronger
+# neighborhood-like admixture than expected.
 
 # %%
 st.rs.border_admixture_score().head()
@@ -445,11 +440,12 @@ st.sp.mutually_exclusive_coexpression_rate(markers=markers).head()
 # For a detailed description of this module, please refer to this [tutorial](volume.ipynb).
 
 # %% [markdown]
-# ### Top-bottom z consistency
+# ### Top–bottom z consistency
 #
-# To detect potential z-overlap mixing within segmented cells, we split each cell’s
-# transcripts into bottom/top z-quantiles (q=0.30), compute log-normalized gene profiles
-# for both parts, and report their cosine similarity (NaN if either part has <10 transcripts or <5 genes).
+# `similarity_top_bottom` compares transcript composition at the top and bottom of
+# each cell to detect potential mixing from overlapping cells across z. Negative
+# residuals indicate lower top–bottom similarity than expected, which may suggest
+# overlapping or incorrectly merged cells.
 
 # %%
 st.vl.similarity_top_bottom().head()

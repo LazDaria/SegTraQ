@@ -436,7 +436,7 @@ def _join_points_regions(
     ).drop(columns=["index_right"])
 
     # if a point intersects multiple polygons, keep the first match
-    pts_joined = pts_joined.sort_values("point_id").groupby("point_id", observed=True, as_index=False).first()
+    pts_joined = pts_joined.sort_values("point_id").drop_duplicates(subset="point_id", keep="first")
 
     # optionally restrict to points whose region id matches another point column
     if require_points_region_ID_match:
@@ -613,25 +613,14 @@ def _pf_log1p_pf(
 def _cosine_similarity_two_vectors(
     x_a: np.ndarray,
     x_b: np.ndarray,
-    min_transcripts: int,
-    min_genes: int,
     scale: float,
 ) -> float:
     """Compute cosine similarity between PFlog1pPF-transformed count profiles."""
     x_a = np.rint(np.asarray(x_a)).astype(int)
     x_b = np.rint(np.asarray(x_b)).astype(int)
 
-    mask = (x_a != 0) | (x_b != 0)
-
-    if (
-        mask.sum() < min_genes
-        or x_a[mask].sum() < min_transcripts
-        or x_b[mask].sum() < min_transcripts
-    ):
-        return np.nan
-
-    x_a_transformed = _pf_log1p_pf(x_a[mask], scale=scale)
-    x_b_transformed = _pf_log1p_pf(x_b[mask], scale=scale)
+    x_a_transformed = _pf_log1p_pf(x_a, scale=scale)
+    x_b_transformed = _pf_log1p_pf(x_b, scale=scale)
 
     sim = _cosine_sim(x_a_transformed, x_b_transformed)
 
@@ -642,6 +631,7 @@ def _two_profile_similarity_metrics(
     x_a: np.ndarray,
     x_b: np.ndarray,
     *,
+    x_overlap: np.ndarray | None = None,
     n_permutations: int = 200,
     min_transcripts: int = 10,
     min_genes: int = 5,
@@ -650,26 +640,29 @@ def _two_profile_similarity_metrics(
 ) -> dict:
     """Compute permutation-corrected PFlog1pPF cosine similarity.
 
-    The reported similarity is the observed PFlog1pPF cosine similarity minus
-    the mean cosine similarity under a conditional permutation null. The null
-    fixes the pooled gene counts and both region totals and reallocates
-    transcripts between profiles using multivariate hypergeometric draws.
+    For disjoint profiles (`x_overlap=None`), the null randomly repartitions the
+    pooled transcripts between the two profiles while preserving their observed
+    transcript totals.
 
-    A lower-tail permutation p-value quantifies whether the observed similarity
-    is smaller than expected under the shared-composition null.
+    If `x_overlap` is provided, it represents transcripts shared by both profiles.
+    The null preserves the observed numbers of shared, A-only, and B-only
+    transcripts while randomly reallocating gene identities across their union.
+
+    The reported similarity is the observed cosine similarity minus the mean
+    cosine similarity under the corresponding null. The lower-tail permutation
+    p-value tests whether the observed profiles are less similar than expected.
     """
     if n_permutations < 100:
-        raise ValueError(
-            f"`n_permutations` must be >= 100 to compute "
-            "the permutation-corrected similarity residual."
-        )
+        raise ValueError("`n_permutations` must be >= 100.")
 
     x_a = np.rint(np.asarray(x_a)).astype(int)
     x_b = np.rint(np.asarray(x_b)).astype(int)
 
+    if x_overlap is not None:
+        x_overlap = np.rint(np.asarray(x_overlap)).astype(int)
+
+    # Use expressed genes only for QC, but retain the full vectors for PFlog1pPF.
     mask = (x_a + x_b) > 0
-    x_a = x_a[mask]
-    x_b = x_b[mask]
 
     n_a = int(x_a.sum())
     n_b = int(x_b.sum())
@@ -686,8 +679,6 @@ def _two_profile_similarity_metrics(
     similarity_observed = _cosine_similarity_two_vectors(
         x_a,
         x_b,
-        min_transcripts=min_transcripts,
-        min_genes=min_genes,
         scale=scale,
     )
 
@@ -697,20 +688,59 @@ def _two_profile_similarity_metrics(
     if rng is None:
         rng = np.random.default_rng()
 
-    pooled = x_a + x_b
     similarity_null = np.empty(n_permutations, dtype=float)
 
-    for i in range(n_permutations):
-        x_a_null = rng.multivariate_hypergeometric(pooled, n_a)
-        x_b_null = pooled - x_a_null
+    if x_overlap is None:
+        # Disjoint profiles: repartition pooled transcripts.
+        pooled = x_a + x_b
 
-        similarity_null[i] = _cosine_similarity_two_vectors(
-            x_a_null,
-            x_b_null,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-        )
+        for i in range(n_permutations):
+            x_a_null = rng.multivariate_hypergeometric(
+                pooled,
+                n_a,
+            )
+            x_b_null = pooled - x_a_null
+
+            similarity_null[i] = _cosine_similarity_two_vectors(
+                x_a_null,
+                x_b_null,
+                scale=scale,
+            )
+
+    else:
+        # Overlapping profiles:
+        # x_a = A-only + overlap
+        # x_b = B-only + overlap
+        x_a_only = x_a - x_overlap
+        x_b_only = x_b - x_overlap
+
+        n_overlap = int(x_overlap.sum())
+        n_a_only = int(x_a_only.sum())
+
+        pooled = x_a_only + x_overlap + x_b_only
+
+        for i in range(n_permutations):
+            overlap_null = rng.multivariate_hypergeometric(
+                pooled,
+                n_overlap,
+            )
+
+            remaining = pooled - overlap_null
+
+            x_a_only_null = rng.multivariate_hypergeometric(
+                remaining,
+                n_a_only,
+            )
+            x_b_only_null = remaining - x_a_only_null
+
+            x_a_null = x_a_only_null + overlap_null
+            x_b_null = x_b_only_null + overlap_null
+
+            similarity_null[i] = _cosine_similarity_two_vectors(
+                x_a_null,
+                x_b_null,
+                scale=scale,
+            )
 
     valid = np.isfinite(similarity_null)
 
@@ -724,7 +754,9 @@ def _two_profile_similarity_metrics(
     )
 
     similarity_p_value = (
-        1 + np.count_nonzero(similarity_null <= similarity_observed)
+        1 + np.count_nonzero(
+            similarity_null <= similarity_observed
+        )
     ) / (len(similarity_null) + 1)
 
     return {
@@ -1075,8 +1107,8 @@ def _border_admixture_permutation_metrics(
         pseudocount=pseudocount,
     )
     empty = {
-        "border_admixture_score_residual_perm": np.nan,
-        "border_admixture_p_value_perm": np.nan,
+        "border_admixture_score": np.nan,
+        "border_admixture_p_value": np.nan,
     }
     if not np.isfinite(observed):
         return empty
@@ -1104,7 +1136,7 @@ def _border_admixture_permutation_metrics(
     residual = observed - float(null_scores.mean())
     p_value = (1 + np.count_nonzero(null_scores >= observed)) / (len(null_scores) + 1)
     return {
-        "border_admixture_score_residual_perm": float(residual),
-        "border_admixture_p_value_perm": float(p_value),
+        "border_admixture_score": float(residual),
+        "border_admixture_p_value": float(p_value),
     }
 

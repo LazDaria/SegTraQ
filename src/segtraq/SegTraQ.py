@@ -322,7 +322,7 @@ class SegTraQ:
             "transcript_density": dens,
         }
 
-    def run_region(
+    def run_region_similarity(
         self,
         n_jobs: int = -1,
         parallel_backend: str = "threading",
@@ -330,8 +330,6 @@ class SegTraQ:
         iou_kwargs: dict = None,
         similarity_nucleus_cell_kwargs: dict = None,
         similarity_nucleus_cytoplasm_kwargs: dict = None,
-        similarity_center_border_kwargs: dict = None,
-        similarity_border_neighborhood_kwargs: dict = None,
         border_admixture_score_kwargs: dict = None,
     ):
         """
@@ -341,8 +339,6 @@ class SegTraQ:
         1) matching between each cell and its best-matching nucleus
         2) similarity between per-cell expression and its matched nucleus
         3) similarity between the cell's nucleus-overlapping and cytoplasmic expression
-        4) similarity between center and border expression
-        5) similarity between border and neighborhood expression
         6) border admixture score
 
         Returns
@@ -372,16 +368,6 @@ class SegTraQ:
             **(similarity_nucleus_cytoplasm_kwargs or {}),
         )
 
-        similarity_center_border = self.rs.similarity_center_border(
-            inplace=inplace,
-            **(similarity_center_border_kwargs or {}),
-        )
-
-        similarity_border_neighborhood = self.rs.similarity_border_neighborhood(
-            inplace=inplace,
-            **(similarity_border_neighborhood_kwargs or {}),
-        )
-
         border_admixture_score = self.rs.border_admixture_score(
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
@@ -396,8 +382,6 @@ class SegTraQ:
             "ious": ious,
             "similarity_nucleus_cell": similarity_nucleus_cell,
             "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
-            "similarity_center_border": similarity_center_border,
-            "similarity_border_neighborhood": similarity_border_neighborhood,
             "border_admixture_score": border_admixture_score,
         }
 
@@ -1470,86 +1454,6 @@ class _RSFacade:
         )
 
     similarity_nucleus_cytoplasm.__doc__ = rs.similarity_nucleus_cytoplasm.__doc__
-
-    def similarity_center_border(
-        self,
-        border_fraction_of_radius: float = 0.2,
-        buffer_fraction_of_radius: float = 0.2,
-        min_transcripts: int = 10,
-        min_genes: int = 5,
-        scale: float = 1e4,
-        inplace: bool = True,
-        n_permutations: int = 200,
-        random_state: int | None = 42,
-        n_jobs: int = -1,
-        parallel_backend: str = "threading",
-    ):
-        return rs.similarity_center_border(
-            sdata=self._p.sdata,
-            tables_key=self._p.tables_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            tables_gene_key=self._p.tables_gene_key,
-            shapes_key=self._p.shapes_key,
-            points_key=self._p.points_key,
-            points_cell_id_key=self._p.points_cell_id_key,
-            points_background_id=self._p.points_background_id,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            points_gene_key=self._p.points_gene_key,
-            border_fraction_of_radius=border_fraction_of_radius,
-            buffer_fraction_of_radius=buffer_fraction_of_radius,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-            inplace=inplace,
-            n_permutations=n_permutations,
-            random_state=random_state,
-            n_jobs=n_jobs,
-            parallel_backend=parallel_backend
-        )
-
-    similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
-
-    def similarity_border_neighborhood(
-        self,
-        border_fraction_of_radius: float = 0.2,
-        buffer_fraction_of_radius: float = 0.1,
-        neighborhood_radius_factor: float = 1.0,
-        min_transcripts: int = 10,
-        min_genes: int = 5,
-        scale: float = 1e4,
-        inplace: bool = True,
-        n_permutations: int = 200,
-        random_state: int | None = 42,
-        n_jobs: int = -1,
-        parallel_backend: str = "threading",
-    ):
-        return rs.similarity_border_neighborhood(
-            sdata=self._p.sdata,
-            tables_key=self._p.tables_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            tables_gene_key=self._p.tables_gene_key,
-            shapes_key=self._p.shapes_key,
-            points_key=self._p.points_key,
-            points_cell_id_key=self._p.points_cell_id_key,
-            points_background_id=self._p.points_background_id,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            points_gene_key=self._p.points_gene_key,
-            border_fraction_of_radius=border_fraction_of_radius,
-            buffer_fraction_of_radius=buffer_fraction_of_radius,
-            neighborhood_radius_factor=neighborhood_radius_factor,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-            inplace=inplace,
-            n_permutations=n_permutations,
-            random_state=random_state,
-            n_jobs=n_jobs,
-            parallel_backend=parallel_backend
-        )
-
-    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
 
     def border_admixture_score(
         self,

@@ -1,11 +1,13 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
+#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: segtraq_26
 #     language: python
@@ -767,54 +769,6 @@ for i, (method, st) in enumerate(st_dict.items()):
 for _method, st in st_dict.items():
     st.rs.similarity_nucleus_cell(n_jobs=-1)
 
-
-# %% [markdown]
-# When the intersection-over-union (IoU) between the cell and nucleus masks is high,
-# a large fraction of transcripts assigned to the cell also overlap with the nucleus.
-# Consequently, the returned similarity metric is strongly correlated with IoU.
-
-
-# %%
-def plot_correlation(sdata, method, ax):
-    obs = sdata.tables["table"].obs
-    df = obs[["iou", "similarity_nucleus_cell"]].dropna()
-
-    _slope, _intercept, r_value, _p_value, _std_err = linregress(df["iou"], df["similarity_nucleus_cell"])
-    r_squared = r_value**2
-
-    ax = sns.regplot(
-        data=df,
-        x="iou",
-        y="similarity_nucleus_cell",
-        ax=ax,
-        scatter_kws={"alpha": 0.6},
-        line_kws={"color": "red"},
-        ci=95,
-    )
-
-    ax.text(
-        0.05,
-        0.95,
-        f"$R^2 = {r_squared:.3f}$",
-        transform=ax.transAxes,
-        verticalalignment="top",
-        fontsize=12,
-        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
-    )
-
-    ax.set_xlabel("IoU")
-    ax.set_ylabel("Cosine similarity between cell and nucleus intersection")
-    ax.set_title(f"{method}: Cell-nuc similarity vs. IoU with Regression Line")
-    ax.grid(True)
-
-
-# %%
-fig, axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
-
-for i, (method, st) in enumerate(st_dict.items()):
-    plot_correlation(st.sdata, method, axes[i])
-
-plt.show()
 
 # %% [markdown]
 # A more informative metric is therefore the similarity in gene expression
