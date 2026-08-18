@@ -1,13 +1,15 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
+#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: segtraq_26
+#     display_name: segtraq_26 (3.11.13)
 #     language: python
 #     name: python3
 # ---
@@ -235,11 +237,11 @@ for method, st in st_dict.items():
 # %%
 for method, st in st_dict.items():
     if method.startswith("p"):
-        _cos_sim = st.vl.similarity_top_bottom(
+        _cos_sim = st.vl.top_bottom_difference(
             correct_z_drift=False
         )  # correct for z drift already done internally in proseg
     else:
-        _cos_sim = st.vl.similarity_top_bottom()
+        _cos_sim = st.vl.top_bottom_difference()
 
 
 # %%
@@ -276,19 +278,23 @@ density_plot_feature(st_dict, "similarity_top_bottom")
 # lead to increase similarity between top and bottom plane (`similarity_top_bottom`).
 
 # %%
-df = st_dict["proseg2"].sdata.tables["table"].obs[["similarity_top_bottom", "transcript_count"]].dropna()
+df = st_dict["proseg2"].sdata.tables["table"].obs[["top_bottom_difference", "transcript_count"]].dropna()
+df["transcript_count_rank"] = df["transcript_count"].rank()
 
 plt.figure(figsize=(5, 3))
 sns.regplot(
     data=df,
-    x="transcript_count",
-    y="similarity_top_bottom",
+    x="transcript_count_rank",
+    y="top_bottom_difference",
     scatter_kws={"alpha": 0.6},
     line_kws={"color": "red"},
     lowess=True,  # nonlinear
     ci=95,
 )
 plt.tight_layout()
+
+# %%
+st_dict["proseg2"].sdata.write("../../data/sdata_proseg2_G.zarr", overwrite=True)
 
 # %% [markdown]
 # The relationship between `similarity_top_bottom` and `transcript_count` looks linear.
