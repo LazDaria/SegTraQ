@@ -283,6 +283,10 @@ def similarity_top_bottom(
     counts_bottom = counts_bottom.reindex(index=all_cells, columns=all_genes, fill_value=0)
     counts_top = counts_top.reindex(index=all_cells, columns=all_genes, fill_value=0)
 
+    # Materialize dense count matrices once before entering the parallel loop.
+    counts_bottom_values = counts_bottom.to_numpy(dtype=int, copy=False)
+    counts_top_values = counts_top.to_numpy(dtype=int, copy=False)
+
     # Seeds are needed only when a permutation p-value is requested.
     if n_permutations > 0:
         rng = np.random.default_rng(random_state)
@@ -290,10 +294,10 @@ def similarity_top_bottom(
     else:
         seeds = [None] * len(all_cells)
 
-    def _score_cell(cid, cell_seed):
+    def _score_cell(i, cid, cell_seed):
         metrics = _two_profile_similarity_metrics(
-            counts_bottom.loc[cid].to_numpy(dtype=int),
-            counts_top.loc[cid].to_numpy(dtype=int),
+            counts_bottom_values[i],
+            counts_top_values[i],
             n_permutations=n_permutations,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
@@ -313,8 +317,8 @@ def similarity_top_bottom(
         return row
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_score_cell)(cid, cell_seed)
-        for cid, cell_seed in zip(all_cells, seeds, strict=False)
+        delayed(_score_cell)(i, cid, cell_seed)
+        for i, (cid, cell_seed) in enumerate(zip(all_cells, seeds, strict=False))
     )
     out = pd.DataFrame(rows)
 

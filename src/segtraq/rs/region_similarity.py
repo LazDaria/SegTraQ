@@ -321,6 +321,13 @@ def similarity_nucleus_cell(
         .reindex(index=all_cells, columns=common_genes, fill_value=0)
     )
 
+    # Materialize the already-dense nucleus/intersection count matrices once so
+    # parallel workers do not repeatedly perform pandas row indexing.
+    expr_nucleus_values = expr_nucleus.to_numpy(dtype=int, copy=False)
+    nucleus_positions = {nid: i for i, nid in enumerate(expr_nucleus.index)}
+    counts_intersection_values = counts_intersection.to_numpy(dtype=int, copy=False)
+    intersection_positions = {cid: i for i, cid in enumerate(counts_intersection.index)}
+
     seeds = _cell_seeds(len(match_df), random_state)
 
     def _cell_count_vector(cid) -> np.ndarray:
@@ -328,6 +335,56 @@ def similarity_nucleus_cell(
         if hasattr(row, "toarray"):
             row = row.toarray()
         return np.asarray(row).ravel()
+
+    #test
+    problems = []
+
+    for _, row in match_df.iterrows():
+        cid = row[shapes_cell_id_key]
+        nid = row["nucleus_id"]
+
+        if pd.isna(nid):
+            continue
+
+        x_cell = _cell_count_vector(cid)
+        x_overlap = counts_intersection.loc[cid].to_numpy()
+
+        if x_overlap.sum() > x_cell.sum():
+            problems.append({
+                "cell_id": cid,
+                "cell_total": x_cell.sum(),
+                "overlap_total": x_overlap.sum(),
+                "difference": x_overlap.sum() - x_cell.sum(),
+            })
+
+    problems = pd.DataFrame(problems)
+
+    print(f"{len(problems)} problematic cells")
+
+    problems_gene = []
+
+    for _, row in match_df.iterrows():
+        cid = row[shapes_cell_id_key]
+        nid = row["nucleus_id"]
+
+        if pd.isna(nid):
+            continue
+
+        x_cell = _cell_count_vector(cid)
+        x_overlap = counts_intersection.loc[cid].to_numpy()
+
+        bad = x_overlap > x_cell
+
+        if bad.any():
+            problems_gene.append({
+                "cell_id": cid,
+                "n_genes": bad.sum(),
+                "excess_transcripts": (x_overlap[bad] - x_cell[bad]).sum(),
+            })
+
+    problems_gene = pd.DataFrame(problems_gene)
+
+    print(f"{len(problems_gene)} cells with gene-wise inconsistencies")
 
     def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
@@ -340,8 +397,8 @@ def similarity_nucleus_cell(
         else:
             base_metrics = _two_profile_similarity_metrics(
                 _cell_count_vector(cid),
-                expr_nucleus.loc[nid].to_numpy(),
-                x_overlap=counts_intersection.loc[cid].to_numpy(),
+                expr_nucleus_values[nucleus_positions[nid]],
+                x_overlap=counts_intersection_values[intersection_positions[cid]],
                 n_permutations=n_permutations,
                 min_transcripts=min_transcripts,
                 min_genes=min_genes,
@@ -574,17 +631,22 @@ def similarity_nucleus_cytoplasm(
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
 
+    # Materialize dense count matrices once before entering the parallel loop.
+    counts_intersection_values = counts_intersection.to_numpy(dtype=int, copy=False)
+    counts_cytoplasm_values = counts_cytoplasm.to_numpy(dtype=int, copy=False)
+    has_nucleus = best_nuc_map.reindex(all_cells).notna().to_numpy()
+
     seeds = _cell_seeds(len(all_cells), random_state)
 
-    def _compute_one(cid, seed: np.uint32) -> dict:
-        if pd.isna(best_nuc_map.get(cid)):
+    def _compute_one(i, cid, seed: np.uint32) -> dict:
+        if not has_nucleus[i]:
             base_metrics = {"similarity": np.nan}
             if n_permutations > 0:
                 base_metrics["similarity_p_value"] = np.nan
         else:
             base_metrics = _two_profile_similarity_metrics(
-                counts_intersection.loc[cid].to_numpy(dtype=int),
-                counts_cytoplasm.loc[cid].to_numpy(dtype=int),
+                counts_intersection_values[i],
+                counts_cytoplasm_values[i],
                 n_permutations=n_permutations,
                 min_transcripts=min_transcripts,
                 min_genes=min_genes,
@@ -597,8 +659,8 @@ def similarity_nucleus_cytoplasm(
         }
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_compute_one)(cid, seed)
-        for cid, seed in zip(all_cells, seeds, strict=False)
+        delayed(_compute_one)(i, cid, seed)
+        for i, (cid, seed) in enumerate(zip(all_cells, seeds, strict=False))
     )
 
     sim_df = pd.DataFrame(rows)
@@ -744,14 +806,19 @@ def border_admixture_score(
     expr_center = expr_center.loc[common_cells]
     expr_border = expr_border.loc[common_cells]
     expr_neighborhood = expr_neighborhood.loc[common_cells]
-    
+
+    # Materialize dense matrices once before entering the parallel loop.
+    expr_center_values = expr_center.to_numpy(dtype=int, copy=False)
+    expr_border_values = expr_border.to_numpy(dtype=int, copy=False)
+    expr_neighborhood_values = expr_neighborhood.to_numpy(dtype=int, copy=False)
+
     seeds = _cell_seeds(len(common_cells), random_state)
 
-    def _one_cell(cid, seed):
+    def _one_cell(i, cid, seed):
         result = _border_admixture_permutation_metrics(
-            x_center=expr_center.loc[cid].to_numpy(dtype=int),
-            x_border=expr_border.loc[cid].to_numpy(dtype=int),
-            x_neighborhood=expr_neighborhood.loc[cid].to_numpy(dtype=int),
+            x_center=expr_center_values[i],
+            x_border=expr_border_values[i],
+            x_neighborhood=expr_neighborhood_values[i],
             n_permutations=n_permutations, min_transcripts=min_transcripts,
             min_genes=min_genes, pseudocount=pseudocount,
             rng=np.random.default_rng(int(seed)),
@@ -759,7 +826,8 @@ def border_admixture_score(
         return {id_key: cid, **result}
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_one_cell)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
+        delayed(_one_cell)(i, cid, seed)
+        for i, (cid, seed) in enumerate(zip(common_cells, seeds, strict=False))
     )
     out = pd.DataFrame(rows)
     if out.empty:

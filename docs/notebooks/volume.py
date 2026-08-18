@@ -24,7 +24,7 @@
 # As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination,
 # because transcripts from overlapping cells may be assigned to the same segmentation mask.
 #
-# <center>
+# <center>f
 #  <img src='../_static/img/docs/volume.png' width='90%' />
 # </center>
 #
@@ -411,7 +411,7 @@ def boxplot_per_celltype(st_dict, feature, q=1, significant_only=True):
 
 
 # %% [markdown]
-# `similarity_top_bottom` differs between cell types, with B cells accounting for much of the difference in the number of significant cells across methods (309 in Xenium, 139 in Proseg v2, and 106 in Proseg v3).
+# `similarity_top_bottom` differs between cell types, with B cells accounting for much of the difference in the number of significant cells across methods (312 in Xenium, 142 in Proseg v2, and 109 in Proseg v3).
 
 # %%
 boxplot_per_celltype(st_dict, "similarity_top_bottom")

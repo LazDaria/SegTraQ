@@ -619,12 +619,72 @@ def _cosine_similarity_two_vectors(
     x_a = np.rint(np.asarray(x_a)).astype(int)
     x_b = np.rint(np.asarray(x_b)).astype(int)
 
-    x_a_transformed = _pf_log1p_pf(x_a, scale=scale)
-    x_b_transformed = _pf_log1p_pf(x_b, scale=scale)
+    # Genes that are zero in both profiles contribute identical centered values
+    # after PFlog1pPF. Keep them in the cosine analytically while avoiding work on
+    # thousands of zero entries for sparse expression profiles.
+    mask = (x_a + x_b) > 0
+    if not mask.any():
+        return np.nan
 
-    sim = _cosine_sim(x_a_transformed, x_b_transformed)
+    sim = _cosine_similarity_rows(
+        x_a[mask][None, :],
+        x_b[mask][None, :],
+        scale=scale,
+        n_features_total=len(x_a),
+    )[0]
 
     return float(sim) if np.isfinite(sim) else np.nan
+
+
+def _cosine_similarity_rows(
+    x_a: np.ndarray,
+    x_b: np.ndarray,
+    *,
+    scale: float,
+    n_features_total: int,
+) -> np.ndarray:
+    """Compute PFlog1pPF cosine similarity row-wise for active genes.
+
+    `x_a` and `x_b` contain only genes with non-zero pooled counts. The contribution
+    of genes that are zero in both profiles is included analytically so the result is
+    identical to transforming and comparing the complete feature vectors.
+    """
+    x_a = np.asarray(x_a, dtype=float)
+    x_b = np.asarray(x_b, dtype=float)
+
+    total_a = x_a.sum(axis=1, keepdims=True)
+    total_b = x_b.sum(axis=1, keepdims=True)
+
+    log_a = np.log1p(scale * x_a / total_a)
+    log_b = np.log1p(scale * x_b / total_b)
+
+    # PFlog1pPF centers across the complete feature panel, including common zeros.
+    mean_a = log_a.sum(axis=1, keepdims=True) / n_features_total
+    mean_b = log_b.sum(axis=1, keepdims=True) / n_features_total
+
+    centered_a = log_a - mean_a
+    centered_b = log_b - mean_b
+
+    n_common_zero = n_features_total - x_a.shape[1]
+
+    dot = np.sum(centered_a * centered_b, axis=1)
+    norm_a_sq = np.sum(centered_a**2, axis=1)
+    norm_b_sq = np.sum(centered_b**2, axis=1)
+
+    if n_common_zero:
+        mean_a = mean_a[:, 0]
+        mean_b = mean_b[:, 0]
+        dot += n_common_zero * mean_a * mean_b
+        norm_a_sq += n_common_zero * mean_a**2
+        norm_b_sq += n_common_zero * mean_b**2
+
+    denom = np.sqrt(norm_a_sq * norm_b_sq)
+    return np.divide(
+        dot,
+        denom,
+        out=np.full_like(dot, np.nan, dtype=float),
+        where=denom > 0,
+    )
 
 
 def _two_profile_similarity_metrics(
@@ -661,7 +721,9 @@ def _two_profile_similarity_metrics(
     if x_overlap is not None:
         x_overlap = np.rint(np.asarray(x_overlap)).astype(int)
 
-    # Use expressed genes only for QC, but retain the full vectors for PFlog1pPF.
+    # Use expressed genes only for QC. Permutations are also restricted to these
+    # active genes for speed, while common-zero genes are retained analytically in
+    # the PFlog1pPF cosine calculation below.
     mask = (x_a + x_b) > 0
 
     n_a = int(x_a.sum())
@@ -676,11 +738,19 @@ def _two_profile_similarity_metrics(
     if k < min_genes or n_a < min_transcripts or n_b < min_transcripts:
         return empty
 
-    similarity_observed = _cosine_similarity_two_vectors(
-        x_a,
-        x_b,
+    n_features_total = len(x_a)
+    x_a = x_a[mask]
+    x_b = x_b[mask]
+
+    if x_overlap is not None:
+        x_overlap = x_overlap[mask]
+
+    similarity_observed = _cosine_similarity_rows(
+        x_a[None, :],
+        x_b[None, :],
         scale=scale,
-    )
+        n_features_total=n_features_total,
+    )[0]
 
     if not np.isfinite(similarity_observed):
         return empty
@@ -688,24 +758,16 @@ def _two_profile_similarity_metrics(
     if rng is None:
         rng = np.random.default_rng()
 
-    similarity_null = np.empty(n_permutations, dtype=float)
-
     if x_overlap is None:
-        # Disjoint profiles: repartition pooled transcripts.
+        # Disjoint profiles: repartition pooled transcripts. Generate all draws at
+        # once to avoid Python overhead across permutations.
         pooled = x_a + x_b
-
-        for i in range(n_permutations):
-            x_a_null = rng.multivariate_hypergeometric(
-                pooled,
-                n_a,
-            )
-            x_b_null = pooled - x_a_null
-
-            similarity_null[i] = _cosine_similarity_two_vectors(
-                x_a_null,
-                x_b_null,
-                scale=scale,
-            )
+        x_a_null = rng.multivariate_hypergeometric(
+            pooled,
+            n_a,
+            size=n_permutations,
+        )
+        x_b_null = pooled[None, :] - x_a_null
 
     else:
         # Overlapping profiles:
@@ -719,28 +781,34 @@ def _two_profile_similarity_metrics(
 
         pooled = x_a_only + x_overlap + x_b_only
 
+        # The overlap draws can be generated as a batch. The second draw is
+        # conditional on the remaining counts of each permutation and therefore
+        # still needs to be sampled once per permutation.
+        overlap_null = rng.multivariate_hypergeometric(
+            pooled,
+            n_overlap,
+            size=n_permutations,
+        )
+        remaining = pooled[None, :] - overlap_null
+
+        x_a_only_null = np.empty_like(remaining)
         for i in range(n_permutations):
-            overlap_null = rng.multivariate_hypergeometric(
-                pooled,
-                n_overlap,
-            )
-
-            remaining = pooled - overlap_null
-
-            x_a_only_null = rng.multivariate_hypergeometric(
-                remaining,
+            x_a_only_null[i] = rng.multivariate_hypergeometric(
+                remaining[i],
                 n_a_only,
             )
-            x_b_only_null = remaining - x_a_only_null
 
-            x_a_null = x_a_only_null + overlap_null
-            x_b_null = x_b_only_null + overlap_null
+        x_b_only_null = remaining - x_a_only_null
+        x_a_null = x_a_only_null + overlap_null
+        x_b_null = x_b_only_null + overlap_null
 
-            similarity_null[i] = _cosine_similarity_two_vectors(
-                x_a_null,
-                x_b_null,
-                scale=scale,
-            )
+    # Transform and compare all null profiles in one vectorized operation.
+    similarity_null = _cosine_similarity_rows(
+        x_a_null,
+        x_b_null,
+        scale=scale,
+        n_features_total=n_features_total,
+    )
 
     valid = np.isfinite(similarity_null)
 
@@ -763,7 +831,6 @@ def _two_profile_similarity_metrics(
         "similarity": float(similarity_residual),
         "similarity_p_value": float(similarity_p_value),
     }
-
 
 def _get_neighborhood_counts(
     sdata: sd.SpatialData,
@@ -1113,21 +1180,54 @@ def _border_admixture_permutation_metrics(
     if not np.isfinite(observed):
         return empty
 
+    # The set of genes used by the score is fixed by the observed center, border,
+    # and neighborhood profiles, so reuse it for all null permutations.
+    mask = (x_center + x_border + x_neighborhood) > 0
+    x_center = x_center[mask]
+    x_border = x_border[mask]
+    x_neighborhood = x_neighborhood[mask]
+
     pooled = x_center + x_border
     n_center = int(x_center.sum())
-    null_scores = np.empty(n_permutations, dtype=float)
 
-    for i in range(n_permutations):
-        center_null = rng.multivariate_hypergeometric(pooled, n_center)
-        border_null = pooled - center_null
-        null_scores[i] = _border_admixture_score_one_cell(
-            x_center=center_null,
-            x_border=border_null,
-            x_neighborhood=x_neighborhood,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            pseudocount=pseudocount,
-        )
+    # Sample all center-border reallocations at once to avoid Python overhead
+    # across permutations. Genes present only in the neighborhood have zero pooled
+    # counts and therefore do not need to be included in the hypergeometric draw.
+    pooled_mask = pooled > 0
+    center_null = np.zeros((n_permutations, len(pooled)), dtype=int)
+    center_null[:, pooled_mask] = rng.multivariate_hypergeometric(
+        pooled[pooled_mask],
+        n_center,
+        size=n_permutations,
+    )
+    border_null = pooled[None, :] - center_null
+
+    # Vectorized version of _border_admixture_score_one_cell() for the null draws.
+    k = len(pooled)
+    p_center = (center_null + pseudocount) / (center_null.sum(axis=1, keepdims=True) + pseudocount * k)
+    p_border = (border_null + pseudocount) / (border_null.sum(axis=1, keepdims=True) + pseudocount * k)
+    p_neighborhood = (x_neighborhood + pseudocount) / (x_neighborhood.sum() + pseudocount * k)
+
+    d = p_neighborhood[None, :] - p_center
+    denom = np.sum(d * d, axis=1)
+    numer = np.sum((p_border - p_center) * d, axis=1)
+    alpha = np.divide(
+        numer,
+        denom,
+        out=np.zeros_like(numer, dtype=float),
+        where=~np.isclose(denom, 0.0),
+    )
+    alpha = np.clip(alpha, 0.0, 1.0)
+
+    p_mix = p_center + alpha[:, None] * d
+    err_center_only = np.sum((p_border - p_center) ** 2, axis=1)
+    err_mixture = np.sum((p_border - p_mix) ** 2, axis=1)
+    null_scores = np.divide(
+        err_center_only - err_mixture,
+        err_center_only,
+        out=np.full(n_permutations, np.nan, dtype=float),
+        where=~np.isclose(err_center_only, 0.0),
+    )
 
     null_scores = null_scores[np.isfinite(null_scores)]
     if len(null_scores) == 0:
@@ -1139,4 +1239,3 @@ def _border_admixture_permutation_metrics(
         "border_admixture_score": float(residual),
         "border_admixture_p_value": float(p_value),
     }
-

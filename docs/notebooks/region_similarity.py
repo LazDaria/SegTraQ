@@ -1,29 +1,46 @@
+# -*- coding: utf-8 -*-
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     custom_cell_magics: kql
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.11.2
+#   kernelspec:
+#     display_name: allen (3.13.5)
+#     language: python
+#     name: python3
+# ---
+
 # %% [markdown]
 # # Module: Region Similarity
-# 
+#
 # Assuming that transcripts are homogeneously distributed throughout the cell,
 # we expect there to be similar expression of genes in the nucleus and in the rest of the cell.
 # If this is not the case, it can be indicative of transcript spillover from adjacent cells.
-# 
+#
 # <center>
 #  <img src='../_static/img/docs/region_similarity.png' width='90%' />
 # </center>
-# 
+#
 # The `region similarity` (`rs`) module compares transcript composition between different
 # subcellular regions to identify cells with unexpected spatial differences in expression.
-# 
+#
 # Because profiles with fewer transcripts are inherently more variable and therefore tend to appear
 # less similar even when sampled from the same underlying expression profile, SegTraQ accounts for
 # this finite-count effect using a permutation-based expectation. The reported scores measure
 # similarity relative to this expectation: values around zero indicate the expected level of similarity,
 # negative values indicate lower similarity than expected, and positive values indicate higher
 # similarity than expected. The accompanying p-value identifies cells with unusually low similarity.
-# 
+#
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
 # %%
-%load_ext autoreload
-%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 
 # %%
 import matplotlib.pyplot as plt
@@ -262,7 +279,7 @@ plot_histogram(
 # `similarity_nucleus_cell()` asks whether they are also molecularly consistent. It compares the transcript
 # composition of the whole cell with that of its matched nucleus and determines whether they are less similar
 # than expected given their transcript counts and overlap. For transcript-informed segmentation methods the whole cell may also include transcripts beyond morphological boundaries.
-# 
+#
 # A negative residual indicates unexpectedly different transcript compositions, which can arise, for example, when transcripts from neighboring cells are incorrectly assigned to the cell or when transcripts from the cell are incorrectly excluded, even if the cell and nucleus boundaries appear well matched.
 
 # %%
@@ -367,9 +384,9 @@ plt.show()
 
 # %% [markdown]
 # ## Similarity between nucleus and cytoplasm
-# 
+#
 # Because nuclear transcripts are part of the whole-cell profile, nucleus–cell similarity is partly driven by transcripts shared between the two profiles. We therefore also compare the nucleus with the remaining non-nuclear part of the cell (referred to here as the cytoplasm).
-# 
+#
 # While `similarity_nucleus_cell` evaluates whether the final cell-level expression profile is molecularly consistent with its matched nucleus, `similarity_nucleus_cytoplasm` provides a more direct comparison of transcript composition between the two compartments. Low residual values may indicate transcript misassignment or contamination, but can also reflect genuine subcellular RNA localization.
 
 # %%
@@ -492,22 +509,22 @@ plt.show()
 
 # %% [markdown]
 # ## Border admixture score
-# 
+#
 # A cell's border can differ from its center for many reasons, including genuine intracellular RNA localization. Therefore, low center–border similarity alone does not show that neighboring cells contributed to that difference.
-# 
+#
 # The `border_admixture_score()` tests this more directly by asking whether the border is better explained as a mixture of the cell center and its neighborhood:
-# 
+#
 # $$
 # p_{\text{border}} \approx (1 - \alpha)\,p_{\text{center}}
 # + \alpha\,p_{\text{neighborhood}}
 # $$
-# 
+#
 # The observed admixture score measures how much better this mixture explains the border compared with
 # the center alone. Because some apparent admixture can arise simply from finite transcript sampling,
 # SegTraQ subtracts the mean score expected under a permutation null. The reported
 # `border_admixture_score` therefore reflects **excess neighborhood-like admixture beyond
 # what is expected by chance**.
-# 
+#
 # Values around zero are close to the null expectation, while positive residuals indicate stronger
 # neighborhood contribution than expected. The accompanying upper-tail p-value identifies cells with
 # unusually strong admixture.
