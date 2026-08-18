@@ -285,15 +285,20 @@ density_plot_feature(st_dict, "similarity_top_bottom", significant_only=True)
 
 # %%
 obs = st_dict["proseg2"].sdata.tables["table"].obs
+
+obs["transcript_count_rank"] = obs["transcript_count"].rank()
+
 df = obs.loc[
     obs["similarity_top_bottom_p_value"] < 0.05,
     ["similarity_top_bottom", "transcript_count"],
 ].dropna()
 
+df = obs
+
 plt.figure(figsize=(5, 3))
 sns.regplot(
     data=df,
-    x="transcript_count",
+    x="transcript_count_rank",
     y="similarity_top_bottom",
     scatter_kws={"alpha": 0.6},
     line_kws={"color": "red"},
@@ -301,6 +306,9 @@ sns.regplot(
     ci=95,
 )
 plt.tight_layout()
+
+# %%
+st_dict["proseg2"].sdata.write("../../data/sdata_proseg2_similarity.zarr", overwrite=True)
 
 # %% [markdown]
 # The regression above is restricted to cells with significant top–bottom dissimilarity.
