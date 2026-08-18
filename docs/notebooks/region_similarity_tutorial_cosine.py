@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: segtraq_26 (3.11.13)
 #     language: python
@@ -15,7 +15,7 @@
 # ---
 
 # %% [markdown]
-# # Module: Region Difference
+# # Module: Region Similarity
 #
 # Assuming that transcripts are homogeneously distributed throughout the cell,
 # we expect there to be similar expression of genes in the nucleus and in the rest of the cell.
@@ -25,11 +25,15 @@
 #  <img src='../_static/img/docs/region_similarity.png' width='90%' />
 # </center>
 #
-# The `region difference` metrics quantify how strongly transcript composition differs
-# between subcellular regions (e.g., cell and nucleus). They use a bias-corrected,
-# count-normalized G statistic; larger values indicate stronger compositional differences.
-# Because of the finite-count bias correction, values can be slightly negative when the observed
-# profiles are more similar than expected under the sampling null.
+# The `region similarity` (`rs`) module compares transcript-composition profiles between
+# subcellular regions (e.g., cell and nucleus). Count profiles are transformed with PFlog1pPF
+# (shifted CLR) and compared using cosine similarity. To account for finite-count effects, the
+# reported score is a permutation-corrected residual: observed cosine similarity minus the mean
+# similarity expected under a conditional random-splitting null.
+#
+# Residuals around zero are close to the null expectation, negative values indicate lower similarity
+# than expected, and positive values indicate higher similarity than expected. The accompanying
+# lower-tail permutation p-value quantifies evidence for unusually low similarity.
 #
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
@@ -227,55 +231,54 @@ plot_histogram(
 )
 
 # %% [markdown]
-# ## Expression difference between cell and nucleus
+# ## Expression similarity between cell and nucleus
 
 # %% [markdown]
-# Now that we have matched each cell with a nucleus, we can ask how strongly the transcript
-# composition of the whole cell differs from that of its matched nucleus.
-# `nucleus_cell_difference()` reports a bias-corrected, count-normalized G statistic.
-# Values close to zero indicate that the observed profiles differ little beyond finite-count
-# sampling effects, whereas larger positive values indicate stronger compositional differences.
-# Small negative values can occur because the finite-count expectation is subtracted from the score.
+# Now that we have matched each cell with a nucleus, we can compare the transcript composition
+# of the whole cell with that of its matched nucleus using `similarity_nucleus_cell()`.
+# The two count profiles are transformed with PFlog1pPF and compared by cosine similarity.
 #
-# By default, the function also performs a conditional permutation test. The pooled gene counts
-# are redistributed between the two regions while preserving their transcript totals, yielding a
-# `nucleus_cell_difference_p_value` for the null hypothesis that both regions share the same
-# underlying transcript composition.
+# To reduce finite-count effects, SegTraQ generates a conditional permutation null by pooling the
+# two profiles and randomly reallocating transcripts while preserving both region totals. The reported
+# `similarity_nucleus_cell` is the observed cosine similarity minus the mean null similarity.
+# Values near zero are close to the random-splitting expectation, whereas increasingly negative
+# values indicate that cell and nucleus are less similar than expected. The lower-tail permutation
+# p-value tests whether this reduction in similarity is stronger than expected under the null.
 
 # %%
-nucleus_cell_df = st.rs.nucleus_cell_difference(n_permutations=200)
+nucleus_cell_df = st.rs.similarity_nucleus_cell(n_permutations=200)
 
 # %%
 plot_histogram(
     df=sdata["table"].obs,
-    column="nucleus_cell_difference",
-    title="Expression difference between cell and nucleus",
-    xlabel="Cell–nucleus difference",
+    column="similarity_nucleus_cell",
+    title="Residual similarity between cell and nucleus",
+    xlabel="Cell–nucleus similarity residual",
 )
 
 # %% [markdown]
-# The score is an effect-size-like measure: larger values indicate stronger differences in
-# transcript composition. In this context, unusually large cell–nucleus differences may be
-# compatible with transcript spillover or other assignment errors, although genuine subcellular
-# RNA localization can also contribute.
+# The residual score measures deviation from the finite-count null expectation. More negative
+# values indicate that cell and nucleus are less similar than expected from random sampling alone.
+# Such deviations can be compatible with transcript spillover or other assignment errors, although
+# genuine subcellular RNA localization can also contribute.
 
 # %%
 plot_regression(
     df=sdata["table"].obs,
     x="iou",
-    y="nucleus_cell_difference",
-    title="Cell–nucleus difference vs. IoU",
-    ylabel="Cell–nucleus difference",
+    y="similarity_nucleus_cell",
+    title="Cell–nucleus similarity residual vs. IoU",
+    ylabel="Cell–nucleus similarity residual",
 )
 
 # %% [markdown]
-# This plot can be used to assess whether the expression difference depends strongly on the
-# geometric overlap between the matched cell and nucleus.
+# This plot can be used to assess whether the null-corrected similarity still depends strongly on
+# the geometric overlap between the matched cell and nucleus.
 
 # %% [markdown]
-# The spatial plot below shows cell boundaries colored by the cell–nucleus difference.
-# Cells with larger values have transcript compositions that deviate more strongly from their
-# matched nuclear profile.
+# The spatial plot below shows cell boundaries colored by the cell–nucleus similarity residual.
+# More negative values indicate cells whose whole-cell and nuclear profiles are less similar than
+# expected under the conditional random-splitting null.
 
 # %%
 # link annotations with cell boundaries
@@ -309,84 +312,77 @@ sdata.pl.render_shapes(
     outline_color="black",
 ).pl.render_shapes(
     element="cell_boundaries",
-    color="nucleus_cell_difference",
+    color="similarity_nucleus_cell",
     cmap="viridis",
     fill_alpha=0.5,
     outline_alpha=1.0,
     outline_width=0.5,
     outline_color="black",
-).pl.show(ax=ax[1], title="Cell boundaries colored by cell–nucleus difference", colorbar=True)
+).pl.show(ax=ax[1], title="Cell boundaries colored by cell–nucleus similarity residual", colorbar=True)
 
 # %% [markdown]
 # ### Using the permutation p-value
 #
-# The difference score describes the **magnitude** of the compositional difference, whereas the
-# permutation p-value asks whether a difference at least this large is unusual under the shared-profile
-# null model. The two quantities therefore answer different questions and are most useful together.
+# The similarity residual describes how far the observed cosine similarity lies from the mean
+# permutation-null similarity. The lower-tail permutation p-value asks whether the observed similarity
+# is unusually **low** under that null. Thus, cells with a negative residual and a small p-value show
+# evidence of stronger regional disagreement than expected from finite transcript sampling alone.
 #
-# Because a p-value is computed for every cell, multiple-testing correction should be considered when
-# using it to flag cells. Here we apply Benjamini–Hochberg false-discovery-rate correction and identify
-# cells with an adjusted p-value below 0.05. In practice, it is often useful to combine statistical
-# significance with a minimum effect-size threshold rather than relying on the p-value alone.
-# Note that with `n_permutations=200`, the smallest attainable p-value is `1 / 201`; increase
-# `n_permutations` when finer p-value resolution is needed, especially for multiple-testing correction.
+# Because a p-value is computed for every cell, we control the false-discovery rate across cells.
+# SciPy provides Benjamini–Hochberg correction through `scipy.stats.false_discovery_control`.
+# Below, we adjust only non-missing p-values and mark cells with FDR < 0.05. Statistical significance
+# should still be considered together with the residual magnitude rather than used as a standalone
+# measure of biological importance. With `n_permutations=200`, the smallest attainable raw p-value is
+# `1 / 201`; increase `n_permutations` when finer p-value resolution is required.
 
 # %%
 obs = sdata.tables["table"].obs
-p_col = "nucleus_cell_difference_p_value"
+p_col = "similarity_nucleus_cell_p_value"
 valid = obs[p_col].notna()
 
-obs["nucleus_cell_difference_q_value"] = np.nan
-obs.loc[valid, "nucleus_cell_difference_q_value"] = false_discovery_control(
+obs["similarity_nucleus_cell_q_value"] = np.nan
+obs.loc[valid, "similarity_nucleus_cell_q_value"] = false_discovery_control(
     obs.loc[valid, p_col].to_numpy(),
     method="bh",
 )
 
-obs["nucleus_cell_difference_significant"] = (
-    obs["nucleus_cell_difference_q_value"] < 0.05
+obs["similarity_nucleus_cell_significant"] = (
+    obs["similarity_nucleus_cell_q_value"] < 0.05
 )
 
 obs.loc[
     valid,
     [
         "cell_id",
-        "nucleus_cell_difference",
-        "nucleus_cell_difference_p_value",
-        "nucleus_cell_difference_q_value",
-        "nucleus_cell_difference_significant",
+        "similarity_nucleus_cell",
+        "similarity_nucleus_cell_p_value",
+        "similarity_nucleus_cell_q_value",
+        "similarity_nucleus_cell_significant",
     ],
 ].head()
 
 # %% [markdown]
-# If only the difference score is needed, the permutation test can be skipped entirely by setting
-# `n_permutations=0`. This is substantially faster and the returned DataFrame then does not contain
-# a p-value column.
-
-# %%
-difference_only_df = st.rs.nucleus_cell_difference(
-    n_permutations=0,
-    inplace=False,
-)
-difference_only_df.head()
+# The reported residual requires the permutation-null mean, so `n_permutations` must be at least 100.
+# Increasing the number of permutations improves the precision of both the null mean and the p-value.
 
 # %% [markdown]
-# We can inspect cells with low IoU and a large cell–nucleus difference to distinguish geometric
-# mismatch from expression-profile disagreement.
+# We can inspect cells with low IoU and strongly negative cell–nucleus similarity residuals to
+# distinguish geometric mismatch from expression-profile disagreement.
 
 # %%
 obs = sdata["table"].obs
-df = obs[["cell_id", "iou", "nucleus_cell_difference"]].dropna()
-df.loc[df["iou"] < 0.1].sort_values("nucleus_cell_difference", ascending=False).head()
+df = obs[["cell_id", "iou", "similarity_nucleus_cell"]].dropna()
+df.loc[df["iou"] < 0.1].sort_values("similarity_nucleus_cell").head()
 
 # %% [markdown]
-# The cells at the top of this table combine weak geometric overlap with a strong compositional
-# difference. Plotting one example can help determine whether the score is consistent with
+# The cells at the top of this table combine weak geometric overlap with unusually low regional
+# similarity. Plotting one example can help determine whether the score is consistent with
 # transcript assignment outside the matched nuclear region.
 
 # %%
 cid = (
     df.loc[df["iou"] < 0.1]
-    .sort_values("nucleus_cell_difference", ascending=False)
+    .sort_values("similarity_nucleus_cell")
     .iloc[0]["cell_id"]
 )
 cid
@@ -487,7 +483,7 @@ def plot_cell_with_nucleus_and_transcripts(
 
 
 # %%
-plot_cell_with_nucleus_and_transcripts(cid, title="Cell with large cell–nucleus difference and low IoU")
+plot_cell_with_nucleus_and_transcripts(cid, title="Cell with low cell–nucleus similarity residual and low IoU")
 
 # %% [markdown]
 # Comparing the nucleus with the whole cell is not fully specific because the nuclear transcripts
@@ -497,46 +493,46 @@ plot_cell_with_nucleus_and_transcripts(cid, title="Cell with large cell–nucleu
 # original morphological boundary).
 
 # %% [markdown]
-# ## Difference between Nucleus and Cytoplasm
+# ## Similarity between nucleus and cytoplasm
 #
-# `nucleus_cytoplasm_difference()` compares nuclear and cytoplasmic gene-count profiles using the
-# same bias-corrected G-based difference score and conditional permutation test.
-# The metric is defined only for cells with a matched nucleus and sufficient transcripts and genes
-# in both regions (`min_transcripts`, `min_genes`).
+# `similarity_nucleus_cytoplasm()` compares nuclear and cytoplasmic gene-count profiles using the
+# same PFlog1pPF cosine-similarity residual and conditional permutation null. The metric is defined
+# only for cells with a matched nucleus and sufficient transcripts and genes in both regions
+# (`min_transcripts`, `min_genes`).
 #
-# Larger values indicate stronger differences in transcript composition between the two compartments.
-# Such differences can reflect assignment errors or contamination, but may also arise from genuine
-# subcellular RNA localization.
+# Residuals near zero are close to the null expectation, while negative values indicate that nucleus
+# and cytoplasm are less similar than expected. Such deviations can reflect assignment errors or
+# contamination, but may also arise from genuine subcellular RNA localization.
 
 # %%
-nuc_cyto_df = st.rs.nucleus_cytoplasm_difference(n_permutations=200)
+nuc_cyto_df = st.rs.similarity_nucleus_cytoplasm(n_permutations=200)
 nuc_cyto_df.head()
 
 # %% [markdown]
-# The histogram below shows the distribution of nucleus–cytoplasm differences.
+# The histogram below shows the distribution of nucleus–cytoplasm similarity residuals.
 
 # %%
 plot_histogram(
     df=sdata["table"].obs,
-    column="nucleus_cytoplasm_difference",
-    xlabel="Nucleus–cytoplasm difference",
+    column="similarity_nucleus_cytoplasm",
+    xlabel="Nucleus–cytoplasm similarity residual",
 )
 
 # %% [markdown]
-# The scatter plot below shows whether the compositional difference between nucleus and cytoplasm
-# depends on the geometric overlap between the matched nucleus and cell.
+# The scatter plot below shows whether the null-corrected nucleus–cytoplasm similarity depends on
+# the geometric overlap between the matched nucleus and cell.
 
 # %%
 plot_regression(
     df=sdata["table"].obs,
     x="iou",
-    y="nucleus_cytoplasm_difference",
-    title="Nucleus–cytoplasm difference vs. IoU",
-    ylabel="Nucleus–cytoplasm difference",
+    y="similarity_nucleus_cytoplasm",
+    title="Nucleus–cytoplasm similarity residual vs. IoU",
+    ylabel="Nucleus–cytoplasm similarity residual",
 )
 
 # %% [markdown]
-# The spatial plots below compare geometric overlap with the two G-based regional difference scores.
+# The spatial plots below compare geometric overlap with the two null-corrected regional similarity scores.
 
 # %%
 # link annotations with cell boundaries
@@ -574,7 +570,7 @@ sdata.pl.render_shapes(
     outline_color="black",
 ).pl.render_shapes(
     element="cell_boundaries",
-    color="nucleus_cell_difference",
+    color="similarity_nucleus_cell",
     cmap="viridis",
     fill_alpha=0.5,
     outline_alpha=1.0,
@@ -595,7 +591,7 @@ sdata.pl.render_shapes(
     outline_color="black",
 ).pl.render_shapes(
     element="cell_boundaries",
-    color="nucleus_cytoplasm_difference",
+    color="similarity_nucleus_cytoplasm",
     cmap="viridis",
     fill_alpha=0.5,
     outline_alpha=1.0,
@@ -609,13 +605,13 @@ sdata.pl.render_shapes(
 )
 
 # %% [markdown]
-# Cells with large regional differences despite high `IoU` are examples where geometric agreement does not necessarily imply similar transcript composition.
+# Strongly negative regional similarity residuals despite high `IoU` illustrate that geometric agreement does not necessarily imply similar transcript composition.
 
 # %% [markdown]
-# ## Difference between the cell center and border
+# ## Similarity between the cell center and border
 #
-# `center_border_difference()` compares gene composition in the cell interior (“center”)
-# and outer ring (“border”) using the G-based difference score.
+# `similarity_center_border()` compares gene composition in the cell interior (“center”)
+# and outer ring (“border”) using the PFlog1pPF cosine-similarity residual.
 #
 # Specifically, it:
 #
@@ -626,26 +622,26 @@ sdata.pl.render_shapes(
 # - A buffer region between them is ignored
 # 3. Assigns transcripts to center and border regions.
 # 4. Builds center and border gene-count profiles.
-# 5. Computes the bias-corrected G-based difference and, when requested, a conditional permutation p-value.
+# 5. Computes cosine similarity, subtracts the mean conditional-null similarity, and reports a lower-tail permutation p-value.
 
 # %%
-center_border_df = st.rs.center_border_difference()
+center_border_df = st.rs.similarity_center_border()
 
 # %%
 center_border_df.head()
 
 # %% [markdown]
-# The histogram below shows the distribution of the compositional difference between the cell center and border.
+# The histogram below shows the distribution of the center–border similarity residual.
 
 # %%
 plot_histogram(
     df=sdata["table"].obs,
-    column="center_border_difference",
-    xlabel="Center–border difference",
+    column="similarity_center_border",
+    xlabel="Center–border similarity residual",
 )
 
 # %% [markdown]
-# The spatial plot below shows the spatial distribution of the computed difference.
+# The spatial plot below shows the spatial distribution of the computed similarity residual.
 
 # %%
 # link annotations with cell boundaries
@@ -666,48 +662,48 @@ sdata.pl.render_shapes(
     outline_color="black",
 ).pl.render_shapes(
     element="cell_boundaries",
-    color="center_border_difference",
+    color="similarity_center_border",
     cmap="viridis",
     fill_alpha=0.5,
     outline_alpha=1.0,
     outline_width=0.5,
     outline_color="black",
 ).pl.show(
-    title="Difference: center vs. border",
+    title="Similarity residual: center vs. border",
     colorbar=True,
     figsize=(6, 6),
 )
 
 # %% [markdown]
-# ## Difference between the border and neighborhood
-# `border_neighborhood_difference()` compares gene composition in the cell border with that of
-# its surrounding neighborhood using the same G-based difference score.
+# ## Similarity between the border and neighborhood
+# `similarity_border_neighborhood()` compares gene composition in the cell border with that of
+# its surrounding neighborhood using the same PFlog1pPF cosine-similarity residual.
 #
 # Specifically, it:
 # 1. Defines the border region as the outer ring of each cell (with an inner buffer gap).
 # 2. Identifies neighboring cells based on a distance threshold relative to cell size.
 # 3. Aggregates transcripts from neighboring cells to obtain a neighborhood expression profile.
 # 4. Builds border and neighborhood gene-count profiles.
-# 5. Computes the bias-corrected G-based difference and, when requested, a conditional permutation p-value.
+# 5. Computes cosine similarity, subtracts the mean conditional-null similarity, and reports a lower-tail permutation p-value.
 
 # %%
-border_nh_df = st.rs.border_neighborhood_difference()
+border_nh_df = st.rs.similarity_border_neighborhood()
 
 # %%
 border_nh_df.head()
 
 # %% [markdown]
-# The histogram below shows the distribution of the compositional difference between the cell border and neighborhood.
+# The histogram below shows the distribution of the border–neighborhood similarity residual.
 
 # %%
 plot_histogram(
     df=sdata["table"].obs,
-    column="border_neighborhood_difference",
-    xlabel="Border–neighborhood difference",
+    column="similarity_border_neighborhood",
+    xlabel="Border–neighborhood similarity residual",
 )
 
 # %% [markdown]
-# The spatial plot below shows the spatial distribution of the computed difference.
+# The spatial plot below shows the spatial distribution of the computed similarity residual.
 
 # %%
 # link annotations with cell boundaries
@@ -728,35 +724,34 @@ sdata.pl.render_shapes(
     outline_color="black",
 ).pl.render_shapes(
     element="cell_boundaries",
-    color="border_neighborhood_difference",
+    color="similarity_border_neighborhood",
     cmap="viridis",
     fill_alpha=0.5,
     outline_alpha=1.0,
     outline_width=0.5,
     outline_color="black",
 ).pl.show(
-    title="Difference: border vs. neighborhood",
+    title="Similarity residual: border vs. neighborhood",
     colorbar=True,
     figsize=(6, 6),
 )
 
 # %% [markdown]
-# The border can differ from both the center and the neighborhood. Because the new scores are
-# G-based differences rather than similarities, a similarity ratio is no longer appropriate.
-# A simple descriptive comparison is instead the difference contrast
+# The border can resemble both the center and the neighborhood. Because these are residual similarities
+# relative to pair-specific permutation nulls, their direct difference is only a descriptive contrast:
 #
 # $$
-# \Delta = D_{\mathrm{center,border}} - D_{\mathrm{border,neighborhood}}.
+# \Delta = R_{\mathrm{border,neighborhood}} - R_{\mathrm{center,border}}.
 # $$
 #
-# Positive values indicate that the border is compositionally closer to the neighborhood than to
-# the center, whereas negative values indicate the opposite. This contrast is descriptive and
-# should not be interpreted as a formal contamination test.
+# Positive values mean that border–neighborhood similarity is higher relative to its own null than
+# center–border similarity is relative to its null. Because the two residuals have different pooled
+# profiles and null distributions, this contrast should not be interpreted as a formal contamination test.
 
 # %%
 obs = sdata.tables["table"].obs
-obs["border_neighborhood_contrast"] = (
-    obs["center_border_difference"] - obs["border_neighborhood_difference"]
+obs["border_neighborhood_similarity_contrast"] = (
+    obs["similarity_border_neighborhood"] - obs["similarity_center_border"]
 )
 
 # %%
@@ -766,21 +761,21 @@ sdata.set_table_annotates_spatialelement("table", region="cell_boundaries")
 
 axes = plt.subplots(1, 3, figsize=(15, 6), constrained_layout=True)[1].flatten()
 
-sdata.pl.render_shapes(element="cell_boundaries", color="center_border_difference").pl.show(
-    ax=axes[0], title="Center–border difference"
+sdata.pl.render_shapes(element="cell_boundaries", color="similarity_center_border").pl.show(
+    ax=axes[0], title="Center–border similarity residual"
 )
-sdata.pl.render_shapes(element="cell_boundaries", color="border_neighborhood_difference").pl.show(
-    ax=axes[1], title="Border–neighborhood difference"
+sdata.pl.render_shapes(element="cell_boundaries", color="similarity_border_neighborhood").pl.show(
+    ax=axes[1], title="Border–neighborhood similarity residual"
 )
-sdata.pl.render_shapes(element="cell_boundaries", color="border_neighborhood_contrast").pl.show(
-    ax=axes[2], title="Center–border minus border–neighborhood"
+sdata.pl.render_shapes(element="cell_boundaries", color="border_neighborhood_similarity_contrast").pl.show(
+    ax=axes[2], title="Border–neighborhood minus center–border"
 )
 
 # %% [markdown]
 # ## Border admixture score
-# Comparing the two regional difference scores can indicate whether the border is compositionally
-# closer to the center or to the neighborhood, but it does not directly estimate a neighborhood
-# contribution. The **border admixture score** instead explicitly models the border as a mixture of
+# Comparing the two regional similarity residuals can show how the border relates to center and
+# neighborhood relative to their respective null expectations, but it does not directly estimate a
+# neighborhood contribution. The **border admixture score** instead explicitly models the border as a mixture of
 # center and neighborhood expression.
 #
 # Specifically, the function `border_admixture_score()`:

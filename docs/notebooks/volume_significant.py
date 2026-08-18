@@ -1,13 +1,15 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
+#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: segtraq_26
+#     display_name: segtraq_26 (3.11.13)
 #     language: python
 #     name: python3
 # ---
@@ -222,9 +224,11 @@ for method, st in st_dict.items():
 # bottom: z ≤ q (default  q=0.30)
 # top: z ≥ 1−q
 #
-# We aggregate gene counts for both parts, normalize within each cell using
-# the combined library size (top+bottom), apply `log1p`, and compute the cosine
-# similarity between the two vectors (considering genes non-zero in either part).
+# We aggregate gene counts for both parts, apply PFlog1pPF (shifted CLR), and compute
+# their cosine similarity. A conditional permutation null then accounts for finite-count
+# sampling effects; `similarity_top_bottom` is the observed cosine similarity minus the
+# mean null similarity. The accompanying lower-tail permutation p-value identifies cells
+# whose top and bottom profiles are significantly less similar than expected under the null.
 # To enable fair comparisons between methods, we optionally correct for global
 # z-drift by normalizing z coordinates before splitting transcripts into top
 # and bottom (default `correct_z_drift=True`); Proseg already performs this
@@ -243,10 +247,14 @@ for method, st in st_dict.items():
 
 
 # %%
-def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
+def density_plot_feature(sdata_dict, feature, figsize=(5, 3), significant_only=False):
     all_feats = []
     for method, st in sdata_dict.items():
-        feat = st.sdata["table"].obs[feature].to_frame(feature)
+        obs = st.sdata["table"].obs
+        if (feature == "similarity_top_bottom") and significant_only:
+            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05]
+            print(f"{method}: {obs.index.__len__()}")
+        feat = obs[feature].to_frame(feature)
         feat["method"] = method
         all_feats.append(feat)
 
@@ -259,24 +267,28 @@ def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
 
 
 # %% [markdown]
-# Proseg version 2 and 3 show the best correlation between top and bottom z-plane overall.
+# Below, we compare the top–bottom similarity residual only among cells with a significant
+# lower-tail permutation p-value (`similarity_top_bottom_p_value < 0.05`). These cells have
+# top and bottom profiles that are less similar than expected under the conditional null.
 
 # %%
 density_plot_feature(st_dict, "similarity_top_bottom")
 
+# %%
+density_plot_feature(st_dict, "similarity_top_bottom", significant_only=True)
+
 # %% [markdown]
-# Even after within-cell normalization, high-count cells have less sampling noise,
-# so their top and bottom gene profiles are estimated more reliably and tend to
-# look more similar, which increases cosine similarity. In low-count cells,
-# random dropout and sparse gene sampling make the two vectors noisier and artificially
-# reduce the similarity.
-#
-# In addition, high-count cells are often larger in size and therefore span a
-# larger proportion of z, which might reduce the risk of 3D overlap and hence
-# lead to increase similarity between top and bottom plane (`similarity_top_bottom`).
+# Because `similarity_top_bottom` is permutation-null corrected, we assess any remaining
+# relationship with transcript count only among cells whose top–bottom dissimilarity is
+# significant (`p < 0.05`). This focuses the diagnostic on cells with evidence for a
+# depth-dependent expression shift rather than cells compatible with the null.
 
 # %%
-df = st_dict["proseg2"].sdata.tables["table"].obs[["similarity_top_bottom", "transcript_count"]].dropna()
+obs = st_dict["proseg2"].sdata.tables["table"].obs
+df = obs.loc[
+    obs["similarity_top_bottom_p_value"] < 0.05,
+    ["similarity_top_bottom", "transcript_count"],
+].dropna()
 
 plt.figure(figsize=(5, 3))
 sns.regplot(
@@ -291,8 +303,9 @@ sns.regplot(
 plt.tight_layout()
 
 # %% [markdown]
-# The relationship between `similarity_top_bottom` and `transcript_count` looks linear.
-# The analytical Pearson residuals lead to stabilisation of the count effect on the cosine similarity.
+# The regression above is restricted to cells with significant top–bottom dissimilarity.
+# Comparing linear, log, and square-root count relationships can reveal whether a residual
+# count dependence remains after permutation-null correction.
 
 # %%
 x = df["transcript_count"].to_numpy()
@@ -321,18 +334,18 @@ print(f"R² sqrt:   {r2_sqrt:.3f}")
 
 
 # %% [markdown]
-# Thus, it makes sense to plot the expression similarity between top and bottom plane per cell type,
-# as this have less variation in transcript counts and cell size.
-#
-# This confirms that Proseg 2 and 3 show the highest expression similarity between top and
-# bottom plane for each cell type.
+# We next compare the top–bottom similarity residual by transferred cell type, again using
+# only cells with a significant lower-tail permutation p-value. Stratifying by cell type
+# additionally reduces variation associated with cell-type-specific transcript abundance and size.
 
 
 # %%
-def boxplot_per_celltype(st_dict, feature, q=1):
+def boxplot_per_celltype(st_dict, feature, q=1, significant_only=False):
     dfs = []
     for method, st in st_dict.items():
         obs = st.sdata["table"].obs[st.sdata["table"].obs["transferred_cell_type"].notna()].copy()
+        if (feature == "similarity_top_bottom") and significant_only:
+            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05].copy()
         obs["transferred_cell_type"] = obs["transferred_cell_type"].cat.remove_unused_categories()
         tmp = obs[["transferred_cell_type", feature]].copy()
         tmp["method"] = method
@@ -361,9 +374,12 @@ def boxplot_per_celltype(st_dict, feature, q=1):
 # %%
 boxplot_per_celltype(st_dict, "similarity_top_bottom")
 
+# %%
+boxplot_per_celltype(st_dict, "similarity_top_bottom", significant_only=True)
+
 # %% [markdown]
-# Proseg achieves this despite having a lower mean transcript count overall,
-# which would typically reduce the expected correlation.
+# The comparison above concerns the subset of cells with significant top–bottom dissimilarity;
+# overall transcript counts are shown below as additional context across segmentation methods.
 
 # %%
 for method, st in st_dict.items():
@@ -508,17 +524,12 @@ for _method, st in st_dict.items():
     _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes}, n_workers=8)
 
 # %% [markdown]
-# Plotting `similarity_top_bottom` against `mean_vsi` shows a weaker association in Proseg v2
-# (and Proseg v3) than in Xenium. One plausible explanation is that Proseg’s quasi-3D
-# assignment reduces the impact of vertically mixed regions on per-cell expression consistency:
-# even where `mean_vsi` is low (regions that look vertically inconsistent in the raw transcript field),
-# Proseg can assign transcripts more coherently to individual cells,
-# resulting in relatively high `similarity_top_bottom`. In Xenium, by contrast,
-# low-VSI regions more directly translate into lower within-cell top–bottom similarity,
-# yielding a stronger correlation.
-#
-# We filter out cells with transcript counts below the 10th percentile,
-# as low-count cells tend to produce noisier and less stable similarity estimates.
+# We compare `similarity_top_bottom` with vertical signal integrity only among cells with a
+# significant lower-tail permutation p-value (`p < 0.05`). This restricts the comparison to
+# cells whose top and bottom expression profiles are less similar than expected under the
+# conditional null. VSI is an independent spatial measure of vertical mixing, so their
+# association can indicate whether expression-level depth inconsistency coincides with
+# transcript-level vertical signal disruption.
 
 # %%
 n = len(st_dict)
@@ -528,10 +539,15 @@ axes = np.atleast_1d(axes)
 for ax, (method, st) in zip(axes, st_dict.items(), strict=False):
     df = (
         st.sdata.tables["table"]
-        .obs[["vertical_signal_integrity", "similarity_top_bottom", "transcript_count"]]
+        .obs[[
+            "vertical_signal_integrity",
+            "similarity_top_bottom",
+            "similarity_top_bottom_p_value",
+            "transcript_count",
+        ]]
         .dropna()
     )
-    df = df[df["transcript_count"] > df["transcript_count"].quantile(0.1)]  # filter low count cells
+    df = df[df["similarity_top_bottom_p_value"] < 0.05]
 
     r = np.corrcoef(df["vertical_signal_integrity"], df["similarity_top_bottom"])[0, 1]
     r2 = r**2
