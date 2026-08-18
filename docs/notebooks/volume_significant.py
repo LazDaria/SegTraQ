@@ -71,6 +71,205 @@ sdata_xenium = sd.read_zarr("../../data/xenium_v1_data/sdata_xenium_crop.zarr")
 sdata_proseg2 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")
 sdata_proseg3 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v3_crop.zarr/")
 
+# %%
+sdata_proseg_sim = sd.read_zarr("../../data/sdata_proseg2_similarity.zarr/")
+sdata_proseg_g = sd.read_zarr("../../data/sdata_proseg2_G.zarr/")
+
+
+# %%
+def plot_regression(
+    df,
+    x,
+    y,
+    figsize=(6, 6),
+    dropna=True,
+    ci=95,
+    scatter_kws=None,
+    line_kws=None,
+    title=None,
+    xlabel=None,
+    ylabel=None,
+    r2_loc=(0.05, 0.95),
+    r2_fmt="{:.3f}",
+    ax=None,
+):
+    data = df[[x, y]]
+    if dropna:
+        data = data.dropna()
+
+    # Regression stats
+    slope, intercept, r_value, p_value, std_err = linregress(data[x], data[y])
+    r_squared = r_value**2
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    scatter_kws = scatter_kws or {"alpha": 0.6}
+    line_kws = line_kws or {"color": "red"}
+
+    sns.regplot(
+        data=data,
+        x=x,
+        y=y,
+        ci=ci,
+        scatter_kws=scatter_kws,
+        line_kws=line_kws,
+        ax=ax,
+    )
+
+    # R² annotation
+    ax.text(
+        r2_loc[0],
+        r2_loc[1],
+        rf"$R^2 = {r2_fmt.format(r_squared)}$",
+        transform=ax.transAxes,
+        verticalalignment="top",
+        fontsize=12,
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+    )
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    ax.set_title(title or f"{y} vs. {x}")
+    ax.grid(True)
+
+    plt.show()
+
+
+# %%
+from scipy.stats import false_discovery_control, linregress
+
+df = pd.DataFrame({
+    "top_bottom_difference": (
+        sdata_proseg_g.tables["table"].obs["top_bottom_difference"]
+    ),
+    "similarity_top_bottom": (
+        sdata_proseg_sim.tables["table"].obs["similarity_top_bottom"]
+    ),
+}).dropna()
+
+print(f"Number of matched cells: {len(df)}")
+
+plot_regression(
+    df=df,
+    x="top_bottom_difference",
+    y="similarity_top_bottom",
+    title="G-statistic difference vs. cosine similarity residual",
+    xlabel="Top–bottom difference (G-statistic)",
+    ylabel="Top–bottom similarity residual (cosine)",
+)
+
+# %%
+sdata_proseg_g.tables["table"].obs.columns
+
+# %%
+fig, axes = plt.subplots(2, 2, figsize=(12, 10), constrained_layout=True)
+
+# ------------------------------------------------------------------
+# G-statistic approach
+# ------------------------------------------------------------------
+obs_g = sdata_proseg_g.tables["table"].obs.copy()
+
+# Transcript-count rank across all evaluable cells
+df_g = obs_g.loc[
+    obs_g["top_bottom_difference"].notna()
+    & obs_g["transcript_count"].notna()
+].copy()
+
+df_g["transcript_count_rank"] = df_g["transcript_count"].rank()
+
+# All cells
+plot_regression(
+    df=df_g,
+    x="transcript_count_rank",
+    y="top_bottom_difference",
+    title="G-statistic residual: all cells",
+    xlabel="Transcript count rank",
+    ylabel="Top–bottom difference",
+    ax=axes[0, 0],
+)
+
+# Significant cells
+df_g_sig = df_g.loc[
+    df_g["top_bottom_difference_p_value"] < 0.05
+].copy()
+
+plot_regression(
+    df=df_g_sig,
+    x="transcript_count_rank",
+    y="top_bottom_difference",
+    title="G-statistic residual: p < 0.05",
+    xlabel="Transcript count rank",
+    ylabel="Top–bottom difference",
+    ax=axes[0, 1],
+)
+
+
+# ------------------------------------------------------------------
+# Cosine-similarity approach
+# ------------------------------------------------------------------
+obs_sim = sdata_proseg_similarity.tables["table"].obs.copy()
+
+# Transcript-count rank across all evaluable cells
+df_sim = obs_sim.loc[
+    obs_sim["similarity_top_bottom"].notna()
+    & obs_sim["transcript_count"].notna()
+].copy()
+
+df_sim["transcript_count_rank"] = df_sim["transcript_count"].rank()
+
+# All cells
+plot_regression(
+    df=df_sim,
+    x="transcript_count_rank",
+    y="similarity_top_bottom",
+    title="Cosine similarity residual: all cells",
+    xlabel="Transcript count rank",
+    ylabel="Top–bottom similarity residual",
+    ax=axes[1, 0],
+)
+
+# Significant cells
+df_sim_sig = df_sim.loc[
+    df_sim["similarity_top_bottom_p_value"] < 0.05
+].copy()
+
+plot_regression(
+    df=df_sim_sig,
+    x="transcript_count_rank",
+    y="similarity_top_bottom",
+    title="Cosine similarity residual: p < 0.05",
+    xlabel="Transcript count rank",
+    ylabel="Top–bottom similarity residual",
+    ax=axes[1, 1],
+)
+
+plt.show()
+
+# %%
+obs = st_dict["proseg2"].sdata.tables["table"].obs
+
+obs["transcript_count_rank"] = obs["transcript_count"].rank()
+
+df = obs.loc[
+    obs["similarity_top_bottom_p_value"] < 0.05,
+    ["similarity_top_bottom", "transcript_count"],
+].dropna()
+
+df = obs
+
+plt.figure(figsize=(5, 3))
+sns.regplot(
+    data=df,
+    x="transcript_count_rank",
+    y="similarity_top_bottom",
+    scatter_kws={"alpha": 0.6},
+    line_kws={"color": "red"},
+    lowess=True,  # nonlinear
+    ci=95,
+)
+plt.tight_layout()
+
 # %% [markdown]
 # Next, we initialize `SegTraQ` objects.
 
