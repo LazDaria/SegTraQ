@@ -817,20 +817,15 @@ def _two_profile_similarity_metrics(
 
     similarity_null = similarity_null[valid]
 
-    similarity_residual = (
-        similarity_observed - similarity_null.mean()
-    )
+    similarity_residual = similarity_observed - similarity_null.mean()
 
-    similarity_p_value = (
-        1 + np.count_nonzero(
-            similarity_null <= similarity_observed
-        )
-    ) / (len(similarity_null) + 1)
+    similarity_p_value = (1 + np.count_nonzero(similarity_null <= similarity_observed)) / (len(similarity_null) + 1)
 
     return {
         "similarity": float(similarity_residual),
         "similarity_p_value": float(similarity_p_value),
     }
+
 
 def _get_neighborhood_counts(
     sdata: sd.SpatialData,

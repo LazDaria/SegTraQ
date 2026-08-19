@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -36,25 +35,27 @@
 # negative values indicate lower similarity than expected, and positive values indicate higher
 # similarity than expected. The accompanying p-value identifies cells with unusually low similarity.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from
+# [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
 
 # %%
 # %load_ext autoreload
 # %autoreload 2
 
 # %%
+import anndata as ad
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import anndata as ad
 import spatialdata as sd
 import spatialdata_plot  # noqa
-from scipy.stats import false_discovery_control, linregress
+from scipy.stats import linregress
 
 import segtraq
 
 # %% [markdown]
 # #### Helpers
+
 
 # %%
 # helper functions for plotting
@@ -158,6 +159,7 @@ def plot_regression(
 
     plt.show()
 
+
 # %% [markdown]
 # We start out by loading the data into a `SegTraQ` object.
 
@@ -173,7 +175,9 @@ st = segtraq.SegTraQ(
 st.sdata
 
 # %% [markdown]
-# We can optionally transfer cell-type labels from a scRNA-seq reference. These labels are not required to compute the `region_similarity` metrics, but help interpret them—for example, by assessing whether low similarity is more common at boundaries between different cell types.
+# We can optionally transfer cell-type labels from a scRNA-seq reference. These labels are not required to compute the
+# `region_similarity` metrics, but help interpret them—for example, by assessing whether low similarity is more common
+# at boundaries between different cell types.
 
 # %%
 adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
@@ -259,7 +263,8 @@ st.sdata.pl.render_shapes(
 plt.show()
 
 # %% [markdown]
-# Since the legacy Xenium segmentation algorithm generates cell masks by expanding nuclear boundaries, most cells have a `nucleus_fraction` close to 1.
+# Since the legacy Xenium segmentation algorithm generates cell masks by expanding nuclear boundaries, most cells have a
+# `nucleus_fraction` close to 1.
 
 # %% [markdown]
 # We can now investigate what the distribution of IoUs looks like.
@@ -278,9 +283,12 @@ plot_histogram(
 # While IoU and `nucleus_fraction` assess whether the cell and nucleus are morphologically well matched,
 # `similarity_nucleus_cell()` asks whether they are also molecularly consistent. It compares the transcript
 # composition of the whole cell with that of its matched nucleus and determines whether they are less similar
-# than expected given their transcript counts and overlap. For transcript-informed segmentation methods the whole cell may also include transcripts beyond morphological boundaries.
+# than expected given their transcript counts and overlap. For transcript-informed segmentation methods the whole cell
+# may also include transcripts beyond morphological boundaries.
 #
-# A negative residual indicates unexpectedly different transcript compositions, which can arise, for example, when transcripts from neighboring cells are incorrectly assigned to the cell or when transcripts from the cell are incorrectly excluded, even if the cell and nucleus boundaries appear well matched.
+# A negative residual indicates unexpectedly different transcript compositions, which can arise, for example, when
+# transcripts from neighboring cells are incorrectly assigned to the cell or when transcripts from the cell are
+# incorrectly excluded, even if the cell and nucleus boundaries appear well matched.
 
 # %%
 nucleus_cell_df = st.rs.similarity_nucleus_cell()
@@ -310,9 +318,9 @@ significant_ids = obs.loc[
 ]
 
 # Create a temporary shapes element containing only significant cells
-sdata.shapes["significant_cells"] = sdata.shapes[st.shapes_key].loc[
-    sdata.shapes[st.shapes_key].index.isin(significant_ids)
-].copy()
+sdata.shapes["significant_cells"] = (
+    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_ids)].copy()
+)
 
 # plot
 fig, ax = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
@@ -373,7 +381,7 @@ sdata.pl.render_shapes(
     outline_alpha=1.0,
     outline_width=0.5,
     outline_color="black",
-    na_color="gray"
+    na_color="gray",
 ).pl.show(
     ax=ax[2],
     title="Transferred cell type",
@@ -385,16 +393,22 @@ plt.show()
 # %% [markdown]
 # ## Similarity between nucleus and cytoplasm
 #
-# Because nuclear transcripts are part of the whole-cell profile, nucleus–cell similarity is partly driven by transcripts shared between the two profiles. We therefore also compare the nucleus with the remaining non-nuclear part of the cell (referred to here as the cytoplasm).
+# Because nuclear transcripts are part of the whole-cell profile, nucleus–cell similarity is partly driven by
+# transcripts shared between the two profiles. We therefore also compare the nucleus with the remaining non-nuclear part
+# of the cell (referred to here as the cytoplasm).
 #
-# While `similarity_nucleus_cell` evaluates whether the final cell-level expression profile is molecularly consistent with its matched nucleus, `similarity_nucleus_cytoplasm` provides a more direct comparison of transcript composition between the two compartments. Low residual values may indicate transcript misassignment or contamination, but can also reflect genuine subcellular RNA localization.
+# While `similarity_nucleus_cell` evaluates whether the final cell-level expression profile is molecularly consistent
+# with its matched nucleus, `similarity_nucleus_cytoplasm` provides a more direct comparison of transcript composition
+# between the two compartments. Low residual values may indicate transcript misassignment or contamination, but can also
+# reflect genuine subcellular RNA localization.
 
 # %%
 nuc_cyto_df = st.rs.similarity_nucleus_cytoplasm()
 nuc_cyto_df.head()
 
 # %% [markdown]
-# The histogram below shows the distribution of nucleus–cytoplasm similarity residuals. For most cells, the observed similarity is close to that expected under the null model.
+# The histogram below shows the distribution of nucleus–cytoplasm similarity residuals. For most cells, the observed
+# similarity is close to that expected under the null model.
 
 # %%
 plot_histogram(
@@ -404,7 +418,11 @@ plot_histogram(
 )
 
 # %% [markdown]
-# We can look at the correlation between the `similarity_nucleus_cell` and `similarity_nucleus_cytoplasm`. As expected, `similarity_nucleus_cell` and `similarity_nucleus_cytoplasm` are strongly correlated, as both capture molecular differences between the nucleus and the rest of the cell. They can diverge when the nucleus contributes strongly to the whole-cell profile: even if nucleus and cytoplasm differ substantially, the whole-cell profile may remain similar to the nucleus because it contains the nuclear transcripts themselves.
+# We can look at the correlation between the `similarity_nucleus_cell` and `similarity_nucleus_cytoplasm`. As expected,
+# `similarity_nucleus_cell` and `similarity_nucleus_cytoplasm` are strongly correlated, as both capture molecular
+# differences between the nucleus and the rest of the cell. They can diverge when the nucleus contributes strongly to
+# the whole-cell profile: even if nucleus and cytoplasm differ substantially, the whole-cell profile may remain similar
+# to the nucleus because it contains the nuclear transcripts themselves.
 
 # %%
 plot_regression(
@@ -433,13 +451,13 @@ significant_nucleus_cytoplasm_ids = obs.loc[
 ]
 
 # Create temporary shapes elements containing only significant cells
-sdata.shapes["significant_nucleus_cell"] = sdata.shapes[st.shapes_key].loc[
-    sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cell_ids)
-].copy()
+sdata.shapes["significant_nucleus_cell"] = (
+    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cell_ids)].copy()
+)
 
-sdata.shapes["significant_nucleus_cytoplasm"] = sdata.shapes[st.shapes_key].loc[
-    sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cytoplasm_ids)
-].copy()
+sdata.shapes["significant_nucleus_cytoplasm"] = (
+    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cytoplasm_ids)].copy()
+)
 
 
 # Plot
@@ -505,14 +523,17 @@ sdata.pl.render_shapes(
 plt.show()
 
 # %% [markdown]
-# We observe more cells with significantly reduced `similarity_nucleus_cytoplasm` than `similarity_nucleus_cell`, particularly in regions with heterogeneous cell-type composition.
+# We observe more cells with significantly reduced `similarity_nucleus_cytoplasm` than `similarity_nucleus_cell`,
+# particularly in regions with heterogeneous cell-type composition.
 
 # %% [markdown]
 # ## Border admixture score
 #
-# A cell's border can differ from its center for many reasons, including genuine intracellular RNA localization. Therefore, low center–border similarity alone does not show that neighboring cells contributed to that difference.
+# A cell's border can differ from its center for many reasons, including genuine intracellular RNA localization.
+# Therefore, low center–border similarity alone does not show that neighboring cells contributed to that difference.
 #
-# The `border_admixture_score()` tests this more directly by asking whether the border is better explained as a mixture of the cell center and its neighborhood:
+# The `border_admixture_score()` tests this more directly by asking whether the border is better explained as a mixture
+# of the cell center and its neighborhood:
 #
 # $$
 # p_{\text{border}} \approx (1 - \alpha)\,p_{\text{center}}
@@ -558,13 +579,13 @@ significant_border_admixture_ids = obs.loc[
 ]
 
 # Create temporary shapes elements containing significant cells
-sdata.shapes["significant_nucleus_cell"] = sdata.shapes[st.shapes_key].loc[
-    sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cell_ids)
-].copy()
+sdata.shapes["significant_nucleus_cell"] = (
+    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cell_ids)].copy()
+)
 
-sdata.shapes["significant_border_admixture"] = sdata.shapes[st.shapes_key].loc[
-    sdata.shapes[st.shapes_key].index.isin(significant_border_admixture_ids)
-].copy()
+sdata.shapes["significant_border_admixture"] = (
+    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_border_admixture_ids)].copy()
+)
 
 # Link annotations with cell boundaries
 obs["region"] = st.shapes_key
@@ -676,6 +697,3 @@ print(sd.__version__)  # spatialdata
 print(spatialdata_plot.__version__)
 
 # %%
-
-
-

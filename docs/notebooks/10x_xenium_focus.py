@@ -1,19 +1,3 @@
-# -*- coding: utf-8 -*-
-# ---
-# jupyter:
-#   jupytext:
-#     custom_cell_magics: kql
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.11.2
-#   kernelspec:
-#     display_name: segtraq_26
-#     language: python
-#     name: python3
-# ---
-
 # %% [markdown]
 # # Technology Focus: 10x Genomics Xenium
 #
@@ -96,11 +80,6 @@
 # ## Read and crop SpatialData objects
 
 # %%
-# %load_ext autoreload
-# %autoreload 2
-
-# %%
-import warnings
 
 import anndata as ad
 import matplotlib.patches as patches
@@ -111,11 +90,10 @@ import scanpy as sc
 import seaborn as sns
 import spatialdata as sd
 import spatialdata_plot  # noqa
-from scipy.stats import linregress
 
 import segtraq
 
-warnings.filterwarnings(action="ignore")
+# warnings.filterwarnings(action="ignore")
 
 # %%
 sdata_xenium_ws = sd.read_zarr("../../data/xenium_5K_data/xenium.zarr")
@@ -180,14 +158,19 @@ st_bidcell = segtraq.SegTraQ(
     sdata_bidcell,
     images_key="image",
     points_background_id=0,
-    tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_y",
+    tables_area_key=None,
+    tables_centroid_x_key="cell_centroid_x",
+    tables_centroid_y_key="cell_centroid_y",
 )
 st_proseg = segtraq.SegTraQ(
     sdata_proseg,
     images_key="image",
-    points_background_id=0,
+    points_cell_id_key="assignment",
+    points_background_id=2**32 - 1,
+    points_gene_key="gene",
     tables_area_key=None,
+    tables_cell_id_key="cell",
+    shapes_cell_id_key="cell",
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
 )
@@ -357,7 +340,6 @@ for method, st in st_dict.items():
     print(f"#cells: {num_cells}; %unassigned: {p_unassigned}")
     print(f"mean #transcripts: {mean_tx}; mean #genes: {np.mean(mean_gn)}")
     print(f"mean #transcripts per gene per cell: {mean_tgc}")
-
 
 # %% [markdown]
 # The number of detected cells is comparable across Xenium, BIDCell, and Proseg.
@@ -770,107 +752,120 @@ for _method, st in st_dict.items():
     st.rs.similarity_nucleus_cell(n_jobs=-1)
 
 
+# %%
+def histogram_feature(
+    sdata_dict,
+    feature,
+    figsize=(8, 4),
+    significant_only=True,
+    bins=30,
+):
+    plt.style.use("default")
+    all_feats = []
+
+    for method, st in sdata_dict.items():
+        obs = st.sdata[st.tables_key].obs
+
+        if significant_only:
+            p_value_col = f"{feature}_p_value"
+            if feature == "border_admixture_score":
+                p_value_col = "border_admixture_p_value"
+            obs = obs.loc[obs[p_value_col] < 0.05]
+
+        feat = obs[feature].to_frame(feature)
+        feat["method"] = method
+        all_feats.append(feat)
+
+    df = pd.concat(all_feats, ignore_index=True)
+    df["method"] = df["method"].astype(str)
+
+    methods = list(sdata_dict.keys())
+    palette = dict(zip(methods, sns.color_palette("Set2", len(methods)), strict=False))
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    sns.histplot(
+        data=df,
+        x=feature,
+        hue="method",
+        bins=bins,
+        stat="count",
+        element="step",
+        # edgecolor=None,
+        palette=palette,
+        ax=ax,
+        alpha=0.3,
+        line_kws=dict(color="method", linewidth=2.5, label="KDE"),
+        kde=True,
+    )
+
+    # Median for each method
+    for method in methods:
+        median = df.loc[df["method"] == method, feature].median()
+
+        ax.axvline(
+            median,
+            color=palette[method],
+            linestyle="--",
+            linewidth=2,
+        )
+
+    ax.set_ylabel("Number of cells")
+    plt.tight_layout()
+
+
 # %% [markdown]
-# A more informative metric is therefore the similarity in gene expression
-# between the region where the cell and nucleus overlap and the remaining cell area,
-# corresponding to the cytoplasm.
+# Among cells with unexpectedly low nucleus–cell similarity
+# (`similarity_nucleus_cell_p_value` < 0.05), ProSeg shows more negative residuals
+# (`similarity_nucleus_cell`) than Xenium and BIDCell, indicating a stronger difference between the nuclear
+# and whole-cell expression profiles than expected. This is partly expected from the different assignment
+# strategies. Xenium and BIDCell assign transcripts to cells based on spatial overlap with the inferred cell
+# boundaries, whereas ProSeg can assign transcripts to a cell even when they lie outside its final 2D cell
+# boundary. Because the nuclear expression profile is also defined by spatial overlap with the nuclear boundary,
+# the nucleus and whole-cell profiles are more spatially coupled for Xenium and BIDCell. Accordingly, among
+# these cells, Xenium and BIDCell show less negative residuals than ProSeg. Thus, ProSeg's lower nucleus–cell
+# similarity may partly reflect its transcript reassignment strategy rather than poorer segmentation.
+
+# %%
+histogram_feature(st_dict, "similarity_nucleus_cell", significant_only=True)
+
+# %% [markdown]
+# While `similarity_nucleus_cell` compares the nuclear transcript profile with the final whole-cell expression
+# profile, `similarity_nucleus_cytoplasm` more directly compares two spatial regions within the cell. It compares
+# the cell's transcripts regionally overlapping with the nucleus and the non-nuclear region (cytoplasm). It
+# therefore asks whether the transcript composition is consistent across these two regions of the same cell.
+# Here, Proseg again shows the lowest consistency between nuclear and cytoplasmic expression profiles.
 
 # %%
 for _method, st in st_dict.items():
     st.rs.similarity_nucleus_cytoplasm(n_jobs=-1)
 
-
-# %% [markdown]
-# This metric shows higher values for Xenium and Proseg, which may indicate reduced
-# transcript contamination in the cytoplasmic compartment.
-
-
 # %%
-def density_plot_feature(sdata_dict, features):
-    all_feats = []
-    for method, st in sdata_dict.items():
-        feat = st.sdata["table"].obs[features]
-        tmp = feat.copy()
-        tmp["method"] = method
-        all_feats.append(tmp)
-
-    df = pd.concat(all_feats, ignore_index=True)
-    df["method"] = df["method"].astype(str)
-
-    feature_cols = [c for c in df.columns if c != "method"]
-
-    plt.style.use("dark_background")
-
-    n = len(feature_cols)
-    n_cols = min(3, n)
-    n_rows = np.ceil(n / n_cols).astype(int)
-
-    fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
-        figsize=(4 * n_cols, 2 * n_rows),
-    )
-    axes = np.atleast_1d(axes).ravel()
-
-    for ax, feat in zip(axes, feature_cols, strict=False):
-        sns.kdeplot(data=df, x=feat, hue="method", common_norm=False, palette="Set2", fill=False, ax=ax)
-
-    fig.tight_layout()
-    plt.show()
-
-
-# %%
-features = ["similarity_nucleus_cytoplasm"]
-density_plot_feature(st_dict, features)
-
-# %% [markdown]
-# *Similarity of gene expression between
-# (1) cell center and cell border and
-# (2) cell border and cell neighborhood*
-#
-# To better disentangle biology from technical contamination,
-# we introduced a metric that evaluates expression similarity
-# between the cell center and the cell border.
-# The underlying assumption is that although genes may differ between nucleus and cytoplasm,
-# their expression should not systematically differ between the interior cytoplasm and the cell periphery.
-# To quantify potential contamination, we compare the expression similarity of
-# (i) the cell border and its eroded cell center and
-# (ii) the cell border and its local neighborhood.
-
-# %%
-for _method, st in st_dict.items():
-    st.rs.similarity_border_neighborhood()
-    st.rs.similarity_center_border()
-
-# %%
-features = ["similarity_center_border", "similarity_border_neighborhood"]
-density_plot_feature(st_dict, features)
+histogram_feature(st_dict, "similarity_nucleus_cytoplasm")
 
 # %% [markdown]
 # *Admixture (contamination) of the cell border*
 #
-# A low `similarity_center_border` or high `similarity_border_neighborhood` does
-# not necessarily represent contamination. To evaluate the contamination of the
-# cell border robustly, we compute the the `border_admixture_score`,
-# which explicitly models the border as a mixture of center and neighborhood expression,
-# and estimates how much better this mixture explains the border compared to the center alone.
+# Unlike the nucleus-based similarity metrics, the `border_admixture_score` more directly tests for contamination
+# from neighboring cells. Rather than asking whether two regions within a cell have different expression profiles,
+# it asks whether the cell border specifically resembles a mixture of the cell center and the surrounding
+# neighborhood more strongly than expected from finite transcript sampling alone. This helps distinguish general
+# within-cell expression differences from differences that specifically point toward a contribution from
+# neighboring cells.
+#
+# Here, Xenium has the largest number of cells with unexpectedly strong border admixture
+# (`border_admixture_p_value` < 0.05), meaning that for more Xenium cells, the border resembles the surrounding
+# neighborhood more than would be expected by chance. Xenium also shows the largest median positive residual
+# among these cells, indicating that the excess neighborhood-like signal at the border tends to be stronger.
+# In contrast, BIDCell and Proseg — both transcript-informed segmentation methods — show substantially fewer
+# cells with evidence of unexpected border admixture, and the effect is generally weaker when it occurs.
 
 # %%
 for _method, st in st_dict.items():
-    st.rs.border_admixture_score()
-
-# %% [markdown]
-# A high `border_admixture_score` means the border is better explained by the
-# mixture than by the center alone. The density plot below shows that Proseg
-# and BIDCell shows the least contamination. It is important to note that Proseg
-# is a transcript-assignment method, meaning that transcripts located near or even within
-# a cell boundary are not necessarily assigned to that cell. When computing the border admixture score,
-# transcripts in the border region that are assigned to other cells must therefore be excluded.
-# This can increase sparsity and noise in the data and may lead to less stable estimates.
+    st.rs.border_admixture_score(n_jobs=-1)
 
 # %%
-features = ["border_admixture_score"]
-density_plot_feature(st_dict, features)
+histogram_feature(st_dict, "border_admixture_score")
 
 # %% [markdown]
 # While it is important to consider metrics that do not depend on the availability of
@@ -882,8 +877,99 @@ density_plot_feature(st_dict, features)
 # cell-type level, this is a useful unsupervised contamination metric that does
 # not rely on reference scRNA-seq data.
 
+# %% [markdown]
+# When cell type labels are available, the metric can still be compared on a cell-type level. The plot compares
+# `border_admixture_score` across segmentation methods within each transferred cell type, restricted to cells
+# with unexpectedly strong border admixture (`border_admixture_p_value` < 0.05). The individual points and
+# boxplots show the magnitude of the excess neighborhood-like signal at the border, while the annotated cell
+# counts show how many cells of each cell type are significantly affected. This helps reveal whether differences
+# between segmentation methods are driven by particular cell types rather than representing a global effect.
+
+
 # %%
-boxplot_per_celltype(st_dict, "border_admixture_score")
+def boxplot_per_celltype_sig(st_dict, feature, q=1, significant_only=True):
+    dfs = []
+    for method, st in st_dict.items():
+        obs = st.sdata[st.tables_key].obs[st.sdata[st.tables_key].obs["transferred_cell_type"].notna()].copy()
+
+        if (feature == "similarity_top_bottom") and significant_only:
+            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05].copy()
+
+        obs["transferred_cell_type"] = obs["transferred_cell_type"].cat.remove_unused_categories()
+
+        tmp = obs[["transferred_cell_type", feature]].copy()
+        tmp["method"] = method
+        dfs.append(tmp)
+
+    df = pd.concat(dfs, ignore_index=True)
+    df = df[df[feature] <= df[feature].quantile(q)]
+
+    fig, ax = plt.subplots(figsize=(15, 5))
+
+    sns.boxplot(
+        data=df,
+        x="transferred_cell_type",
+        y=feature,
+        hue="method",
+        showcaps=True,
+        showfliers=False,
+        palette="Set2",
+        boxprops={"alpha": 0.5},
+        ax=ax,
+    )
+
+    sns.stripplot(
+        data=df,
+        x="transferred_cell_type",
+        y=feature,
+        hue="method",
+        dodge=True,
+        jitter=True,
+        palette="Set2",
+        alpha=1,
+        size=3,
+        legend=False,
+        ax=ax,
+    )
+
+    celltypes = df["transferred_cell_type"].unique()
+    methods = list(st_dict.keys())
+
+    n_methods = len(methods)
+    box_width = 0.8
+    offsets = np.linspace(
+        -box_width / 2 + box_width / (2 * n_methods),
+        box_width / 2 - box_width / (2 * n_methods),
+        n_methods,
+    )
+
+    # Position labels slightly above the data
+    ymin, ymax = ax.get_ylim()
+    y_text = ymax + 0.02 * (ymax - ymin)
+
+    for i, celltype in enumerate(celltypes):
+        for j, method in enumerate(methods):
+            n = len(df.loc[(df["transferred_cell_type"] == celltype) & (df["method"] == method)])
+
+            ax.text(
+                i + offsets[j],
+                y_text,
+                f"n={n}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+                rotation=90,
+            )
+
+    # Make room for annotations
+    ax.set_ylim(ymin, ymax + 0.12 * (ymax - ymin))
+
+    fig.tight_layout()
+    plt.show()
+
+
+# %%
+boxplot_per_celltype_sig(st_dict, "border_admixture_score")
 
 # %% [markdown]
 # ### Supervised module
@@ -978,7 +1064,6 @@ for method, st in st_dict.items():
 # %%
 boxplot_per_celltype(st_dict, "marker_balanced_accuracy")
 
-
 # %% [markdown]
 # The `negative_marker_avoidance` score quantifies the extent to which a focal cell expresses positive
 # markers of neighboring cell types, and thus reflects contamination. Overall, contamination levels are low;
@@ -1057,22 +1142,23 @@ boxplot_per_celltype(st_dict, "positive_marker_recall")
 
 # %% [markdown]
 # These metrics are most informative when considered jointly. For example, we plot the mean
-# `negative_marker_avoidance` (a supervised measure of contamination) against the mean
+# `marker_balanced_accuracy` (a supervised measure of both how well positive markers are captured and negative
+# markers are avoided) against the mean
 # `border_admixture_score`, an unsupervised contamination metric. In this combined view,
-# we can see that the two transcript-informed methods, BIDCell and Proseg,
-# show marginally less contamination than the transcript-agnostic segmentation method from Xenium.
+# we can see that Proseg
+# shows slighltly better performance than the other two methods.
 
 # %%
 rows = []
 for _method, st in st_dict.items():
     corr_ncv_vs_center = st.sdata.tables["table"].obs["border_admixture_score"].median()
-    negative_F1 = st.sdata.tables["table"].obs["negative_marker_avoidance"].median()
+    negative_F1 = st.sdata.tables["table"].obs["marker_balanced_accuracy"].median()
 
     rows.append(
         {
             "Method": _method,
             "Border_admixture_score": corr_ncv_vs_center,
-            "negative_marker_avoidance": negative_F1,
+            "marker_balanced_accuracy": negative_F1,
         }
     )
 
@@ -1083,7 +1169,7 @@ fig, ax = plt.subplots(figsize=(4, 3))
 sns.scatterplot(
     data=results_df,
     x="Border_admixture_score",
-    y="negative_marker_avoidance",
+    y="marker_balanced_accuracy",
     hue="Method",
     style="Method",
     s=100,
@@ -1092,11 +1178,11 @@ sns.scatterplot(
 )
 
 ax.set_xlabel("Border_admixture_score (↓)")
-ax.set_ylabel("negative_marker_avoidance (↓)")
-ax.set_title("Border_admixture_score vs. negative_marker_avoidance")
+ax.set_ylabel("marker_balanced_accuracy (↓)")
+ax.set_title("Border_admixture_score vs. marker_balanced_accuracy")
 
-ax.set_xlim(0, 1)
-ax.set_ylim(0, 1.1)
+# ax.set_xlim(0, 1)
+# ax.set_ylim(0, 1.1)
 
 legend = ax.legend(title="Method", frameon=False, bbox_to_anchor=(1.05, 1), loc="upper left")
 
@@ -1120,7 +1206,6 @@ for method, st in st_dict.items():
 
 # %% [markdown]
 # Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination.
-# Across methods, the highest number of cells affected by contamination are found among T and B cells.
 
 # %%
 methods_df = []
@@ -1132,67 +1217,6 @@ for method, st in st_dict.items():
 
 merged = pd.concat(methods_df, axis=1)
 merged
-
-# %% [markdown]
-# Proseg contains the lowest number of T cells and B cells, and hence the overall
-# contamination will be lower than for the other methods.
-
-# %%
-methods_df = []
-
-for method, st in st_dict.items():
-    obs = st.sdata.tables["table"].obs
-
-    counts = obs["transferred_cell_type"].value_counts().rename(method)
-
-    methods_df.append(counts)
-
-pd.concat(methods_df, axis=1).fillna(0)
-
-# %% [markdown]
-# It therefore makes sense to compute the percentage of cells per celltype affected by contamination.
-
-# %%
-rows = []
-
-for method, st in st_dict.items():
-    obs = st.sdata.tables["table"].obs
-
-    total = obs["transferred_cell_type"].value_counts()
-    contaminated = obs.loc[obs["contamination_counts"] > 0, "transferred_cell_type"].value_counts()
-
-    frac = (contaminated / total).rename(method)
-
-    rows.append(frac)
-merged_frac = pd.concat(rows, axis=1).fillna(0)
-merged_frac
-
-# %%
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-df_long = merged_frac.reset_index().melt(
-    id_vars="transferred_cell_type", var_name="Method", value_name="fraction_contaminated"
-)
-
-fig, ax = plt.subplots(figsize=(6, 4))
-
-sns.barplot(
-    data=df_long,
-    x="transferred_cell_type",
-    y="fraction_contaminated",
-    hue="Method",
-    ax=ax,
-)
-
-ax.set_ylabel("Fraction of contaminated cells")
-ax.set_xlabel("Cell type")
-ax.set_title("Contamination per cell type (normalized)")
-plt.xticks(rotation=45)
-
-plt.tight_layout()
-plt.show()
-
 
 # %% [markdown]
 # The spatial plot below shows the number of contaminating transcripts in each cell.
@@ -1429,28 +1453,24 @@ plt.show()
 # %% [markdown]
 # *Top-bottom z consistency*
 #
-# To detect potential z-overlap mixing within segmented cells, we split each cell’s
-# transcripts into bottom/top z-quantiles (q=0.30), compute log-normalized gene profiles
-# for both parts, and report their cosine similarity (NaN if either part has <10 transcripts or <5 genes).
+# To detect potential z-overlap mixing within segmented cells, we compare gene expression profiles between the
+# bottom and top z-regions of each cell. `similarity_top_bottom` reports the observed cosine similarity relative
+# to its permutation-based null expectation, with negative residuals indicating lower consistency across z than
+# expected. In the histogram below, we show these residuals only for cells with unexpectedly low top–bottom
+# similarity (`similarity_top_bottom_p_value` < 0.05).
 
 # %%
 for _method, st in st_dict.items():
     _cos_sim = st.vl.similarity_top_bottom()
 
 # %% [markdown]
-# Proseg 2 shows the highest expression similarity between top and bottom plane both
-# overall and on a cell type level. This is also true for cell types,
-# for which proseg has a lower per-cell transcript counts such as myoepithelial and DCIS2 cells.
-#
-# The other three methods have peaks at zero, which means that top and bottom parts
-# have completely different gene compositions (genes present in one are essentially absent in the other).
+# Proseg (a quasi-3D method) shows the fewest cells with unexpectedly different expression profiles between the
+# top and bottom of the cell (`similarity_top_bottom_p_value` < 0.05). Moreover, even among these cells, the
+# differences between top and bottom are generally smaller than for Xenium and BIDCell, suggesting more
+# consistent transcript composition across z.
 
 # %%
-feature = ["similarity_top_bottom"]
-density_plot_feature(st_dict, feature)
-
-# %%
-boxplot_per_celltype(st_dict, "similarity_top_bottom")
+histogram_feature(st_dict, "similarity_top_bottom")
 
 # %% [markdown]
 # In [volume.ipynb](./volume.ipynb), we explore the distribution of transcripts along the z-dimension

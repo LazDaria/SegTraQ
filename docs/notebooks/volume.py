@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -55,7 +54,6 @@ import pandas as pd
 import seaborn as sns
 import spatialdata as sd
 import spatialdata_plot  # noqa
-from sklearn.metrics import r2_score
 
 import segtraq
 
@@ -245,6 +243,7 @@ for method, st in st_dict.items():
 # lower-tail permutation p-value (`similarity_top_bottom_p_value < 0.05`). These cells have
 # top and bottom profiles that are less similar than expected under the conditional null.
 
+
 # %%
 def histogram_feature(
     sdata_dict,
@@ -259,9 +258,7 @@ def histogram_feature(
         obs = st.sdata[st.tables_key].obs
 
         if (feature == "similarity_top_bottom") and significant_only:
-            obs = obs.loc[
-                obs["similarity_top_bottom_p_value"] < 0.05
-            ]
+            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05]
 
         feat = obs[feature].to_frame(feature)
         feat["method"] = method
@@ -271,7 +268,7 @@ def histogram_feature(
     df["method"] = df["method"].astype(str)
 
     methods = list(sdata_dict.keys())
-    palette = dict(zip(methods, sns.color_palette("Set2", len(methods))))
+    palette = dict(zip(methods, sns.color_palette("Set2", len(methods)), strict=False))
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -304,7 +301,9 @@ def histogram_feature(
 
 
 # %% [markdown]
-# Although the median residual among significant cells is similar across methods, Xenium has more cells that deviate significantly from the null expectation, suggesting that these deviations occur more frequently rather than being stronger in magnitude.
+# Although the median residual among significant cells is similar across methods, Xenium has more cells that deviate
+# significantly from the null expectation, suggesting that these deviations occur more frequently rather than being
+# stronger in magnitude.
 
 # %%
 histogram_feature(
@@ -314,25 +313,20 @@ histogram_feature(
 )
 
 # %% [markdown]
-# We next compare top–bottom similarity residuals across transferred cell types, considering only cells with a significant lower-tail p-value to reduce variation related to cell-type-specific composition.
+# We next compare top–bottom similarity residuals across transferred cell types, considering only cells with a
+# significant lower-tail p-value to reduce variation related to cell-type-specific composition.
 
 
 # %%
 def boxplot_per_celltype(st_dict, feature, q=1, significant_only=True):
     dfs = []
     for method, st in st_dict.items():
-        obs = st.sdata[st.tables_key].obs[
-            st.sdata[st.tables_key].obs["transferred_cell_type"].notna()
-        ].copy()
+        obs = st.sdata[st.tables_key].obs[st.sdata[st.tables_key].obs["transferred_cell_type"].notna()].copy()
 
         if (feature == "similarity_top_bottom") and significant_only:
-            obs = obs.loc[
-                obs["similarity_top_bottom_p_value"] < 0.05
-            ].copy()
+            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05].copy()
 
-        obs["transferred_cell_type"] = (
-            obs["transferred_cell_type"].cat.remove_unused_categories()
-        )
+        obs["transferred_cell_type"] = obs["transferred_cell_type"].cat.remove_unused_categories()
 
         tmp = obs[["transferred_cell_type", feature]].copy()
         tmp["method"] = method
@@ -386,12 +380,7 @@ def boxplot_per_celltype(st_dict, feature, q=1, significant_only=True):
 
     for i, celltype in enumerate(celltypes):
         for j, method in enumerate(methods):
-            n = len(
-                df.loc[
-                    (df["transferred_cell_type"] == celltype)
-                    & (df["method"] == method)
-                ]
-            )
+            n = len(df.loc[(df["transferred_cell_type"] == celltype) & (df["method"] == method)])
 
             ax.text(
                 i + offsets[j],
@@ -411,7 +400,8 @@ def boxplot_per_celltype(st_dict, feature, q=1, significant_only=True):
 
 
 # %% [markdown]
-# `similarity_top_bottom` differs between cell types, with B cells accounting for much of the difference in the number of significant cells across methods (312 in Xenium, 142 in Proseg v2, and 109 in Proseg v3).
+# `similarity_top_bottom` differs between cell types, with B cells accounting for much of the difference in the number
+# of significant cells across methods (312 in Xenium, 142 in Proseg v2, and 109 in Proseg v3).
 
 # %%
 boxplot_per_celltype(st_dict, "similarity_top_bottom")
@@ -456,6 +446,7 @@ for _method, st in proseg_dict.items():
 # Below we can see the distribution of the `heterotypic_overlap_area` and
 # `heterotypic_overlap_fraction` in proseg v2 and v3. Some cells have heterotypic overlap fractions > 50%.
 
+
 # %%
 def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
     all_feats = []
@@ -495,7 +486,10 @@ density_plot_feature(proseg_dict, "heterotypic_overlap_fraction")
 tbl = st_proseg3.sdata.tables[st_proseg3.tables_key]
 rank = 2
 idx = tbl.obs["heterotypic_overlap_area"].nlargest(rank).index[rank - 1]
-x0, y0 = tbl.obs.loc[idx, st_proseg3.tables_centroid_x_key] / 0.2125, tbl.obs.loc[idx, st_proseg3.tables_centroid_y_key] / 0.2125
+x0, y0 = (
+    tbl.obs.loc[idx, st_proseg3.tables_centroid_x_key] / 0.2125,
+    tbl.obs.loc[idx, st_proseg3.tables_centroid_y_key] / 0.2125,
+)
 
 # Define color palette for plotting
 col_celltype = {
@@ -588,12 +582,14 @@ axes = np.atleast_1d(axes)
 for ax, (method, st) in zip(axes, st_dict.items(), strict=False):
     df = (
         st.sdata.tables[st.tables_key]
-        .obs[[
-            "vertical_signal_integrity",
-            "similarity_top_bottom",
-            "similarity_top_bottom_p_value",
-            "transcript_count",
-        ]]
+        .obs[
+            [
+                "vertical_signal_integrity",
+                "similarity_top_bottom",
+                "similarity_top_bottom_p_value",
+                "transcript_count",
+            ]
+        ]
         .dropna()
     )
     df = df[df["similarity_top_bottom_p_value"] < 0.05]

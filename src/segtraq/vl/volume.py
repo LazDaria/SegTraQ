@@ -162,7 +162,7 @@ def similarity_top_bottom(
     If `n_permutations >= 100`, a conditional permutation test pools the bottom and
     top counts and reallocates transcripts while preserving both region totals.
     The lower-tail p-value quantifies whether the observed similarity is smaller
-    than expected under a shared-composition null model. 
+    than expected under a shared-composition null model.
 
     Parameters
     ----------
@@ -267,16 +267,10 @@ def similarity_top_bottom(
     tx["_is_top"] = valid_split & (tx["_z_for_split"] >= tx["_z_top"])
 
     counts_bottom = (
-        tx[tx["_is_bottom"]]
-        .groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .unstack(fill_value=0)
+        tx[tx["_is_bottom"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
     )
     counts_top = (
-        tx[tx["_is_top"]]
-        .groupby([points_cell_id_key, points_gene_key], observed=True)
-        .size()
-        .unstack(fill_value=0)
+        tx[tx["_is_top"]].groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
     )
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
@@ -302,11 +296,7 @@ def similarity_top_bottom(
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
-            rng=(
-                np.random.default_rng(int(cell_seed))
-                if cell_seed is not None
-                else None
-            ),
+            rng=(np.random.default_rng(int(cell_seed)) if cell_seed is not None else None),
         )
         row = {
             tables_cell_id_key: cid,
@@ -324,8 +314,7 @@ def similarity_top_bottom(
 
     if out.empty:
         raise ValueError(
-            f"Could not compute top-bottom profile similarities. "
-            f"Try a different quantile. You used q={q}."
+            f"Could not compute top-bottom profile similarities. Try a different quantile. You used q={q}."
         )
 
     if inplace:
@@ -338,6 +327,7 @@ def similarity_top_bottom(
         )
 
     return out
+
 
 def fraction_heterotypic_overlap(
     sdata: sd.SpatialData,

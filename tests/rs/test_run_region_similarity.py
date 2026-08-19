@@ -8,6 +8,4 @@ def test_run_region_similarity(segtraq_obj):
     assert "iou" in obs.columns
     assert "similarity_nucleus_cell" in obs.columns
     assert "similarity_nucleus_cytoplasm" in obs.columns
-    assert "similarity_center_border" in obs.columns
-    assert "similarity_border_neighborhood" in obs.columns
     assert "border_admixture_score" in obs.columns

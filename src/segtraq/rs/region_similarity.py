@@ -33,7 +33,7 @@ def match_nuclei_to_cells(
     (area(cell ∩ nucleus) / area(nucleus)). Candidate nuclei are identified by
     spatial overlap, and the highest-scoring nucleus is retained for each cell.
     The final result also enforces a one-to-one assignment so that a nucleus is
-    not matched to multiple cells. 
+    not matched to multiple cells.
 
     Parameters
     ----------
@@ -124,7 +124,6 @@ def match_nuclei_to_cells(
     return match_df
 
 
-
 def _rename_similarity_metrics(metrics: dict, prefix: str) -> dict:
     """Rename shared outputs to their public metric names."""
     out = {prefix: metrics["similarity"]}
@@ -137,6 +136,7 @@ def _cell_seeds(n: int, random_state: int | None) -> np.ndarray:
     """Generate deterministic, independent seeds for cell-wise permutations."""
     rng = np.random.default_rng(random_state)
     return rng.integers(0, np.iinfo(np.uint32).max, size=n, dtype=np.uint32)
+
 
 def similarity_nucleus_cell(
     sdata: sd.SpatialData,
@@ -267,9 +267,7 @@ def similarity_nucleus_cell(
             inplace=inplace,
         )
     else:
-        match_df = sdata.tables[tables_key].obs[
-            [tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]
-        ].copy()
+        match_df = sdata.tables[tables_key].obs[[tables_cell_id_key, "nucleus_id", "iou", "nucleus_fraction"]].copy()
         # need to rename the column to the id_key used in shapes for the join later
         match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
 
@@ -336,7 +334,7 @@ def similarity_nucleus_cell(
             row = row.toarray()
         return np.asarray(row).ravel()
 
-    #test
+    # test
     problems = []
 
     for _, row in match_df.iterrows():
@@ -350,16 +348,16 @@ def similarity_nucleus_cell(
         x_overlap = counts_intersection.loc[cid].to_numpy()
 
         if x_overlap.sum() > x_cell.sum():
-            problems.append({
-                "cell_id": cid,
-                "cell_total": x_cell.sum(),
-                "overlap_total": x_overlap.sum(),
-                "difference": x_overlap.sum() - x_cell.sum(),
-            })
+            problems.append(
+                {
+                    "cell_id": cid,
+                    "cell_total": x_cell.sum(),
+                    "overlap_total": x_overlap.sum(),
+                    "difference": x_overlap.sum() - x_cell.sum(),
+                }
+            )
 
     problems = pd.DataFrame(problems)
-
-    print(f"{len(problems)} problematic cells")
 
     problems_gene = []
 
@@ -376,15 +374,15 @@ def similarity_nucleus_cell(
         bad = x_overlap > x_cell
 
         if bad.any():
-            problems_gene.append({
-                "cell_id": cid,
-                "n_genes": bad.sum(),
-                "excess_transcripts": (x_overlap[bad] - x_cell[bad]).sum(),
-            })
+            problems_gene.append(
+                {
+                    "cell_id": cid,
+                    "n_genes": bad.sum(),
+                    "excess_transcripts": (x_overlap[bad] - x_cell[bad]).sum(),
+                }
+            )
 
     problems_gene = pd.DataFrame(problems_gene)
-
-    print(f"{len(problems_gene)} cells with gene-wise inconsistencies")
 
     def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
@@ -419,8 +417,7 @@ def similarity_nucleus_cell(
 
     # Permutations are independent across cells, so parallelize at the cell level.
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_compute_one)(row, seed)
-        for (_, row), seed in zip(match_df.iterrows(), seeds, strict=False)
+        delayed(_compute_one)(row, seed) for (_, row), seed in zip(match_df.iterrows(), seeds, strict=False)
     )
 
     out = pd.DataFrame(rows)
@@ -659,19 +656,19 @@ def similarity_nucleus_cytoplasm(
         }
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_compute_one)(i, cid, seed)
-        for i, (cid, seed) in enumerate(zip(all_cells, seeds, strict=False))
+        delayed(_compute_one)(i, cid, seed) for i, (cid, seed) in enumerate(zip(all_cells, seeds, strict=False))
     )
 
     sim_df = pd.DataFrame(rows)
     out = match_df.reset_index(drop=True).merge(sim_df, on=id_key, how="left")
     if inplace:
         merge_into_obs(
-            sdata=sdata, 
-            tables_key=tables_key, 
-            df_to_merge=out, 
-            tables_cell_id_key=tables_cell_id_key, 
-            df_cell_id_key=id_key)
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
     return out
 
 
@@ -819,15 +816,16 @@ def border_admixture_score(
             x_center=expr_center_values[i],
             x_border=expr_border_values[i],
             x_neighborhood=expr_neighborhood_values[i],
-            n_permutations=n_permutations, min_transcripts=min_transcripts,
-            min_genes=min_genes, pseudocount=pseudocount,
+            n_permutations=n_permutations,
+            min_transcripts=min_transcripts,
+            min_genes=min_genes,
+            pseudocount=pseudocount,
             rng=np.random.default_rng(int(seed)),
         )
         return {id_key: cid, **result}
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_one_cell)(i, cid, seed)
-        for i, (cid, seed) in enumerate(zip(common_cells, seeds, strict=False))
+        delayed(_one_cell)(i, cid, seed) for i, (cid, seed) in enumerate(zip(common_cells, seeds, strict=False))
     )
     out = pd.DataFrame(rows)
     if out.empty:
@@ -838,10 +836,11 @@ def border_admixture_score(
 
     if inplace:
         merge_into_obs(
-            sdata=sdata, 
-            tables_key=tables_key, 
-            df_to_merge=out, 
-            tables_cell_id_key=tables_cell_id_key, 
-            df_cell_id_key=id_key)
-            
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=out,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=id_key,
+        )
+
     return out

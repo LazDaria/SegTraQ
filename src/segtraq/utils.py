@@ -10,7 +10,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import scipy.sparse as sp
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
@@ -2122,42 +2121,9 @@ def filter_cells(adata, col: str, func: Callable):
     return adata[mask]
 
 
-def _recompute_expression_matrix(
-    sdata,
-    points_key: str = "transcripts",
-    tables_key: str = "table",
-    tables_cell_id_key: str = "cell_id",
-    tables_gene_key: str | None = None,
-    points_gene_key: str = "feature_name",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str | int | None = "UNASSIGNED",
-):
-    transcripts = sdata.points[points_key].compute()
-
-    # remove background transcripts
-    transcripts = transcripts[~_is_background(transcripts[points_cell_id_key], points_background_id)]
-
-    # Pivot: rows = cell IDs, columns = genes, values = counts
-    expression_matrix_from_transcripts = (
-        transcripts.groupby([points_cell_id_key, points_gene_key], observed=True).size().unstack(fill_value=0)
-    )
-
-    # Align the new expression matrix with the existing one in tables
-    adata = sdata.tables[tables_key]
-    genes = _get_genes(adata, tables_gene_key)
-    # Ensure the new matrix has the same index and columns as the existing one
-    expression_matrix_from_transcripts = expression_matrix_from_transcripts.reindex(
-        index=adata.obs[tables_cell_id_key],
-        columns=genes,
-        fill_value=0,
-    )
-    return expression_matrix_from_transcripts
-
-
 def _filter_control_and_low_quality_transcripts(
     sdata,
     min_qv: float | None = 20.0,
-    control_genes: tuple | list = (),
     control_prefixes: tuple | list = (
         "NegControlProbe_",
         "antisense_",
@@ -2175,64 +2141,53 @@ def _filter_control_and_low_quality_transcripts(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_gene_key: str | None = None,
-    recompute_expression: bool = True,
     inplace: bool = True,
 ) -> sd.SpatialData:
     r"""
-    Filter control and low-quality transcripts from the SpatialData object.
-    This is always done in place.
+    Filter control and low-quality transcripts from the SpatialData points element.
+
+    The cell-level expression table is left unchanged. This allows SegTraQ to use
+    a consistent transcript-level filtering strategy across segmentation methods
+    while preserving the expression matrix provided by each method.
+
+    After filtering, the genes and cell IDs represented by assigned transcripts
+    are compared with those represented in the cell-level table. Differences are
+    reported as warnings because they may indicate that the transcript assignments
+    and expression matrix were generated using different filtering or assignment
+    procedures.
 
     Parameters
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing transcript data.
     min_qv : float | None, default=20.0
-        Minimum quality value (qv) threshold for transcripts to be considered valid.
+        Minimum quality value (qv) threshold for transcripts to be retained.
         If None, no filtering is applied based on quality.
-    control_prefixes : tuple | list, default=(
-        "NegControlProbe\_",
-        "antisense\_",
-        "NegControlCodeword",
-        "BLANK_",
-        "Blank-",
-        "NegPrb",
-        "DeprecatedCodeword\_",
-        "UnassignedCodeword\_",
-        "Intergenic_Region\_",
-    )
-        Control prefixes to identify control probes in gene names.
-        Transcripts with gene names starting with any of these prefixes will be considered
-        control probes and filtered out.
-    control_genes : tuple | list, default=()
-        Additional keywords to identify control probes in gene names.
-        For these ones, exact matches will be filtered out (e.g. "GAPDH" or "ERCC-00002"),
-        whereas for the control_prefixes, any gene name starting with the prefix will be
-        filtered out (e.g. "NegControlProbe_1" or "NegControlProbe_2").
+    control_prefixes : tuple | list
+        Gene-name prefixes identifying control probes to remove.
     points_key : str, default="transcripts"
-        The key in the SpatialData points attribute that contains transcript data.
+        Key containing transcript-level data.
     points_gene_key : str, default="feature_name"
-        The column name in the points DataFrame that contains gene names.
+        Column containing gene names.
     points_cell_id_key : str, default="cell_id"
-        The column name in the points DataFrame that contains cell IDs.
+        Column containing transcript-to-cell assignments.
     points_background_id : str | int | None, default="UNASSIGNED"
-        The value in the points DataFrame that indicates background/unassigned transcripts.
+        Value indicating unassigned/background transcripts.
     tables_key : str, default="table"
-        The key in the SpatialData tables attribute that contains the expression table.
+        Key containing the cell-level expression table.
     tables_cell_id_key : str, default="cell_id"
-        The column name in the tables DataFrame that contains cell IDs.
+        Column containing cell IDs in the table.
     tables_gene_key : str or None, default=None
         Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
-    recompute_expression : bool, default=True
-        Whether to recompute the expression matrix after filtering.
-        Note that this can be computationally expensive for large datasets.
-    inplace: bool, default=True
-        Whether to modify the SpatialData object in place. Defaults to True.
+        If None, `var_names` are used.
+    inplace : bool, default=True
+        Whether to modify the SpatialData object in place.
 
     Returns
     -------
     sd.SpatialData
-        The updated SpatialData object with invalid transcripts marked (in an extra column).
+        SpatialData object with filtered transcript points. The expression table
+        is left unchanged.
     """
     if inplace:
         warnings.warn(
@@ -2247,82 +2202,84 @@ def _filter_control_and_low_quality_transcripts(
     pts = sdata.points[points_key]
     adata = sdata.tables[tables_key]
 
-    # materialize the df to perform the filtering
+    # Materialize the points to perform filtering.
     pts_pd = pts.compute()
-    # get the transformation
     points_transformation = pts.attrs["transform"]
 
-    # we need multiple masks here:
-    # one for the prefixed that checks using startswith
-    # one for the genes that performs an exact match
-    # one for the quality filtering (if qv column is present and min_qv is not None)
+    # Control probes: prefix and exact-match filters.
     prefix_mask = (
         pts_pd[points_gene_key].str.startswith(tuple(control_prefixes))
         if control_prefixes
         else pd.Series(False, index=pts_pd.index)
     )
-    gene_mask = pts_pd[points_gene_key].isin(control_genes) if control_genes else pd.Series(False, index=pts_pd.index)
 
-    if "qv" not in pts_pd.columns and min_qv is not None:
-        raise KeyError(
-            f"Quality value column 'qv' not found in points DataFrame. "
-            f"Available columns: {pts.columns.tolist()}. "
-            f"If you do not want to filter by quality, set min_qv=None."
-        )
-    elif "qv" not in pts_pd.columns and min_qv is None:
-        invalid_mask = prefix_mask | gene_mask
+    # Quality filtering.
+    if min_qv is not None:
+        if "qv" not in pts_pd.columns:
+            raise KeyError(
+                "Quality value column 'qv' not found in points DataFrame. "
+                f"Available columns: {pts_pd.columns.tolist()}. "
+                "If you do not want to filter by quality, set min_qv=None."
+            )
+        quality_mask = pts_pd["qv"] < min_qv
     else:
-        invalid_mask = prefix_mask | gene_mask | (pts_pd["qv"] < min_qv)
+        quality_mask = pd.Series(False, index=pts_pd.index)
 
-    removed_genes = pts_pd.loc[invalid_mask, points_gene_key].unique().tolist()
-    pts_pd = pts_pd[~invalid_mask]
+    invalid_mask = prefix_mask | quality_mask
+    pts_pd = pts_pd.loc[~invalid_mask].copy()
+
+    # Write filtered points back; leave the expression table unchanged.
     sdata.points[points_key] = sd.models.PointsModel.parse(
-        dd.from_pandas(pts_pd, npartitions=1), transformations=points_transformation
+        dd.from_pandas(pts_pd, npartitions=1),
+        transformations=points_transformation,
     )
 
-    # ---- tables ----
-    # on the anndata object, we remove genes that are control genes
-    # filtering by quality does not make sense here, as we do not have per-gene quality values
-    # again, we need to make a distinction between control prefixes (prefix match) and gene masks (exact match)
-    genes_names = _get_genes(adata, tables_gene_key)
-    prefix_mask = (
-        genes_names.str.startswith(tuple(control_prefixes)) if control_prefixes else pd.Series(False, index=genes_names)
+    # Check consistency between assigned points and the expression table.
+    is_background = _is_background(
+        pts_pd[points_cell_id_key],
+        points_background_id,
     )
-    gene_mask = genes_names.isin(control_genes) if control_genes else pd.Series(False, index=genes_names)
-    adata = adata[:, ~(prefix_mask | gene_mask)]
-    sdata.tables[tables_key] = adata
+    assigned = pts_pd.loc[~is_background]
 
-    # check if any of the gene names of the removed transcripts appear in the anndata object
-    # if so, that means we might need to recompute the expression matrix
-    filtered_genes_in_adata = set(removed_genes) & set(genes_names)
-    if len(filtered_genes_in_adata) > 0:
-        if not recompute_expression:
-            warnings.warn(
-                f"Some of the filtered genes ({len(filtered_genes_in_adata)}) also appear in the tables. "
-                f"These genes are: {list(filtered_genes_in_adata)[:5]}... "
-                f"If you wish to recompute the expression matrix after filtering, set recompute_expression=True.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-        else:
-            # aggregate the counts from the points to get a new expression matrix
-            # the aggregate function from spatialdata is not sufficient,
-            # because it removes all layers but the shapes and transcripts
-            expression_matrix = _recompute_expression_matrix(
-                sdata,
-                points_key=points_key,
-                tables_key=tables_key,
-                tables_cell_id_key=tables_cell_id_key,
-                points_gene_key=points_gene_key,
-                points_cell_id_key=points_cell_id_key,
-                points_background_id=points_background_id,
-            )
+    point_genes = set(assigned[points_gene_key].dropna().unique())
+    table_genes = set(_get_genes(adata, tables_gene_key))
 
-            # updating the expression matrix in the tables
-            adata = sdata.tables[tables_key].copy()
-            # turn back into a sparse matrix
-            adata.X = sp.csr_matrix(expression_matrix.values)
-            sdata.tables[tables_key] = adata
+    point_cells = set(assigned[points_cell_id_key].dropna().unique())
+    table_cells = set(adata.obs[tables_cell_id_key].dropna().unique())
+
+    genes_only_points = point_genes - table_genes
+    genes_only_table = table_genes - point_genes
+
+    if genes_only_points or genes_only_table:
+        warnings.warn(
+            "Gene sets differ between assigned transcript points and the expression table. "
+            f"{len(genes_only_points)} genes occur only in points "
+            f"(e.g. {list(genes_only_points)[:5]}), and "
+            f"{len(genes_only_table)} occur only in the table "
+            f"(e.g. {list(genes_only_table)[:5]}). "
+            "This may reflect differences in the filtering used to generate the "
+            "transcript data and expression matrix. Please check that `filter_kwargs`, "
+            "particularly `min_qv` and `control_prefixes`, are consistent "
+            "with the filtering used to generate the expression table.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+    cells_only_points = point_cells - table_cells
+    cells_only_table = table_cells - point_cells
+
+    if cells_only_points or cells_only_table:
+        warnings.warn(
+            "Cell IDs differ between assigned transcript points and the expression table. "
+            f"{len(cells_only_points)} cells occur only in points "
+            f"(e.g. {list(cells_only_points)[:5]}), and "
+            f"{len(cells_only_table)} occur only in the table "
+            f"(e.g. {list(cells_only_table)[:5]}). "
+            "Please check that the transcript assignments and `filter_kwargs` are "
+            "consistent with how the expression table was generated.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
     return sdata
 

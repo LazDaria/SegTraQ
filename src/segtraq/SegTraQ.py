@@ -26,7 +26,6 @@ DEFAULT_FILTER_KWARGS = {
         "UnassignedCodeword_",
         "Intergenic_Region_",
     ),
-    "control_genes": (),
     "inplace": True,
 }
 
@@ -190,7 +189,6 @@ class SegTraQ:
             sdata_new = _filter_control_and_low_quality_transcripts(
                 sdata,
                 min_qv=resolved_kwargs["min_qv"],
-                control_genes=resolved_kwargs["control_genes"],
                 control_prefixes=resolved_kwargs["control_prefixes"],
                 points_key=points_key,
                 points_gene_key=points_gene_key,
@@ -199,7 +197,6 @@ class SegTraQ:
                 tables_key=tables_key,
                 tables_cell_id_key=tables_cell_id_key,
                 tables_gene_key=tables_gene_key,
-                recompute_expression=True,
                 inplace=resolved_kwargs["inplace"],
             )
         else:
