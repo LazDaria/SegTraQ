@@ -20,6 +20,7 @@ from packaging import version as pkg_version
 from rasterio.features import shapes
 from scipy import sparse
 from scipy.spatial.distance import cdist
+from scipy.stats import rankdata
 from shapely.affinity import affine_transform, translate
 from shapely.geometry import shape
 from sklearn.metrics import roc_auc_score
@@ -709,64 +710,83 @@ def _pairwise_auc(
     max_fpr: float | None,
     auc_pos_thresh: float,
     min_cells_per_celltype: int,
-) -> tuple[str, str, list[str], bool]:
+) -> tuple[tuple[str, str, list[str], bool], tuple[str, str, list[str], bool]]:
     """
-    Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b)
-    and return genes up in ct_a vs ct_b.
+    Helper: compute per-gene AUC/pAUC for one pair (ct_a, ct_b) and return
+    genes up in ct_a vs ct_b AND genes up in ct_b vs ct_a.
+
+    For full AUC (max_fpr=None) the ROC AUC is symmetric under swapping the
+    positive class (AUC_b = 1 - AUC_a), so a single per-gene pass suffices.
+    For partial AUC (max_fpr set) this symmetry does not hold - the FPR range
+    being standardized over is defined relative to the positive class - so
+    both directions must be computed explicitly.
     """
-    # Restrict to cells of ct_a and ct_b
+    empty = lambda: ((ct_a, ct_b, [], False), (ct_b, ct_a, [], False))  # noqa: E731
+
     mask = ctypes.isin([ct_a, ct_b])
     if mask.sum() < 2 * min_cells_per_celltype:
-        # too few cells total -> skip
-        return (ct_a, ct_b, [], False)
+        return empty()
 
     ad_pair = adata[mask]
-    X_pair = ad_pair.X
-    if hasattr(X_pair, "toarray"):
-        X_pair = X_pair.toarray()
+
+    # if not enough cells in either type, skip this pair
+    labels_a = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
+    if labels_a.sum() == 0 or labels_a.sum() == labels_a.size:
+        return empty()
+
+    # drop genes with zero expression across the whole pair - AUC is 0.5
+    # for them regardless (constant score), so skip the per-gene ROC call
+    if sparse.issparse(ad_pair.X):
+        gene_mask = ad_pair.X.getnnz(axis=0) > 0
     else:
-        X_pair = np.asarray(X_pair)  # (n_cells_pair, n_genes)
+        gene_mask = (ad_pair.X > 0).any(axis=0)
+    ad_pair = ad_pair[:, gene_mask]
 
-    genes = _get_genes(ad_pair, gene_key)
-    genes = np.asarray(genes)
+    X_pair = ad_pair.X
+    X_pair = X_pair.toarray() if hasattr(X_pair, "toarray") else np.asarray(X_pair)
 
-    labels = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
-    if labels.sum() == 0 or labels.sum() == labels.size:
-        # Only one class present -> skip
-        return (ct_a, ct_b, [], False)
+    genes = np.asarray(_get_genes(ad_pair, gene_key))
 
-    # Precompute means per group to enforce directionality
-    mask_a = labels == 1
-    mask_b = labels == 0
+    mask_a = labels_a == 1
+    mask_b = ~mask_a
     mean_a = X_pair[mask_a].mean(axis=0)
     mean_b = X_pair[mask_b].mean(axis=0)
 
-    # Compute AUC/pAUC per gene (non-vectorized, one roc_auc_score per gene)
-    aucs = np.zeros(genes.size, dtype=float)
-    for j in range(genes.size):
-        scores = X_pair[:, j]
-        # If all scores identical, AUC is undefined -> treat as 0.5
-        if np.all(scores == scores[0]):
-            aucs[j] = 0.5
-        else:
-            aucs[j] = roc_auc_score(labels, scores, max_fpr=max_fpr)
+    n_genes = genes.size
+    n_a = int(mask_a.sum())
+    n_b = int(mask_b.sum())
 
-    # Identify genes up in ct_a vs ct_b
-    #   high AUC and higher mean in ct_a
-    up_mask = (aucs >= auc_pos_thresh) & (mean_a > mean_b)
+    if max_fpr is None:
+        # full AUC == tie-corrected Mann-Whitney rank-sum statistic.
+        # One vectorized ranking over all genes replaces n_genes separate
+        # roc_auc_score calls, and the reverse direction is free (AUC_b = 1 - AUC_a).
+        ranks = rankdata(X_pair, axis=0)
+        rank_sum_a = ranks[mask_a].sum(axis=0)
+        aucs_a = (rank_sum_a - n_a * (n_a + 1) / 2) / (n_a * n_b)
+        aucs_b = 1.0 - aucs_a
+    else:
+        # partial AUC has no equivalent closed-form rank-sum shortcut and is not
+        # symmetric under swapping the positive class, so both directions still
+        # need an explicit per-gene call here.
+        aucs_a = np.full(n_genes, 0.5, dtype=float)
+        aucs_b = np.full(n_genes, 0.5, dtype=float)
+        labels_b = 1 - labels_a
+        for j in range(n_genes):
+            scores = X_pair[:, j]
+            if not np.all(scores == scores[0]):
+                aucs_a[j] = roc_auc_score(labels_a, scores, max_fpr=max_fpr)
+                aucs_b[j] = roc_auc_score(labels_b, scores, max_fpr=max_fpr)
 
-    # get indices of candidate genes
-    idx = np.where(up_mask)[0]
+    def _select(aucs, mean_pos, mean_neg):
+        up_mask = (aucs >= auc_pos_thresh) & (mean_pos > mean_neg)
+        idx = np.where(up_mask)[0]
+        idx = idx[np.argsort(-aucs[idx])][:200]
+        return genes[idx].tolist()
 
-    # sort candidates by AUC descending
-    idx = idx[np.argsort(-aucs[idx])]
+    pos_genes_a = _select(aucs_a, mean_a, mean_b)
+    pos_genes_b = _select(aucs_b, mean_b, mean_a)
 
-    # cap at 200 genes
-    idx = idx[:200]
-
-    pos_genes_a = genes[idx].tolist()
-
-    return (ct_a, ct_b, pos_genes_a, True)
+    return (ct_a, ct_b, pos_genes_a, True), (ct_b, ct_a, pos_genes_b, True)
 
 
 def _pairwise_de(
@@ -779,33 +799,54 @@ def _pairwise_de(
     pval_adj_thresh: float,
     logfc_pos_thresh: float,
     min_cells_per_celltype: int,
-) -> tuple[str, str, list[str], bool]:
+    max_cells_per_celltype: int,
+    random_state: int,
+) -> tuple[tuple[str, str, list[str], bool], tuple[str, str, list[str], bool]]:
     """
     Helper: run DE for one pair (ct_a, ct_b) and return genes up in ct_a.
     """
-    mask = ctypes.isin([ct_a, ct_b])
-    if mask.sum() < 2 * min_cells_per_celltype:
-        # too few cells total, skip
-        return (ct_a, ct_b, [], False)
+    # for logreg, the symmetry assumption does not hold, hence we do not support it
+    assert method in (
+        "t-test",
+        "wilcoxon",
+        "t-test_overestim_var",
+    ), f"Invalid DE method: {method}. Please choose from 't-test', 'wilcoxon', or 't-test_overestim_var'."
+    rng = np.random.default_rng(random_state)
 
-    ad_pair = adata[mask].copy()
+    idx_a = np.flatnonzero(ctypes == ct_a)
+    idx_b = np.flatnonzero(ctypes == ct_b)
 
-    # DE: ct_a vs ct_b
-    sc.tl.rank_genes_groups(
-        ad_pair,
-        groupby=ref_cell_type,
-        groups=[ct_a],
-        reference=ct_b,
-        method=method,
-    )
+    # need enough cells in each type before sampling
+    if len(idx_a) < min_cells_per_celltype or len(idx_b) < min_cells_per_celltype:
+        return (ct_a, ct_b, [], False), (ct_b, ct_a, [], False)
+
+    # downsample each cell type independently if needed
+    if len(idx_a) > max_cells_per_celltype:
+        idx_a = rng.choice(idx_a, size=max_cells_per_celltype, replace=False)
+    if len(idx_b) > max_cells_per_celltype:
+        idx_b = rng.choice(idx_b, size=max_cells_per_celltype, replace=False)
+
+    pair_idx = np.concatenate([idx_a, idx_b])
+    ad_pair = adata[pair_idx].copy()
+
+    # drop genes with zero expression across the whole pair — they can never pass thresholds
+    if sparse.issparse(ad_pair.X):
+        gene_mask = ad_pair.X.getnnz(axis=0) > 0
+    else:
+        gene_mask = (ad_pair.X > 0).any(axis=0)
+
+    ad_pair = ad_pair[:, gene_mask].copy()
+
+    sc.tl.rank_genes_groups(ad_pair, groupby=ref_cell_type, groups=[ct_a], reference=ct_b, method=method)
     df = sc.get.rank_genes_groups_df(ad_pair, group=ct_a)
 
-    pos_df = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
-    pos_df = pos_df.sort_values("logfoldchanges", ascending=False).head(200)
+    pos_a = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] > logfc_pos_thresh)]
+    pos_a = pos_a.sort_values("logfoldchanges", ascending=False).head(200)
 
-    pos_genes_a = pos_df["names"].tolist()
+    pos_b = df[(df["pvals_adj"] < pval_adj_thresh) & (df["logfoldchanges"] < -logfc_pos_thresh)]
+    pos_b = pos_b.sort_values("logfoldchanges", ascending=True).head(200)
 
-    return (ct_a, ct_b, pos_genes_a, True)
+    return (ct_a, ct_b, pos_a["names"].tolist(), True), (ct_b, ct_a, pos_b["names"].tolist(), True)
 
 
 def markers_from_reference(
@@ -825,6 +866,8 @@ def markers_from_reference(
     t_pos: float = 0.25,
     t_neg: float = 1.0,
     min_cells_per_celltype: int = 10,
+    max_cells_per_celltype: int = 1000,
+    random_state: int = 42,
     n_jobs: int = 1,
 ) -> dict[str, dict[str, list[str]]]:
     """
@@ -846,8 +889,9 @@ def markers_from_reference(
 
     Overlap filtering:
     Overlap filtering is applied separately to positive and negative markers:
-        - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
-        - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
+
+    - Positive lists: genes appearing in ≥ t_pos * n_types lists are dropped.
+    - Negative lists: genes appearing in ≥ t_neg * n_types lists are dropped.
 
     Parameters
     ----------
@@ -899,6 +943,11 @@ def markers_from_reference(
     min_cells_per_celltype : int, optional (default: 10)
         Minimum number of cells required per cell type to be included in pairwise
         computations.
+    max_cells_per_celltype : int, optional (default: 1000)
+        Maximum number of cells to include per cell type in pairwise computations.
+        Only relevant for DE mode, where downsampling is performed to limit computation time.
+    random_state : int, optional (default: 42)
+        Random seed for reproducibility of downsampling in DE mode.
     n_jobs : int, optional (default: 1)
         Number of parallel jobs for running pairwise computations.
 
@@ -941,6 +990,8 @@ def markers_from_reference(
 
     # ordered cell type pairs (a, b), a != b
     celltype_pairs = [(ct_a, ct_b) for ct_a in usable_celltypes for ct_b in usable_celltypes if ct_a != ct_b]
+    # unordered pairs (a, b) with a < b to avoid duplicate computation
+    unordered_pairs = [(a, b) for i, a in enumerate(usable_celltypes) for b in usable_celltypes[i + 1 :]]
 
     # Precompute fraction of cells with counts > 0 per type
     # This dictionary maps cell type to an array of shape (n_genes,)
@@ -986,16 +1037,25 @@ def markers_from_reference(
                 pval_adj_thresh=pval_adj_thresh,
                 logfc_pos_thresh=logfc_pos_thresh,
                 min_cells_per_celltype=min_cells_per_celltype,
+                max_cells_per_celltype=max_cells_per_celltype,
+                random_state=random_state,
             )
 
     else:
         raise ValueError(f"Unknown mode '{mode}'. Use 'auc' or 'de'.")
 
     # Run over all pairs, possibly in parallel
+    # We exploit the symmetry of the pairwise computation: (a, b) and (b, a) are computed together
     if n_jobs == 1:
-        results = [worker(ct_a, ct_b) for ct_a, ct_b in celltype_pairs]
+        results = []
+        for ct_a, ct_b in unordered_pairs:
+            r_ab, r_ba = worker(ct_a, ct_b)
+            results.append(r_ab)
+            results.append(r_ba)
     else:
-        results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in celltype_pairs)
+        pair_results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in unordered_pairs)
+
+        results = [r for pair in pair_results for r in pair]
 
     # the ok column indicates whether the pairwise computation was valid (enough cells, etc.)
     # we filter out invalid pairs before building the up_by_pair dictionary
@@ -1583,6 +1643,34 @@ def validate_spatialdata(
                     UserWarning,
                     stacklevel=2,
                 )
+        else:
+            # points_background_id=None is treated as matching None, np.nan, and pd.NA.
+            # Ensure there actually are missing values among the point cell IDs -- otherwise
+            # this silently means "no background filtering happens at all".
+            has_missing_id = points_df[points_cell_id_key].isna().any()
+            most_common_points_id = points_df[points_cell_id_key].mode(dropna=False).iloc[0]
+            if not has_missing_id:
+                warnings.warn(
+                    "points_background_id is None, but no missing values (None/np.nan/pd.NA) were "
+                    "found among point cell IDs. "
+                    "If your background points are denoted with an explicit value (e.g. 0, -1, 'background'), "
+                    "pass that value as 'points_background_id' instead."
+                    f"The most common cell ID among points is '{most_common_points_id}'. ",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            else:
+                # as a more stringent check, warn if missing values are not the most common cell ID
+                if pd.notna(most_common_points_id):
+                    warnings.warn(
+                        "points_background_id is None, but the most common cell ID among points is "
+                        f"'{most_common_points_id}', not a missing value. "
+                        "This may indicate that 'points_background_id' "
+                        "should be set explicitly rather than left as None. "
+                        "If you are sure that 'points_background_id=None' is correct, you can ignore this warning.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
 
         # missing_in_polygons = { #TODO - after querying sdata objects, this breaks
         #     x
@@ -2145,50 +2233,72 @@ def _filter_control_and_low_quality_transcripts(
     inplace: bool = True,
 ) -> sd.SpatialData:
     r"""
-    Filter control and low-quality transcripts from the SpatialData points element.
+        Filter control and low-quality transcripts from the SpatialData points element.
 
-    The cell-level expression table is left unchanged. This allows SegTraQ to use
-    a consistent transcript-level filtering strategy across segmentation methods
-    while preserving the expression matrix provided by each method.
+        The cell-level expression table is left unchanged. This allows SegTraQ to use
+        a consistent transcript-level filtering strategy across segmentation methods
+        while preserving the expression matrix provided by each method.
 
-    After filtering, the genes and cell IDs represented by assigned transcripts
-    are compared with those represented in the cell-level table. Differences are
-    reported as warnings because they may indicate that the transcript assignments
-    and expression matrix were generated using different filtering or assignment
-    procedures.
+        After filtering, the genes and cell IDs represented by assigned transcripts
+        are compared with those represented in the cell-level table. Differences are
+        reported as warnings because they may indicate that the transcript assignments
+        and expression matrix were generated using different filtering or assignment
+        procedures.
 
-    Parameters
-    ----------
-    sdata : sd.SpatialData
-        The SpatialData object containing transcript data.
-    min_qv : float | None, default=20.0
-        Minimum quality value (qv) threshold for transcripts to be retained.
-        If None, no filtering is applied based on quality.
-    control_prefixes : tuple | list
-        Gene-name prefixes identifying control probes to remove.
-    points_key : str, default="transcripts"
-        Key containing transcript-level data.
-    points_gene_key : str, default="feature_name"
-        Column containing gene names.
-    points_cell_id_key : str, default="cell_id"
-        Column containing transcript-to-cell assignments.
-    points_background_id : str | int | None, default="UNASSIGNED"
-        Value indicating unassigned/background transcripts.
-    tables_key : str, default="table"
-        Key containing the cell-level expression table.
-    tables_cell_id_key : str, default="cell_id"
-        Column containing cell IDs in the table.
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If None, `var_names` are used.
-    inplace : bool, default=True
-        Whether to modify the SpatialData object in place.
+        Parameters
+        ----------
+        sdata : sd.SpatialData
+            The SpatialData object containing transcript data.
+        min_qv : float | None, default=20.0
+            Minimum quality value (qv) threshold for transcripts to be retained.
+            If None, no filtering is applied based on quality.
+    <<<<<<< HEAD
+        control_prefixes : tuple | list
+            Gene-name prefixes identifying control probes to remove.
+    =======
+        control_prefixes : tuple | list, default=(
+            "NegControlProbe\_",
+            "antisense\_",
+            "NegControlCodeword",
+            "BLANK\_",
+            "Blank-",
+            "NegPrb",
+            "DeprecatedCodeword\_",
+            "UnassignedCodeword\_",
+            "Intergenic_Region\_",
+        )
+            Control prefixes to identify control probes in gene names.
+            Transcripts with gene names starting with any of these prefixes will be considered
+            control probes and filtered out.
+        control_genes : tuple | list, default=()
+            Additional keywords to identify control probes in gene names.
+            For these ones, exact matches will be filtered out (e.g. "GAPDH" or "ERCC-00002"),
+            whereas for the control_prefixes, any gene name starting with the prefix will be
+            filtered out (e.g. "NegControlProbe_1" or "NegControlProbe_2").
+    >>>>>>> origin/main
+        points_key : str, default="transcripts"
+            Key containing transcript-level data.
+        points_gene_key : str, default="feature_name"
+            Column containing gene names.
+        points_cell_id_key : str, default="cell_id"
+            Column containing transcript-to-cell assignments.
+        points_background_id : str | int | None, default="UNASSIGNED"
+            Value indicating unassigned/background transcripts.
+        tables_key : str, default="table"
+            Key containing the cell-level expression table.
+        tables_cell_id_key : str, default="cell_id"
+            Column containing cell IDs in the table.
+        tables_gene_key : str or None, default=None
+            Column in `sdata.tables[tables_key].var` containing gene identifiers.
+            If None, `var_names` are used.
+        inplace : bool, default=True
+            Whether to modify the SpatialData object in place.
 
-    Returns
-    -------
-    sd.SpatialData
-        SpatialData object with filtered transcript points. The expression table
-        is left unchanged.
+        Returns
+        -------
+        sd.SpatialData
+            SpatialData object with filtered transcript points. The expression table
+            is left unchanged.
     """
     if inplace:
         warnings.warn(

@@ -3,9 +3,7 @@ import pandas as pd
 import segtraq as st
 
 
-def test_neighbor_contamination_realdata_inplace_outputs(sdata_labeled, adata_ref):
-    markers = st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
-
+def test_neighbor_contamination_realdata_inplace_outputs(sdata_labeled, markers):
     (
         per_cell_df,
         mat_df,

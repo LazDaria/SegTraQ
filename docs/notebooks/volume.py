@@ -661,6 +661,7 @@ plt.show()
 
 # %% [markdown]
 # Wrapper to run all metrics (including label transfer).
+# By default, this does not run `ovrlpy` to reduce runtime, but it can be enabled with `run_ovrlpy=True`.
 
 # %%
 sdata_proseg2 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")

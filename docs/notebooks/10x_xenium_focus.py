@@ -1555,7 +1555,7 @@ keys = []
 values = []
 
 for key, df in border_distance_negative.items():
-    for val in df["distance_to_cell_membrane_norm_165_genes"]:
+    for val in df["distance_to_cell_membrane_norm_166_genes"]:
         keys.append(key)
         values.append(val)
 
@@ -1565,7 +1565,7 @@ keys = []
 values = []
 
 for key, df in border_distance_positive.items():
-    for val in df["distance_to_cell_membrane_norm_80_genes"]:
+    for val in df["distance_to_cell_membrane_norm_78_genes"]:
         keys.append(key)
         values.append(val)
 
@@ -1620,7 +1620,7 @@ for i, (method, st) in enumerate(st_dict.items()):
         st.sdata,
         "cell_boundaries",
         method,
-        "distance_to_cell_membrane_norm_165_genes",
+        "distance_to_cell_membrane_norm_166_genes",
         markers[method]["DCIS1"]["negative"][:20],
         axes[i],
     )

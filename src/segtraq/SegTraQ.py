@@ -391,6 +391,7 @@ class SegTraQ:
         query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = None,
         cell_type_key: str | None = None,
+        run_ovrlpy: bool = False,
         inplace: bool = True,
         label_transfer_kwargs: dict[str, Any] | None = None,
         kwargs: dict[str, Any] | None = None,
@@ -419,7 +420,7 @@ class SegTraQ:
 
         1) similarity_top_bottom
         2) label transfer, if needed and possible
-        3) vertical_signal_integrity_per_cell
+        3) vertical_signal_integrity_per_cell (disabled by default, use run_ovrlpy=True)
         4) fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available
 
         Parameters
@@ -445,6 +446,9 @@ class SegTraQ:
             this column is used for `fraction_heterotypic_overlap` and to infer ovrlpy
             `n_components`. If `None` and `adata_ref` is provided, label transfer is run first
             and labels are stored under `"transferred_cell_type"`.
+        run_ovrlpy : bool, default=False
+            If `True`, runs ovrlpy to compute vertical signal integrity per cell. If `False`,
+            this step is skipped and `vsi_kwargs` are ignored.
         inplace : bool, default=True
             If `True`, writes results into `sdata.tables[tables_key].obs` as implemented by
             the underlying functions and returns `None`. If `False`, returns all results as
@@ -503,39 +507,40 @@ class SegTraQ:
             )
 
         # vertical_signal_integrity_per_cell
-        ovrlp = vsi_kwargs.get("ovrlp")
+        if run_ovrlpy:
+            ovrlp = vsi_kwargs.get("ovrlp")
 
-        ovrlpy_init_kwargs = dict(vsi_kwargs.get("ovrlpy_init_kwargs") or {})
+            ovrlpy_init_kwargs = dict(vsi_kwargs.get("ovrlpy_init_kwargs") or {})
 
-        if ovrlp is None and "n_components" not in ovrlpy_init_kwargs:
-            if cell_type_key is not None:
-                if cell_type_key not in self.sdata.tables[self.tables_key].obs:
-                    raise KeyError(
-                        f"cell type key {cell_type_key!r} not found in sdata.tables[{self.tables_key!r}].obs"
+            if ovrlp is None and "n_components" not in ovrlpy_init_kwargs:
+                if cell_type_key is not None:
+                    if cell_type_key not in self.sdata.tables[self.tables_key].obs:
+                        raise KeyError(
+                            f"cell type key {cell_type_key!r} not found in sdata.tables[{self.tables_key!r}].obs"
+                        )
+
+                    ovrlpy_init_kwargs["n_components"] = (
+                        self.sdata.tables[self.tables_key].obs[cell_type_key].dropna().nunique()
                     )
 
-                ovrlpy_init_kwargs["n_components"] = (
-                    self.sdata.tables[self.tables_key].obs[cell_type_key].dropna().nunique()
-                )
+                elif adata_ref is not None:
+                    if ref_cell_type is None:
+                        raise ValueError(
+                            "`ref_cell_type` is required when `adata_ref` is provided to infer `n_components`."
+                        )
 
-            elif adata_ref is not None:
-                if ref_cell_type is None:
-                    raise ValueError(
-                        "`ref_cell_type` is required when `adata_ref` is provided to infer `n_components`."
-                    )
+                    if ref_cell_type not in adata_ref.obs:
+                        raise KeyError(f"ref cell type key {ref_cell_type!r} not found in `adata_ref.obs`.")
 
-                if ref_cell_type not in adata_ref.obs:
-                    raise KeyError(f"ref cell type key {ref_cell_type!r} not found in `adata_ref.obs`.")
+                    ovrlpy_init_kwargs["n_components"] = adata_ref.obs[ref_cell_type].dropna().nunique()
 
-                ovrlpy_init_kwargs["n_components"] = adata_ref.obs[ref_cell_type].dropna().nunique()
+            if ovrlpy_init_kwargs:
+                vsi_kwargs["ovrlpy_init_kwargs"] = ovrlpy_init_kwargs
 
-        if ovrlpy_init_kwargs:
-            vsi_kwargs["ovrlpy_init_kwargs"] = ovrlpy_init_kwargs
-
-        vsi = self.vl.vertical_signal_integrity_per_cell(
-            inplace=inplace,
-            **vsi_kwargs,
-        )
+            vsi = self.vl.vertical_signal_integrity_per_cell(
+                inplace=inplace,
+                **vsi_kwargs,
+            )
 
         # fraction_heterotypic_overlap, only if cell-type labels and valid shapes are available
         het = None
