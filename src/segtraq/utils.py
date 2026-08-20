@@ -2133,6 +2133,7 @@ def _filter_control_and_low_quality_transcripts(
         "NegPrb",
         "DeprecatedCodeword_",
         "UnassignedCodeword_",
+        "Intergenic_Region_",
     ),
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",

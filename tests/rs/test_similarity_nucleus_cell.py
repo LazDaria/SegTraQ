@@ -1,10 +1,12 @@
 import pandas as pd
 
 import segtraq as st
+from segtraq.utils import _filter_control_and_low_quality_transcripts
 
 
 def test_similarity_nucleus_cell(sdata_new):
-    df = st.rs.similarity_nucleus_cell(sdata_new, n_jobs=8)
+    sdata = _filter_control_and_low_quality_transcripts(sdata_new)
+    df = st.rs.similarity_nucleus_cell(sdata)
 
     assert isinstance(df, pd.DataFrame)
 
@@ -25,7 +27,8 @@ def test_similarity_nucleus_cell(sdata_new):
 
 
 def test_similarity_nucleus_cell_value_range(sdata_new):
-    df = st.rs.similarity_nucleus_cell(sdata_new, n_jobs=8)
+    sdata = _filter_control_and_low_quality_transcripts(sdata_new)
+    df = st.rs.similarity_nucleus_cell(sdata)
 
     vals = df["similarity_nucleus_cell"].dropna()
 
@@ -37,8 +40,9 @@ def test_similarity_nucleus_cell_value_range(sdata_new):
 
 
 def test_similarity_nucleus_cell_high_thresholds_return_nan(sdata_new):
+    sdata = _filter_control_and_low_quality_transcripts(sdata_new)
     df = st.rs.similarity_nucleus_cell(
-        sdata_new,
+        sdata,
         min_transcripts=10_000,
         min_genes=10_000,
         n_jobs=8,
@@ -49,15 +53,16 @@ def test_similarity_nucleus_cell_high_thresholds_return_nan(sdata_new):
 
 
 def test_similarity_nucleus_cell_no_inplace(sdata_new):
-    before_cols = set(sdata_new.tables["table"].obs.columns)
+    sdata = _filter_control_and_low_quality_transcripts(sdata_new)
+    before_cols = set(sdata.tables["table"].obs.columns)
 
     df = st.rs.similarity_nucleus_cell(
-        sdata_new,
+        sdata,
         n_jobs=8,
         inplace=False,
     )
 
-    after_cols = set(sdata_new.tables["table"].obs.columns)
+    after_cols = set(sdata.tables["table"].obs.columns)
 
     assert isinstance(df, pd.DataFrame)
     assert before_cols == after_cols
