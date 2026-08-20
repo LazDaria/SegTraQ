@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
@@ -321,7 +322,7 @@ class SegTraQ:
 
     def run_region_similarity(
         self,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
         iou_kwargs: dict = None,
@@ -336,7 +337,7 @@ class SegTraQ:
         1) matching between each cell and its best-matching nucleus
         2) similarity between per-cell expression and its matched nucleus
         3) similarity between the cell's nucleus-overlapping and cytoplasmic expression
-        6) border admixture score
+        4) border admixture score
 
         Returns
         -------
@@ -394,7 +395,7 @@ class SegTraQ:
         run_ovrlpy: bool = False,
         inplace: bool = True,
         label_transfer_kwargs: dict[str, Any] | None = None,
-        kwargs: dict[str, Any] | None = None,
+        similarity_kwargs: dict[str, Any] | None = None,
         heterotypic_overlap_kwargs: dict[str, Any] | None = None,
         vsi_kwargs: dict[str, Any] | None = None,
     ):
@@ -456,7 +457,7 @@ class SegTraQ:
         label_transfer_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `self.run_label_transfer()`. Do not include
             `adata_ref` or `ref_cell_type` here; pass them directly to `run_volume`.
-        kwargs : dict or None, optional
+        similarity_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `vl.similarity_top_bottom`.
         heterotypic_overlap_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `vl.fraction_heterotypic_overlap`.
@@ -478,14 +479,14 @@ class SegTraQ:
         )
 
         label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
-        kwargs = {} if kwargs is None else dict(kwargs)
+        similarity_kwargs = {} if similarity_kwargs is None else dict(similarity_kwargs)
         heterotypic_overlap_kwargs = {} if heterotypic_overlap_kwargs is None else dict(heterotypic_overlap_kwargs)
         vsi_kwargs = {} if vsi_kwargs is None else dict(vsi_kwargs)
 
         # similarity_top_bottom
-        diff = self.vl.similarity_top_bottom(
+        sim = self.vl.similarity_top_bottom(
             inplace=inplace,
-            **kwargs,
+            **similarity_kwargs,
         )
 
         # label transfer, if needed and possible
@@ -570,7 +571,7 @@ class SegTraQ:
             return None
 
         out = {
-            "similarity_top_bottom": diff,
+            "similarity_top_bottom": sim,
             "vertical_signal_integrity_per_cell": vsi,
         }
 
@@ -980,7 +981,7 @@ class SegTraQ:
         t_pos: float = 0.25,
         t_neg: float = 1.0,
         min_cells_per_celltype: int = 10,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
 
@@ -1020,19 +1021,18 @@ class SegTraQ:
 
         return markers
 
-    markers_from_reference.__doc__ = (
-        _markers_from_reference.__doc__
-        + """
+    markers_from_reference.__doc__ = _markers_from_reference.__doc__ + dedent(
+        """
 
-    Notes
-    -----
-    query_gene_key : str | None
-        Addtional parameter only used when ``markers_from_reference`` is called
-        as a method of a `SegTraQ` instance. Specifies the column in
-        `self.sdata.tables[tables_key].var` containing the query gene
-        identifiers. If `None`, `var_names` are used. These identifiers are
-        used to subset the reference genes before marker selection.
-    """
+            Notes
+            -----
+            query_gene_key : str | None
+                Additional parameter only used when ``markers_from_reference`` is called
+                as a method of a ``SegTraQ`` instance. Specifies the column in
+                ``self.sdata.tables[tables_key].var`` containing the query gene
+                identifiers. If ``None``, ``var_names`` are used. These identifiers are
+                used to subset the reference genes before marker selection.
+            """
     )
 
     def run_label_transfer(
@@ -1150,9 +1150,8 @@ class SegTraQ:
             "NegPrb",
             "DeprecatedCodeword_",
             "UnassignedCodeword_",
+            "Intergenic_Region_",
         ),
-        control_genes: tuple | list = (),
-        recompute_expression: bool = True,
         inplace: bool = True,
     ):
         """
@@ -1164,10 +1163,6 @@ class SegTraQ:
             Minimum quality value (QV) threshold for transcripts to be retained.
         control_prefixes : tuple or list, optional
             List of gene name prefixes indicating control transcripts to be filtered out.
-        control_genes : tuple or list, optional
-            List of gene name prefixes indicating control genes to be filtered out.
-        recompute_expression : bool, default=True
-            If True, recomputes the per-cell expression matrix after filtering transcripts.
         inplace : bool, default=True
             If True, modifies `self.sdata` in place.
             If False, returns a new SpatialData object with filtered transcripts.
@@ -1182,7 +1177,6 @@ class SegTraQ:
             sdata=self.sdata,
             min_qv=min_qv,
             control_prefixes=control_prefixes,
-            control_genes=control_genes,
             points_key=self.points_key,
             points_gene_key=self.points_gene_key,
             points_cell_id_key=self.points_cell_id_key,
@@ -1190,7 +1184,6 @@ class SegTraQ:
             tables_key=self.tables_key,
             tables_cell_id_key=self.tables_cell_id_key,
             tables_gene_key=self.tables_gene_key,
-            recompute_expression=recompute_expression,
             inplace=inplace,
         )
 
@@ -1307,7 +1300,7 @@ class _BLFacade:
     def morphological_features(
         self,
         features_to_compute: list | None = None,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         eps: float = 1e-6,
         inplace: bool = True,
@@ -1357,7 +1350,7 @@ class _RSFacade:
         self,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1383,7 +1376,7 @@ class _RSFacade:
         scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
         n_permutations: int = 200,
@@ -1424,7 +1417,7 @@ class _RSFacade:
         scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
         n_permutations: int = 200,
@@ -1467,7 +1460,7 @@ class _RSFacade:
         pseudocount: float = 0.5,
         n_permutations: int = 200,
         random_state: int | None = None,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1595,7 +1588,7 @@ class _PSFacade:
         cell_type_query: str | list[str] | None = None,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         predicate: str = "intersects",
         inplace: bool = True,
@@ -1635,7 +1628,7 @@ class _PSFacade:
         restrict_to_within_boundary: bool = False,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1676,7 +1669,7 @@ class _PSFacade:
         membrane_region: Literal["cell", "nucleus"] = "cell",
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         signed: bool = True,
         inplace: bool = True,
@@ -1868,7 +1861,7 @@ class _VLFacade:
         min_transcripts: int = 10,
         n_permutations: int = 200,
         random_state: int | None = 42,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1925,7 +1918,7 @@ class _VLFacade:
     def vertical_signal_integrity_per_cell(
         self,
         ovrlp: ovrlpy.Ovrlp | None = None,
-        n_workers: int = 1,
+        n_jobs: int | None = None,
         random_state: int = 123,
         ovrlpy_init_kwargs: dict[str, Any] | None = None,
         ovrlpy_analyse_kwargs: dict[str, Any] | None = None,
@@ -1943,7 +1936,7 @@ class _VLFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             points_background_id=self._p.points_background_id,
-            n_workers=n_workers,
+            n_jobs=n_jobs,
             random_state=random_state,
             ovrlpy_init_kwargs=ovrlpy_init_kwargs,
             ovrlpy_analyse_kwargs=ovrlpy_analyse_kwargs,

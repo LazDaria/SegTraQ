@@ -3,6 +3,8 @@ import pytest
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 def test_similarity_top_bottom_type(sdata_new):
     df = st.vl.similarity_top_bottom(sdata_new)

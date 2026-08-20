@@ -31,6 +31,7 @@ from spatialdata.transformations import (
     set_transformation,
 )
 
+from ._settings import settings
 from .bl import baseline as bl
 from .constants import CONNECTIVITIES_KEY, DISTANCES_KEY, NEIGHBORS_KEY, NORM_LOG_LAYER, PCA_KEY, SEGTRAQ_CELL_ID_KEY
 
@@ -868,7 +869,7 @@ def markers_from_reference(
     min_cells_per_celltype: int = 10,
     max_cells_per_celltype: int = 1000,
     random_state: int = 42,
-    n_jobs: int = 1,
+    n_jobs: int | None = None,
 ) -> dict[str, dict[str, list[str]]]:
     """
     Compute positive and negative markers per cell type using pairwise contrasts
@@ -948,7 +949,7 @@ def markers_from_reference(
         Only relevant for DE mode, where downsampling is performed to limit computation time.
     random_state : int, optional (default: 42)
         Random seed for reproducibility of downsampling in DE mode.
-    n_jobs : int, optional (default: 1)
+    n_jobs : int or None, optional (default: None)
         Number of parallel jobs for running pairwise computations.
 
     Returns
@@ -957,6 +958,9 @@ def markers_from_reference(
         A dictionary mapping each cell type to its positive and negative markers:
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     # copies gene identifiers into var_names and makes them unique (if needed)
     adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
 
@@ -2233,72 +2237,50 @@ def _filter_control_and_low_quality_transcripts(
     inplace: bool = True,
 ) -> sd.SpatialData:
     r"""
-        Filter control and low-quality transcripts from the SpatialData points element.
+    Filter control and low-quality transcripts from the SpatialData points element.
 
-        The cell-level expression table is left unchanged. This allows SegTraQ to use
-        a consistent transcript-level filtering strategy across segmentation methods
-        while preserving the expression matrix provided by each method.
+    The cell-level expression table is left unchanged. This allows SegTraQ to use
+    a consistent transcript-level filtering strategy across segmentation methods
+    while preserving the expression matrix provided by each method.
 
-        After filtering, the genes and cell IDs represented by assigned transcripts
-        are compared with those represented in the cell-level table. Differences are
-        reported as warnings because they may indicate that the transcript assignments
-        and expression matrix were generated using different filtering or assignment
-        procedures.
+    After filtering, the genes and cell IDs represented by assigned transcripts
+    are compared with those represented in the cell-level table. Differences are
+    reported as warnings because they may indicate that the transcript assignments
+    and expression matrix were generated using different filtering or assignment
+    procedures.
 
-        Parameters
-        ----------
-        sdata : sd.SpatialData
-            The SpatialData object containing transcript data.
-        min_qv : float | None, default=20.0
-            Minimum quality value (qv) threshold for transcripts to be retained.
-            If None, no filtering is applied based on quality.
-    <<<<<<< HEAD
-        control_prefixes : tuple | list
-            Gene-name prefixes identifying control probes to remove.
-    =======
-        control_prefixes : tuple | list, default=(
-            "NegControlProbe\_",
-            "antisense\_",
-            "NegControlCodeword",
-            "BLANK\_",
-            "Blank-",
-            "NegPrb",
-            "DeprecatedCodeword\_",
-            "UnassignedCodeword\_",
-            "Intergenic_Region\_",
-        )
-            Control prefixes to identify control probes in gene names.
-            Transcripts with gene names starting with any of these prefixes will be considered
-            control probes and filtered out.
-        control_genes : tuple | list, default=()
-            Additional keywords to identify control probes in gene names.
-            For these ones, exact matches will be filtered out (e.g. "GAPDH" or "ERCC-00002"),
-            whereas for the control_prefixes, any gene name starting with the prefix will be
-            filtered out (e.g. "NegControlProbe_1" or "NegControlProbe_2").
-    >>>>>>> origin/main
-        points_key : str, default="transcripts"
-            Key containing transcript-level data.
-        points_gene_key : str, default="feature_name"
-            Column containing gene names.
-        points_cell_id_key : str, default="cell_id"
-            Column containing transcript-to-cell assignments.
-        points_background_id : str | int | None, default="UNASSIGNED"
-            Value indicating unassigned/background transcripts.
-        tables_key : str, default="table"
-            Key containing the cell-level expression table.
-        tables_cell_id_key : str, default="cell_id"
-            Column containing cell IDs in the table.
-        tables_gene_key : str or None, default=None
-            Column in `sdata.tables[tables_key].var` containing gene identifiers.
-            If None, `var_names` are used.
-        inplace : bool, default=True
-            Whether to modify the SpatialData object in place.
+    Parameters
+    ----------
+    sdata : sd.SpatialData
+        The SpatialData object containing transcript data.
+    min_qv : float | None, default=20.0
+        Minimum quality value (qv) threshold for transcripts to be retained.
+        If None, no filtering is applied based on quality.
+    control_prefixes : tuple | list
+        Gene-name prefixes identifying control probes to remove.
+    points_key : str, default="transcripts"
+        Key containing transcript-level data.
+    points_gene_key : str, default="feature_name"
+        Column containing gene names.
+    points_cell_id_key : str, default="cell_id"
+        Column containing transcript-to-cell assignments.
+    points_background_id : str | int | None, default="UNASSIGNED"
+        Value indicating unassigned/background transcripts.
+    tables_key : str, default="table"
+        Key containing the cell-level expression table.
+    tables_cell_id_key : str, default="cell_id"
+        Column containing cell IDs in the table.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If None, `var_names` are used.
+    inplace : bool, default=True
+        Whether to modify the SpatialData object in place.
 
-        Returns
-        -------
-        sd.SpatialData
-            SpatialData object with filtered transcript points. The expression table
-            is left unchanged.
+    Returns
+    -------
+    sd.SpatialData
+        SpatialData object with filtered transcript points. The expression table
+        is left unchanged.
     """
     if inplace:
         warnings.warn(

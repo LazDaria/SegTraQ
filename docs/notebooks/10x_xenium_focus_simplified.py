@@ -19,7 +19,7 @@
 # This tutorial highlights the basic functions of `SegTraQ` on a single
 # Xenium dataset that was segmented using the Xenium default segmentation.
 # To follow along, you can download the data already in `SpatialData`
-# format from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# format from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 #
 # For a more detailed description of how the data was obtained and a comparison
 # between segmentation methods, please look at the Xenium Focus.
@@ -44,6 +44,8 @@ import spatialdata as sd
 import spatialdata_plot  # noqa
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 # filtering import and deprecation warnings from spatialdata
 # this is in general not recommended

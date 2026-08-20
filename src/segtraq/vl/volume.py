@@ -9,6 +9,7 @@ from joblib import Parallel, delayed
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 from shapely.ops import unary_union
 
+from .._settings import settings
 from ..rs.utils import _two_profile_similarity_metrics
 from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs
 from .utils import _correct_z_drift, _run_ovrlpy
@@ -26,7 +27,7 @@ def vertical_signal_integrity_per_cell(
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     points_background_id: str | int = "UNASSIGNED",
-    n_workers: int = 1,
+    n_jobs: int | None = None,
     random_state: int = 123,
     ovrlpy_init_kwargs: dict[str, Any] | None = None,
     ovrlpy_analyse_kwargs: dict[str, Any] | None = None,
@@ -70,8 +71,8 @@ def vertical_signal_integrity_per_cell(
         Column in the cell table uniquely identifying each cell.
     points_background_id : str or int, default="UNASSIGNED"
         Identifier for transcripts not assigned to any cell (background).
-    n_workers : int, default=-1
-        Number of workers passed to `ovrlpy.Ovrlp` if `ovrlp=None`.
+    n_jobs : int  or None, default=None
+        Number of jobs passed to `ovrlpy.Ovrlp` if `ovrlp=None`.
     random_state : int, default=42
         Random seed passed to `ovrlpy.Ovrlp` if `ovrlp=None`.
     ovrlpy_init_kwargs : dict or None, default=None
@@ -86,17 +87,19 @@ def vertical_signal_integrity_per_cell(
     pd.DataFrame
         DataFrame with columns [tables_cell_id_key, "vertical_signal_integrity"].
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
 
     if ovrlp is None:
         ovrlp = _run_ovrlpy(
             sdata=sdata,
+            n_jobs=n_jobs,
             points_key=points_key,
             points_gene_key=points_gene_key,
             points_cell_id_key=points_cell_id_key,
             points_x_key=points_x_key,
             points_y_key=points_y_key,
             points_z_key=points_z_key,
-            n_workers=n_workers,
             random_state=random_state,
             ovrlpy_init_kwargs=ovrlpy_init_kwargs,
             ovrlpy_analyse_kwargs=ovrlpy_analyse_kwargs,
@@ -148,7 +151,7 @@ def similarity_top_bottom(
     min_transcripts: int = 10,
     n_permutations: int = 200,
     random_state: int | None = 42,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -210,7 +213,7 @@ def similarity_top_bottom(
         Number of conditional permutations used to compute the p-value. Must be >= 100.
     random_state : int or None, default=42
         Random seed used to generate reproducible per-cell permutation streams.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs used for per-cell profile comparisons.
     parallel_backend : str, default="threading"
         Parallelization backend passed to joblib.
@@ -223,6 +226,9 @@ def similarity_top_bottom(
         DataFrame with `tables_cell_id_key` and `similarity_top_bottom`. If
         `n_permutations >= 100`, `similarity_top_bottom_p_value` is also returned.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     if not (0.0 < q < 0.5):
         raise ValueError(f"`q` must be in (0, 0.5). Got {q}.")
     if n_permutations < 100:

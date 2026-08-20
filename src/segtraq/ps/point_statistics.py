@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import spatialdata as sd
 
+from .._settings import settings
 from ..rs.region_similarity import match_nuclei_to_cells
 from ..rs.utils import _get_filtered_points_df, _join_points_regions
 from ..utils import merge_into_obs, xy_scale
@@ -29,7 +30,7 @@ def percentage_transcripts_in_compartments(
     points_y_key: str = "y",
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     predicate: str = "intersects",
     inplace: bool = True,
@@ -86,9 +87,9 @@ def percentage_transcripts_in_compartments(
         Criterion to choose the best nucleus for each cell when `centroid_region="nucleus"`.
     min_intersection_area : float, default=0.0
         Minimum overlap area required to consider a nucleus a candidate for a cell.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs for cell-nucleus matching (if needed).
-        Default `-1` uses all available CPU cores.
+        `-1` uses all available CPU cores.
     parallel_backend : str, optional
         Parallelization backend to use with joblib. Default is "threading".
     predicate : str, default="intersects"
@@ -103,6 +104,9 @@ def percentage_transcripts_in_compartments(
       num_total, num_in_cell, num_outside_cell, num_in_nucleus_overlap, num_in_cytoplasm
       perc_outside_cell, perc_nucleus, perc_cytoplasm
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     # transformations alignment check
     T_transcripts = sdata.points[points_key].attrs["transform"]
     T_shapes = sdata.shapes[shapes_key].attrs["transform"]
@@ -298,7 +302,7 @@ def distance_to_centroid(
     restrict_to_within_boundary: bool = False,
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -356,9 +360,9 @@ def distance_to_centroid(
         Criterion to choose the best nucleus for each cell when `centroid_region="nucleus"`.
     min_intersection_area : float, default=0.0
         Minimum overlap area required to consider a nucleus a candidate for a cell.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs for cell-nucleus matching (if needed).
-        Default `-1` uses all available CPU cores.
+        `-1` uses all available CPU cores.
     parallel_backend : str, optional
         Parallelization backend to use with joblib. Default is "threading".
     inplace : bool, default=True
@@ -371,6 +375,9 @@ def distance_to_centroid(
         centroid x/y, raw distance, and the normalized distance column `distance_<feature>`.
         If `inplace=True`, returns the merged (two-column) DataFrame used to write into `.obs`.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     # validate inputs
     if centroid_region not in ("cell", "nucleus"):
         raise ValueError(f"centroid_region={centroid_region!r} not supported. Use 'cell' or 'nucleus'.")
@@ -517,7 +524,7 @@ def distance_to_membrane(
     restrict_to_within_boundary: bool = False,
     select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     signed: bool = True,
     inplace: bool = True,
@@ -581,9 +588,9 @@ def distance_to_membrane(
         Criterion to choose the best nucleus for each cell when `membrane_region="nucleus"`.
     min_intersection_area : float, default=0.0
         Minimum overlap area required to consider a nucleus a candidate for a cell.
-    n_jobs : int, default=1
+    n_jobs : int, default=None
         Number of parallel jobs for cell-nucleus matching (if needed).
-        Default `-1` uses all available CPU cores.
+        `-1` uses all available CPU cores.
     parallel_backend : str, optional
         Parallelization backend to use with joblib. Default is "threading".
     signed : bool, default=True
@@ -599,6 +606,9 @@ def distance_to_membrane(
         - `distance_to_{membrane_region}_membrane_norm_<feature>`
         If `inplace=True`, returns the DataFrame that was merged into `.obs`.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     # validate inputs
     if membrane_region not in ("cell", "nucleus"):
         raise ValueError(f"membrane_region={membrane_region!r} not supported. Use 'cell' or 'nucleus'.")

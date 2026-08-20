@@ -7,6 +7,8 @@ from spatialdata import SpatialData
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 @pytest.fixture(scope="session", name="sdata_new")
 def test_sdata_new():

@@ -33,7 +33,7 @@
 # providing intuitive signals for potential contamination or biased spatial distributions.
 # Metrics can be returned as a table and, if desired, stored in place in the `SpatialData` object.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
 # %load_ext autoreload
@@ -52,6 +52,8 @@ import spatialdata as sd
 import spatialdata_plot  # noqa
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 # %% [markdown]
 # We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium data

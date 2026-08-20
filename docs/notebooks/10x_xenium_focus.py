@@ -1,8 +1,22 @@
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.19.5
+#   kernelspec:
+#     display_name: segtraq_26
+#     language: python
+#     name: python3
+# ---
+
 # %% [markdown]
 # # Technology Focus: 10x Genomics Xenium
 #
 # To follow along with this tutorial, you can download the data already in
-# `SpatialData` format from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# `SpatialData` format from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %% [markdown]
 # ## Description of prior dataset acquisition and segmentation
@@ -92,6 +106,8 @@ import spatialdata as sd
 import spatialdata_plot  # noqa
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 # warnings.filterwarnings(action="ignore")
 
@@ -1178,11 +1194,8 @@ sns.scatterplot(
 )
 
 ax.set_xlabel("Border_admixture_score (↓)")
-ax.set_ylabel("marker_balanced_accuracy (↓)")
+ax.set_ylabel("marker_balanced_accuracy (↑)")
 ax.set_title("Border_admixture_score vs. marker_balanced_accuracy")
-
-# ax.set_xlim(0, 1)
-# ax.set_ylim(0, 1.1)
 
 legend = ax.legend(title="Method", frameon=False, bbox_to_anchor=(1.05, 1), loc="upper left")
 
@@ -1495,21 +1508,21 @@ histogram_feature(st_dict, "similarity_top_bottom")
 plt.style.use("dark_background")
 
 
-def plot_metric(sdata, boundary_key, method, metric, genes, ax):
-    sdata_plot = sd.deepcopy(sdata)
-    sdata_plot["table"] = sdata_plot["table"][(sdata_plot["table"].obs[metric].notna())]
+def plot_metric(st, method, metric, genes, ax):
+    sdata_plot = sd.deepcopy(st.sdata)
+    sdata_plot[st.tables_key] = sdata_plot[st.tables_key][(sdata_plot[st.tables_key].obs[metric].notna())]
 
-    sdata_plot.tables["table"].obs["region"] = boundary_key
-    sdata_plot.set_table_annotates_spatialelement("table", region=boundary_key)
+    sdata_plot.tables[st.tables_key].obs["region"] = st.shapes_key
+    sdata_plot.set_table_annotates_spatialelement(st.tables_key, region=st.shapes_key)
 
     sdata_plot.pl.render_shapes(
-        element="nucleus_boundaries",
+        element=st.nucleus_shapes_key,
         fill_alpha=0.2,
         outline_alpha=1.0,
         outline_width=0.5,
         outline_color="black",
     ).pl.render_shapes(
-        element="cell_boundaries",
+        element=st.shapes_key,
         color=metric,
         cmap="viridis",
         fill_alpha=0.5,
@@ -1517,8 +1530,8 @@ def plot_metric(sdata, boundary_key, method, metric, genes, ax):
         outline_width=0.5,
         outline_color="black",
     ).pl.render_points(
-        "transcripts",
-        color="feature_name",
+        st.points_key,
+        color=st.points_gene_key,
         groups=genes,
         palette=["red"] * len(genes),
     ).pl.show(ax=ax, title="Cell/nuclei seg. for " + method + " " + metric, colorbar=True)
@@ -1617,8 +1630,7 @@ fig, axes = plt.subplots(1, 3, figsize=(15, 10), constrained_layout=True)
 
 for i, (method, st) in enumerate(st_dict.items()):
     plot_metric(
-        st.sdata,
-        "cell_boundaries",
+        st,
         method,
         "distance_to_cell_membrane_norm_166_genes",
         markers[method]["DCIS1"]["negative"][:20],

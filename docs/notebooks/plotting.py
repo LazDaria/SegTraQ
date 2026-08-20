@@ -20,7 +20,7 @@
 # In order to use it, you need to prepare your data in the form of a dictionary
 # that maps the method name to the corresponding `SegTraQ` object.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %% [markdown]
 # ## Data Preparation
@@ -44,6 +44,8 @@ import spatialdata as sd
 import spatialdata_plot  # noqa
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 # %%
 # === READING SPATIALDATA OBJECTS ===
@@ -83,17 +85,23 @@ st_bidcell = segtraq.SegTraQ(
     sdata_bidcell,
     images_key="image",
     points_background_id=0,
-    tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_y",
+    tables_area_key=None,
+    tables_centroid_x_key="cell_centroid_x",
+    tables_centroid_y_key="cell_centroid_y",
 )
 st_proseg = segtraq.SegTraQ(
     sdata_proseg,
     images_key="image",
-    points_background_id=0,
+    points_cell_id_key="assignment",
+    points_background_id=2**32 - 1,
+    points_gene_key="gene",
     tables_area_key=None,
+    tables_cell_id_key="cell",
+    shapes_cell_id_key="cell",
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
 )
+
 st_segger = segtraq.SegTraQ(
     sdata_segger, images_key="image", tables_centroid_x_key="cell_centroid_x", tables_centroid_y_key="cell_centroid_y"
 )

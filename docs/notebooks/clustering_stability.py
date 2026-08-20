@@ -27,7 +27,7 @@
 # </center>
 #
 # To follow along with this tutorial, you can download the data from
-# [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
 # %load_ext autoreload
@@ -53,6 +53,8 @@ import spatialdata_plot  # noqa: F401
 
 import segtraq
 
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
+
 
 # %%
 def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
@@ -75,8 +77,9 @@ st_bidcell = segtraq.SegTraQ(
     sd.read_zarr("../../data/xenium_5K_data/bidcell.zarr"),
     images_key="image",
     points_background_id=0,
-    tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_y",
+    tables_area_key=None,
+    tables_centroid_x_key="cell_centroid_x",
+    tables_centroid_y_key="cell_centroid_y",
 )
 
 st_segger = segtraq.SegTraQ(
@@ -96,10 +99,14 @@ st_xenium = segtraq.SegTraQ(
 st_proseg2 = segtraq.SegTraQ(
     sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr"),
     images_key="image",
-    points_background_id=0,
+    points_cell_id_key="assignment",
+    points_background_id=2**32 - 1,
+    points_gene_key="gene",
     tables_area_key=None,
+    tables_cell_id_key="cell",
+    shapes_cell_id_key="cell",
     tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_x",
+    tables_centroid_y_key="centroid_y",
 )
 
 st_dict = {"bidcell": st_bidcell, "segger": st_segger, "xenium": st_xenium, "proseg2": st_proseg2}
@@ -282,9 +289,13 @@ scRNAseq_data_path = Path("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 adata_ref = ad.read_h5ad(scRNAseq_data_path)
 st = segtraq.SegTraQ(
     sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr"),
-    images_key=None,
+    images_key="image",
+    points_cell_id_key="assignment",
+    points_background_id=2**32 - 1,
+    points_gene_key="gene",
     tables_area_key=None,
-    points_background_id=0,
+    tables_cell_id_key="cell",
+    shapes_cell_id_key="cell",
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
 )

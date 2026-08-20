@@ -2,6 +2,8 @@ import pandas as pd
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 def test_similarity_nucleus_cytoplasm(sdata_new):
     df = st.rs.similarity_nucleus_cytoplasm(sdata_new)

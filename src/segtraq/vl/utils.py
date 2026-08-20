@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 import numpy as np
@@ -58,13 +59,13 @@ def _correct_z_drift(
 
 def _run_ovrlpy(
     sdata,
+    n_jobs: int,
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_cell_id_key: str = "cell_id",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_z_key: str = "z",
-    n_workers: int = -1,
     random_state: int = 123,
     ovrlpy_init_kwargs: dict[str, Any] | None = None,
     ovrlpy_analyse_kwargs: dict[str, Any] | None = None,
@@ -78,6 +79,8 @@ def _run_ovrlpy(
     ----------
     sdata : SpatialData
         A `SpatialData` object.
+    n_jobs : int
+        Number of workers passed to `ovrlpy.Ovrlp`.
     points_key : str, default="transcripts"
         Key in `sdata.points` for the transcript-level points table.
     points_gene_key : str, default="feature_name"
@@ -90,8 +93,6 @@ def _run_ovrlpy(
         Column in the points table containing transcript y-coordinates.
     points_z_key : str, default="z"
         Column in the points table containing transcript z-coordinates.
-    n_workers : int, default=-1
-        Number of workers passed to `ovrlpy.Ovrlp`.
     random_state : int, default=42
         Random seed passed to `ovrlpy.Ovrlp` to ensure reproducible results.
     ovrlpy_init_kwargs : dict or None, default=None
@@ -104,6 +105,7 @@ def _run_ovrlpy(
     ovrlpy.Ovrlp
         Initialized and analysed `ovrlpy.Ovrlp` object.
     """
+    ovrl_n_jobs = os.cpu_count() if n_jobs == -1 else n_jobs
 
     ovrlpy_init_kwargs = ovrlpy_init_kwargs or {}
     ovrlpy_analyse_kwargs = ovrlpy_analyse_kwargs or {}
@@ -126,7 +128,7 @@ def _run_ovrlpy(
 
     ovrlp_obj = ovrlpy.Ovrlp(
         coordinate_df,
-        n_workers=n_workers,
+        n_workers=ovrl_n_jobs,
         random_state=random_state,
         **ovrlpy_init_kwargs,
     )

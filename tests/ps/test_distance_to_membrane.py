@@ -3,6 +3,8 @@ import pytest
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 def _pick_present_gene(sdata, points_key="transcripts", points_gene_key="feature_name", n=2000):
     """

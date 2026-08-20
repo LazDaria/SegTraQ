@@ -35,7 +35,7 @@
 # or in other words, how well it can disentangle transcripts from overlapping cells.
 #
 # To follow along with this tutorial, you can download the data from
-# [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
 # %load_ext autoreload
@@ -56,6 +56,8 @@ import spatialdata as sd
 import spatialdata_plot  # noqa
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 warnings.filterwarnings(action="ignore")
 
@@ -564,7 +566,7 @@ for ax in axes:
 n_celltypes = st_xenium.sdata.tables[st_xenium.tables_key].obs["transferred_cell_type"].nunique()
 
 for _method, st in st_dict.items():
-    _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes}, n_workers=8)
+    _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes})
 
 # %% [markdown]
 # We compare `similarity_top_bottom` with vertical signal integrity only among cells with a

@@ -36,7 +36,7 @@
 # similarity than expected. The accompanying p-value identifies cells with unusually low similarity.
 #
 # To follow along with this tutorial, you can download the data from
-# [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
 # %load_ext autoreload
@@ -52,6 +52,8 @@ import spatialdata_plot  # noqa
 from scipy.stats import linregress
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 # %% [markdown]
 # #### Helpers

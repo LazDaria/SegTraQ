@@ -4,6 +4,7 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
 
+from .._settings import settings
 from ..utils import _get_count_matrix, _get_genes, merge_into_obs
 from .utils import (
     _border_admixture_permutation_metrics,
@@ -23,7 +24,7 @@ def match_nuclei_to_cells(
     nucleus_shapes_key: str = "nucleus_boundaries",
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> DataFrame:
@@ -57,7 +58,7 @@ def match_nuclei_to_cells(
     min_intersection_area : float, default=0.0
         Minimum area (cell ∩ nucleus) required to consider a nucleus as a candidate.
         Overlaps <= this threshold are ignored.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs across cells. `-1` uses all available CPU cores.
     parallel_backend : str, default="threading"
         Parallelization backend passed to joblib.
@@ -69,6 +70,9 @@ def match_nuclei_to_cells(
     pandas.DataFrame
         One row per cell with the matched nucleus ID, IoU, and nucleus fraction.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     assert nucleus_shapes_key is not None, (
         "Cannot compute IoUs: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `rs` metrics."
@@ -157,7 +161,7 @@ def similarity_nucleus_cell(
     scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
     n_permutations: int = 200,
@@ -217,7 +221,7 @@ def similarity_nucleus_cell(
     min_intersection_area : float, default=0.0
         Minimum area(cell ∩ nucleus) required to consider a nucleus as a
         candidate. Overlaps <= this threshold are ignored.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs across cells. `-1` uses all available CPU cores.
     parallel_backend : str, default="threading"
         Parallelization backend passed to joblib.
@@ -234,6 +238,9 @@ def similarity_nucleus_cell(
         One row per cell with nucleus-match information, null-corrected
         nucleus-cell similarity, and its permutation p-value.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     if n_permutations < 100:
         raise ValueError("`n_permutations` must be >= 100.")
 
@@ -313,7 +320,7 @@ def similarity_nucleus_cell(
 
     counts_intersection = (
         tx_nuc[tx_nuc["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
         .reindex(index=all_cells, columns=common_genes, fill_value=0)
@@ -452,7 +459,7 @@ def similarity_nucleus_cytoplasm(
     scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
     n_permutations: int = 200,
@@ -510,7 +517,7 @@ def similarity_nucleus_cytoplasm(
     min_intersection_area : float, default=0.0
         Minimum area (cell ∩ nucleus) required to consider a nucleus as a
         candidate. Overlaps <= this threshold are ignored.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs across cells. `-1` uses all available CPU cores.
     parallel_backend : str, default="threading"
         Parallelization backend passed to joblib.
@@ -527,6 +534,8 @@ def similarity_nucleus_cytoplasm(
         One row per cell with nucleus-match information and null-calibrated
         nucleus-cytoplasm similarity score and its permutation p-value.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
 
     if n_permutations < 100:
         raise ValueError("`n_permutations` must be >= 100.")
@@ -614,7 +623,7 @@ def similarity_nucleus_cytoplasm(
 
     counts_intersection = (
         tx[tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
@@ -622,7 +631,7 @@ def similarity_nucleus_cytoplasm(
 
     counts_cytoplasm = (
         tx[~tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
@@ -692,7 +701,7 @@ def border_admixture_score(
     pseudocount: float = 0.5,
     n_permutations: int = 200,
     random_state: int | None = 42,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
@@ -749,7 +758,7 @@ def border_admixture_score(
         Number of permutations per cell. Must be >= 100.
     random_state : int or None, default=42
         Seed for reproducible cell-wise permutations.
-    n_jobs : int, default=-1
+    n_jobs : int  or None, default=None
         Number of parallel jobs across cells. `-1` uses all available CPU cores.
     parallel_backend : str, default="threading"
         Parallelization backend passed to joblib.
@@ -762,6 +771,8 @@ def border_admixture_score(
         One row per cell with null-corrected border-admixture score and
         permutation p-value.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
 
     if n_permutations < 100:
         raise ValueError("`n_permutations` must be >= 100.")
