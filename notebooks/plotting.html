@@ -358,7 +358,7 @@ document.write(`
   <section id="Module:-Plotting">
 <h1>Module: Plotting<a class="headerlink" href="#Module:-Plotting" title="Link to this heading">#</a></h1>
 <p>One of the main usecases of <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> is to compare different segmentation methods. To facilitate this task, you can make use of the plotting module (<code class="docutils literal notranslate"><span class="pre">pl</span></code>). In order to use it, you need to prepare your data in the form of a dictionary that maps the method name to the corresponding <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object.</p>
-<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <section id="Data-Preparation">
 <h2>Data Preparation<a class="headerlink" href="#Data-Preparation" title="Link to this heading">#</a></h2>
 <p>First, we need to get the data into the right format. This closely follows the <a class="reference internal" href="10x_xenium_focus.html"><span class="doc">Xenium Focus</span></a>.</p>
@@ -386,6 +386,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 </pre></div>
 </div>
 </div>
@@ -430,17 +431,23 @@ document.write(`
     <span class="n">sdata_bidcell</span><span class="p">,</span>
     <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
     <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
-    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_y&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">st_proseg</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
     <span class="n">sdata_proseg</span><span class="p">,</span>
     <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
-    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
     <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
     <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
     <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
 <span class="p">)</span>
+
 <span class="n">st_segger</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
     <span class="n">sdata_segger</span><span class="p">,</span> <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_x&quot;</span><span class="p">,</span> <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;cell_centroid_y&quot;</span>
 <span class="p">)</span>
@@ -455,18 +462,10 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42322cf0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4236a990&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4226c550&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe422b2ea0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42bcb100&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe422a69f0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe423cf790&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe423cf460&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42251250&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42252f50&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42677200&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe42675c70&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea00ecf0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea1de990&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea03da90&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea4b1ba0&gt;: None
 </pre></div></div>
 </div>
 </section>

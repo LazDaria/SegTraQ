@@ -333,13 +333,14 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-Nucleus-and-Cytoplasm">Similarity between Nucleus and Cytoplasm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-cell-center-and-border">Similarity between the cell center and border</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-border-and-neighborhood">Similarity between the border and neighborhood</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Border-admixture-score">Border admixture score</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Helpers">Helpers</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-nucleus-and-cytoplasm">Similarity between nucleus and cytoplasm</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Border-admixture-score">Border admixture score</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+</li>
 </ul>
             </nav>
         </div>
@@ -354,9 +355,11 @@ document.write(`
   <section id="Module:-Region-Similarity">
 <h1>Module: Region Similarity<a class="headerlink" href="#Module:-Region-Similarity" title="Link to this heading">#</a></h1>
 <p>Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.</p>
-<center><p><img alt="a7bee535910042d595dcd0afaa8931d9" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
-</center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module provides metrics to assess how similar the expression profiles are between subcellular regions (e.g., cell and nucleus).</p>
-<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<center><p><img alt="29158e6558fd480bb885339a0712838d" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
+</center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module compares transcript composition between different subcellular regions to identify cells with unexpected spatial differences in expression.</p>
+<p>Because profiles with fewer transcripts are inherently more variable and therefore tend to appear less similar even when sampled from the same underlying expression profile, SegTraQ accounts for this finite-count effect using a permutation-based expectation. The reported scores measure similarity relative to this expectation: values around zero indicate the expected level of similarity, negative values indicate lower similarity than expected, and positive values indicate higher similarity than
+expected. The accompanying p-value identifies cells with unusually low similarity.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -370,7 +373,8 @@ document.write(`
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
@@ -378,6 +382,7 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">linregress</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 </pre></div>
 </div>
 </div>
@@ -386,188 +391,14 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
 </pre></div></div>
 </div>
-<p>We start out by loading the data into a <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_v1_data/sdata_xenium_crop.zarr/&quot;</span><span class="p">)</span>
-<span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
-    <span class="n">sdata</span><span class="p">,</span>
-    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">points_background_id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># &quot;UNASSIGNED&quot; for Xenium prime</span>
-<span class="p">)</span>
-
-<span class="n">sdata</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
-  validate_spatialdata(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
-  sdata_new = _filter_control_and_low_quality_transcripts(
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-SpatialData object, with associated Zarr store: /g/huber/projects/CODEX/segtraq/data/20260204_SegTraQ_sdata/xenium_v1_data/sdata_xenium_crop.zarr
-├── Images
-│     └── &#39;morphology_focus&#39;: DataTree[cyx] (1, 2500, 2500), (1, 1250, 1250), (1, 625, 625), (1, 313, 313), (1, 156, 156)
-├── Points
-│     └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 8) (3D points)
-├── Shapes
-│     ├── &#39;cell_boundaries&#39;: GeoDataFrame shape: (1563, 1) (2D shapes)
-│     └── &#39;nucleus_boundaries&#39;: GeoDataFrame shape: (1501, 1) (2D shapes)
-└── Tables
-      └── &#39;table&#39;: AnnData (1563, 313)
-with coordinate systems:
-    ▸ &#39;global&#39;, with elements:
-        morphology_focus (Images), transcripts (Points), cell_boundaries (Shapes), nucleus_boundaries (Shapes)
-</pre></div></div>
-</div>
-<p>As you can see, the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code>dataset contains cell and nuclear masks as <code class="docutils literal notranslate"><span class="pre">shapes</span></code>. It is important that you have a nuclear segmentation in your object, otherwise you will not be able to compute the metrics below.</p>
-<section id="Intersection-over-Union-between-cell-and-nucleus-masks">
-<h2>Intersection over Union between cell and nucleus masks<a class="headerlink" href="#Intersection-over-Union-between-cell-and-nucleus-masks" title="Link to this heading">#</a></h2>
-<p>First, we get the nucleus that overlaps most with each cell and compute the Intersection over Union (IoU) between cell and nuclear masks using the method <code class="docutils literal notranslate"><span class="pre">match_nuclei_to_cells()</span></code>.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">match_nuclei_to_cells</span><span class="p">()</span>
-<span class="n">results_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>cell_id</th>
-      <th>nucleus_id</th>
-      <th>iou</th>
-      <th>nucleus_fraction</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>6327</td>
-      <td>6327.0</td>
-      <td>0.051420</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>6328</td>
-      <td>6328.0</td>
-      <td>0.064608</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>6330</td>
-      <td>6330.0</td>
-      <td>0.047572</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>6331</td>
-      <td>6331.0</td>
-      <td>0.042835</td>
-      <td>1.0</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>6332</td>
-      <td>6332.0</td>
-      <td>0.041484</td>
-      <td>1.0</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-<p>For each <code class="docutils literal notranslate"><span class="pre">cell_id</span></code>, we obtain the ID (<code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>) of the nucleus mask with the highest <code class="docutils literal notranslate"><span class="pre">IoU</span></code>. If a cell does not overlap with any nucleus, the function returns a missing value for <code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>. In addition to the <code class="docutils literal notranslate"><span class="pre">IoU</span></code>, we also report the fraction of the nucleus that overlaps with the cell. If the nucleus has an invalid geometry, <code class="docutils literal notranslate"><span class="pre">IoU</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> are reported as <code class="docutils literal notranslate"><span class="pre">NA</span></code>.</p>
-<p>Let’s see what this looks like when we plot the IoU spatially.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
-
-<span class="c1"># plot</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by IoU&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_11_1.png" src="../_images/notebooks_region_similarity_11_1.png" />
-</div>
-</div>
-<p>We will quickly set up some helper functions to facilitate plotting.</p>
+<section id="Helpers">
+<h2>Helpers<a class="headerlink" href="#Helpers" title="Link to this heading">#</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># helper functions for plotting</span>
@@ -673,156 +504,83 @@ with coordinate systems:
 </pre></div>
 </div>
 </div>
-<p>We can now investigate what the distribution of IoUs looks like.</p>
+<p>We start out by loading the data into a <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
-    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
-    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Intersection over Union (IoU)&quot;</span><span class="p">,</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_v1_data/sdata_xenium_crop.zarr/&quot;</span><span class="p">)</span>
+<span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># &quot;UNASSIGNED&quot; for Xenium prime</span>
 <span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_15_0.png" src="../_images/notebooks_region_similarity_15_0.png" />
-</div>
-</div>
-</section>
-<section id="Expression-similarity-between-cell-and-nucleus">
-<h2>Expression similarity between cell and nucleus<a class="headerlink" href="#Expression-similarity-between-cell-and-nucleus" title="Link to this heading">#</a></h2>
-<p>Now that we have matched each cell with a nucleus, we can investigate how similar the expression profiles are between the nucleus and the whole cell (including the nucleus). For this, we use the function <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell()</span></code>.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">similarity_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">similarity_nucleus_cell</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
-    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cosine similarity between cell and nucleus expression&quot;</span><span class="p">,</span>
-    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Cosine similarity&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_19_0.png" src="../_images/notebooks_region_similarity_19_0.png" />
-</div>
-</div>
-<p>The histogram shows the distribution of cosine similarity values across cells. It is right-skewed, with a median of 0.73. This provides intuition about possible spatial spillover: cells may be contaminated by neighboring cells, assuming that nuclei capture expression with less contamination due to their smaller radius.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_regression</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
-    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
-    <span class="n">y</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cosine sim. vs. IoU with Regression Line&quot;</span><span class="p">,</span>
-    <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Cosine similarity between cell and nucleus intersection&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_21_0.png" src="../_images/notebooks_region_similarity_21_0.png" />
-</div>
-</div>
-<p>The calculated R2 (coefficient of determination) is 0.428, indicating that similarity between cell and nucleus increases with their IoU.</p>
-<p>The spatial plot below shows cell boundaries colored by cosine similarity between the nucleus and the cell. Cells whose transcripts are distributed across the nucleus region tend to have higher similarity with the nucleus, while cells whose transcripts are located outside the nuclear region —potentially due to spillover from neighboring cells— tend to exhibit lower similarity.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
 
-<span class="c1"># plot</span>
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by IoU&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Overlay of nuclei and cell masks colored by cosine similarity&quot;</span><span class="p">,</span> <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">127</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:161: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+  sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_24_1.png" src="../_images/notebooks_region_similarity_24_1.png" />
-</div>
-</div>
-<p>Let’s have a look at some cells with a low IoU, but a high similarity between the nucleus and the whole cell.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span> <span class="s2">&quot;iou&quot;</span><span class="p">,</span> <span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
-<span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;iou&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+SpatialData object, with associated Zarr store: /g/huber/projects/CODEX/segtraq/data/20260204_SegTraQ_sdata/xenium_v1_data/sdata_xenium_crop.zarr
+├── Images
+│     └── &#39;morphology_focus&#39;: DataTree[cyx] (1, 2500, 2500), (1, 1250, 1250), (1, 625, 625), (1, 313, 313), (1, 156, 156)
+├── Points
+│     └── &#39;transcripts&#39;: DataFrame with shape: (&lt;Delayed&gt;, 8) (3D points)
+├── Shapes
+│     ├── &#39;cell_boundaries&#39;: GeoDataFrame shape: (1563, 1) (2D shapes)
+│     └── &#39;nucleus_boundaries&#39;: GeoDataFrame shape: (1501, 1) (2D shapes)
+└── Tables
+      └── &#39;table&#39;: AnnData (1563, 313)
+with coordinate systems:
+    ▸ &#39;global&#39;, with elements:
+        morphology_focus (Images), transcripts (Points), cell_boundaries (Shapes), nucleus_boundaries (Shapes)
+</pre></div></div>
+</div>
+<p>We can optionally transfer cell-type labels from a scRNA-seq reference. These labels are not required to compute the <code class="docutils literal notranslate"><span class="pre">region_similarity</span></code> metrics, but help interpret them—for example, by assessing whether low similarity is more common at boundaries between different cell types.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata_ref</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>As you can see, the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code>dataset contains cell and nuclear masks as <code class="docutils literal notranslate"><span class="pre">shapes</span></code>. It is important that you have a nuclear segmentation in your object, otherwise you will not be able to compute the metrics below.</p>
+<section id="Intersection-over-Union-between-cell-and-nucleus-masks">
+<h3>Intersection over Union between cell and nucleus masks<a class="headerlink" href="#Intersection-over-Union-between-cell-and-nucleus-masks" title="Link to this heading">#</a></h3>
+<p>First, we match each cell to its most overlapping nucleus using <code class="docutils literal notranslate"><span class="pre">match_nuclei_to_cells()</span></code> and quantify the overlap using the Intersection over Union (<code class="docutils literal notranslate"><span class="pre">iou</span></code>) and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code>, the fraction of the nucleus area covered by the cell. These measures can highlight poor morphological segmentation: oversegmented cells may cover only part of a nucleus, resulting in a low <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code>, whereas undersegmented cells may extend far beyond the nucleus, resulting in a low <code class="docutils literal notranslate"><span class="pre">iou</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">match_nuclei_to_cells</span><span class="p">()</span>
+<span class="n">results_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -845,172 +603,136 @@ with coordinate systems:
     <tr style="text-align: right;">
       <th></th>
       <th>cell_id</th>
+      <th>nucleus_id</th>
       <th>iou</th>
-      <th>similarity_nucleus_cell</th>
+      <th>nucleus_fraction</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>77122</th>
-      <td>77123</td>
-      <td>0.081804</td>
-      <td>0.810418</td>
+      <th>0</th>
+      <td>6327</td>
+      <td>6327.0</td>
+      <td>0.051420</td>
+      <td>1.0</td>
     </tr>
     <tr>
-      <th>77479</th>
-      <td>77480</td>
-      <td>0.096786</td>
-      <td>0.799364</td>
+      <th>1</th>
+      <td>6328</td>
+      <td>6328.0</td>
+      <td>0.064608</td>
+      <td>1.0</td>
     </tr>
     <tr>
-      <th>76667</th>
-      <td>76668</td>
-      <td>0.097281</td>
-      <td>0.784293</td>
+      <th>2</th>
+      <td>6330</td>
+      <td>6330.0</td>
+      <td>0.047572</td>
+      <td>1.0</td>
     </tr>
     <tr>
-      <th>77118</th>
-      <td>77119</td>
-      <td>0.091755</td>
-      <td>0.783151</td>
+      <th>3</th>
+      <td>6331</td>
+      <td>6331.0</td>
+      <td>0.042835</td>
+      <td>1.0</td>
     </tr>
     <tr>
-      <th>78681</th>
-      <td>78682</td>
-      <td>0.093248</td>
-      <td>0.780749</td>
+      <th>4</th>
+      <td>6332</td>
+      <td>6332.0</td>
+      <td>0.041484</td>
+      <td>1.0</td>
     </tr>
   </tbody>
 </table>
 </div></div>
 </div>
-<p>We can see that there are some cells with high <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code> despite low <code class="docutils literal notranslate"><span class="pre">IoU</span></code>. Let’s investigate one of these cells in more detail. By plotting the cell (centroid marked by grey cross) with its nucleus (centroid marked by black cross) and assigned transcripts (red), we can see that for this cell, the nucleus is small in comparison to the cell, however the transcripts are still somewhat homogeneously distributed within the cell, leading to the high similarity.</p>
+<p>For each <code class="docutils literal notranslate"><span class="pre">cell_id</span></code>, we obtain the ID (<code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>) of the nucleus mask with the highest <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code>. If a cell does not overlap with any nucleus, the function returns a missing value for <code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>. If the nucleus has an invalid geometry, <code class="docutils literal notranslate"><span class="pre">iou</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> are reported as <code class="docutils literal notranslate"><span class="pre">NA</span></code>.</p>
+<p>Let’s see what this looks like when we plot the <code class="docutils literal notranslate"><span class="pre">iou</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> spatially.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cid</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;iou&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">]</span>
-    <span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">])</span>
-    <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># IoU</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">nucleus_shapes_key</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Intersection over Union (IoU)&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">cid</span>
+
+<span class="c1"># Nucleus fraction</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;nucleus_fraction&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">nucleus_shapes_key</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus fraction&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
-</pre></div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-np.float64(77123.0)
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># helper function for plotting</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">plot_cell_with_nucleus_and_transcripts</span><span class="p">(</span>
-    <span class="n">cid</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">pix_to_um_scale_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2125</span><span class="p">,</span>
-    <span class="n">repositioned_transcripts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">padding</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;feature_name&quot;</span><span class="p">,</span>
-    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span>
-    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell_id&quot;</span><span class="p">,</span>
-    <span class="n">genes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">center_layer</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">outer_layer</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-<span class="p">):</span>
-    <span class="c1"># add annotation of this cell to .obs</span>
-    <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="n">cid</span>
-
-    <span class="c1"># compute x,y of cell and nucleus centroids in µm space</span>
-    <span class="n">centroid_x_cell_px</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">cid</span><span class="p">]</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">x</span>
-    <span class="n">centroid_y_cell_px</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">cid</span><span class="p">]</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">y</span>
-    <span class="n">centroid_x_cell</span> <span class="o">=</span> <span class="n">centroid_x_cell_px</span> <span class="o">/</span> <span class="n">pix_to_um_scale_factor</span>
-    <span class="n">centroid_y_cell</span> <span class="o">=</span> <span class="n">centroid_y_cell_px</span> <span class="o">/</span> <span class="n">pix_to_um_scale_factor</span>
-
-    <span class="n">nid</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">tables_cell_id_key</span><span class="p">]</span> <span class="o">==</span> <span class="n">cid</span><span class="p">,</span> <span class="s2">&quot;nucleus_id&quot;</span><span class="p">]</span>
-    <span class="n">centroid_x_nucleus</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nid</span><span class="p">]</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">x</span> <span class="o">/</span> <span class="n">pix_to_um_scale_factor</span>
-    <span class="n">centroid_y_nucleus</span> <span class="o">=</span> <span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nid</span><span class="p">]</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">y</span> <span class="o">/</span> <span class="n">pix_to_um_scale_factor</span>
-
-    <span class="c1"># add annotation of this cell to .points and build new `PointsModel``</span>
-    <span class="n">trans</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
-    <span class="n">trans</span><span class="p">[</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;other_cells&quot;</span>
-    <span class="n">trans</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">trans</span><span class="p">[</span><span class="n">points_cell_id_key</span><span class="p">]</span> <span class="o">==</span> <span class="n">cid</span><span class="p">,</span> <span class="s2">&quot;focal_cell&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;focal_cell&quot;</span>
-    <span class="n">trans</span><span class="p">[</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trans</span><span class="p">[</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">repositioned_transcripts</span><span class="p">:</span>
-        <span class="n">trans</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">])</span>
-        <span class="n">trans</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repositioned_x&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;repositioned_y&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;repositioned_z&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">})</span>
-    <span class="n">sdata</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts_2&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">PointsModel</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">trans</span><span class="p">)</span>
-    <span class="n">T</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">transformations</span><span class="o">.</span><span class="n">get_transformation</span><span class="p">(</span><span class="n">sdata</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">])</span>
-    <span class="n">sd</span><span class="o">.</span><span class="n">transformations</span><span class="o">.</span><span class="n">set_transformation</span><span class="p">(</span><span class="n">sdata</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts_2&quot;</span><span class="p">],</span> <span class="n">T</span><span class="p">)</span>
-
-    <span class="c1"># zoom in for better visibility</span>
-    <span class="n">sdata_cropped</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">bounding_box</span><span class="p">(</span>
-        <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">],</span>
-        <span class="n">min_coordinate</span><span class="o">=</span><span class="p">[</span><span class="n">centroid_x_cell</span> <span class="o">-</span> <span class="n">padding</span><span class="p">,</span> <span class="n">centroid_y_cell</span> <span class="o">-</span> <span class="n">padding</span><span class="p">],</span>
-        <span class="n">max_coordinate</span><span class="o">=</span><span class="p">[</span><span class="n">centroid_x_cell</span> <span class="o">+</span> <span class="n">padding</span><span class="p">,</span> <span class="n">centroid_y_cell</span> <span class="o">+</span> <span class="n">padding</span><span class="p">],</span>
-        <span class="n">target_coordinate_system</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="c1"># plot cell and transcripts of that cell</span>
-    <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-
-    <span class="n">plot</span> <span class="o">=</span> <span class="n">sdata_cropped</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-        <span class="n">element</span><span class="o">=</span><span class="n">center_layer</span><span class="p">,</span>
-        <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-        <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-        <span class="n">element</span><span class="o">=</span><span class="n">outer_layer</span><span class="p">,</span>
-        <span class="n">color</span><span class="o">=</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">,</span>
-        <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-        <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">genes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">plot</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
-            <span class="s2">&quot;transcripts_2&quot;</span><span class="p">,</span>
-            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">,</span>
-            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-            <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;focal_cell&quot;</span><span class="p">],</span>
-            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;red&quot;</span><span class="p">],</span>
-        <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">plot</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_points</span><span class="p">(</span>
-            <span class="s2">&quot;transcripts&quot;</span><span class="p">,</span>
-            <span class="n">color</span><span class="o">=</span><span class="n">points_gene_key</span><span class="p">,</span>
-            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-            <span class="n">groups</span><span class="o">=</span><span class="n">genes</span><span class="p">,</span>
-            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;red&quot;</span><span class="p">],</span>
-        <span class="p">)</span>
-
-    <span class="n">plot</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-        <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">,</span>
-        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
-        <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="c1"># landmark for cell and nucleus centroid</span>
-    <span class="n">axes</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">centroid_x_cell</span><span class="p">],</span> <span class="p">[</span><span class="n">centroid_y_cell</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">linewidths</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
-    <span class="n">axes</span><span class="o">.</span><span class="n">scatter</span><span class="p">([</span><span class="n">centroid_x_nucleus</span><span class="p">],</span> <span class="p">[</span><span class="n">centroid_y_nucleus</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">linewidths</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-</pre></div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_region_similarity_15_1.png" src="../_images/notebooks_region_similarity_15_1.png" />
 </div>
 </div>
+<p>Since the legacy Xenium segmentation algorithm generates cell masks by expanding nuclear boundaries, most cells have a <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> close to 1.</p>
+<p>We can now investigate what the distribution of IoUs looks like.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_cell_with_nucleus_and_transcripts</span><span class="p">(</span><span class="n">cid</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell with high similarity_nucleus_cell despite high IoU&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Intersection over Union (IoU)&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1018,26 +740,162 @@ np.float64(77123.0)
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_30_0.png" src="../_images/notebooks_region_similarity_30_0.png" />
+<img alt="../_images/notebooks_region_similarity_18_0.png" src="../_images/notebooks_region_similarity_18_0.png" />
 </div>
 </div>
-<p>Just looking at the similarity between the nucleus and the entire cell isn’t specific enough. As a better metric, we therefore compute the similarity between the transcripts in the cell region intersecting the nucleus and the transcripts in the remaining cell region (we call this the cytoplasm, however with Proseg, this can also include transcripts that were originally measured outside of the cell).</p>
 </section>
-<section id="Similarity-between-Nucleus-and-Cytoplasm">
-<h2>Similarity between Nucleus and Cytoplasm<a class="headerlink" href="#Similarity-between-Nucleus-and-Cytoplasm" title="Link to this heading">#</a></h2>
-<p>The function <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm()</span></code> computes the cosine similarity between the spatial transcript feature counts within the nucleus and the cytoplasm. It is applicable only when nuclear masks are available. It returns <code class="docutils literal notranslate"><span class="pre">NaN</span></code> when the regions have no or not a sufficient number of overlapping transcripts (<code class="docutils literal notranslate"><span class="pre">min_transcripts</span></code>, <code class="docutils literal notranslate"><span class="pre">min_genes</span></code>). A low correlation/similarity may indicate that the cell boundary extension captures neighborhood or ambient signal rather than true intracellular
-expression—a concern similarly highlighted by segmentation benchmarks such as <a class="reference external" href="https://www.nature.com/articles/s41587-021-01044-w">Baysor</a>. This is based on the assumption that transcripts are homogeneously distributed within the cell and not localized in specific subcellular regions.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<section id="Expression-similarity-between-cell-and-nucleus">
+<h3>Expression similarity between cell and nucleus<a class="headerlink" href="#Expression-similarity-between-cell-and-nucleus" title="Link to this heading">#</a></h3>
+<p>While IoU and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> assess whether the cell and nucleus are morphologically well matched, <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell()</span></code> asks whether they are also molecularly consistent. It compares the transcript composition of the whole cell with that of its matched nucleus and determines whether they are less similar than expected given their transcript counts and overlap. For transcript-informed segmentation methods the whole cell may also include transcripts beyond morphological boundaries.</p>
+<p>A negative residual indicates unexpectedly different transcript compositions, which can arise, for example, when transcripts from neighboring cells are incorrectly assigned to the cell or when transcripts from the cell are incorrectly excluded, even if the cell and nucleus boundaries appear well matched.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim_nuc_cyto_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">similarity_nucleus_cytoplasm</span><span class="p">()</span>
-<span class="n">sim_nuc_cyto_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nucleus_cell_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">similarity_nucleus_cell</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Residual similarity between cell and nucleus&quot;</span><span class="p">,</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Cell–nucleus similarity residual&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_region_similarity_22_0.png" src="../_images/notebooks_region_similarity_22_0.png" />
+</div>
+</div>
+<p>We can visualize the similarity residual spatially to identify cells whose nucleus and whole-cell transcript profiles are less similar than expected. The residual indicates the magnitude of this difference, while the p-value indicates how strongly the data support it. Cells with both a negative residual and a low p-value therefore provide the strongest evidence for unexpectedly different nucleus–cell transcript composition.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
+
+<span class="c1"># Get significant cell IDs</span>
+<span class="n">significant_ids</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+    <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_nucleus_cell_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">tables_cell_id_key</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Create a temporary shapes element containing only significant cells</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;significant_cells&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">significant_ids</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="p">)</span>
+
+<span class="c1"># plot</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># IoU</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">nucleus_shapes_key</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nuclei and cell masks colored by IoU&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Cell–nucleus similarity residual</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">nucleus_shapes_key</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;significant_cells&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell–nucleus similarity residual (red: p &lt; 0.05)&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Transferred cell type</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="n">na_color</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Transferred cell type&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">127</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_region_similarity_24_1.png" src="../_images/notebooks_region_similarity_24_1.png" />
+</div>
+</div>
+</section>
+<section id="Similarity-between-nucleus-and-cytoplasm">
+<h3>Similarity between nucleus and cytoplasm<a class="headerlink" href="#Similarity-between-nucleus-and-cytoplasm" title="Link to this heading">#</a></h3>
+<p>Because nuclear transcripts are part of the whole-cell profile, nucleus–cell similarity is partly driven by transcripts shared between the two profiles. We therefore also compare the nucleus with the remaining non-nuclear part of the cell (referred to here as the cytoplasm).</p>
+<p>While <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code> evaluates whether the final cell-level expression profile is molecularly consistent with its matched nucleus, <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code> provides a more direct comparison of transcript composition between the two compartments. Low residual values may indicate transcript misassignment or contamination, but can also reflect genuine subcellular RNA localization.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nuc_cyto_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">similarity_nucleus_cytoplasm</span><span class="p">()</span>
+<span class="n">nuc_cyto_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1064,6 +922,7 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <th>iou</th>
       <th>nucleus_fraction</th>
       <th>similarity_nucleus_cytoplasm</th>
+      <th>similarity_nucleus_cytoplasm_p_value</th>
     </tr>
   </thead>
   <tbody>
@@ -1073,7 +932,8 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <td>6327.0</td>
       <td>0.051420</td>
       <td>1.0</td>
-      <td>0.372956</td>
+      <td>-0.149144</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>1</th>
@@ -1081,7 +941,8 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <td>6328.0</td>
       <td>0.064608</td>
       <td>1.0</td>
-      <td>0.415304</td>
+      <td>-0.032734</td>
+      <td>0.248756</td>
     </tr>
     <tr>
       <th>2</th>
@@ -1089,7 +950,8 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <td>6330.0</td>
       <td>0.047572</td>
       <td>1.0</td>
-      <td>0.430957</td>
+      <td>-0.090591</td>
+      <td>0.024876</td>
     </tr>
     <tr>
       <th>3</th>
@@ -1097,7 +959,8 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <td>6331.0</td>
       <td>0.042835</td>
       <td>1.0</td>
-      <td>0.453765</td>
+      <td>-0.066339</td>
+      <td>0.054726</td>
     </tr>
     <tr>
       <th>4</th>
@@ -1105,21 +968,22 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <td>6332.0</td>
       <td>0.041484</td>
       <td>1.0</td>
-      <td>0.409186</td>
+      <td>-0.043669</td>
+      <td>0.149254</td>
     </tr>
   </tbody>
 </table>
 </div></div>
 </div>
-<p>The histogram below shows that the cosine similarity between the nucleus and remaining part of the cell is 0.45.</p>
+<p>The histogram below shows the distribution of nucleus–cytoplasm similarity residuals. For most cells, the observed similarity is close to that expected under the null model.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
     <span class="n">column</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cytoplasm&quot;</span><span class="p">,</span>
-    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Cosine Similarity - Nucleus vs. Cytoplasm&quot;</span><span class="p">,</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Nucleus–cytoplasm similarity residual&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -1128,20 +992,21 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_35_0.png" src="../_images/notebooks_region_similarity_35_0.png" />
+<img alt="../_images/notebooks_region_similarity_28_0.png" src="../_images/notebooks_region_similarity_28_0.png" />
 </div>
 </div>
-<p>The scatter plot below visualizes the cosine similarity between transcript counts in the intersection and remainder of each cell, plotted against the Intersection over Union (IoU) with the nucleus. The calculated R2 value is 0.032, indicating that <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code> less dependent on <code class="docutils literal notranslate"><span class="pre">IoU</span></code> than <code class="docutils literal notranslate"><span class="pre">similarity_cell_nucleus</span></code>.</p>
+<p>We can look at the correlation between the <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code> and <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code>. As expected, <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code> and <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code> are strongly correlated, as both capture molecular differences between the nucleus and the rest of the cell. They can diverge when the nucleus contributes strongly to the whole-cell profile: even if nucleus and cytoplasm differ substantially, the whole-cell profile may remain similar to the nucleus because it
+contains the nuclear transcripts themselves.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_regression</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
-    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
     <span class="n">y</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cytoplasm&quot;</span><span class="p">,</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cosine sim. vs. IoU with Regression Line&quot;</span><span class="p">,</span>
-    <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Cosine similarity between nucleus and cytoplasm&quot;</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus–cytoplasm similarity residual vs. Nucleus–cell similarity residual&quot;</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Nucleus–cytoplasm similarity residual&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -1150,82 +1015,98 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_37_0.png" src="../_images/notebooks_region_similarity_37_0.png" />
+<img alt="../_images/notebooks_region_similarity_30_0.png" src="../_images/notebooks_region_similarity_30_0.png" />
 </div>
 </div>
-<p>The spatial plots below shows the spatial distribution of computed correlations. The cosine similarity between parts can be a measure of how much neighboring signal is captured.</p>
+<p>Let’s visualize this in a spatial plot.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
 
-<span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+<span class="c1"># Get significant cell IDs for each similarity metric</span>
+<span class="n">significant_nucleus_cell_ids</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+    <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_nucleus_cell_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">tables_cell_id_key</span><span class="p">,</span>
+<span class="p">]</span>
 
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Intersection over Union (IoU)&quot;</span><span class="p">,</span>
-    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+<span class="n">significant_nucleus_cytoplasm_ids</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+    <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_nucleus_cytoplasm_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">tables_cell_id_key</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Create temporary shapes elements containing only significant cells</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;significant_nucleus_cell&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">significant_nucleus_cell_ids</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="p">)</span>
 
+<span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;significant_nucleus_cytoplasm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">significant_nucleus_cytoplasm_ids</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="p">)</span>
+
+
+<span class="c1"># Plot</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Cell–nucleus similarity residual</span>
 <span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
     <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
     <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
     <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;significant_nucleus_cell&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
 <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus vs. whole cell&quot;</span><span class="p">,</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus–cell similarity residual (red: p &lt; 0.05)&quot;</span><span class="p">,</span>
     <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
 <span class="p">)</span>
 
+<span class="c1"># Nucleus–cytoplasm similarity residual</span>
 <span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;nucleus_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
     <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cytoplasm&quot;</span><span class="p">,</span>
     <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
     <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
     <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;significant_nucleus_cytoplasm&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
 <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus vs. cytoplasm&quot;</span><span class="p">,</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus–cytoplasm similarity residual (red: p &lt; 0.05)&quot;</span><span class="p">,</span>
     <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
 <span class="p">)</span>
+
+<span class="c1"># Transferred cell type</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="n">na_color</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Transferred cell type&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -1234,7 +1115,6 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">127</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">143</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
@@ -1243,422 +1123,30 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_39_1.png" src="../_images/notebooks_region_similarity_39_1.png" />
+<img alt="../_images/notebooks_region_similarity_32_1.png" src="../_images/notebooks_region_similarity_32_1.png" />
 </div>
 </div>
-<p>Above, we can see that there are some cells with low cosine similarity between parts despite high <code class="docutils literal notranslate"><span class="pre">IoU</span></code>.</p>
-</section>
-<section id="Similarity-between-the-cell-center-and-border">
-<h2>Similarity between the cell center and border<a class="headerlink" href="#Similarity-between-the-cell-center-and-border" title="Link to this heading">#</a></h2>
-<p>The function <code class="docutils literal notranslate"><span class="pre">similarity_center_border()</span></code> computes the cosine similarity between gene expression in the cell interior (“center”) and outer ring (“border”).</p>
-<p>Specifically, it:</p>
-<ol class="arabic simple">
-<li><p>Computes an equivalent radius for each cell and defines two erosion distances.</p></li>
-<li><p>Constructs:</p></li>
-</ol>
-<ul class="simple">
-<li><p>Border: outer ring of the cell</p></li>
-<li><p>Center: inner eroded region</p></li>
-<li><p>A buffer region between them is ignored</p></li>
-</ul>
-<ol class="arabic simple" start="3">
-<li><p>Assigns transcripts to center and border regions.</p></li>
-<li><p>Computes expression profiles and applies normalization and log transformation.</p></li>
-<li><p>Computes cosine similarity between center and border expression.</p></li>
-</ol>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">center_border_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">similarity_center_border</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">center_border_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>cell_id</th>
-      <th>similarity_center_border</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>6327</td>
-      <td>0.531734</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>6328</td>
-      <td>0.435338</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>6330</td>
-      <td>0.402755</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>6331</td>
-      <td>0.460853</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>6332</td>
-      <td>0.417375</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-<p>The histogram below shows the distribution of the similarity between the cell center and border.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
-    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;similarity_center_border&quot;</span><span class="p">,</span>
-    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Cosine Similarity - Cell center vs. border&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_45_0.png" src="../_images/notebooks_region_similarity_45_0.png" />
-</div>
-</div>
-<p>The spatial plots below shows the spatial distribution of computed similarity.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
-
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_centers&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_borders&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_center_border&quot;</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Similarity: center vs. border&quot;</span><span class="p">,</span>
-    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">173</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_47_1.png" src="../_images/notebooks_region_similarity_47_1.png" />
-</div>
-</div>
-</section>
-<section id="Similarity-between-the-border-and-neighborhood">
-<h2>Similarity between the border and neighborhood<a class="headerlink" href="#Similarity-between-the-border-and-neighborhood" title="Link to this heading">#</a></h2>
-<p>The function <code class="docutils literal notranslate"><span class="pre">similarity_border_neighborhood()</span></code> computes the cosine similarity between gene expression in the cell border and its surrounding neighborhood.</p>
-<p>Specifically, it:</p>
-<ol class="arabic simple">
-<li><p>Defines the border region as the outer ring of each cell (with an inner buffer gap).</p></li>
-<li><p>Identifies neighboring cells based on a distance threshold relative to cell size.</p></li>
-<li><p>Aggregates transcripts from neighboring cells to obtain a neighborhood expression profile.</p></li>
-<li><p>Computes expression profiles for the border and neighborhood.</p></li>
-<li><p>Applies normalization and log transformation.</p></li>
-<li><p>Computes cosine similarity between border and neighborhood expression.</p></li>
-</ol>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">border_nh_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">similarity_border_neighborhood</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">border_nh_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>cell_id</th>
-      <th>similarity_border_neighborhood</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>6327</td>
-      <td>0.576493</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>6328</td>
-      <td>0.480898</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>6330</td>
-      <td>0.487583</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>6331</td>
-      <td>0.623569</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>6332</td>
-      <td>0.583823</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-<p>The histogram below shows the distribution of the similarity between the cell border and neighborhood.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
-    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;similarity_border_neighborhood&quot;</span><span class="p">,</span>
-    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Cosine Similarity - Cell border vs. neighborhood&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_52_0.png" src="../_images/notebooks_region_similarity_52_0.png" />
-</div>
-</div>
-<p>The spatial plots below shows the spatial distribution of computed similarity.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
-
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_centers&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_borders&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
-    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_border_neighborhood&quot;</span><span class="p">,</span>
-    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
-    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Similarity: border vs. neighborhood&quot;</span><span class="p">,</span>
-    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">101</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_54_1.png" src="../_images/notebooks_region_similarity_54_1.png" />
-</div>
-</div>
-<p>The border can resemble both the center and the neighborhood. A more specific indication of potential contamination can be obtained by comparing these similarities, for example via their ratio.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_border_neighborhood&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_center_border&quot;</span><span class="p">]</span>
-<span class="p">)</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
-<span class="p">)</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;neighborhood_center_ratio_clipped&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
-    <span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span><span class="p">]</span>
-    <span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">upper</span><span class="o">=</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="mf">0.95</span><span class="p">))</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
-
-<span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_center_border&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;similarity_center_border&quot;</span>
-<span class="p">)</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_border_neighborhood&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;similarity_border_neighborhood&quot;</span>
-<span class="p">)</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;neighborhood_center_ratio&quot;</span>
-<span class="p">)</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;neighborhood_center_ratio_clipped&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;neighborhood_center_ratio_clipped (95th perc)&quot;</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">173</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">101</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">175</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">175</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_57_1.png" src="../_images/notebooks_region_similarity_57_1.png" />
-</div>
-</div>
+<p>We observe more cells with significantly reduced <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code> than <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code>, particularly in regions with heterogeneous cell-type composition.</p>
 </section>
 <section id="Border-admixture-score">
-<h2>Border admixture score<a class="headerlink" href="#Border-admixture-score" title="Link to this heading">#</a></h2>
-<p>The ratio between border–neighborhood and center–border similarity can be unstable, as it can become very large when the similarity between center and border is close to zero. A more robust metric is therefore the <strong>border admixture score</strong>, which explicitly models the border as a mixture of center and neighborhood expression.</p>
-<p>Specifically, the function <code class="docutils literal notranslate"><span class="pre">border_admixture_score()</span></code>:</p>
-<ol class="arabic simple">
-<li><p>Computes gene expression profiles for center, border, and neighborhood regions.</p></li>
-<li><p>Converts counts to gene proportions (with a small pseudocount).</p></li>
-<li><p>Models the border profile as a mixture:</p></li>
-</ol>
+<h3>Border admixture score<a class="headerlink" href="#Border-admixture-score" title="Link to this heading">#</a></h3>
+<p>A cell’s border can differ from its center for many reasons, including genuine intracellular RNA localization. Therefore, low center–border similarity alone does not show that neighboring cells contributed to that difference.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">border_admixture_score()</span></code> tests this more directly by asking whether the border is better explained as a mixture of the cell center and its neighborhood:</p>
 <div class="math notranslate nohighlight">
-\[p_{\text{border}} \approx (1 - \alpha)\, p_{\text{center}} + \alpha\, p_{\text{neighborhood}}\]</div>
-<ol class="arabic simple" start="4">
-<li><p>Estimates the mixture weight <span class="math notranslate nohighlight">\(\alpha\)</span> using least squares.</p></li>
-<li><p>Computes how much better this mixture explains the border compared to the center alone (<code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code>).</p></li>
-<li><p>Estimates confidence intervals via bootstrap resampling.</p></li>
-</ol>
-<p>The resulting score reflects how strongly the border resembles the neighborhood beyond what is expected from the center alone.</p>
+\[p_{\text{border}} \approx (1 - \alpha)\,p_{\text{center}}
++ \alpha\,p_{\text{neighborhood}}\]</div>
+<p>The observed admixture score measures how much better this mixture explains the border compared with the center alone. Because some apparent admixture can arise simply from finite transcript sampling, SegTraQ subtracts the mean score expected under a permutation null. The reported <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code> therefore reflects <strong>excess neighborhood-like admixture beyond what is expected by chance</strong>.</p>
+<p>Values around zero are close to the null expectation, while positive residuals indicate stronger neighborhood contribution than expected. The accompanying upper-tail p-value identifies cells with unusually strong admixture.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">border_admixture_score</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">rs</span><span class="o">.</span><span class="n">border_admixture_score</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1682,49 +1170,42 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
       <th></th>
       <th>cell_id</th>
       <th>border_admixture_score</th>
-      <th>border_admixture_score_ci_low</th>
-      <th>border_admixture_score_ci_high</th>
+      <th>border_admixture_p_value</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
       <td>6327</td>
-      <td>0.221298</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.147459</td>
+      <td>0.049751</td>
     </tr>
     <tr>
       <th>1</th>
       <td>6328</td>
-      <td>0.341255</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.256665</td>
+      <td>0.024876</td>
     </tr>
     <tr>
       <th>2</th>
       <td>6330</td>
-      <td>0.012326</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>-0.138142</td>
+      <td>0.970149</td>
     </tr>
     <tr>
       <th>3</th>
       <td>6331</td>
-      <td>0.448690</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.391760</td>
+      <td>0.009950</td>
     </tr>
     <tr>
       <th>4</th>
       <td>6332</td>
-      <td>0.166207</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.020090</td>
+      <td>0.353234</td>
     </tr>
     <tr>
       <th>...</th>
-      <td>...</td>
       <td>...</td>
       <td>...</td>
       <td>...</td>
@@ -1732,52 +1213,47 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
     <tr>
       <th>1557</th>
       <td>95953</td>
-      <td>0.691989</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.427025</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>1558</th>
       <td>95954</td>
-      <td>0.317130</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.233438</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>1559</th>
       <td>95955</td>
-      <td>0.044268</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.009714</td>
+      <td>0.258706</td>
     </tr>
     <tr>
       <th>1560</th>
       <td>95959</td>
-      <td>0.256127</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.179122</td>
+      <td>0.044776</td>
     </tr>
     <tr>
       <th>1561</th>
       <td>95960</td>
-      <td>0.255799</td>
-      <td>NaN</td>
-      <td>NaN</td>
+      <td>0.177855</td>
+      <td>0.039801</td>
     </tr>
   </tbody>
 </table>
-<p>1562 rows × 4 columns</p>
+<p>1562 rows × 3 columns</p>
 </div></div>
 </div>
 <p>The histogram below shows the distribution of the border_admixture_score.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plot_histogram</span><span class="p">(</span>
-    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
     <span class="n">column</span><span class="o">=</span><span class="s2">&quot;border_admixture_score&quot;</span><span class="p">,</span>
-    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Border admixture score&quot;</span><span class="p">,</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Border admixture score (residual)&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -1786,47 +1262,121 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_61_0.png" src="../_images/notebooks_region_similarity_61_0.png" />
-</div>
-</div>
-<p>The confidence interval reflects the uncertainty in the border admixture score due to limited and noisy transcript counts, estimated via bootstrap resampling. It should be considered to distinguish robust signals from effects that could arise by chance, especially in sparse data.</p>
-<p>A border_admixture_score &gt; 0 indicates that including the neighborhood improves the fit to the border compared to using the center alone. A score of 1 means that the border expression is perfectly explained by a mixture of center and neighborhood.</p>
-<p>To identify potentially contaminated cells, we use a threshold of 0.25 and require that the lower bound of the confidence interval exceeds this threshold, ensuring that only cells with a robust and consistent neighborhood contribution are selected.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
-
-<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;border_admixture_score_confident_binary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;border_admixture_score_ci_low&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.25</span>
-
-<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;border_admixture_score_confident&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;border_admixture_score&quot;</span><span class="p">]</span>
-
-<span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;border_admixture_score_confident_binary&quot;</span><span class="p">],</span> <span class="s2">&quot;border_admixture_score_confident&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-</pre></div>
+<img alt="../_images/notebooks_region_similarity_37_0.png" src="../_images/notebooks_region_similarity_37_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># link annotations with cell boundaries</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">obs</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
 
-<span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+<span class="c1"># Get significant cell IDs for nucleus-cell similarity</span>
+<span class="n">significant_nucleus_cell_ids</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+    <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_nucleus_cell_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">tables_cell_id_key</span><span class="p">,</span>
+<span class="p">]</span>
 
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;border_admixture_score&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Border admixture score (all cells)&quot;</span>
+<span class="c1"># Get significant cell IDs for border admixture</span>
+<span class="n">significant_border_admixture_ids</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+    <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;border_admixture_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">tables_cell_id_key</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Create temporary shapes elements containing significant cells</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;significant_nucleus_cell&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">significant_nucleus_cell_ids</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="p">)</span>
 
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;border_admixture_score_confident_binary&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cells with significant neighborhood contribution (CI &gt; 0.25)&quot;</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="s2">&quot;significant_border_admixture&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sdata</span><span class="o">.</span><span class="n">shapes</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">significant_border_admixture_ids</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="p">)</span>
 
-<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;border_admixture_score_confident&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Border admixture score (confidence-filtered)&quot;</span>
+<span class="c1"># Link annotations with cell boundaries</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">,</span>
+    <span class="n">region</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
 <span class="p">)</span>
+
+<span class="c1"># Plot</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span>
+    <span class="mi">1</span><span class="p">,</span>
+    <span class="mi">3</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+    <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 1. Nucleus-cell similarity residual</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;significant_nucleus_cell&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Nucleus–cell similarity residual (red: p &lt; 0.05)&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 2. Border admixture residual</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_centers&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;cell_borders&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;border_admixture_score&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="s2">&quot;significant_border_admixture&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Border admixture residual (red: p &lt; 0.05)&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 3. Transferred cell type</span>
+<span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="n">na_color</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Transferred cell type&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -1835,23 +1385,57 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">127</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">132</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Column <span class="ansi-green-fg">&#39;border_admixture_score_confident&#39;</span> for element <span class="ansi-green-fg">&#39;cell_boundaries&#39;</span> contains only NaN
-         values; rendering with na_color.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_64_1.png" src="../_images/notebooks_region_similarity_64_1.png" />
+<img alt="../_images/notebooks_region_similarity_38_1.png" src="../_images/notebooks_region_similarity_38_1.png" />
 </div>
+</div>
+<p>For convenience, <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> also provides a wrapper to run all <code class="docutils literal notranslate"><span class="pre">region_similarity</span></code> metrics.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_v1_data/sdata_xenium_crop.zarr/&quot;</span><span class="p">)</span>
+<span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># &quot;UNASSIGNED&quot; for Xenium prime</span>
+<span class="p">)</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">run_region_similarity</span><span class="p">()</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Index([&#39;cell_id&#39;, &#39;transcript_counts&#39;, &#39;control_probe_counts&#39;,
+       &#39;control_codeword_counts&#39;, &#39;total_counts&#39;, &#39;cell_area&#39;, &#39;nucleus_area&#39;,
+       &#39;region&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;similarity_nucleus_cell&#39;,
+       &#39;similarity_nucleus_cell_p_value&#39;, &#39;nucleus_id&#39;, &#39;iou&#39;,
+       &#39;nucleus_fraction&#39;, &#39;similarity_nucleus_cytoplasm&#39;,
+       &#39;similarity_nucleus_cytoplasm_p_value&#39;, &#39;border_admixture_score&#39;,
+       &#39;border_admixture_p_value&#39;],
+      dtype=&#39;object&#39;)
+</pre></div></div>
 </div>
 </section>
 <section id="Session-Info">
-<h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
+<h3>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
@@ -1876,6 +1460,7 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
 </pre></div>
 </div>
 </div>
+</section>
 </section>
 </section>
 
@@ -1924,13 +1509,14 @@ expression—a concern similarly highlighted by segmentation benchmarks such as 
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-Nucleus-and-Cytoplasm">Similarity between Nucleus and Cytoplasm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-cell-center-and-border">Similarity between the cell center and border</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-the-border-and-neighborhood">Similarity between the border and neighborhood</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Border-admixture-score">Border admixture score</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Helpers">Helpers</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Intersection-over-Union-between-cell-and-nucleus-masks">Intersection over Union between cell and nucleus masks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Expression-similarity-between-cell-and-nucleus">Expression similarity between cell and nucleus</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Similarity-between-nucleus-and-cytoplasm">Similarity between nucleus and cytoplasm</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Border-admixture-score">Border admixture score</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 

@@ -353,19 +353,17 @@ document.write(`
   <section id="Data-Preparation">
 <h1>Data Preparation<a class="headerlink" href="#Data-Preparation" title="Link to this heading">#</a></h1>
 <p>In order to use <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code>, you first need to get your data into a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object. While <code class="docutils literal notranslate"><span class="pre">spatialdata_io</span></code> has a lot of readers for different technologies, the constantly evolving landscape of segmentation methods makes it difficult to provide up-to-date, generalizable readers. To facilitate the process of getting your data into the correct format, we provide examples for some segmentation methods.</p>
-<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
-
-<span class="n">ad_test</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_io</span>  <span class="c1"># noqa</span>
@@ -400,13 +398,13 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
 </pre></div></div>
 </div>
 <p>Below, we define a few custom functions that will be required for reading data below.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">labels_to_shapes</span><span class="p">(</span><span class="n">label_img</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">simplify_tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">:</span>
@@ -450,7 +448,7 @@ document.write(`
 </div>
 <p>Setting the data path:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium&quot;</span><span class="p">)</span>
@@ -461,7 +459,7 @@ document.write(`
 <h2>Xenium<a class="headerlink" href="#Xenium" title="Link to this heading">#</a></h2>
 <p>For Xenium data, we can make use of the functions from <code class="docutils literal notranslate"><span class="pre">spatialdata_io</span></code>. We don’t need <code class="docutils literal notranslate"><span class="pre">cells_as_circles</span></code>, <code class="docutils literal notranslate"><span class="pre">cell_labels</span></code>, <code class="docutils literal notranslate"><span class="pre">nucleus_labels</span></code> and <code class="docutils literal notranslate"><span class="pre">morphology_mip</span></code> for <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code>, so we will not read these data.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_xenium</span> <span class="o">=</span> <span class="n">spatialdata_io</span><span class="o">.</span><span class="n">xenium</span><span class="p">(</span>
@@ -476,12 +474,12 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
   self.validate_table_in_spatialdata(v)
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -503,7 +501,7 @@ with coordinate systems:
 </div>
 <p>For visualization, we crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object to zoom into a smaller region.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">bb_xmin</span> <span class="o">=</span> <span class="mi">10000</span>
@@ -525,19 +523,19 @@ with coordinate systems:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
   self.validate_table_in_spatialdata(v)
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:170: UserWarning: The table is annotating &#39;cell_labels&#39;, which is not present in the SpatialData object.
   self.validate_table_in_spatialdata(v)
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;matplotlib.patches.Rectangle at 0x7ffdecc61d10&gt;
+&lt;matplotlib.patches.Rectangle at 0x7ffed6700410&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -549,7 +547,7 @@ with coordinate systems:
 </div>
 <p>Cropping currently suffers from performance issues, and can take tens of minutes on large datasets. This will be improved in future releases of <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Link table to spatial element before cropping</span>
@@ -560,7 +558,7 @@ with coordinate systems:
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_xenium_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_xenium</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
@@ -569,7 +567,7 @@ with coordinate systems:
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> plot below shows the cell boundaries colored by cell area. Xenium version 1 uses nuclear expansion to generate cell boundaries.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -607,7 +605,7 @@ with coordinate systems:
 </div>
 <p>Finally, we can read these into SegTraQ. Don’t worry if you do not know all of these parameters up front, you can start by simply passing an <code class="docutils literal notranslate"><span class="pre">sdata</span></code> object into the function and it will tell you exactly which parameters need to be set.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_xenium</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
@@ -624,9 +622,7 @@ with coordinate systems:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
-  validate_spatialdata(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -636,7 +632,7 @@ with coordinate systems:
 <p>Depending on the segmentation method applied to re-segment the Xenium data, the data output format will differ. No <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> readers are available for individual segmentation methods. Below, we demonstrate how to load data from the output of the segmentation method <code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> into <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code>.</p>
 <p>The single-cell expression and metadata are first loaded into an <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">csv_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;bidcell_output/cell_gene_matrices/202*/cell*.csv&quot;</span><span class="p">))</span>
@@ -663,13 +659,13 @@ with coordinate systems:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
+/home/lazic/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
   return dispatch(args[0].__class__)(*args, **kw)
 </pre></div></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> outputs cell and nucleus boundaries as a raster (label image) rather than vector shapes (polygons). Therefore, we first convert the rasterized boundaries into polygon geometries using <code class="docutils literal notranslate"><span class="pre">labels_to_shapes</span></code>. Nucleus boundaries are not copied from Xenium, because BIDCell, re-runs nuclear segmentation internally via Cellpose.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cell_label_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;bidcell_output/model_outputs/202*/test_output/*_connected.tif&quot;</span><span class="p">))</span>
@@ -684,7 +680,7 @@ with coordinate systems:
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> filters the Xenium transcripts file prior to segmentation by removing low-quality transcripts (qv &lt; 20) and control probes. However, the cell IDs in the processed transcripts file (<code class="docutils literal notranslate"><span class="pre">transcripts_processed.csv</span></code>) still correspond to the original Xenium segmentation. Therefore, we reassign cell IDs based on the BIDCell segmentation masks.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;bidcell_output/transcripts_processed.csv&quot;</span>
@@ -703,7 +699,7 @@ with coordinate systems:
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object can then be built from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object, the <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code>, <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> and <code class="docutils literal notranslate"><span class="pre">transcripts</span></code>. We link the table observations to the shapes by specifying <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) containing the
 object IDs, which are matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_bidcell</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">SpatialData</span><span class="p">(</span>
@@ -723,7 +719,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <p>Finally, we read in the image. Here, we have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data. If you do not have an <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> object that you can read the transformations from, you can also read in the image manually using <code class="docutils literal notranslate"><span class="pre">sd.models.Image2DModel(tiff.imread(&quot;morphology_focus.ome.tif&quot;))</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_bidcell</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
@@ -736,7 +732,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_bidcell_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_bidcell</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
@@ -744,7 +740,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -782,7 +778,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed. Naming will differ between segmentation methods, e.g. <code class="docutils literal notranslate"><span class="pre">cell_area</span></code> in Xenium and <code class="docutils literal notranslate"><span class="pre">cell_size</span></code> in BIDCell in addition to other settings like the <code class="docutils literal notranslate"><span class="pre">points_background_id</span></code>. Please set parameters accordingly.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_bidcell</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
@@ -800,7 +796,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -810,7 +806,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 <p>Below, we show how to read data from the older proseg version 2 into the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> format. Proseg version 2 does not output a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object, so the latter has to be built from scratch.</p>
 <p>We first build the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">counts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/expected-counts.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
@@ -829,13 +825,13 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
+/home/lazic/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:934: ImplicitModificationWarning: Transforming to str index.
   return dispatch(args[0].__class__)(*args, **kw)
 </pre></div></div>
 </div>
 <p>Next, we read the vector shapes (polygons). These are stored in a <code class="docutils literal notranslate"><span class="pre">GeoJSON</span></code> file and can be read using <code class="docutils literal notranslate"><span class="pre">read_geojson_gz</span></code> and <code class="docutils literal notranslate"><span class="pre">to_cell_shapes</span></code>. Proseg is a quasi-3D method and provides cell boundaries for each z-layer and well as a 2D projection.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">polygons_layers_gz_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/cell-polygons-layers.geojson.gz&quot;</span>
@@ -859,7 +855,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <p>Next, we load transcripts. Proseg internally filters control probes and transcripts with a <code class="docutils literal notranslate"><span class="pre">qv</span></code> &lt; 20. Thus, there will be fewer transcripts than in <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code>. <strong>In Proseg, “x”, “y” and “z” columns in the transcripts correspond to repositioned transcripts, while the “observed” columns correspond to raw input positions. For SegTraQ, we use the raw positions.</strong> We will rename these columns to avoid misalignment when cropping the data via <code class="docutils literal notranslate"><span class="pre">query.bounding_box()</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/transcript-metadata.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
@@ -880,7 +876,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object can then be built from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object, the <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code> and <code class="docutils literal notranslate"><span class="pre">transcripts</span></code>. We link the table observations to the shapes by specifying <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) containing the object IDs, which are
 matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">SpatialData</span><span class="p">(</span>
@@ -895,7 +891,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">images</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> can be copied from <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> since these are not changed by proseg segmentation. We have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
@@ -914,7 +910,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <p>Proseg applies clipping to the transcript z-coordinates and overwrites the original values in <code class="docutils literal notranslate"><span class="pre">observed_z</span></code>. To preserve the raw Xenium z-coordinates for downstream analyses, we map the original <code class="docutils literal notranslate"><span class="pre">z</span></code> values back to the Proseg transcript table using the unique <code class="docutils literal notranslate"><span class="pre">transcript_id</span></code>. See more info in this <a class="reference external" href="https://github.com/dcjones/proseg/issues/136">issue</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">proseg_tx</span> <span class="o">=</span> <span class="n">sdata_proseg2</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
@@ -937,7 +933,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_proseg2</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
@@ -945,7 +941,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -983,7 +979,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_proseg2</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
@@ -1006,9 +1002,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
-  validate_spatialdata(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1017,7 +1011,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 <h2>Proseg 3<a class="headerlink" href="#Proseg-3" title="Link to this heading">#</a></h2>
 <p>Proseg 3 already provides a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as output, which can be read in easily.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v3/proseg-output.zarr&quot;</span><span class="p">)</span>
@@ -1030,12 +1024,12 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_4085382/4211026938.py:1: UserWarning: SpatialData is not stored in the most current format. If you want to use Zarr v3, please write the store to a new location using `sdata.write()`.
+/tmp/ipykernel_2242801/4211026938.py:1: UserWarning: SpatialData is not stored in the most current format. If you want to use Zarr v3, please write the store to a new location using `sdata.write()`.
   sdata_proseg3 = sd.read_zarr(data_path / &#34;proseg_output_v3/proseg-output.zarr&#34;)
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -1054,7 +1048,7 @@ with coordinate systems:
 </div>
 <p><strong>In Proseg, “x”, “y” and “z” columns in the transcripts correspond to repositioned transcripts, while the “observed” columns correspond to raw input positions. For SegTraQ, we use the raw positions.</strong> We will rename these columns to avoid misalignment when cropping the data via “query.bounding_box`.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pts</span> <span class="o">=</span> <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span>
@@ -1079,7 +1073,7 @@ with coordinate systems:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/home/meyerben/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:975: UserWarning: The index of the dataframe is not monotonic increasing. It is recommended to sort the data to adjust the order of the index before calling .parse() (or call `parse(sort=True)`) to avoid possible problems due to unknown divisions.
+/home/lazic/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/functools.py:975: UserWarning: The index of the dataframe is not monotonic increasing. It is recommended to sort the data to adjust the order of the index before calling .parse() (or call `parse(sort=True)`) to avoid possible problems due to unknown divisions.
   return dispatch(args[0].__class__).__get__(obj, cls)(*args, **kwargs)
 </pre></div></div>
 </div>
@@ -1087,7 +1081,7 @@ with coordinate systems:
 <p>The table observations are linked to the shapes via <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (here <code class="docutils literal notranslate"><span class="pre">&quot;cell&quot;</span></code>) containing the object IDs, which are matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns
 with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">uns</span>
@@ -1095,21 +1089,21 @@ with <code class="docutils literal notranslate"><span class="pre">adata.obs[inst
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;proseg_run&#39;: {&#39;args&#39;: &#39;proseg_v3 --xenium /g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium/transcripts.csv --output-counts counts.mtx.gz --output-expected-counts expected-counts.mtx.gz --output-cell-metadata cell-metadata.csv.gz --output-transcript-metadata transcript-metadata.csv.gz --output-gene-metadata gene-metadata.csv.gz --output-cell-polygons cell-polygons.geojson.gz --output-cell-polygon-layers cell-polygons-layers.geojson.gz --nthreads 32&#39;,
+{&#39;spatialdata_attrs&#39;: {&#39;region&#39;: &#39;cell_boundaries&#39;,
+  &#39;region_key&#39;: &#39;region&#39;,
+  &#39;instance_key&#39;: &#39;cell&#39;},
+ &#39;proseg_run&#39;: {&#39;args&#39;: &#39;proseg_v3 --xenium /g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium/transcripts.csv --output-counts counts.mtx.gz --output-expected-counts expected-counts.mtx.gz --output-cell-metadata cell-metadata.csv.gz --output-transcript-metadata transcript-metadata.csv.gz --output-gene-metadata gene-metadata.csv.gz --output-cell-polygons cell-polygons.geojson.gz --output-cell-polygon-layers cell-polygons-layers.geojson.gz --nthreads 32&#39;,
   &#39;duration&#39;: &#39;2086.29130289s&#39;,
-  &#39;version&#39;: &#39;3.1.0&#39;},
- &#39;spatialdata_attrs&#39;: {&#39;region&#39;: &#39;cell_boundaries&#39;,
-  &#39;instance_key&#39;: &#39;cell&#39;,
-  &#39;region_key&#39;: &#39;region&#39;}}
+  &#39;version&#39;: &#39;3.1.0&#39;}}
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">polygons_layers_gz_path</span> <span class="o">=</span> <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v3/cell-polygons-layers.geojson.gz&quot;</span>
@@ -1135,13 +1129,13 @@ with <code class="docutils literal notranslate"><span class="pre">adata.obs[inst
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_4085382/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+/tmp/ipykernel_2242801/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
 Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
 
 To further ignore this warning, you can do:
 import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&#39;, UserWarning)
   gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
-/tmp/ipykernel_4085382/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+/tmp/ipykernel_2242801/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
 Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
 
 To further ignore this warning, you can do:
@@ -1151,7 +1145,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">images</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> can be copied from <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> since these are not changed by proseg segmentation. We have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
@@ -1170,7 +1164,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>Proseg applies clipping to the transcript z-coordinates and overwrites the original values in <code class="docutils literal notranslate"><span class="pre">observed_z</span></code>. To preserve the raw Xenium z-coordinates for downstream analyses, we map the original <code class="docutils literal notranslate"><span class="pre">z</span></code> values back to the Proseg transcript table using the unique <code class="docutils literal notranslate"><span class="pre">transcript_id</span></code>. See more info in this <a class="reference external" href="https://github.com/dcjones/proseg/issues/136">issue</a>.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">proseg_tx</span> <span class="o">=</span> <span class="n">sdata_proseg3</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="s2">&quot;transcripts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
@@ -1193,7 +1187,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg3_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_proseg3</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
@@ -1201,7 +1195,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -1239,7 +1233,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filter_kwargs</span> <span class="o">=</span> <span class="p">{</span>
@@ -1280,9 +1274,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
-  validate_spatialdata(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1292,7 +1284,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 <p><strong>Segger is still under very active development, so output formats might change in the future.</strong></p>
 <p>Segger outputs single-cell data already in <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> format. The <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object does not contain a cell ID column. We will add it, to be able to link the <code class="docutils literal notranslate"><span class="pre">table</span></code> to the <code class="docutils literal notranslate"><span class="pre">shapes</span></code> in the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object created below.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span>
@@ -1308,7 +1300,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 <p>The table observations are linked to the shapes via <code class="docutils literal notranslate"><span class="pre">region_key</span></code>, <code class="docutils literal notranslate"><span class="pre">region</span></code>, and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>. <code class="docutils literal notranslate"><span class="pre">region_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;region&quot;</span></code>) that indicates which SpatialData element the observations refer to (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_boundaries&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">instance_key</span></code> is the column in <code class="docutils literal notranslate"><span class="pre">adata.obs</span></code> (here <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) containing the object IDs, which are matched to the <strong>index</strong> of <code class="docutils literal notranslate"><span class="pre">sdata.shapes[region]</span></code>. Therefore, make sure that <code class="docutils literal notranslate"><span class="pre">sdata.shapes[&quot;cell_boundaries&quot;].index</span></code> aligns
 with <code class="docutils literal notranslate"><span class="pre">adata.obs[instance_key]</span></code>.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span>
@@ -1327,7 +1319,7 @@ with <code class="docutils literal notranslate"><span class="pre">adata.obs[inst
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_4085382/1139085374.py:4: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+/tmp/ipykernel_2242801/1139085374.py:4: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
 Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
 
 To further ignore this warning, you can do:
@@ -1337,7 +1329,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>We load <code class="docutils literal notranslate"><span class="pre">segger_transcripts.parquet</span></code>, which contains transcripts assigned to cell IDs by segger (<code class="docutils literal notranslate"><span class="pre">segger_cell_id</span></code>). The original cell ID is renamed from <code class="docutils literal notranslate"><span class="pre">cell_id</span></code> to <code class="docutils literal notranslate"><span class="pre">original_cell_id</span></code> to avoid confusion. Segger applies a more stringent filtering with <code class="docutils literal notranslate"><span class="pre">min_qv</span> <span class="pre">=</span> <span class="pre">30</span></code> as compared to other methods, so the number of transcripts will be lower.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span>
@@ -1357,7 +1349,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object can then be built from the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object, the <code class="docutils literal notranslate"><span class="pre">cell_boundaries</span></code>, <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> and <code class="docutils literal notranslate"><span class="pre">transcripts</span></code>. We also link the table observations to the shapes by setting the <code class="docutils literal notranslate"><span class="pre">region_key</span></code> and <code class="docutils literal notranslate"><span class="pre">instance_key</span></code>, as explained above.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_segger</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">SpatialData</span><span class="p">(</span>
@@ -1374,7 +1366,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">images</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_boundaries</span></code> can be copied from <code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code> since these are not changed by segger segmentation. We have to make sure that the individual layers are aligned and hence set transformations in line with the xenium data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_segger</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdata_xenium</span><span class="o">.</span><span class="n">images</span><span class="p">[</span><span class="s2">&quot;morphology_focus&quot;</span><span class="p">]</span>
@@ -1388,7 +1380,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>We crop the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object as before to visualize the data.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_segger_crop</span> <span class="o">=</span> <span class="n">crop</span><span class="p">(</span><span class="n">sdata_segger</span><span class="p">,</span> <span class="n">bb_xmin</span><span class="p">,</span> <span class="n">bb_ymin</span><span class="p">,</span> <span class="n">bb_xmax</span><span class="p">,</span> <span class="n">bb_ymax</span><span class="p">)</span>
@@ -1397,7 +1389,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <p>Finally, we can initialize the <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> object, based on which all metrics can be computed.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st_segger</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
@@ -1418,7 +1410,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1426,7 +1418,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[44]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>

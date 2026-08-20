@@ -335,7 +335,7 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-data-into-SegTraQ-and-run-label-transfer">Load data into SegTraQ and run label transfer</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Inspect-z-distribution-of-transcripts">Inspect z distribution of transcripts</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Top–bottom-z-consistency-(cosine-similarity)">Top–bottom z consistency (cosine similarity)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Top–bottom-z-consistency">Top–bottom z consistency</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">Heterotypic overlap area/fraction (detecting 3D overlaps)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)">Mean VSI per cell (ovrlpy-based vertical signal integrity)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
@@ -353,10 +353,10 @@ document.write(`
   <section id="Module:-Volume-(3D)">
 <h1>Module: Volume (3D)<a class="headerlink" href="#Module:-Volume-(3D)" title="Link to this heading">#</a></h1>
 <p>Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical thickness of ~4–10 µm. Even for a relatively thin 5 µm section, cells can partially overlap along the z-dimension, depending on tissue orientation and how the sample is cut. As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination, because transcripts from overlapping cells may be assigned to the same segmentation mask.</p>
-<center><p><img alt="28a1749e8da24ffebe258e84eb96cddd" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
+<center><p>f <img alt="6a0857c6997b47f6be18fd5e1644272c" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
 </center><p>To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the <code class="docutils literal notranslate"><span class="pre">volume</span></code> (<code class="docutils literal notranslate"><span class="pre">vl</span></code>) accessor.</p>
 <p>In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap, and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg), or in other words, how well it can disentangle transcripts from overlapping cells.</p>
-<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -381,9 +381,9 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">r2_score</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
 </pre></div>
@@ -394,7 +394,7 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
 </pre></div></div>
 </div>
@@ -573,13 +573,12 @@ document.write(`
 </div>
 </div>
 </section>
-<section id="Top–bottom-z-consistency-(cosine-similarity)">
-<h2>Top–bottom z consistency (cosine similarity)<a class="headerlink" href="#Top–bottom-z-consistency-(cosine-similarity)" title="Link to this heading">#</a></h2>
-<p>To assess whether a segmented cell may contain transcripts from overlapping cells across z, we compute a top–bottom z similarity score. The intuition is that a correctly segmented single cell should have a broadly consistent expression profile across depth, while merged/overlapping cells may show depth-dependent expression shifts, lowering similarity.</p>
-<p>For each cell, we split its transcripts into:</p>
-<p>bottom: z ≤ q (default q=0.30) top: z ≥ 1−q</p>
-<p>We aggregate gene counts for both parts, normalize within each cell using the combined library size (top+bottom), apply <code class="docutils literal notranslate"><span class="pre">log1p</span></code>, and compute the cosine similarity between the two vectors (considering genes non-zero in either part). To enable fair comparisons between methods, we optionally correct for global z-drift by normalizing z coordinates before splitting transcripts into top and bottom (default <code class="docutils literal notranslate"><span class="pre">correct_z_drift=True</span></code>); Proseg already performs this normalization internally. Cells are
-set to <code class="docutils literal notranslate"><span class="pre">NaN</span></code> if either part has fewer than <code class="docutils literal notranslate"><span class="pre">min_transcripts</span></code> transcripts (default 10) or fewer than <code class="docutils literal notranslate"><span class="pre">min_genes</span></code> genes (default 5).</p>
+<section id="Top–bottom-z-consistency">
+<h2>Top–bottom z consistency<a class="headerlink" href="#Top–bottom-z-consistency" title="Link to this heading">#</a></h2>
+<p>To identify cells that may contain transcripts from overlapping cells across the z-axis, we compare the transcript composition at the top and bottom of each cell. A single, correctly segmented cell is expected to have broadly consistent expression across depth, whereas overlapping or incorrectly merged cells may contain different expression profiles at different z positions.</p>
+<p>For each cell, transcripts are taken from the bottom and top fractions of its z-range (default: 30% each). Their gene-expression profiles are transformed with PFlog1pPF and compared using cosine similarity. Because profiles with fewer transcripts tend to appear less similar due to finite-count sampling, the observed similarity is compared with a permutation-based expectation. The reported <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> is the residual from this expectation: values around zero indicate the expected
+similarity, while negative values indicate that the top and bottom are less similar than expected. The accompanying lower-tail p-value identifies cells with evidence for unusually low similarity.</p>
+<p>Optionally, global z-drift can be corrected before defining the top and bottom regions (<code class="docutils literal notranslate"><span class="pre">correct_z_drift=True</span></code>). Cells without sufficient transcripts or detected genes in both regions are not evaluated.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -594,32 +593,77 @@ set to <code class="docutils literal notranslate"><span class="pre">NaN</span></
 </pre></div>
 </div>
 </div>
+<p>Below, we compare the top–bottom similarity residual only among cells with a significant lower-tail permutation p-value (<code class="docutils literal notranslate"><span class="pre">similarity_top_bottom_p_value</span> <span class="pre">&lt;</span> <span class="pre">0.05</span></code>). These cells have top and bottom profiles that are less similar than expected under the conditional null.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">density_plot_feature</span><span class="p">(</span><span class="n">sdata_dict</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">)):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">histogram_feature</span><span class="p">(</span>
+    <span class="n">sdata_dict</span><span class="p">,</span>
+    <span class="n">feature</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+    <span class="n">significant_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">bins</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+<span class="p">):</span>
     <span class="n">all_feats</span> <span class="o">=</span> <span class="p">[]</span>
+
     <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">sdata_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">feat</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">feature</span> <span class="o">==</span> <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">significant_only</span><span class="p">:</span>
+            <span class="n">obs</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_top_bottom_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">]</span>
+
+        <span class="n">feat</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
         <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
         <span class="n">all_feats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feat</span><span class="p">)</span>
 
     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_feats</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
 
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
-    <span class="n">sns</span><span class="o">.</span><span class="n">kdeplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="n">common_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">methods</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sdata_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">palette</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">methods</span><span class="p">,</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">methods</span><span class="p">)),</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+
+    <span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
+        <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+        <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">,</span>
+        <span class="n">element</span><span class="o">=</span><span class="s2">&quot;step&quot;</span><span class="p">,</span>
+        <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="n">palette</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+        <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Median for each method</span>
+    <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">:</span>
+        <span class="n">median</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">method</span><span class="p">,</span> <span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span>
+            <span class="n">median</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">palette</span><span class="p">[</span><span class="n">method</span><span class="p">],</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+            <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Number of cells&quot;</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<p>Proseg version 2 and 3 show the best correlation between top and bottom z-plane overall.</p>
+<p>Although the median residual among significant cells is similar across methods, Xenium has more cells that deviate significantly from the null expectation, suggesting that these deviations occur more frequently rather than being stronger in magnitude.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">density_plot_feature</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">histogram_feature</span><span class="p">(</span>
+    <span class="n">st_dict</span><span class="p">,</span>
+    <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">,</span>
+    <span class="n">significant_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -627,96 +671,30 @@ set to <code class="docutils literal notranslate"><span class="pre">NaN</span></
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_21_0.png" src="../_images/notebooks_volume_21_0.png" />
+<img alt="../_images/notebooks_volume_22_0.png" src="../_images/notebooks_volume_22_0.png" />
 </div>
 </div>
-<p>Even after within-cell normalization, high-count cells have less sampling noise, so their top and bottom gene profiles are estimated more reliably and tend to look more similar, which increases cosine similarity. In low-count cells, random dropout and sparse gene sampling make the two vectors noisier and artificially reduce the similarity.</p>
-<p>In addition, high-count cells are often larger in size and therefore span a larger proportion of z, which might reduce the risk of 3D overlap and hence lead to increase similarity between top and bottom plane (<code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code>).</p>
-<div class="nbinput docutils container">
+<p>We next compare top–bottom similarity residuals across transferred cell types, considering only cells with a significant lower-tail p-value to reduce variation related to cell-type-specific composition.</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">st_dict</span><span class="p">[</span><span class="s2">&quot;proseg2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript_count&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
-
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
-<span class="n">sns</span><span class="o">.</span><span class="n">regplot</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">,</span>
-    <span class="n">y</span><span class="o">=</span><span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">,</span>
-    <span class="n">scatter_kws</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">},</span>
-    <span class="n">line_kws</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">},</span>
-    <span class="n">lowess</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># nonlinear</span>
-    <span class="n">ci</span><span class="o">=</span><span class="mi">95</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_23_0.png" src="../_images/notebooks_volume_23_0.png" />
-</div>
-</div>
-<p>The relationship between <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> and <code class="docutils literal notranslate"><span class="pre">transcript_count</span></code> looks linear. The analytical Pearson residuals lead to stabilisation of the count effect on the cosine similarity.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-
-<span class="c1"># Linear fit</span>
-<span class="n">coef_lin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">deg</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">y_hat_lin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyval</span><span class="p">(</span><span class="n">coef_lin</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
-<span class="n">r2_lin</span> <span class="o">=</span> <span class="n">r2_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_hat_lin</span><span class="p">)</span>
-
-<span class="c1"># Log fit</span>
-<span class="n">x_log</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">coef_log</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">x_log</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">deg</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">y_hat_log</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyval</span><span class="p">(</span><span class="n">coef_log</span><span class="p">,</span> <span class="n">x_log</span><span class="p">)</span>
-<span class="n">r2_log</span> <span class="o">=</span> <span class="n">r2_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_hat_log</span><span class="p">)</span>
-
-<span class="c1"># sqrt fit</span>
-<span class="n">x_sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">coef_sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">x_sqrt</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">deg</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">y_hat_sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyval</span><span class="p">(</span><span class="n">coef_sqrt</span><span class="p">,</span> <span class="n">x_sqrt</span><span class="p">)</span>
-<span class="n">r2_sqrt</span> <span class="o">=</span> <span class="n">r2_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">y_hat_sqrt</span><span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;R² linear: </span><span class="si">{</span><span class="n">r2_lin</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;R² log1p:  </span><span class="si">{</span><span class="n">r2_log</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;R² sqrt:   </span><span class="si">{</span><span class="n">r2_sqrt</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-R² linear: 0.377
-R² log1p:  0.489
-R² sqrt:   0.455
-</pre></div></div>
-</div>
-<p>Thus, it makes sense to plot the expression similarity between top and bottom plane per cell type, as this have less variation in transcript counts and cell size.</p>
-<p>This confirms that Proseg 2 and 3 show the highest expression similarity between top and bottom plane for each cell type.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">significant_only</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
     <span class="n">dfs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">feature</span> <span class="o">==</span> <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">significant_only</span><span class="p">:</span>
+            <span class="n">obs</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;similarity_top_bottom_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
         <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
+
         <span class="n">tmp</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
         <span class="n">dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
 
     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">q</span><span class="p">))]</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">q</span><span class="p">)]</span>
 
     <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
 
@@ -728,16 +706,64 @@ R² sqrt:   0.455
         <span class="n">showcaps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span>
+        <span class="n">boxprops</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">},</span>
         <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
     <span class="p">)</span>
+
+    <span class="n">sns</span><span class="o">.</span><span class="n">stripplot</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
+        <span class="n">dodge</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">jitter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">legend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">celltypes</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="n">methods</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">st_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="n">n_methods</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">methods</span><span class="p">)</span>
+    <span class="n">box_width</span> <span class="o">=</span> <span class="mf">0.8</span>
+    <span class="n">offsets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+        <span class="o">-</span><span class="n">box_width</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">box_width</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_methods</span><span class="p">),</span>
+        <span class="n">box_width</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">box_width</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_methods</span><span class="p">),</span>
+        <span class="n">n_methods</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Position labels slightly above the data</span>
+    <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()</span>
+    <span class="n">y_text</span> <span class="o">=</span> <span class="n">ymax</span> <span class="o">+</span> <span class="mf">0.02</span> <span class="o">*</span> <span class="p">(</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">celltype</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">celltypes</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">method</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">methods</span><span class="p">):</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">celltype</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">method</span><span class="p">)])</span>
+
+            <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+                <span class="n">i</span> <span class="o">+</span> <span class="n">offsets</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                <span class="n">y_text</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;n=</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
+                <span class="n">va</span><span class="o">=</span><span class="s2">&quot;bottom&quot;</span><span class="p">,</span>
+                <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Make room for annotations</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">+</span> <span class="mf">0.12</span> <span class="o">*</span> <span class="p">(</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">ymin</span><span class="p">))</span>
 
     <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> differs between cell types, with B cells accounting for much of the difference in the number of significant cells across methods (312 in Xenium, 142 in Proseg v2, and 109 in Proseg v3).</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">)</span>
@@ -748,28 +774,8 @@ R² sqrt:   0.455
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_28_0.png" src="../_images/notebooks_volume_28_0.png" />
+<img alt="../_images/notebooks_volume_26_0.png" src="../_images/notebooks_volume_26_0.png" />
 </div>
-</div>
-<p>Proseg achieves this despite having a lower mean transcript count overall, which would typically reduce the expected correlation.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> mean transcript count: </span><span class="si">{</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s1">&#39;table&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;transcript_count&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-xenium mean transcript count: 150.79718490083172
-proseg2 mean transcript count: 140.00259067357513
-proseg3 mean transcript count: 119.69210697977822
-</pre></div></div>
 </div>
 </section>
 <section id="Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">
@@ -782,7 +788,7 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 <p><code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_fraction</span></code>: the same overlap area normalized by the cell’s polygon area</p>
 <p>This metric is not intended as a standalone quality score, but is most informative when interpreted alongside other measures (see next chapter).</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">proseg_dict</span> <span class="o">=</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -791,16 +797,16 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;segtraq.SegTraQ.SegTraQ at 0x7fffce478440&gt;
+&lt;segtraq.SegTraQ.SegTraQ at 0x7ffeea0e8830&gt;
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">proseg_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -811,8 +817,29 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 </div>
 </div>
 <p>Below we can see the distribution of the <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code> and <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_fraction</span></code> in proseg v2 and v3. Some cells have heterotypic overlap fractions &gt; 50%.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">density_plot_feature</span><span class="p">(</span><span class="n">sdata_dict</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">)):</span>
+    <span class="n">all_feats</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">sdata_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
+        <span class="n">feat</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+        <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="n">all_feats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feat</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_feats</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+    <span class="n">sns</span><span class="o">.</span><span class="n">kdeplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="n">common_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">density_plot_feature</span><span class="p">(</span><span class="n">proseg_dict</span><span class="p">,</span> <span class="s2">&quot;heterotypic_overlap_area&quot;</span><span class="p">)</span>
@@ -823,11 +850,11 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_35_0.png" src="../_images/notebooks_volume_35_0.png" />
+<img alt="../_images/notebooks_volume_32_0.png" src="../_images/notebooks_volume_32_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">density_plot_feature</span><span class="p">(</span><span class="n">proseg_dict</span><span class="p">,</span> <span class="s2">&quot;heterotypic_overlap_fraction&quot;</span><span class="p">)</span>
@@ -838,20 +865,23 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_36_0.png" src="../_images/notebooks_volume_36_0.png" />
+<img alt="../_images/notebooks_volume_33_0.png" src="../_images/notebooks_volume_33_0.png" />
 </div>
 </div>
 <p>Spatially, it is often more informative to visualize cells with high <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code> rather than high heterotypic_overlap_fraction. The fraction normalizes by cell size, so very small cells (often partial cells near the top or bottom z-planes due to tissue cutting) can show high values (often close to 1) even when the absolute overlap is negligible. In contrast, the overlap area highlights regions where a substantial amount of tissue is involved in cross-type overlap.</p>
 <p>Let’s have a look at a cell with a high <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_area</span></code> in proseg2. It is a stromal cell that overlaps a dendritic cell (black cross marks cell centroid).</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Identify cell with high heterotypic_overlap_area</span>
-<span class="n">tbl</span> <span class="o">=</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
+<span class="n">tbl</span> <span class="o">=</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span>
 <span class="n">rank</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">idx</span> <span class="o">=</span> <span class="n">tbl</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;heterotypic_overlap_area&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nlargest</span><span class="p">(</span><span class="n">rank</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">rank</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
-<span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="n">tbl</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="s2">&quot;centroid_x&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mf">0.2125</span><span class="p">,</span> <span class="n">tbl</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="s2">&quot;centroid_y&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mf">0.2125</span>
+<span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">tbl</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_centroid_x_key</span><span class="p">]</span> <span class="o">/</span> <span class="mf">0.2125</span><span class="p">,</span>
+    <span class="n">tbl</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_centroid_y_key</span><span class="p">]</span> <span class="o">/</span> <span class="mf">0.2125</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="c1"># Define color palette for plotting</span>
 <span class="n">col_celltype</span> <span class="o">=</span> <span class="p">{</span>
@@ -872,26 +902,26 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 
 <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-<span class="n">s</span> <span class="o">=</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span>
 <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_categorical_dtype</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">add_categories</span><span class="p">([</span><span class="s2">&quot;Unknown&quot;</span><span class="p">])</span>
 
-<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;Unknown&quot;</span><span class="p">)</span>
+<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;Unknown&quot;</span><span class="p">)</span>
 
-<span class="n">labels</span> <span class="o">=</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col_celltype</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span> <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
 
 <span class="c1"># Bottom plane</span>
-<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries_z0&quot;</span>
-<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries_z0&quot;</span><span class="p">)</span>
+<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries_z0&quot;</span>
+<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries_z0&quot;</span><span class="p">)</span>
 
 <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
     <span class="s2">&quot;cell_boundaries_z0&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">labels</span>
 <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Bottom: Cell masks colored by transferred cell type&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
 
 <span class="c1"># Top plane</span>
-<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries_z1&quot;</span>
-<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries_z1&quot;</span><span class="p">)</span>
+<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries_z1&quot;</span>
+<span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="n">st_proseg3</span><span class="o">.</span><span class="n">tables_key</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries_z1&quot;</span><span class="p">)</span>
 
 <span class="n">st_proseg3</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
     <span class="s2">&quot;cell_boundaries_z1&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">labels</span>
@@ -919,7 +949,7 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_38_1.png" src="../_images/notebooks_volume_38_1.png" />
+<img alt="../_images/notebooks_volume_35_1.png" src="../_images/notebooks_volume_35_1.png" />
 </div>
 </div>
 </section>
@@ -930,13 +960,13 @@ of the tissue: high VSI indicates strong agreement, while low VSI suggests poten
 <p>To connect this pixel-level map to our 3D metrics, we compute mean VSI per cell by sampling the VSI value at each transcript’s (x,y) position and averaging these values across all transcripts assigned to the same cell.</p>
 <p>We can run the compute the VSI map and extract the mean VSI per cell.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n_celltypes</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n_celltypes</span> <span class="o">=</span> <span class="n">st_xenium</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_xenium</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">()</span>
 
 <span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">_mean_vsi</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">vl</span><span class="o">.</span><span class="n">vertical_signal_integrity_per_cell</span><span class="p">(</span><span class="n">ovrlpy_init_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;n_components&quot;</span><span class="p">:</span> <span class="n">n_celltypes</span><span class="p">},</span> <span class="n">n_workers</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">_mean_vsi</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">vl</span><span class="o">.</span><span class="n">vertical_signal_integrity_per_cell</span><span class="p">(</span><span class="n">ovrlpy_init_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;n_components&quot;</span><span class="p">:</span> <span class="n">n_celltypes</span><span class="p">})</span>
 </pre></div>
 </div>
 </div>
@@ -957,7 +987,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.44it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  4.20it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -974,7 +1004,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.26it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.28it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -985,7 +1015,7 @@ Creating signal integrity map
 Running vertical adjustment
 Creating gene expression embeddings for visualization
 determining pseudocells
-found 378 pseudocells
+found 371 pseudocells
 sampling expression:
 </pre></div></div>
 </div>
@@ -994,7 +1024,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.47it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  5.30it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1011,7 +1041,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.19it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.33it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1031,7 +1061,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  2.81it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  6.46it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1048,14 +1078,12 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:03&lt;00:00,  1.28it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.36it/s]
 </pre></div></div>
 </div>
-<p>Plotting <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> against <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code> shows a weaker association in Proseg v2 (and Proseg v3) than in Xenium. One plausible explanation is that Proseg’s quasi-3D assignment reduces the impact of vertically mixed regions on per-cell expression consistency: even where <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code> is low (regions that look vertically inconsistent in the raw transcript field), Proseg can assign transcripts more coherently to individual cells, resulting in relatively high <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code>.
-In Xenium, by contrast, low-VSI regions more directly translate into lower within-cell top–bottom similarity, yielding a stronger correlation.</p>
-<p>We filter out cells with transcript counts below the 10th percentile, as low-count cells tend to produce noisier and less stable similarity estimates.</p>
+<p>We compare <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> with vertical signal integrity only among cells with a significant lower-tail permutation p-value (<code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">&lt;</span> <span class="pre">0.05</span></code>). This restricts the comparison to cells whose top and bottom expression profiles are less similar than expected under the conditional null. VSI is an independent spatial measure of vertical mixing, so their association can indicate whether expression-level depth inconsistency coincides with transcript-level vertical signal disruption.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">st_dict</span><span class="p">)</span>
@@ -1064,11 +1092,18 @@ In Xenium, by contrast, low-VSI regions more directly translate into lower withi
 
 <span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="n">df</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
-        <span class="o">.</span><span class="n">obs</span><span class="p">[[</span><span class="s2">&quot;vertical_signal_integrity&quot;</span><span class="p">,</span> <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript_count&quot;</span><span class="p">]]</span>
+        <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span>
+        <span class="o">.</span><span class="n">obs</span><span class="p">[</span>
+            <span class="p">[</span>
+                <span class="s2">&quot;vertical_signal_integrity&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;similarity_top_bottom_p_value&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;transcript_count&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">]</span>
         <span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
     <span class="p">)</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;transcript_count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)]</span>  <span class="c1"># filter low count cells</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;similarity_top_bottom_p_value&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">]</span>
 
     <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;vertical_signal_integrity&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
     <span class="n">r2</span> <span class="o">=</span> <span class="n">r</span><span class="o">**</span><span class="mi">2</span>
@@ -1097,14 +1132,14 @@ In Xenium, by contrast, low-VSI regions more directly translate into lower withi
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_43_0.png" src="../_images/notebooks_volume_43_0.png" />
+<img alt="../_images/notebooks_volume_40_0.png" src="../_images/notebooks_volume_40_0.png" />
 </div>
 </div>
 <p>In addition, proseg v2 and v3 shows large <code class="docutils literal notranslate"><span class="pre">heterotypic_overlap_fraction</span></code> values at low <code class="docutils literal notranslate"><span class="pre">mean_vsi</span></code>, this supports the idea that Proseg is successfully detecting substantial cross-type overlap in regions with poor vertical signal integrity. In other words, low-VSI regions (where the raw transcript field appears vertically inconsistent and prone to 3D mixing) coincide with locations where Proseg identifies strong heterotypic overlap across z-layers. This suggests that the overlap signal
 captured by ovrlpy (low VSI) corresponds to biologically and geometrically meaningful overlap events that Proseg can partially represent in its quasi-3D segmentation output.</p>
 <p>We evaluate this relation in cell types individually to reduce confounding from large cell-type–specific differences in transcript abundance.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">proseg_dict</span><span class="p">)</span>
@@ -1112,7 +1147,7 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
 <span class="n">axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">proseg_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
-    <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
 
     <span class="n">df</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
         <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;DCIS2&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;vertical_signal_integrity&quot;</span><span class="p">,</span> <span class="s2">&quot;heterotypic_overlap_fraction&quot;</span><span class="p">]</span>
@@ -1144,35 +1179,61 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_45_0.png" src="../_images/notebooks_volume_45_0.png" />
+<img alt="../_images/notebooks_volume_42_0.png" src="../_images/notebooks_volume_42_0.png" />
 </div>
 </div>
 <p>Wrapper to run all metrics (including label transfer). By default, this does not run <code class="docutils literal notranslate"><span class="pre">ovrlpy</span></code> to reduce runtime, but it can be enabled with <code class="docutils literal notranslate"><span class="pre">run_ovrlpy=True</span></code>.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="k">if</span> <span class="s2">&quot;proseg&quot;</span> <span class="ow">in</span> <span class="n">method</span><span class="p">:</span>
-        <span class="n">shapes_key_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;cell_boundaries_z0&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_boundaries_z1&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_boundaries_z2&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_boundaries_z3&quot;</span><span class="p">]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sdata_proseg2</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/&quot;</span><span class="p">)</span>
 
-        <span class="n">st</span><span class="o">.</span><span class="n">run_volume</span><span class="p">(</span>
-            <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
-            <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
-            <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
-            <span class="n">heterotypic_overlap_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;shapes_key_list&quot;</span><span class="p">:</span> <span class="n">shapes_key_list</span><span class="p">},</span>
-        <span class="p">)</span>
+<span class="n">st_proseg2</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
+    <span class="n">sdata_proseg2</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
+    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
+    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">st</span><span class="o">.</span><span class="n">run_volume</span><span class="p">(</span><span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
+<span class="n">shapes_key_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;cell_boundaries_z0&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_boundaries_z1&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_boundaries_z2&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_boundaries_z3&quot;</span><span class="p">]</span>
+
+<span class="n">st_proseg2</span><span class="o">.</span><span class="n">run_volume</span><span class="p">(</span>
+    <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
+    <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
+    <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+    <span class="n">heterotypic_overlap_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;shapes_key_list&quot;</span><span class="p">:</span> <span class="n">shapes_key_list</span><span class="p">},</span>
+<span class="p">)</span>
+
+<span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg2</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Index([&#39;cell&#39;, &#39;original_cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;,
+       &#39;fov&#39;, &#39;cluster&#39;, &#39;volume&#39;, &#39;scale&#39;, &#39;population&#39;, &#39;region&#39;,
+       &#39;cell_area&#39;, &#39;similarity_top_bottom&#39;, &#39;similarity_top_bottom_p_value&#39;,
+       &#39;transcript_count&#39;, &#39;gene_count&#39;, &#39;transferred_cell_type&#39;,
+       &#39;pearson_score&#39;, &#39;heterotypic_overlap_area&#39;,
+       &#39;heterotypic_overlap_fraction&#39;],
+      dtype=&#39;object&#39;)
+</pre></div></div>
 </div>
 </section>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
@@ -1239,7 +1300,7 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-data-into-SegTraQ-and-run-label-transfer">Load data into SegTraQ and run label transfer</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Inspect-z-distribution-of-transcripts">Inspect z distribution of transcripts</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Top–bottom-z-consistency-(cosine-similarity)">Top–bottom z consistency (cosine similarity)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Top–bottom-z-consistency">Top–bottom z consistency</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Heterotypic-overlap-area/fraction-(detecting-3D-overlaps)">Heterotypic overlap area/fraction (detecting 3D overlaps)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Mean-VSI-per-cell-(ovrlpy-based-vertical-signal-integrity)">Mean VSI per cell (ovrlpy-based vertical signal integrity)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>

@@ -348,9 +348,9 @@ document.write(`
   <section id="Module:-Baseline-Metrics">
 <h1>Module: Baseline Metrics<a class="headerlink" href="#Module:-Baseline-Metrics" title="Link to this heading">#</a></h1>
 <p>When assessing the quality of a segmentation, the first thing one usually looks at are summary metrics such as the number of segmented cells, number of transcripts/genes per cell, the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.</p>
-<center><p><img alt="79ebb7095ba441bc9b5e142e48f40cf5" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
+<center><p><img alt="a0334781911e49bb8d98f15203f31431" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">baseline</span></code> (<code class="docutils literal notranslate"><span class="pre">bl</span></code>) module contains several metrics that can help you to assess the quality of your segmentation. The methods all return their corresponding values or dataframes, and also write them into the spatialdata object.</p>
-<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju">here</a>.</p>
+<p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -370,6 +370,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 
 <span class="n">sdata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">)</span>
 
@@ -377,9 +378,13 @@ document.write(`
 <span class="c1"># this has the advantage that we only need to set keywords like cell IDs or transcript IDs once</span>
 <span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
     <span class="n">sdata</span><span class="p">,</span>
-    <span class="n">images_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
+    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
     <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
+    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
     <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
     <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
 <span class="p">)</span>
@@ -391,21 +396,15 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe485541a0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4857a990&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe4857ad50&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe48598180&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe48598640&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 4 cell IDs in shapes: [np.int64(11273), np.int64(10307), np.int64(10308), np.int64(6870)]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:161: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
-  validate_spatialdata(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/utils.py:1769: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -452,6 +451,15 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1221: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
+  return bl.num_genes(
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -475,7 +483,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-2.0661238167303786
+2.0587258842241827
 </pre></div></div>
 </div>
 <p>Next, let’s see how many transcripts were detected per cell. We can do this using the <code class="docutils literal notranslate"><span class="pre">transcripts_per_cell()</span></code> method.</p>
@@ -511,34 +519,34 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>cell_id</th>
+      <th>assignment</th>
       <th>transcript_count</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>3446</td>
+      <td>3445</td>
       <td>2345</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>1097</td>
+      <td>1096</td>
       <td>1777</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>2722</td>
+      <td>2721</td>
       <td>1458</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>2006</td>
+      <td>2005</td>
       <td>1407</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>2100</td>
+      <td>2099</td>
       <td>1314</td>
     </tr>
   </tbody>
@@ -616,34 +624,34 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>cell_id</th>
+      <th>assignment</th>
       <th>gene_count</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
+      <td>0</td>
       <td>389</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
+      <td>1</td>
       <td>45</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>3</td>
+      <td>2</td>
       <td>5</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>4</td>
+      <td>3</td>
       <td>120</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>5</td>
+      <td>4</td>
       <td>41</td>
     </tr>
   </tbody>
@@ -720,35 +728,35 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>cell_id</th>
+      <th>cell</th>
       <th>transcript_density</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
-      <td>2.391061</td>
+      <td>0</td>
+      <td>2.210744</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
-      <td>0.989691</td>
+      <td>1</td>
+      <td>0.888889</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>3</td>
-      <td>0.171429</td>
+      <td>2</td>
+      <td>0.166667</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>4</td>
-      <td>1.993355</td>
+      <td>3</td>
+      <td>2.173913</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>5</td>
-      <td>0.508108</td>
+      <td>4</td>
+      <td>0.528090</td>
     </tr>
   </tbody>
 </table>
@@ -825,34 +833,34 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>cell_id</th>
+      <th>assignment</th>
       <th>mean_transcripts_per_gene</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
+      <td>0</td>
       <td>1.375321</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
+      <td>1</td>
       <td>1.066667</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>3</td>
+      <td>2</td>
       <td>1.200000</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>4</td>
+      <td>3</td>
       <td>1.250000</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>5</td>
+      <td>4</td>
       <td>1.146341</td>
     </tr>
   </tbody>
@@ -930,7 +938,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>cell_id</th>
+      <th>cell</th>
       <th>num_polygons</th>
       <th>cell_area</th>
       <th>perimeter</th>
@@ -945,68 +953,68 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
-      <td>3</td>
-      <td>223.75</td>
-      <td>77.291274</td>
-      <td>0.470665</td>
-      <td>0.874023</td>
-      <td>0.867660</td>
-      <td>2.153846</td>
-      <td>0.885685</td>
-      <td>26.699178</td>
+      <td>0</td>
+      <td>2</td>
+      <td>242.0</td>
+      <td>102.0</td>
+      <td>0.292297</td>
+      <td>0.789560</td>
+      <td>0.706671</td>
+      <td>2.106796</td>
+      <td>0.880172</td>
+      <td>42.991735</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
       <td>1</td>
-      <td>48.50</td>
-      <td>28.825554</td>
-      <td>0.733494</td>
-      <td>0.906542</td>
-      <td>0.955507</td>
-      <td>1.090909</td>
-      <td>0.399653</td>
-      <td>17.132217</td>
+      <td>1</td>
+      <td>54.0</td>
+      <td>46.0</td>
+      <td>0.320692</td>
+      <td>0.771429</td>
+      <td>0.667452</td>
+      <td>1.111111</td>
+      <td>0.435890</td>
+      <td>39.185184</td>
     </tr>
     <tr>
       <th>2</th>
+      <td>2</td>
       <td>3</td>
-      <td>1</td>
-      <td>35.00</td>
-      <td>27.756656</td>
-      <td>0.570878</td>
-      <td>0.853659</td>
-      <td>0.914635</td>
-      <td>1.368421</td>
-      <td>0.682625</td>
-      <td>22.012341</td>
+      <td>36.0</td>
+      <td>44.0</td>
+      <td>0.233672</td>
+      <td>0.734694</td>
+      <td>0.617673</td>
+      <td>1.428571</td>
+      <td>0.714143</td>
+      <td>53.777776</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>4</td>
       <td>3</td>
-      <td>75.25</td>
-      <td>42.007644</td>
-      <td>0.535870</td>
-      <td>0.817935</td>
-      <td>0.865989</td>
-      <td>1.130435</td>
-      <td>0.466321</td>
-      <td>23.450394</td>
+      <td>1</td>
+      <td>69.0</td>
+      <td>46.0</td>
+      <td>0.409773</td>
+      <td>0.807018</td>
+      <td>0.787440</td>
+      <td>1.444444</td>
+      <td>0.721602</td>
+      <td>30.666666</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>5</td>
+      <td>4</td>
       <td>1</td>
-      <td>92.50</td>
-      <td>44.342251</td>
-      <td>0.591175</td>
-      <td>0.864486</td>
-      <td>0.863819</td>
-      <td>1.119565</td>
-      <td>0.449652</td>
-      <td>21.256597</td>
+      <td>89.0</td>
+      <td>60.0</td>
+      <td>0.310669</td>
+      <td>0.780702</td>
+      <td>0.656972</td>
+      <td>1.109589</td>
+      <td>0.433332</td>
+      <td>40.449438</td>
     </tr>
   </tbody>
 </table>
@@ -1102,7 +1110,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
       <th>perc_unassigned</th>
     </tr>
     <tr>
-      <th>feature_name</th>
+      <th>gene</th>
       <th></th>
       <th></th>
       <th></th>
@@ -1159,11 +1167,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffe487b30b0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-AnnData object with n_obs × n_vars = 17885 × 5095
-    obs: &#39;cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;, &#39;volume&#39;, &#39;label_id&#39;, &#39;region&#39;, &#39;gene_count&#39;, &#39;transcript_count&#39;, &#39;transcript_density&#39;, &#39;mean_transcripts_per_gene&#39;, &#39;num_polygons&#39;, &#39;cell_area&#39;, &#39;perimeter&#39;, &#39;circularity&#39;, &#39;solidity&#39;, &#39;convexity&#39;, &#39;elongation&#39;, &#39;eccentricity&#39;, &#39;compactness&#39;
+AnnData object with n_obs × n_vars = 17885 × 5094
+    obs: &#39;cell&#39;, &#39;original_cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;, &#39;fov&#39;, &#39;cluster&#39;, &#39;volume&#39;, &#39;scale&#39;, &#39;population&#39;, &#39;region&#39;, &#39;gene_count&#39;, &#39;transcript_count&#39;, &#39;transcript_density&#39;, &#39;mean_transcripts_per_gene&#39;, &#39;num_polygons&#39;, &#39;cell_area&#39;, &#39;perimeter&#39;, &#39;circularity&#39;, &#39;solidity&#39;, &#39;convexity&#39;, &#39;elongation&#39;, &#39;eccentricity&#39;, &#39;compactness&#39;
     var: &#39;total&#39;, &#39;unassigned&#39;, &#39;perc_unassigned&#39;
     uns: &#39;spatialdata_attrs&#39;, &#39;num_cells&#39;, &#39;num_transcripts&#39;, &#39;num_genes&#39;, &#39;perc_unassigned_transcripts&#39;
-    layers: &#39;X_estimated&#39;
 </pre></div></div>
 </div>
 <p>Alternatively, all <code class="docutils literal notranslate"><span class="pre">bl</span></code> metrics can be computed in one run via <code class="docutils literal notranslate"><span class="pre">run_baseline</span></code>.</p>
@@ -1175,6 +1182,15 @@ AnnData object with n_obs × n_vars = 17885 × 5095
 <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1221: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
+  return bl.num_genes(
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
@@ -1199,16 +1215,17 @@ AnnData object with n_obs × n_vars = 17885 × 5095
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>cell_id</th>
+      <th>cell</th>
+      <th>original_cell_id</th>
       <th>centroid_x</th>
       <th>centroid_y</th>
       <th>centroid_z</th>
+      <th>fov</th>
+      <th>cluster</th>
       <th>volume</th>
-      <th>label_id</th>
-      <th>region</th>
-      <th>gene_count</th>
-      <th>mean_transcripts_per_gene</th>
-      <th>transcript_count</th>
+      <th>scale</th>
+      <th>population</th>
+      <th>...</th>
       <th>transcript_density</th>
       <th>num_polygons</th>
       <th>cell_area</th>
@@ -1224,121 +1241,127 @@ AnnData object with n_obs × n_vars = 17885 × 5095
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
+      <td>0</td>
+      <td>acjlikbd-1</td>
       <td>154.66340</td>
       <td>1053.59360</td>
       <td>-0.115346</td>
+      <td>Y5</td>
+      <td>8</td>
       <td>1131.67400</td>
-      <td>1</td>
-      <td>cell_boundaries</td>
-      <td>389.0</td>
-      <td>1.375321</td>
-      <td>535.0</td>
-      <td>2.391061</td>
-      <td>3.0</td>
-      <td>223.75</td>
-      <td>77.291274</td>
-      <td>0.470665</td>
-      <td>0.874023</td>
-      <td>0.867660</td>
-      <td>2.153846</td>
-      <td>0.885685</td>
-      <td>26.699178</td>
+      <td>1.0</td>
+      <td>540</td>
+      <td>...</td>
+      <td>2.210744</td>
+      <td>2</td>
+      <td>242.0</td>
+      <td>102.0</td>
+      <td>0.292297</td>
+      <td>0.789560</td>
+      <td>0.706671</td>
+      <td>2.106796</td>
+      <td>0.880172</td>
+      <td>42.991735</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
+      <td>1</td>
+      <td>jaigfolp-1</td>
       <td>348.67285</td>
       <td>287.59875</td>
       <td>0.524985</td>
+      <td>X5</td>
+      <td>6</td>
       <td>256.04938</td>
-      <td>2</td>
-      <td>cell_boundaries</td>
-      <td>45.0</td>
-      <td>1.066667</td>
-      <td>48.0</td>
-      <td>0.989691</td>
       <td>1.0</td>
-      <td>48.50</td>
-      <td>28.825554</td>
-      <td>0.733494</td>
-      <td>0.906542</td>
-      <td>0.955507</td>
-      <td>1.090909</td>
-      <td>0.399653</td>
-      <td>17.132217</td>
+      <td>47</td>
+      <td>...</td>
+      <td>0.888889</td>
+      <td>1</td>
+      <td>54.0</td>
+      <td>46.0</td>
+      <td>0.320692</td>
+      <td>0.771429</td>
+      <td>0.667452</td>
+      <td>1.111111</td>
+      <td>0.435890</td>
+      <td>39.185184</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>3</td>
+      <td>2</td>
+      <td>acmaeipl-1</td>
       <td>720.20215</td>
       <td>1218.87230</td>
       <td>0.660745</td>
+      <td>Y6</td>
+      <td>7</td>
       <td>148.57190</td>
-      <td>3</td>
-      <td>cell_boundaries</td>
-      <td>5.0</td>
-      <td>1.200000</td>
-      <td>6.0</td>
-      <td>0.171429</td>
       <td>1.0</td>
-      <td>35.00</td>
-      <td>27.756656</td>
-      <td>0.570878</td>
-      <td>0.853659</td>
-      <td>0.914635</td>
-      <td>1.368421</td>
-      <td>0.682625</td>
-      <td>22.012341</td>
+      <td>5</td>
+      <td>...</td>
+      <td>0.166667</td>
+      <td>3</td>
+      <td>36.0</td>
+      <td>44.0</td>
+      <td>0.233672</td>
+      <td>0.734694</td>
+      <td>0.617673</td>
+      <td>1.428571</td>
+      <td>0.714143</td>
+      <td>53.777776</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>4</td>
+      <td>3</td>
+      <td>ippkogeb-1</td>
       <td>877.44590</td>
       <td>1707.41210</td>
       <td>-0.980020</td>
+      <td>Z6</td>
+      <td>8</td>
       <td>233.92108</td>
-      <td>4</td>
-      <td>cell_boundaries</td>
-      <td>120.0</td>
-      <td>1.250000</td>
-      <td>150.0</td>
-      <td>1.993355</td>
-      <td>3.0</td>
-      <td>75.25</td>
-      <td>42.007644</td>
-      <td>0.535870</td>
-      <td>0.817935</td>
-      <td>0.865989</td>
-      <td>1.130435</td>
-      <td>0.466321</td>
-      <td>23.450394</td>
+      <td>1.0</td>
+      <td>179</td>
+      <td>...</td>
+      <td>2.173913</td>
+      <td>1</td>
+      <td>69.0</td>
+      <td>46.0</td>
+      <td>0.409773</td>
+      <td>0.807018</td>
+      <td>0.787440</td>
+      <td>1.444444</td>
+      <td>0.721602</td>
+      <td>30.666666</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>5</td>
+      <td>4</td>
+      <td>icelkgce-1</td>
       <td>1253.77540</td>
       <td>1426.49510</td>
       <td>0.859675</td>
+      <td>Y7</td>
+      <td>0</td>
       <td>327.17487</td>
-      <td>5</td>
-      <td>cell_boundaries</td>
-      <td>41.0</td>
-      <td>1.146341</td>
-      <td>47.0</td>
-      <td>0.508108</td>
       <td>1.0</td>
-      <td>92.50</td>
-      <td>44.342251</td>
-      <td>0.591175</td>
-      <td>0.864486</td>
-      <td>0.863819</td>
-      <td>1.119565</td>
-      <td>0.449652</td>
-      <td>21.256597</td>
+      <td>39</td>
+      <td>...</td>
+      <td>0.528090</td>
+      <td>1</td>
+      <td>89.0</td>
+      <td>60.0</td>
+      <td>0.310669</td>
+      <td>0.780702</td>
+      <td>0.656972</td>
+      <td>1.109589</td>
+      <td>0.433332</td>
+      <td>40.449438</td>
     </tr>
   </tbody>
 </table>
+<p>5 rows × 24 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1377,7 +1400,7 @@ AnnData object with n_obs × n_vars = 17885 × 5095
       <th>perc_unassigned</th>
     </tr>
     <tr>
-      <th>gene_symbol</th>
+      <th>gene</th>
       <th></th>
       <th></th>
       <th></th>
@@ -1385,34 +1408,34 @@ AnnData object with n_obs × n_vars = 17885 × 5095
   </thead>
   <tbody>
     <tr>
-      <th>EEF1G</th>
-      <td>29662</td>
-      <td>568</td>
-      <td>1.914908</td>
+      <th>A2ML1</th>
+      <td>46</td>
+      <td>2</td>
+      <td>4.347826</td>
     </tr>
     <tr>
-      <th>XBP1</th>
-      <td>24838</td>
-      <td>42</td>
-      <td>0.169096</td>
+      <th>AAMP</th>
+      <td>615</td>
+      <td>5</td>
+      <td>0.813008</td>
     </tr>
     <tr>
-      <th>TIMP3</th>
-      <td>18879</td>
-      <td>74</td>
-      <td>0.391970</td>
+      <th>AAR2</th>
+      <td>298</td>
+      <td>5</td>
+      <td>1.677852</td>
     </tr>
     <tr>
-      <th>RAB11FIP1</th>
-      <td>15609</td>
-      <td>24</td>
-      <td>0.153757</td>
+      <th>AARSD1</th>
+      <td>273</td>
+      <td>1</td>
+      <td>0.366300</td>
     </tr>
     <tr>
-      <th>H3F3B</th>
-      <td>13492</td>
-      <td>368</td>
-      <td>2.727542</td>
+      <th>ABAT</th>
+      <td>212</td>
+      <td>5</td>
+      <td>2.358491</td>
     </tr>
   </tbody>
 </table>
