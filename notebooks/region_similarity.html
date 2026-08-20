@@ -355,7 +355,7 @@ document.write(`
   <section id="Module:-Region-Similarity">
 <h1>Module: Region Similarity<a class="headerlink" href="#Module:-Region-Similarity" title="Link to this heading">#</a></h1>
 <p>Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.</p>
-<center><p><img alt="29158e6558fd480bb885339a0712838d" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
+<center><p><img alt="e9de955da53647e99e025032d34576d3" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module compares transcript composition between different subcellular regions to identify cells with unexpected spatial differences in expression.</p>
 <p>Because profiles with fewer transcripts are inherently more variable and therefore tend to appear less similar even when sampled from the same underlying expression profile, SegTraQ accounts for this finite-count effect using a permutation-based expectation. The reported scores measure similarity relative to this expectation: values around zero indicate the expected level of similarity, negative values indicate lower similarity than expected, and positive values indicate higher similarity than
 expected. The accompanying p-value identifies cells with unusually low similarity.</p>
@@ -382,6 +382,7 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">linregress</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+
 <span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 </pre></div>
 </div>
@@ -526,11 +527,11 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:161: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1177,32 +1178,32 @@ contains the nuclear transcripts themselves.</p>
     <tr>
       <th>0</th>
       <td>6327</td>
-      <td>0.147459</td>
-      <td>0.049751</td>
+      <td>0.149936</td>
+      <td>0.069652</td>
     </tr>
     <tr>
       <th>1</th>
       <td>6328</td>
-      <td>0.256665</td>
+      <td>0.252905</td>
       <td>0.024876</td>
     </tr>
     <tr>
       <th>2</th>
       <td>6330</td>
-      <td>-0.138142</td>
-      <td>0.970149</td>
+      <td>-0.117952</td>
+      <td>0.925373</td>
     </tr>
     <tr>
       <th>3</th>
       <td>6331</td>
-      <td>0.391760</td>
-      <td>0.009950</td>
+      <td>0.390063</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>4</th>
       <td>6332</td>
-      <td>0.020090</td>
-      <td>0.353234</td>
+      <td>0.024209</td>
+      <td>0.368159</td>
     </tr>
     <tr>
       <th>...</th>
@@ -1213,32 +1214,32 @@ contains the nuclear transcripts themselves.</p>
     <tr>
       <th>1557</th>
       <td>95953</td>
-      <td>0.427025</td>
+      <td>0.428372</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>1558</th>
       <td>95954</td>
-      <td>0.233438</td>
+      <td>0.235525</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>1559</th>
       <td>95955</td>
-      <td>0.009714</td>
-      <td>0.258706</td>
+      <td>0.003808</td>
+      <td>0.293532</td>
     </tr>
     <tr>
       <th>1560</th>
       <td>95959</td>
-      <td>0.179122</td>
-      <td>0.044776</td>
+      <td>0.187398</td>
+      <td>0.029851</td>
     </tr>
     <tr>
       <th>1561</th>
       <td>95960</td>
-      <td>0.177855</td>
-      <td>0.039801</td>
+      <td>0.182119</td>
+      <td>0.024876</td>
     </tr>
   </tbody>
 </table>

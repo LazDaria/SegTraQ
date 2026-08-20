@@ -348,7 +348,7 @@ document.write(`
   <section id="Module:-Baseline-Metrics">
 <h1>Module: Baseline Metrics<a class="headerlink" href="#Module:-Baseline-Metrics" title="Link to this heading">#</a></h1>
 <p>When assessing the quality of a segmentation, the first thing one usually looks at are summary metrics such as the number of segmented cells, number of transcripts/genes per cell, the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.</p>
-<center><p><img alt="a0334781911e49bb8d98f15203f31431" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
+<center><p><img alt="e42468eb64bb46b5a86d6a1a2df5941b" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">baseline</span></code> (<code class="docutils literal notranslate"><span class="pre">bl</span></code>) module contains several metrics that can help you to assess the quality of your segmentation. The methods all return their corresponding values or dataframes, and also write them into the spatialdata object.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
@@ -370,6 +370,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+
 <span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 
 <span class="n">sdata</span> <span class="o">=</span> <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">)</span>
@@ -398,13 +399,13 @@ document.write(`
 <div class="highlight"><pre>
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:161: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -456,7 +457,7 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1221: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1214: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
   return bl.num_genes(
 </pre></div></div>
 </div>
@@ -1188,7 +1189,7 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1221: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1214: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
   return bl.num_genes(
 </pre></div></div>
 </div>

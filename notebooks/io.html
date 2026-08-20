@@ -380,6 +380,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shapely</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rasterio.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">shapes</span>
@@ -535,7 +536,7 @@ with coordinate systems:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;matplotlib.patches.Rectangle at 0x7ffed6700410&gt;
+&lt;matplotlib.patches.Rectangle at 0x7ffdcd0aa0d0&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -622,7 +623,11 @@ with coordinate systems:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 1417 occur only in the table (e.g. [np.int32(110751), np.int32(110754), np.int32(110755), np.int32(110756), np.int32(110759)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -678,7 +683,8 @@ with coordinate systems:
 </pre></div>
 </div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">BIDCell</span></code> filters the Xenium transcripts file prior to segmentation by removing low-quality transcripts (qv &lt; 20) and control probes. However, the cell IDs in the processed transcripts file (<code class="docutils literal notranslate"><span class="pre">transcripts_processed.csv</span></code>) still correspond to the original Xenium segmentation. Therefore, we reassign cell IDs based on the BIDCell segmentation masks.</p>
+<p>BIDCell filters the Xenium transcripts file prior to segmentation by removing low-quality transcripts (<code class="docutils literal notranslate"><span class="pre">qv</span> <span class="pre">&lt;</span> <span class="pre">20</span></code>) and control probes. However, the cell IDs in the processed transcripts file (<code class="docutils literal notranslate"><span class="pre">transcripts_processed.csv</span></code>) still correspond to the original Xenium segmentation. Therefore, we reassign cell IDs based on the BIDCell segmentation masks, following the same coordinate scaling and mask-based assignment used by BIDCell to ensure that transcript assignments match the reported expression
+matrix.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
@@ -689,9 +695,26 @@ with coordinate systems:
 <span class="n">transcripts_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
     <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cell_id&quot;</span><span class="p">:</span> <span class="s2">&quot;original_cell_id&quot;</span><span class="p">,</span> <span class="s2">&quot;x_location&quot;</span><span class="p">:</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y_location&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z_location&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
 <span class="p">)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-<span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_labels</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>  <span class="c1"># reassign BIDCell cell IDs</span>
+
+<span class="n">scale_pix_x</span> <span class="o">=</span> <span class="mf">0.2125</span>  <span class="c1"># config.affine.scale_pix_x</span>
+<span class="n">scale_pix_y</span> <span class="o">=</span> <span class="mf">0.2125</span>  <span class="c1"># config.affine.scale_pix_y</span>
+
+<span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">cell_labels</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="n">height_pix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">height</span> <span class="o">/</span> <span class="n">scale_pix_y</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">width_pix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">width</span> <span class="o">/</span> <span class="n">scale_pix_x</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="n">cell_labels_rescaled</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
+    <span class="n">cell_labels</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+    <span class="p">(</span><span class="n">width_pix</span><span class="p">,</span> <span class="n">height_pix</span><span class="p">),</span>
+    <span class="n">interpolation</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">INTER_NEAREST</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="n">scale_pix_x</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="n">scale_pix_y</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_labels_rescaled</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span>
 <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;feature_name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -796,7 +819,9 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 1849 occur only in the table (e.g. [np.int32(1), np.int32(3), np.int32(4), np.int32(5), np.int32(7)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -804,18 +829,41 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 <section id="Proseg-2">
 <h2>Proseg 2<a class="headerlink" href="#Proseg-2" title="Link to this heading">#</a></h2>
 <p>Below, we show how to read data from the older proseg version 2 into the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> format. Proseg version 2 does not output a <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object, so the latter has to be built from scratch.</p>
-<p>We first build the <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> object.</p>
+<p>We first load the Proseg transcript metadata and reconstruct the cell-by-gene count matrix from the hard transcript assignments. This ensures that the expression matrix and transcript-level cell assignments represent the same segmentation.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">counts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/expected-counts.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
-<span class="n">X</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">counts_df</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Read transcript-level ProSeg assignments</span>
+<span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+    <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/transcript-metadata.csv.gz&quot;</span><span class="p">,</span>
+    <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-<span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/cell-metadata.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
+<span class="n">background_id</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span>
+
+<span class="c1"># Build integer cell × gene counts from hard transcript assignments</span>
+<span class="n">counts_df</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">transcripts_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;assignment&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">background_id</span><span class="p">]</span>
+    <span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span> <span class="s2">&quot;gene&quot;</span><span class="p">],</span> <span class="n">observed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Cell metadata</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+    <span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/cell-metadata.csv.gz&quot;</span><span class="p">,</span>
+    <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
-<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># required for new version of SpatialData</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+
+<span class="c1"># Align count matrix to ProSeg cells</span>
+<span class="n">counts_df</span> <span class="o">=</span> <span class="n">counts_df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;cell&quot;</span><span class="p">],</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">X</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">counts_df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
 <span class="n">var</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">counts_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
+
 <span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">var</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -858,8 +906,7 @@ object IDs, which are matched to the <strong>index</strong> of <code class="docu
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_path</span> <span class="o">/</span> <span class="s2">&quot;proseg_output_v2/transcript-metadata.csv.gz&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span><span class="p">)</span>
-<span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
 <span class="n">transcripts_df</span> <span class="o">=</span> <span class="n">transcripts_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
     <span class="n">columns</span><span class="o">=</span><span class="p">{</span>
         <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;repositioned_x&quot;</span><span class="p">,</span>
@@ -1002,7 +1049,13 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 167 occur only in the table (e.g. [&#39;antisense_MYLIP&#39;, &#39;BLANK_0392&#39;, &#39;BLANK_0391&#39;, &#39;BLANK_0351&#39;, &#39;BLANK_0477&#39;]). This may reflect differences in the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 488 occur only in the table (e.g. [np.int64(147458), np.int64(24586), np.int64(161809), np.int64(163857), np.int64(151572)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1024,7 +1077,7 @@ matched to the <strong>index</strong> of <code class="docutils literal notransla
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2242801/4211026938.py:1: UserWarning: SpatialData is not stored in the most current format. If you want to use Zarr v3, please write the store to a new location using `sdata.write()`.
+/tmp/ipykernel_2331296/4211026938.py:1: UserWarning: SpatialData is not stored in the most current format. If you want to use Zarr v3, please write the store to a new location using `sdata.write()`.
   sdata_proseg3 = sd.read_zarr(data_path / &#34;proseg_output_v3/proseg-output.zarr&#34;)
 </pre></div></div>
 </div>
@@ -1098,8 +1151,8 @@ with <code class="docutils literal notranslate"><span class="pre">adata.obs[inst
   &#39;region_key&#39;: &#39;region&#39;,
   &#39;instance_key&#39;: &#39;cell&#39;},
  &#39;proseg_run&#39;: {&#39;args&#39;: &#39;proseg_v3 --xenium /g/huber/projects/CODEX/segtraq/data/20260113_Janesick_Replicate1/xenium/transcripts.csv --output-counts counts.mtx.gz --output-expected-counts expected-counts.mtx.gz --output-cell-metadata cell-metadata.csv.gz --output-transcript-metadata transcript-metadata.csv.gz --output-gene-metadata gene-metadata.csv.gz --output-cell-polygons cell-polygons.geojson.gz --output-cell-polygon-layers cell-polygons-layers.geojson.gz --nthreads 32&#39;,
-  &#39;duration&#39;: &#39;2086.29130289s&#39;,
-  &#39;version&#39;: &#39;3.1.0&#39;}}
+  &#39;version&#39;: &#39;3.1.0&#39;,
+  &#39;duration&#39;: &#39;2086.29130289s&#39;}}
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1129,13 +1182,13 @@ with <code class="docutils literal notranslate"><span class="pre">adata.obs[inst
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2242801/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+/tmp/ipykernel_2331296/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
 Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
 
 To further ignore this warning, you can do:
 import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&#39;, UserWarning)
   gdf[gdf.geometry.notna() &amp; ~gdf.geometry.is_empty]
-/tmp/ipykernel_2242801/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+/tmp/ipykernel_2331296/1220609859.py:7: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
 Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
 
 To further ignore this warning, you can do:
@@ -1274,7 +1327,13 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 167 occur only in the table (e.g. [&#39;antisense_MYLIP&#39;, &#39;BLANK_0392&#39;, &#39;BLANK_0391&#39;, &#39;BLANK_0351&#39;, &#39;BLANK_0477&#39;]). This may reflect differences in the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 280 occur only in the table (e.g. [np.uint32(102400), np.uint32(102404), np.uint32(102405), np.uint32(10246), np.uint32(55304)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1319,7 +1378,7 @@ with <code class="docutils literal notranslate"><span class="pre">adata.obs[inst
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2242801/1139085374.py:4: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
+/tmp/ipykernel_2331296/1139085374.py:4: UserWarning: GeoSeries.notna() previously returned False for both missing (None) and empty geometries. Now, it only returns False for missing values. Since the calling GeoSeries contains empty geometries, the result has changed compared to previous versions of GeoPandas.
 Given a GeoSeries &#39;s&#39;, you can use &#39;~s.is_empty &amp; s.notna()&#39; to get back the old behaviour.
 
 To further ignore this warning, you can do:
@@ -1410,7 +1469,7 @@ import warnings; warnings.filterwarnings(&#39;ignore&#39;, &#39;GeoSeries.notna&
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>

@@ -405,6 +405,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata_plot</span>  <span class="c1"># noqa</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
+
 <span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
 
 <span class="c1"># filtering import and deprecation warnings from spatialdata</span>
@@ -442,7 +443,7 @@ document.write(`
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;dask.config.set at 0x7ffeea78b890&gt;
+&lt;dask.config.set at 0x7ffeea6d34d0&gt;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -458,8 +459,8 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee9fcbe00&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee9ff6990&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0bc590&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </pre></div></div>
 </div>
 <p>Let’s have a quick look at the data.</p>
@@ -501,9 +502,9 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee9ff6990&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;CYP2A6&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;Human_PTEN_G129E_WT:A&#39;, &#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;HPV18-E6&#39;]). This may reflect differences in the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;F2&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;Human_PTEN_G129E_WT:A&#39;, &#39;CYP2A6&#39;]). This may reflect differences in the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:189: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;ipkonddj-1&#39;, &#39;obnphglo-1&#39;, &#39;obnpmdml-1&#39;, &#39;ocnkohki-1&#39;, &#39;obobppei-1&#39;]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;ocnokblm-1&#39;, &#39;obnphglo-1&#39;, &#39;hmbkphlg-1&#39;, &#39;hljkefam-1&#39;, &#39;obnkiokn-1&#39;]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1275,31 +1276,31 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee9ff6990&gt;: None
     <tr>
       <th>0</th>
       <td>acceakgj-1</td>
-      <td>0.013968</td>
-      <td>0.383085</td>
+      <td>0.011469</td>
+      <td>0.412935</td>
     </tr>
     <tr>
       <th>1</th>
       <td>accebped-1</td>
-      <td>0.107964</td>
-      <td>0.099502</td>
+      <td>0.105905</td>
+      <td>0.074627</td>
     </tr>
     <tr>
       <th>2</th>
       <td>accedpdh-1</td>
-      <td>0.293839</td>
-      <td>0.009950</td>
+      <td>0.294026</td>
+      <td>0.024876</td>
     </tr>
     <tr>
       <th>3</th>
       <td>acceejoe-1</td>
-      <td>0.205204</td>
-      <td>0.004975</td>
+      <td>0.203938</td>
+      <td>0.019900</td>
     </tr>
     <tr>
       <th>4</th>
       <td>acceekkh-1</td>
-      <td>0.137976</td>
+      <td>0.130126</td>
       <td>0.034826</td>
     </tr>
   </tbody>
@@ -1933,58 +1934,58 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
   <tbody>
     <tr>
       <th>0</th>
-      <td>CASP8</td>
-      <td>KDR</td>
-      <td>0.790793</td>
-      <td>0.336357</td>
-      <td>4</td>
-      <td>492</td>
-      <td>203</td>
-      <td>17612</td>
+      <td>COL18A1</td>
+      <td>RUBCNL</td>
+      <td>1.033139</td>
+      <td>0.564529</td>
+      <td>8</td>
+      <td>451</td>
+      <td>319</td>
+      <td>17533</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>MAOB</td>
-      <td>SLC12A2</td>
-      <td>3.139980</td>
-      <td>0.983600</td>
-      <td>4</td>
-      <td>69</td>
-      <td>368</td>
-      <td>17870</td>
+      <td>FAT2</td>
+      <td>HDC</td>
+      <td>1.224311</td>
+      <td>0.670068</td>
+      <td>0</td>
+      <td>45</td>
+      <td>162</td>
+      <td>18104</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>KIT</td>
-      <td>PIK3R2</td>
-      <td>1.655591</td>
-      <td>0.878584</td>
-      <td>5</td>
-      <td>92</td>
-      <td>631</td>
-      <td>17583</td>
+      <td>PMAIP1</td>
+      <td>PRRX1</td>
+      <td>0.328876</td>
+      <td>0.061647</td>
+      <td>1</td>
+      <td>302</td>
+      <td>267</td>
+      <td>17741</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>FCMR</td>
-      <td>SLC12A2</td>
-      <td>0.841028</td>
-      <td>0.354970</td>
-      <td>6</td>
-      <td>370</td>
-      <td>366</td>
-      <td>17569</td>
+      <td>CD47</td>
+      <td>NRP1</td>
+      <td>1.551269</td>
+      <td>0.977470</td>
+      <td>25</td>
+      <td>1610</td>
+      <td>168</td>
+      <td>16508</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>JAG1</td>
-      <td>PLCG2</td>
-      <td>2.033418</td>
-      <td>0.924933</td>
-      <td>4</td>
-      <td>388</td>
-      <td>101</td>
-      <td>17818</td>
+      <td>FBLN5</td>
+      <td>PTP4A3</td>
+      <td>4.097436</td>
+      <td>0.988321</td>
+      <td>3</td>
+      <td>91</td>
+      <td>168</td>
+      <td>18049</td>
     </tr>
   </tbody>
 </table>
