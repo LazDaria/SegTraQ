@@ -2,6 +2,7 @@ import numpy as np
 
 from segtraq.utils import _filter_control_and_low_quality_transcripts
 
+
 CONTROL_PREFIXES = (
     "NegControlProbe_",
     "antisense_",
@@ -40,22 +41,26 @@ def test_filter_control_and_low_quality_transcripts(sdata_new):
     # No retained genes should match a control prefix.
     assert not points["feature_name"].str.startswith(CONTROL_PREFIXES).any()
 
-    # The expression table should remain unchanged.
-    assert sdata.tables["table"].shape == sdata_new.tables["table"].shape
-
-    np.testing.assert_array_equal(
-        _to_array(sdata.tables["table"].X),
-        _to_array(sdata_new.tables["table"].X),
-    )
+    # No control genes should remain in the expression table.
+    table_genes = sdata.tables["table"].var_names.astype(str)
+    assert not table_genes.str.startswith(CONTROL_PREFIXES).any()
 
     # Point transformation should be preserved.
     assert sdata.points["transcripts"].attrs["transform"] == sdata_new.points["transcripts"].attrs["transform"]
 
 
 def test_filter_control_prefixes(sdata_new):
-    # Use a prefix known to occur in the fixture.
     points_before = sdata_new.points["transcripts"].compute()
-    prefix = points_before["feature_name"].iloc[0][:3]
+
+    # Use a prefix known to occur in both points and the table.
+    table_genes = set(sdata_new.tables["table"].var_names.astype(str))
+    common_genes = points_before.loc[
+        points_before["feature_name"].astype(str).isin(table_genes),
+        "feature_name",
+    ].astype(str)
+
+    gene = common_genes.iloc[0]
+    prefix = gene
 
     sdata = _filter_control_and_low_quality_transcripts(
         sdata_new,
@@ -69,16 +74,11 @@ def test_filter_control_prefixes(sdata_new):
 
     points_after = sdata.points["transcripts"].compute()
 
-    assert not points_after["feature_name"].str.startswith(prefix).any()
+    assert not points_after["feature_name"].astype(str).str.startswith(prefix).any()
     assert len(points_after) < len(points_before)
 
-    # Table is not modified by control-probe filtering.
-    assert sdata.tables["table"].shape == sdata_new.tables["table"].shape
-
-    np.testing.assert_array_equal(
-        _to_array(sdata.tables["table"].X),
-        _to_array(sdata_new.tables["table"].X),
-    )
+    # Matching control genes should also be removed from the table.
+    assert not sdata.tables["table"].var_names.astype(str).str.startswith(prefix).any()
 
 
 def test_filter_control_and_low_quality_transcripts_no_filtering(sdata_new):
@@ -120,7 +120,7 @@ def test_filter_control_and_low_quality_transcripts_no_transcripts_remain(
     # No transcripts should remain.
     assert len(sdata.points["transcripts"].compute()) == 0
 
-    # The table should still remain unchanged.
+    # QV filtering does not modify the expression table.
     assert sdata.tables["table"].shape == sdata_new.tables["table"].shape
 
     np.testing.assert_array_equal(
@@ -134,6 +134,7 @@ def test_filter_control_and_low_quality_transcripts_inplace_false(
 ):
     n_points_before = len(sdata_new.points["transcripts"])
     X_before = _to_array(sdata_new.tables["table"].X).copy()
+    var_names_before = sdata_new.tables["table"].var_names.copy()
 
     _filter_control_and_low_quality_transcripts(
         sdata_new,
@@ -152,6 +153,8 @@ def test_filter_control_and_low_quality_transcripts_inplace_false(
         _to_array(sdata_new.tables["table"].X),
         X_before,
     )
+
+    assert sdata_new.tables["table"].var_names.equals(var_names_before)
 
 
 def test_filter_control_and_low_quality_transcripts_min_qv_none(sdata_new):

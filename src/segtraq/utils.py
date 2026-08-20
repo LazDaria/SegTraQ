@@ -2216,7 +2216,7 @@ def filter_cells(adata, col: str, func: Callable):
 def _filter_control_and_low_quality_transcripts(
     sdata,
     min_qv: float | None = 20.0,
-    control_prefixes: tuple | list = (
+    control_prefixes: tuple | list | None = (
         "NegControlProbe_",
         "antisense_",
         "NegControlCodeword",
@@ -2239,9 +2239,9 @@ def _filter_control_and_low_quality_transcripts(
     r"""
     Filter control and low-quality transcripts from the SpatialData points element.
 
-    The cell-level expression table is left unchanged. This allows SegTraQ to use
-    a consistent transcript-level filtering strategy across segmentation methods
-    while preserving the expression matrix provided by each method.
+    Control genes matching `control_prefixes` are removed from both the transcript
+    points and the cell-level expression table. Quality filtering is applied only
+    to transcript points, leaving the expression matrix otherwise unchanged.
 
     After filtering, the genes and cell IDs represented by assigned transcripts
     are compared with those represented in the cell-level table. Differences are
@@ -2256,7 +2256,7 @@ def _filter_control_and_low_quality_transcripts(
     min_qv : float | None, default=20.0
         Minimum quality value (qv) threshold for transcripts to be retained.
         If None, no filtering is applied based on quality.
-    control_prefixes : tuple | list
+    control_prefixes : tuple | list | None
         Gene-name prefixes identifying control probes to remove.
     points_key : str, default="transcripts"
         Key containing transcript-level data.
@@ -2279,16 +2279,23 @@ def _filter_control_and_low_quality_transcripts(
     Returns
     -------
     sd.SpatialData
-        SpatialData object with filtered transcript points. The expression table
-        is left unchanged.
+        SpatialData object with filtered transcript points and control genes
+        removed from the expression table.
     """
     if inplace:
-        warnings.warn(
-            "Filtering control and low-quality transcripts from the SpatialData object in-place. "
-            "Set filter_kwargs={'inplace': False} to avoid modifying the original object.",
-            UserWarning,
-            stacklevel=2,
-        )
+        if control_prefixes or min_qv is not None:
+            filtering = f"control probes matching prefixes {tuple(control_prefixes)}" if control_prefixes else ""
+
+            if min_qv is not None:
+                filtering += f"{' and ' if filtering else ''}transcripts with qv < {min_qv}"
+
+            warnings.warn(
+                f"Filtering {filtering} from transcript points in-place; control probes are also "
+                "removed from the expression table if present. Configure `min_qv`, `control_prefixes`, "
+                "and `inplace` via `filter_kwargs`.",
+                UserWarning,
+                stacklevel=2,
+            )
     else:
         sdata = sd.deepcopy(sdata)
 
@@ -2299,7 +2306,7 @@ def _filter_control_and_low_quality_transcripts(
     pts_pd = pts.compute()
     points_transformation = pts.attrs["transform"]
 
-    # Control probes: prefix and exact-match filters.
+    # Control probes: prefix filters.
     prefix_mask = (
         pts_pd[points_gene_key].str.startswith(tuple(control_prefixes))
         if control_prefixes
@@ -2321,11 +2328,31 @@ def _filter_control_and_low_quality_transcripts(
     invalid_mask = prefix_mask | quality_mask
     pts_pd = pts_pd.loc[~invalid_mask].copy()
 
-    # Write filtered points back; leave the expression table unchanged.
+    # Write filtered points back.
     sdata.points[points_key] = sd.models.PointsModel.parse(
         dd.from_pandas(pts_pd, npartitions=1),
         transformations=points_transformation,
     )
+
+    # Remove control genes from the expression table.
+    table_genes = pd.Series(_get_genes(adata, tables_gene_key))
+    table_control_mask = (
+        table_genes.str.startswith(tuple(control_prefixes))
+        if control_prefixes
+        else pd.Series(False, index=table_genes.index)
+    )
+
+    if table_control_mask.any():
+        removed_table_genes = table_genes.loc[table_control_mask].tolist()
+        warnings.warn(
+            f"{len(removed_table_genes)} control genes matching `control_prefixes` "
+            "were present in the expression table and were removed "
+            f"(e.g. {removed_table_genes[:5]}).",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        adata = adata[:, ~table_control_mask.to_numpy()].copy()
+        sdata.tables[tables_key] = adata
 
     # Check consistency between assigned points and the expression table.
     is_background = _is_background(
@@ -2350,7 +2377,8 @@ def _filter_control_and_low_quality_transcripts(
             f"(e.g. {list(genes_only_points)[:5]}), and "
             f"{len(genes_only_table)} occur only in the table "
             f"(e.g. {list(genes_only_table)[:5]}). "
-            "This may reflect differences in the filtering used to generate the "
+            "Genes only occuring in the table can be introduced by cropping (`SpatialData`),"
+            " but differences may also be due to the filtering used to generate the "
             "transcript data and expression matrix. Please check that `filter_kwargs`, "
             "particularly `min_qv` and `control_prefixes`, are consistent "
             "with the filtering used to generate the expression table.",
@@ -2368,8 +2396,11 @@ def _filter_control_and_low_quality_transcripts(
             f"(e.g. {list(cells_only_points)[:5]}), and "
             f"{len(cells_only_table)} occur only in the table "
             f"(e.g. {list(cells_only_table)[:5]}). "
-            "Please check that the transcript assignments and `filter_kwargs` are "
-            "consistent with how the expression table was generated.",
+            "Cells only occuring in the table can reflect zero-count cells,"
+            " but differences may also be due to the filtering used to generate the "
+            "transcript data and expression matrix. Please check that `filter_kwargs`, "
+            "particularly `min_qv` and `control_prefixes`, are consistent "
+            "with the filtering used to generate the expression table.",
             RuntimeWarning,
             stacklevel=2,
         )

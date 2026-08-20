@@ -1141,7 +1141,7 @@ class SegTraQ:
     def filter_control_and_low_quality_transcripts(
         self,
         min_qv: float = 20.0,
-        control_prefixes: tuple | list = (
+        control_prefixes: tuple | list | None = (
             "NegControlProbe_",
             "antisense_",
             "NegControlCodeword",
