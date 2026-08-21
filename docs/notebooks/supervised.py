@@ -36,7 +36,7 @@
 # - how much its expression resembles other (neighboring) cell types, and
 # - if it is possible to predict that a cell of one cell type is adjacent to a different cell type.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
 # %load_ext autoreload
@@ -58,6 +58,8 @@ import spatialdata as sd
 import spatialdata_plot  # noqa
 
 import segtraq
+
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
 
 # %% [markdown]
 # #### Transfer labels from scRNA-seq to spatial transcriptomics

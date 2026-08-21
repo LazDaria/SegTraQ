@@ -2,6 +2,8 @@ import pandas as pd
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 def test_morphological_features(sdata_new):
     morphological_features = st.bl.morphological_features(sdata_new)

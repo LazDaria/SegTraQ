@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
@@ -26,7 +27,6 @@ DEFAULT_FILTER_KWARGS = {
         "UnassignedCodeword_",
         "Intergenic_Region_",
     ),
-    "control_genes": (),
     "inplace": True,
 }
 
@@ -190,7 +190,6 @@ class SegTraQ:
             sdata_new = _filter_control_and_low_quality_transcripts(
                 sdata,
                 min_qv=resolved_kwargs["min_qv"],
-                control_genes=resolved_kwargs["control_genes"],
                 control_prefixes=resolved_kwargs["control_prefixes"],
                 points_key=points_key,
                 points_gene_key=points_gene_key,
@@ -199,7 +198,6 @@ class SegTraQ:
                 tables_key=tables_key,
                 tables_cell_id_key=tables_cell_id_key,
                 tables_gene_key=tables_gene_key,
-                recompute_expression=True,
                 inplace=resolved_kwargs["inplace"],
             )
         else:
@@ -324,14 +322,12 @@ class SegTraQ:
 
     def run_region_similarity(
         self,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
         iou_kwargs: dict = None,
         similarity_nucleus_cell_kwargs: dict = None,
         similarity_nucleus_cytoplasm_kwargs: dict = None,
-        similarity_center_border_kwargs: dict = None,
-        similarity_border_neighborhood_kwargs: dict = None,
         border_admixture_score_kwargs: dict = None,
     ):
         """
@@ -341,9 +337,7 @@ class SegTraQ:
         1) matching between each cell and its best-matching nucleus
         2) similarity between per-cell expression and its matched nucleus
         3) similarity between the cell's nucleus-overlapping and cytoplasmic expression
-        4) similarity between center and border expression
-        5) similarity between border and neighborhood expression
-        6) border admixture score
+        4) border admixture score
 
         Returns
         -------
@@ -372,16 +366,6 @@ class SegTraQ:
             **(similarity_nucleus_cytoplasm_kwargs or {}),
         )
 
-        similarity_center_border = self.rs.similarity_center_border(
-            inplace=inplace,
-            **(similarity_center_border_kwargs or {}),
-        )
-
-        similarity_border_neighborhood = self.rs.similarity_border_neighborhood(
-            inplace=inplace,
-            **(similarity_border_neighborhood_kwargs or {}),
-        )
-
         border_admixture_score = self.rs.border_admixture_score(
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
@@ -396,8 +380,6 @@ class SegTraQ:
             "ious": ious,
             "similarity_nucleus_cell": similarity_nucleus_cell,
             "similarity_nucleus_cytoplasm": similarity_nucleus_cytoplasm,
-            "similarity_center_border": similarity_center_border,
-            "similarity_border_neighborhood": similarity_border_neighborhood,
             "border_admixture_score": border_admixture_score,
         }
 
@@ -999,7 +981,7 @@ class SegTraQ:
         t_pos: float = 0.25,
         t_neg: float = 1.0,
         min_cells_per_celltype: int = 10,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
     ):
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
 
@@ -1039,19 +1021,18 @@ class SegTraQ:
 
         return markers
 
-    markers_from_reference.__doc__ = (
-        _markers_from_reference.__doc__
-        + """
+    markers_from_reference.__doc__ = _markers_from_reference.__doc__ + dedent(
+        """
 
-    Notes
-    -----
-    query_gene_key : str | None
-        Addtional parameter only used when ``markers_from_reference`` is called
-        as a method of a `SegTraQ` instance. Specifies the column in
-        `self.sdata.tables[tables_key].var` containing the query gene
-        identifiers. If `None`, `var_names` are used. These identifiers are
-        used to subset the reference genes before marker selection.
-    """
+            Notes
+            -----
+            query_gene_key : str | None
+                Additional parameter only used when ``markers_from_reference`` is called
+                as a method of a ``SegTraQ`` instance. Specifies the column in
+                ``self.sdata.tables[tables_key].var`` containing the query gene
+                identifiers. If ``None``, ``var_names`` are used. These identifiers are
+                used to subset the reference genes before marker selection.
+            """
     )
 
     def run_label_transfer(
@@ -1160,7 +1141,7 @@ class SegTraQ:
     def filter_control_and_low_quality_transcripts(
         self,
         min_qv: float = 20.0,
-        control_prefixes: tuple | list = (
+        control_prefixes: tuple | list | None = (
             "NegControlProbe_",
             "antisense_",
             "NegControlCodeword",
@@ -1169,9 +1150,8 @@ class SegTraQ:
             "NegPrb",
             "DeprecatedCodeword_",
             "UnassignedCodeword_",
+            "Intergenic_Region_",
         ),
-        control_genes: tuple | list = (),
-        recompute_expression: bool = True,
         inplace: bool = True,
     ):
         """
@@ -1183,10 +1163,6 @@ class SegTraQ:
             Minimum quality value (QV) threshold for transcripts to be retained.
         control_prefixes : tuple or list, optional
             List of gene name prefixes indicating control transcripts to be filtered out.
-        control_genes : tuple or list, optional
-            List of gene name prefixes indicating control genes to be filtered out.
-        recompute_expression : bool, default=True
-            If True, recomputes the per-cell expression matrix after filtering transcripts.
         inplace : bool, default=True
             If True, modifies `self.sdata` in place.
             If False, returns a new SpatialData object with filtered transcripts.
@@ -1201,7 +1177,6 @@ class SegTraQ:
             sdata=self.sdata,
             min_qv=min_qv,
             control_prefixes=control_prefixes,
-            control_genes=control_genes,
             points_key=self.points_key,
             points_gene_key=self.points_gene_key,
             points_cell_id_key=self.points_cell_id_key,
@@ -1209,7 +1184,6 @@ class SegTraQ:
             tables_key=self.tables_key,
             tables_cell_id_key=self.tables_cell_id_key,
             tables_gene_key=self.tables_gene_key,
-            recompute_expression=recompute_expression,
             inplace=inplace,
         )
 
@@ -1326,7 +1300,7 @@ class _BLFacade:
     def morphological_features(
         self,
         features_to_compute: list | None = None,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         eps: float = 1e-6,
         inplace: bool = True,
@@ -1364,7 +1338,7 @@ class _BLFacade:
 
 class _RSFacade:
     """
-    Bound region-similarity (rs) metrics interface for a SegTraQ instance.
+    Bound region-difference (rd) metrics interface for a SegTraQ instance.
     Methods use the parent's `sdata` and configured keys.
     No per-call overrides are allowed.
     """
@@ -1376,7 +1350,7 @@ class _RSFacade:
         self,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1399,12 +1373,14 @@ class _RSFacade:
         self,
         min_transcripts: int = 10,
         min_genes: int = 5,
+        scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
-        scale: float = 1e4,
         inplace: bool = True,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
     ):
         return rs.similarity_nucleus_cell(
             sdata=self._p.sdata,
@@ -1422,12 +1398,14 @@ class _RSFacade:
             points_gene_key=self._p.points_gene_key,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
+            scale=scale,
             select_by=select_by,
             min_intersection_area=min_intersection_area,
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
-            scale=scale,
             inplace=inplace,
+            n_permutations=n_permutations,
+            random_state=random_state,
         )
 
     similarity_nucleus_cell.__doc__ = rs.similarity_nucleus_cell.__doc__
@@ -1439,9 +1417,11 @@ class _RSFacade:
         scale: float = 1e4,
         select_by: str = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
     ):
         return rs.similarity_nucleus_cytoplasm(
             sdata=self._p.sdata,
@@ -1464,73 +1444,11 @@ class _RSFacade:
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             inplace=inplace,
+            n_permutations=n_permutations,
+            random_state=random_state,
         )
 
     similarity_nucleus_cytoplasm.__doc__ = rs.similarity_nucleus_cytoplasm.__doc__
-
-    def similarity_center_border(
-        self,
-        border_fraction_of_radius: float = 0.2,
-        buffer_fraction_of_radius: float = 0.2,
-        min_transcripts: int = 10,
-        min_genes: int = 5,
-        scale: float = 1e4,
-        inplace: bool = True,
-    ):
-        return rs.similarity_center_border(
-            sdata=self._p.sdata,
-            tables_key=self._p.tables_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            tables_gene_key=self._p.tables_gene_key,
-            shapes_key=self._p.shapes_key,
-            points_key=self._p.points_key,
-            points_cell_id_key=self._p.points_cell_id_key,
-            points_background_id=self._p.points_background_id,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            points_gene_key=self._p.points_gene_key,
-            border_fraction_of_radius=border_fraction_of_radius,
-            buffer_fraction_of_radius=buffer_fraction_of_radius,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-            inplace=inplace,
-        )
-
-    similarity_center_border.__doc__ = rs.similarity_center_border.__doc__
-
-    def similarity_border_neighborhood(
-        self,
-        border_fraction_of_radius: float = 0.2,
-        buffer_fraction_of_radius: float = 0.1,
-        neighborhood_radius_factor: float = 1.0,
-        min_transcripts: int = 10,
-        min_genes: int = 5,
-        scale: float = 1e4,
-        inplace: bool = True,
-    ):
-        return rs.similarity_border_neighborhood(
-            sdata=self._p.sdata,
-            tables_key=self._p.tables_key,
-            tables_cell_id_key=self._p.tables_cell_id_key,
-            tables_gene_key=self._p.tables_gene_key,
-            shapes_key=self._p.shapes_key,
-            points_key=self._p.points_key,
-            points_cell_id_key=self._p.points_cell_id_key,
-            points_background_id=self._p.points_background_id,
-            points_x_key=self._p.points_x_key,
-            points_y_key=self._p.points_y_key,
-            points_gene_key=self._p.points_gene_key,
-            border_fraction_of_radius=border_fraction_of_radius,
-            buffer_fraction_of_radius=buffer_fraction_of_radius,
-            neighborhood_radius_factor=neighborhood_radius_factor,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-            inplace=inplace,
-        )
-
-    similarity_border_neighborhood.__doc__ = rs.similarity_border_neighborhood.__doc__
 
     def border_admixture_score(
         self,
@@ -1540,10 +1458,9 @@ class _RSFacade:
         min_transcripts: int = 10,
         min_genes: int = 5,
         pseudocount: float = 0.5,
-        n_boot: int = 0,
-        ci_level: float = 0.95,
+        n_permutations: int = 200,
         random_state: int | None = None,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1565,8 +1482,7 @@ class _RSFacade:
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             pseudocount=pseudocount,
-            n_boot=n_boot,
-            ci_level=ci_level,
+            n_permutations=n_permutations,
             random_state=random_state,
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
@@ -1672,7 +1588,7 @@ class _PSFacade:
         cell_type_query: str | list[str] | None = None,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         predicate: str = "intersects",
         inplace: bool = True,
@@ -1712,7 +1628,7 @@ class _PSFacade:
         restrict_to_within_boundary: bool = False,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
     ):
@@ -1753,7 +1669,7 @@ class _PSFacade:
         membrane_region: Literal["cell", "nucleus"] = "cell",
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
         min_intersection_area: float = 0.0,
-        n_jobs: int = -1,
+        n_jobs: int | None = None,
         parallel_backend: str = "threading",
         signed: bool = True,
         inplace: bool = True,
@@ -1943,6 +1859,10 @@ class _VLFacade:
         scale: float = 1e4,
         min_genes: int = 5,
         min_transcripts: int = 10,
+        n_permutations: int = 200,
+        random_state: int | None = 42,
+        n_jobs: int | None = None,
+        parallel_backend: str = "threading",
         inplace: bool = True,
     ):
         return vl.similarity_top_bottom(
@@ -1964,6 +1884,10 @@ class _VLFacade:
             scale=scale,
             min_genes=min_genes,
             min_transcripts=min_transcripts,
+            n_permutations=n_permutations,
+            random_state=random_state,
+            n_jobs=n_jobs,
+            parallel_backend=parallel_backend,
             inplace=inplace,
         )
 
@@ -1994,7 +1918,7 @@ class _VLFacade:
     def vertical_signal_integrity_per_cell(
         self,
         ovrlp: ovrlpy.Ovrlp | None = None,
-        n_workers: int = 1,
+        n_jobs: int | None = None,
         random_state: int = 123,
         ovrlpy_init_kwargs: dict[str, Any] | None = None,
         ovrlpy_analyse_kwargs: dict[str, Any] | None = None,
@@ -2012,7 +1936,7 @@ class _VLFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             points_background_id=self._p.points_background_id,
-            n_workers=n_workers,
+            n_jobs=n_jobs,
             random_state=random_state,
             ovrlpy_init_kwargs=ovrlpy_init_kwargs,
             ovrlpy_analyse_kwargs=ovrlpy_analyse_kwargs,

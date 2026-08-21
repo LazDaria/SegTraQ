@@ -13,12 +13,14 @@ from ..utils import _get_genes, _is_background, filter_cells
 
 
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
+    """Return polygon intersection area, or NaN for invalid geometries."""
     if not (poly1.is_valid and poly2.is_valid):
         return np.nan
     return poly1.intersection(poly2).area
 
 
 def _compute_iou_from_areas(inter_area: float, area1: float, area2: float) -> float:
+    """Compute intersection-over-union from precomputed areas."""
     if np.isnan(inter_area) or area1 <= 0 or area2 <= 0:
         return np.nan
     union = area1 + area2 - inter_area
@@ -26,6 +28,7 @@ def _compute_iou_from_areas(inter_area: float, area1: float, area2: float) -> fl
 
 
 def _compute_nucleus_fraction(inter_area: float, nuc_area: float) -> float:
+    """Compute the fraction of nucleus area overlapping a cell."""
     if np.isnan(inter_area) or nuc_area <= 0:
         return np.nan
     return inter_area / nuc_area
@@ -36,14 +39,13 @@ def _match_nucleus_one_cell(
     nucleus_shapes: GeoDataFrame,
     id_name: str,
     nuc_sindex: Index,
-    select_by: str = "nucleus_fraction",  # "iou" or "nucleus_fraction"
-    min_intersection_area: float = 0.0,  # optional filter to ignore tiny overlaps
+    select_by: str = "nucleus_fraction",
+    min_intersection_area: float = 0.0,
 ) -> dict:
-    """
-    For one cell polygon, find the best-matching nucleus using either IoU or
-    nucleus intersection fraction as the primary score.
+    """Find the best-matching nucleus for one cell polygon.
 
-    Tie-breaker: larger nucleus area.
+    The primary score is either IoU or nucleus intersection fraction. Ties are
+    resolved by larger nucleus area, then larger intersection area, then nucleus ID.
     """
     if select_by not in ("iou", "nucleus_fraction"):
         raise ValueError(f"select_by must be 'iou' or 'nucleus_fraction', got {select_by!r}")
@@ -54,7 +56,7 @@ def _match_nucleus_one_cell(
     # candidate nuclei based on bounding-box overlap (fast prefilter)
     candidate_idx = list(nuc_sindex.intersection(cell_geom.bounds))
 
-    # if there are no nuclei intersecting with our cell
+    # No bounding-box candidates means no possible polygon intersection.
     if not candidate_idx:
         return {
             id_name: cell_id,
@@ -121,7 +123,7 @@ def _match_nucleus_one_cell(
                 nucleus_fraction=nucleus_fraction,
             )
 
-    # If nothing survived filtering
+    # No valid candidate survived the geometry/overlap filters.
     if best["score"] == -np.inf:
         return {
             id_name: cell_id,
@@ -144,8 +146,7 @@ def _get_center_and_border_shapes(
     border_fraction_of_radius: float = 0.2,
     buffer_fraction_of_radius: float = 0.1,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
-    """
-    Create center and border shapes with a buffer gap between them.
+    """Create center and border shapes with a buffer gap between them.
 
     Border is the outer ring:
         cell - cell eroded by border_fraction_of_radius
@@ -154,6 +155,7 @@ def _get_center_and_border_shapes(
         cell eroded by border_fraction_of_radius + buffer_fraction_of_radius
 
     The region between border and center is ignored.
+
     Parameters
     ----------
     sdata : SpatialData
@@ -251,8 +253,9 @@ def _get_filtered_points_df(
     points_key: str,
     points_cell_id_key: str,
     points_gene_key: str,
-    points_background_id: str,
+    points_background_id: str | int,
 ) -> pd.DataFrame:
+    """Filter transcript points to valid genes, cells, and optional subsets."""
     tbl = sdata.tables[tables_key]
     pts = sdata.points[points_key]
 
@@ -272,8 +275,7 @@ def _get_filtered_points_df(
         adata = tbl
     cell_ids = adata.obs[tables_cell_id_key]
 
-    # subset points to cells in tbl
-
+    # Subset points to cells retained after optional cell-type filtering.
     pts = pts[pts[points_cell_id_key].isin(cell_ids)]
 
     # optionally subset to gene selection
@@ -458,7 +460,7 @@ def _join_points_regions(
 
 
 def _ensure_center_border_shapes_exists(
-    sdata,
+    sdata: sd.SpatialData,
     shapes_key: str = "cell_boundaries",
     border_fraction_of_radius: float = 0.2,
     buffer_fraction_of_radius: float = 0.1,
@@ -504,7 +506,7 @@ def _ensure_center_border_shapes_exists(
 
 
 def _get_center_border_counts(
-    sdata,
+    sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
@@ -517,7 +519,8 @@ def _get_center_border_counts(
     tables_gene_key: str | None = None,
     border_fraction_of_radius: float = 0.2,
     buffer_fraction_of_radius: float = 0.1,
-):
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return gene-count matrices for non-overlapping cell centers and borders."""
     _ensure_center_border_shapes_exists(
         sdata=sdata,
         shapes_key=shapes_key,
@@ -555,11 +558,10 @@ def _get_center_border_counts(
         predicate="within",
     )
 
-    # checking if there are any transcripts that were counted in both center and border
-    # this should never be the case, hence we issue a warning if it happens
-    center_transcripts = tx_assigned_to_center["point_id"].values
-    border_transcripts = tx_assigned_to_border["point_id"].values
-    intersecting_transcripts = set(center_transcripts).intersection(set(border_transcripts))
+    # Center and border are constructed to be disjoint; flag any unexpected double counts.
+    center_transcripts = pd.Index(tx_assigned_to_center["point_id"])
+    border_transcripts = pd.Index(tx_assigned_to_border["point_id"])
+    intersecting_transcripts = center_transcripts.intersection(border_transcripts)
     if len(intersecting_transcripts) > 0:
         warnings.warn(
             f"{len(intersecting_transcripts)} transcripts were counted in both center and border regions. "
@@ -572,6 +574,7 @@ def _get_center_border_counts(
 
 
 def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
+    """Compute cosine similarity between two numeric vectors."""
     x_norm = np.linalg.norm(x)
     y_norm = np.linalg.norm(y)
     if x_norm == 0.0 or y_norm == 0.0:
@@ -579,41 +582,253 @@ def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.dot(x, y) / (x_norm * y_norm))
 
 
-def _norm_log_vector(x: np.ndarray, scale: float = 1e4) -> np.ndarray:
+def _pf_log1p_pf(
+    x: np.ndarray,
+    scale: float = 1e4,
+) -> np.ndarray:
+    """Apply PFlog1pPF (shifted CLR) to one count vector.
+
+    Counts are first converted to proportions and scaled, followed by `log1p`.
+    The transformed profile is then centered by subtracting its mean across
+    genes. A zero-depth profile is returned as zeros.
+    """
+    if scale <= 0:
+        raise ValueError("`scale` must be > 0.")
+
     x = np.asarray(x, dtype=float)
+
+    if x.ndim != 1:
+        raise ValueError("`x` must be a one-dimensional array.")
+
     total = x.sum()
-    if total == 0:
-        return np.zeros_like(x)
-    return np.log1p((x / total) * scale)
+    if total <= 0:
+        return np.zeros_like(x, dtype=float)
+
+    transformed = np.log1p(scale * x / total)
+    transformed -= transformed.mean()
+
+    return transformed
 
 
 def _cosine_similarity_two_vectors(
     x_a: np.ndarray,
     x_b: np.ndarray,
-    min_transcripts: int,
-    min_genes: int,
     scale: float,
 ) -> float:
-    """
-    Compute cosine similarity between two expression vectors after filtering,
-    masking zero entries, and applying log-normalization.
+    """Compute cosine similarity between PFlog1pPF-transformed count profiles."""
+    x_a = np.rint(np.asarray(x_a)).astype(int)
+    x_b = np.rint(np.asarray(x_b)).astype(int)
 
-    Returns NaN if minimum gene or transcript thresholds are not met.
-    """
-    mask = (x_a != 0) | (x_b != 0)
-
-    if mask.sum() < min_genes or x_a[mask].sum() < min_transcripts or x_b[mask].sum() < min_transcripts:
+    # Genes that are zero in both profiles contribute identical centered values
+    # after PFlog1pPF. Keep them in the cosine analytically while avoiding work on
+    # thousands of zero entries for sparse expression profiles.
+    mask = (x_a + x_b) > 0
+    if not mask.any():
         return np.nan
 
-    sim = _cosine_sim(
-        _norm_log_vector(x_a[mask], scale=scale),
-        _norm_log_vector(x_b[mask], scale=scale),
-    )
+    sim = _cosine_similarity_rows(
+        x_a[mask][None, :],
+        x_b[mask][None, :],
+        scale=scale,
+        n_features_total=len(x_a),
+    )[0]
+
     return float(sim) if np.isfinite(sim) else np.nan
 
 
+def _cosine_similarity_rows(
+    x_a: np.ndarray,
+    x_b: np.ndarray,
+    *,
+    scale: float,
+    n_features_total: int,
+) -> np.ndarray:
+    """Compute PFlog1pPF cosine similarity row-wise for active genes.
+
+    `x_a` and `x_b` contain only genes with non-zero pooled counts. The contribution
+    of genes that are zero in both profiles is included analytically so the result is
+    identical to transforming and comparing the complete feature vectors.
+    """
+    x_a = np.asarray(x_a, dtype=float)
+    x_b = np.asarray(x_b, dtype=float)
+
+    total_a = x_a.sum(axis=1, keepdims=True)
+    total_b = x_b.sum(axis=1, keepdims=True)
+
+    log_a = np.log1p(scale * x_a / total_a)
+    log_b = np.log1p(scale * x_b / total_b)
+
+    # PFlog1pPF centers across the complete feature panel, including common zeros.
+    mean_a = log_a.sum(axis=1, keepdims=True) / n_features_total
+    mean_b = log_b.sum(axis=1, keepdims=True) / n_features_total
+
+    centered_a = log_a - mean_a
+    centered_b = log_b - mean_b
+
+    n_common_zero = n_features_total - x_a.shape[1]
+
+    dot = np.sum(centered_a * centered_b, axis=1)
+    norm_a_sq = np.sum(centered_a**2, axis=1)
+    norm_b_sq = np.sum(centered_b**2, axis=1)
+
+    if n_common_zero:
+        mean_a = mean_a[:, 0]
+        mean_b = mean_b[:, 0]
+        dot += n_common_zero * mean_a * mean_b
+        norm_a_sq += n_common_zero * mean_a**2
+        norm_b_sq += n_common_zero * mean_b**2
+
+    denom = np.sqrt(norm_a_sq * norm_b_sq)
+    return np.divide(
+        dot,
+        denom,
+        out=np.full_like(dot, np.nan, dtype=float),
+        where=denom > 0,
+    )
+
+
+def _two_profile_similarity_metrics(
+    x_a: np.ndarray,
+    x_b: np.ndarray,
+    *,
+    x_overlap: np.ndarray | None = None,
+    n_permutations: int = 200,
+    min_transcripts: int = 10,
+    min_genes: int = 5,
+    scale: float = 1e4,
+    rng: np.random.Generator | None = None,
+) -> dict:
+    """Compute permutation-corrected PFlog1pPF cosine similarity.
+
+    For disjoint profiles (`x_overlap=None`), the null randomly repartitions the
+    pooled transcripts between the two profiles while preserving their observed
+    transcript totals.
+
+    If `x_overlap` is provided, it represents transcripts shared by both profiles.
+    The null preserves the observed numbers of shared, A-only, and B-only
+    transcripts while randomly reallocating gene identities across their union.
+
+    The reported similarity is the observed cosine similarity minus the mean
+    cosine similarity under the corresponding null. The lower-tail permutation
+    p-value tests whether the observed profiles are less similar than expected.
+    """
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
+
+    x_a = np.rint(np.asarray(x_a)).astype(int)
+    x_b = np.rint(np.asarray(x_b)).astype(int)
+
+    if x_overlap is not None:
+        x_overlap = np.rint(np.asarray(x_overlap)).astype(int)
+
+    # Use expressed genes only for QC. Permutations are also restricted to these
+    # active genes for speed, while common-zero genes are retained analytically in
+    # the PFlog1pPF cosine calculation below.
+    mask = (x_a + x_b) > 0
+
+    n_a = int(x_a.sum())
+    n_b = int(x_b.sum())
+    k = int(mask.sum())
+
+    empty = {
+        "similarity": np.nan,
+        "similarity_p_value": np.nan,
+    }
+
+    if k < min_genes or n_a < min_transcripts or n_b < min_transcripts:
+        return empty
+
+    n_features_total = len(x_a)
+    x_a = x_a[mask]
+    x_b = x_b[mask]
+
+    if x_overlap is not None:
+        x_overlap = x_overlap[mask]
+
+    similarity_observed = _cosine_similarity_rows(
+        x_a[None, :],
+        x_b[None, :],
+        scale=scale,
+        n_features_total=n_features_total,
+    )[0]
+
+    if not np.isfinite(similarity_observed):
+        return empty
+
+    if rng is None:
+        rng = np.random.default_rng()
+
+    if x_overlap is None:
+        # Disjoint profiles: repartition pooled transcripts. Generate all draws at
+        # once to avoid Python overhead across permutations.
+        pooled = x_a + x_b
+        x_a_null = rng.multivariate_hypergeometric(
+            pooled,
+            n_a,
+            size=n_permutations,
+        )
+        x_b_null = pooled[None, :] - x_a_null
+
+    else:
+        # Overlapping profiles:
+        # x_a = A-only + overlap
+        # x_b = B-only + overlap
+        x_a_only = x_a - x_overlap
+        x_b_only = x_b - x_overlap
+
+        n_overlap = int(x_overlap.sum())
+        n_a_only = int(x_a_only.sum())
+
+        pooled = x_a_only + x_overlap + x_b_only
+
+        # The overlap draws can be generated as a batch. The second draw is
+        # conditional on the remaining counts of each permutation and therefore
+        # still needs to be sampled once per permutation.
+        overlap_null = rng.multivariate_hypergeometric(
+            pooled,
+            n_overlap,
+            size=n_permutations,
+        )
+        remaining = pooled[None, :] - overlap_null
+
+        x_a_only_null = np.empty_like(remaining)
+        for i in range(n_permutations):
+            x_a_only_null[i] = rng.multivariate_hypergeometric(
+                remaining[i],
+                n_a_only,
+            )
+
+        x_b_only_null = remaining - x_a_only_null
+        x_a_null = x_a_only_null + overlap_null
+        x_b_null = x_b_only_null + overlap_null
+
+    # Transform and compare all null profiles in one vectorized operation.
+    similarity_null = _cosine_similarity_rows(
+        x_a_null,
+        x_b_null,
+        scale=scale,
+        n_features_total=n_features_total,
+    )
+
+    valid = np.isfinite(similarity_null)
+
+    if not valid.any():
+        return empty
+
+    similarity_null = similarity_null[valid]
+
+    similarity_residual = similarity_observed - similarity_null.mean()
+
+    similarity_p_value = (1 + np.count_nonzero(similarity_null <= similarity_observed)) / (len(similarity_null) + 1)
+
+    return {
+        "similarity": float(similarity_residual),
+        "similarity_p_value": float(similarity_p_value),
+    }
+
+
 def _get_neighborhood_counts(
-    sdata,
+    sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
@@ -623,19 +838,19 @@ def _get_neighborhood_counts(
     points_background_id: str = "UNASSIGNED",
     neighborhood_radius_factor: float = 1.0,
     tables_gene_key: str | None = None,
-):
-    """
-    Compute neighborhood transcript count vectors for each focal cell.
+) -> tuple[pd.DataFrame, pd.Series]:
+    """Compute neighborhood transcript count vectors for each focal cell.
 
-    For each focal cell, the neighborhood is defined as the set of cells whose
-    geometry lies within `radius_factor * equivalent_radius(focal_cell)` of the
-    focal cell boundary. Neighborhood counts are obtained by summing the
-    transcript count vectors of those neighboring cells.
+    Neighbors are cells within `neighborhood_radius_factor` times the median
+    equivalent cell radius from the focal cell boundary. Neighborhood counts
+    are obtained by summing the count vectors of those neighboring cells.
 
     Returns
     -------
     pandas.DataFrame
         Cell x gene count matrix for neighborhood transcripts.
+    pandas.Series
+        Number of neighbors for each focal cell.
     """
     pts = _get_filtered_points_df(
         sdata=sdata,
@@ -693,7 +908,7 @@ def _get_neighborhood_counts(
 
 
 def _find_neighbors_by_distance(
-    sdata,
+    sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     shapes_key: str = "cell_boundaries",
@@ -740,7 +955,7 @@ def _find_neighbors_by_distance(
 
     areas = cells_gdf.geometry.area.clip(lower=1e-6)
     radii = np.sqrt(areas / np.pi)
-    # global distance threshold based on median cell size
+    # Use one global distance threshold so neighborhood definitions are comparable across cells.
     max_dist = float(np.median(radii)) * radius_factor
 
     sindex = cells_gdf.sindex
@@ -924,54 +1139,28 @@ def _border_admixture_score_one_cell(
     return float((err_center_only - err_mixture) / err_center_only)
 
 
-def _bootstrap_mixture_fit(
+def _border_admixture_permutation_metrics(
     x_center: np.ndarray,
     x_border: np.ndarray,
     x_neighborhood: np.ndarray,
-    n_boot: int = 0,
+    *,
+    n_permutations: int = 200,
     min_transcripts: int = 10,
     min_genes: int = 5,
     pseudocount: float = 0.5,
-    ci_level: float = 0.95,
     rng: np.random.Generator | None = None,
 ) -> dict:
-    """
-    Bootstrap the border admixture score for one cell using multinomial
-    resampling of the observed per-region gene count vectors.
+    """Return null-corrected admixture improvement and its permutation p-value."""
+    if n_permutations <= 0:
+        raise ValueError("`n_permutations` must be > 0.")
+    if rng is None:
+        rng = np.random.default_rng()
 
-    Parameters
-    ----------
-    x_center, x_border, x_neighborhood : np.ndarray
-        Gene count vectors for the center, border, and neighborhood regions.
-    n_boot : int, default=0
-        Number of bootstrap replicates.
-    min_transcripts : int, default=10
-        Minimum number of transcripts required in each region.
-    min_genes : int, default=5
-        Minimum number of genes required across the three regions combined.
-    pseudocount : float, default=0.5
-        Pseudocount used when converting counts to proportions.
-    ci_level : float, default=0.95
-        Percentile confidence interval level.
-    rng : np.random.Generator | None, default=None
-        Random number generator. If None, a new generator is created.
-
-    Returns
-    -------
-    dict
-        Dictionary with:
-        - `border_admixture_score`
-        - `border_admixture_score_ci_low`
-        - `border_admixture_score_ci_high`
-    """
     x_center = np.rint(np.asarray(x_center)).astype(int)
     x_border = np.rint(np.asarray(x_border)).astype(int)
     x_neighborhood = np.rint(np.asarray(x_neighborhood)).astype(int)
 
-    if rng is None:
-        rng = np.random.default_rng()
-
-    score = _border_admixture_score_one_cell(
+    observed = _border_admixture_score_one_cell(
         x_center=x_center,
         x_border=x_border,
         x_neighborhood=x_neighborhood,
@@ -979,63 +1168,69 @@ def _bootstrap_mixture_fit(
         min_genes=min_genes,
         pseudocount=pseudocount,
     )
+    empty = {
+        "border_admixture_score": np.nan,
+        "border_admixture_p_value": np.nan,
+    }
+    if not np.isfinite(observed):
+        return empty
 
+    # The set of genes used by the score is fixed by the observed center, border,
+    # and neighborhood profiles, so reuse it for all null permutations.
+    mask = (x_center + x_border + x_neighborhood) > 0
+    x_center = x_center[mask]
+    x_border = x_border[mask]
+    x_neighborhood = x_neighborhood[mask]
+
+    pooled = x_center + x_border
     n_center = int(x_center.sum())
-    n_border = int(x_border.sum())
-    n_neighborhood = int(x_neighborhood.sum())
 
-    if n_center == 0 or n_border == 0 or n_neighborhood == 0:
-        return {
-            "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
-            "border_admixture_score_ci_low": np.nan,
-            "border_admixture_score_ci_high": np.nan,
-        }
+    # Sample all center-border reallocations at once to avoid Python overhead
+    # across permutations. Genes present only in the neighborhood have zero pooled
+    # counts and therefore do not need to be included in the hypergeometric draw.
+    pooled_mask = pooled > 0
+    center_null = np.zeros((n_permutations, len(pooled)), dtype=int)
+    center_null[:, pooled_mask] = rng.multivariate_hypergeometric(
+        pooled[pooled_mask],
+        n_center,
+        size=n_permutations,
+    )
+    border_null = pooled[None, :] - center_null
 
-    p_center = x_center / n_center
-    p_border = x_border / n_border
-    p_neighborhood = x_neighborhood / n_neighborhood
+    # Vectorized version of _border_admixture_score_one_cell() for the null draws.
+    k = len(pooled)
+    p_center = (center_null + pseudocount) / (center_null.sum(axis=1, keepdims=True) + pseudocount * k)
+    p_border = (border_null + pseudocount) / (border_null.sum(axis=1, keepdims=True) + pseudocount * k)
+    p_neighborhood = (x_neighborhood + pseudocount) / (x_neighborhood.sum() + pseudocount * k)
 
-    if n_boot <= 0:
-        return {
-            "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
-            "border_admixture_score_ci_low": np.nan,
-            "border_admixture_score_ci_high": np.nan,
-        }
+    d = p_neighborhood[None, :] - p_center
+    denom = np.sum(d * d, axis=1)
+    numer = np.sum((p_border - p_center) * d, axis=1)
+    alpha = np.divide(
+        numer,
+        denom,
+        out=np.zeros_like(numer, dtype=float),
+        where=~np.isclose(denom, 0.0),
+    )
+    alpha = np.clip(alpha, 0.0, 1.0)
 
-    boot_scores = []
+    p_mix = p_center + alpha[:, None] * d
+    err_center_only = np.sum((p_border - p_center) ** 2, axis=1)
+    err_mixture = np.sum((p_border - p_mix) ** 2, axis=1)
+    null_scores = np.divide(
+        err_center_only - err_mixture,
+        err_center_only,
+        out=np.full(n_permutations, np.nan, dtype=float),
+        where=~np.isclose(err_center_only, 0.0),
+    )
 
-    for _ in range(n_boot):
-        # resample counts under multinomial model preserving library size
-        xb_center = rng.multinomial(n_center, p_center)
-        xb_border = rng.multinomial(n_border, p_border)
-        xb_neighborhood = rng.multinomial(n_neighborhood, p_neighborhood)
+    null_scores = null_scores[np.isfinite(null_scores)]
+    if len(null_scores) == 0:
+        return empty
 
-        boot_score = _border_admixture_score_one_cell(
-            x_center=xb_center,
-            x_border=xb_border,
-            x_neighborhood=xb_neighborhood,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            pseudocount=pseudocount,
-        )
-
-        if np.isfinite(boot_score):
-            boot_scores.append(boot_score)
-
-    boot_scores = np.asarray(boot_scores, dtype=float)
-
-    if len(boot_scores) == 0:
-        ci_low = np.nan
-        ci_high = np.nan
-    else:
-        alpha = 1.0 - ci_level
-        ci_low, ci_high = np.quantile(
-            boot_scores,
-            [alpha / 2, 1 - alpha / 2],
-        )
-
+    residual = observed - float(null_scores.mean())
+    p_value = (1 + np.count_nonzero(null_scores >= observed)) / (len(null_scores) + 1)
     return {
-        "border_admixture_score": float(score) if np.isfinite(score) else np.nan,
-        "border_admixture_score_ci_low": float(ci_low) if np.isfinite(ci_low) else np.nan,
-        "border_admixture_score_ci_high": float(ci_high) if np.isfinite(ci_high) else np.nan,
+        "border_admixture_score": float(residual),
+        "border_admixture_p_value": float(p_value),
     }

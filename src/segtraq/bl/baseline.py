@@ -6,6 +6,7 @@ import pandas as pd
 import spatialdata as sd
 from joblib import Parallel, delayed
 
+from .._settings import settings
 from ..utils import _get_genes, _is_background, merge_into_obs, merge_into_uns, merge_into_var
 from .utils import count_polygons
 
@@ -490,7 +491,7 @@ def morphological_features(
     tables_centroid_y_key: str = "centroid_y",
     shapes_key: str = "cell_boundaries",
     features_to_compute: list | None = None,
-    n_jobs: int = -1,  # number of parallel jobs, -1 uses all CPUs
+    n_jobs: int | None = None,  # number of parallel jobs, -1 uses all CPUs
     parallel_backend: str = "threading",
     tables_key: str = "table",
     eps: float = 1e-6,
@@ -517,7 +518,7 @@ def morphological_features(
         "solidity", "convexity", "elongation", "eccentricity", "compactness".
     n_jobs : int, optional
         Number of parallel jobs to use for computation.
-        Default `-1` uses all available CPU cores.
+        Default is None. `-1` uses all available CPU cores.
     parallel_backend : str, optional
         Parallelization backend to use with joblib. Default is "threading".
     tables_key : str, optional
@@ -544,6 +545,9 @@ def morphological_features(
       "eccentricity" are computed on the convex hull of the *entire* geometry.
     - Invalid or null geometries are filtered out before computation.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     # Define all possible features
     all_features = [
         "centroid",

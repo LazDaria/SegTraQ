@@ -26,7 +26,7 @@
 # The `baseline` (`bl`) module contains several metrics that can help you to assess the quality of your segmentation.
 # The methods all return their corresponding values or dataframes, and also write them into the spatialdata object.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
 # %load_ext autoreload
@@ -40,15 +40,21 @@ import spatialdata as sd
 
 import segtraq
 
+segtraq.settings.n_jobs = -1  # Use all available CPU cores
+
 sdata = sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr")
 
 # putting the spatialdata object into a SegTraQ constructor
 # this has the advantage that we only need to set keywords like cell IDs or transcript IDs once
 st = segtraq.SegTraQ(
     sdata,
-    images_key=None,
+    images_key="image",
+    points_cell_id_key="assignment",
+    points_background_id=2**32 - 1,
+    points_gene_key="gene",
     tables_area_key=None,
-    points_background_id=0,
+    tables_cell_id_key="cell",
+    shapes_cell_id_key="cell",
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
 )

@@ -4,14 +4,15 @@ import spatialdata as sd
 from joblib import Parallel, delayed
 from pandas import DataFrame
 
+from .._settings import settings
 from ..utils import _get_count_matrix, _get_genes, merge_into_obs
 from .utils import (
-    _bootstrap_mixture_fit,
-    _cosine_similarity_two_vectors,
+    _border_admixture_permutation_metrics,
     _get_center_border_counts,
     _get_neighborhood_counts,
     _join_points_regions,
     _match_nucleus_one_cell,
+    _two_profile_similarity_metrics,
 )
 
 
@@ -23,13 +24,17 @@ def match_nuclei_to_cells(
     nucleus_shapes_key: str = "nucleus_boundaries",
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> DataFrame:
-    """
-    Computes the best-matching nucleus for each cell based on Intersection-over-Union (IoU) or
-    nucleus fraction (area(cell ∩ nucleus) / area(nucleus)).
+    """Compute the best-matching nucleus for each cell.
+
+    Matching is based on Intersection-over-Union (IoU) or nucleus fraction
+    (area(cell ∩ nucleus) / area(nucleus)). Candidate nuclei are identified by
+    spatial overlap, and the highest-scoring nucleus is retained for each cell.
+    The final result also enforces a one-to-one assignment so that a nucleus is
+    not matched to multiple cells.
 
     Parameters
     ----------
@@ -53,17 +58,21 @@ def match_nuclei_to_cells(
     min_intersection_area : float, default=0.0
         Minimum area (cell ∩ nucleus) required to consider a nucleus as a candidate.
         Overlaps <= this threshold are ignored.
-    n_jobs : int, optional
-        Number of parallel jobs. Default `-1` uses all available CPU cores.
-    parallel_backend : str, optional
-        Parallelization backend to use with joblib. Default is "threading".
-    inplace : bool, optional
-        Whether to add the results to `sdata.tables`. Default is True.
+    n_jobs : int  or None, default=None
+        Number of parallel jobs across cells. `-1` uses all available CPU cores.
+    parallel_backend : str, default="threading"
+        Parallelization backend passed to joblib.
+    inplace : bool, default=True
+        Whether to merge the results into `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pandas.DataFrame
+        One row per cell with the matched nucleus ID, IoU, and nucleus fraction.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
     assert nucleus_shapes_key is not None, (
         "Cannot compute IoUs: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer in the `SegTraQ` constructor before running `rs` metrics."
@@ -76,14 +85,13 @@ def match_nuclei_to_cells(
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
-    # Get GeoDataFrames
+    # Reuse the nucleus spatial index across cells to avoid repeated index construction.
     cell_boundaries = sdata.shapes[shapes_key]
     nuc_boundaries = sdata.shapes[nucleus_shapes_key]
-
-    # spatial index reused across all cells for efficiency
     nuc_sindex = nuc_boundaries.sindex
 
-    # Parallel loop over cells
+    # Each cell can be matched independently. Threading avoids repeatedly copying
+    # the GeoDataFrames and spatial index to worker processes.
     results = Parallel(n_jobs=n_jobs, verbose=0, backend=parallel_backend)(
         delayed(_match_nucleus_one_cell)(
             cell_row=cell_row,
@@ -98,7 +106,8 @@ def match_nuclei_to_cells(
 
     match_df = pd.DataFrame(results)
 
-    # if a nucleus is assigned to multiple cells, we keep only the one with the highest fraction / IoU
+    # Resolve nuclei matched to multiple cells by keeping only the best cell-nucleus
+    # match according to the primary overlap score, using the secondary score as a tie-breaker.
     cols = (
         ["nucleus_id", "nucleus_fraction", "iou"]
         if select_by == "nucleus_fraction"
@@ -106,6 +115,7 @@ def match_nuclei_to_cells(
     )
 
     match_df.loc[match_df.sort_values(cols, ascending=[True, False, False]).duplicated("nucleus_id"), cols] = np.nan
+
     if inplace:
         merge_into_obs(
             sdata=sdata,
@@ -118,6 +128,20 @@ def match_nuclei_to_cells(
     return match_df
 
 
+def _rename_similarity_metrics(metrics: dict, prefix: str) -> dict:
+    """Rename shared outputs to their public metric names."""
+    out = {prefix: metrics["similarity"]}
+    if "similarity_p_value" in metrics:
+        out[f"{prefix}_p_value"] = metrics["similarity_p_value"]
+    return out
+
+
+def _cell_seeds(n: int, random_state: int | None) -> np.ndarray:
+    """Generate deterministic, independent seeds for cell-wise permutations."""
+    rng = np.random.default_rng(random_state)
+    return rng.integers(0, np.iinfo(np.uint32).max, size=n, dtype=np.uint32)
+
+
 def similarity_nucleus_cell(
     sdata: sd.SpatialData,
     tables_key: str = "table",
@@ -127,27 +151,29 @@ def similarity_nucleus_cell(
     nucleus_shapes_key: str = "nucleus_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED",
+    points_background_id: str | int = "UNASSIGNED",
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
     tables_raw_counts_layer: str | None = None,
     min_transcripts: int = 10,
     min_genes: int = 5,
+    scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
-    scale: float = 1e4,
     inplace: bool = True,
+    n_permutations: int = 200,
+    random_state: int | None = 42,
 ) -> pd.DataFrame:
-    """
-    Compute the cosine similarity between whole-cell and matched nucleus
-    expression profiles for each cell.
+    """Compare whole-cell and matched-nucleus profiles using PFlog1pPF cosine similarity.
 
-    The point estimate is computed from cell and nucleus count matrices using
-    genes detected in at least one of the two regions, followed by row-wise
-    library-size normalization and log1p transformation.
+    The whole-cell expression profile is compared with the transcript profile
+    inside its matched nucleus after PFlog1pPF transformation. Because the cell
+    and nucleus profiles can share transcripts, the permutation null preserves
+    their observed transcript overlap. A lower-tail permutation p-value tests
+    whether the observed similarity is smaller than expected under this null.
 
     Parameters
     ----------
@@ -179,12 +205,14 @@ def similarity_nucleus_cell(
         Column for the y-coordinate of each transcript/spot.
     tables_raw_counts_layer : str | None, optional
         Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts.
-        If a layer is specified, it must exist and contain count-like values.
+        like counts. If a layer is specified, it must exist and contain
+        count-like values.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both cell and nucleus.
     min_genes : int, default=5
         Minimum number of non-zero genes required across cell and nucleus.
+    scale : float, default=1e4
+        Scale factor used for the PFlog1pPF transformation.
     select_by : str, default="nucleus_fraction"
         Score used to select the best-matching nucleus per cell. Options:
         - "iou": maximize Intersection-over-Union (cell vs nucleus).
@@ -193,26 +221,29 @@ def similarity_nucleus_cell(
     min_intersection_area : float, default=0.0
         Minimum area(cell ∩ nucleus) required to consider a nucleus as a
         candidate. Overlaps <= this threshold are ignored.
-    n_jobs : int, default=-1
-        Number of jobs for computing cell-nucleus matches if they have not yet
-        been calculated. Default `-1` uses all available CPU cores.
-    parallel_backend : str, optional
-        Parallelization backend to use with joblib. Default is "threading".
-    scale : float, default=1e4
-        Library-size normalization scale used before log1p.
+    n_jobs : int  or None, default=None
+        Number of parallel jobs across cells. `-1` uses all available CPU cores.
+    parallel_backend : str, default="threading"
+        Parallelization backend passed to joblib.
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
+    n_permutations : int, default=200
+        Number of conditional permutations per cell. Must be >= 100.
+    random_state : int or None, default=42
+        Seed for reproducible cell-wise permutations.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns:
-            - cell id column
-            - `nucleus_id`
-            - `iou`
-            - `nucleus_fraction`
-            - `similarity_nucleus_cell`
+        One row per cell with nucleus-match information, null-corrected
+        nucleus-cell similarity, and its permutation p-value.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
+
     assert nucleus_shapes_key is not None, (
         "Cannot compute nucleus-cell similarity: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer before running this metric."
@@ -248,15 +279,15 @@ def similarity_nucleus_cell(
         match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
 
     counts = _get_count_matrix(adata, layer=tables_raw_counts_layer)
-    arr = counts.toarray() if hasattr(counts, "toarray") else counts
-
-    expr_cells = pd.DataFrame(
-        arr,
+    count_genes = pd.Index(_get_genes(adata=adata, gene_key=tables_gene_key))
+    cell_positions = pd.Series(
+        np.arange(adata.n_obs),
         index=adata.obs[tables_cell_id_key],
-        columns=adata.var_names,
     )
 
-    _, expr_nucleus = _join_points_regions(
+    # Keep the transcript-level join to identify transcripts shared between
+    # the segmentation-assigned cell profile and the matched nucleus profile.
+    tx_nuc, expr_nucleus = _join_points_regions(
         sdata=sdata,
         region_key=nucleus_shapes_key,
         tables_key=tables_key,
@@ -272,51 +303,142 @@ def similarity_nucleus_cell(
         require_points_region_ID_match=False,
     )
 
-    # ensure vectors are aligned on the same gene set
-    common_genes = expr_nucleus.columns.intersection(expr_cells.columns)
+    # Keep the cell count matrix sparse and materialize only the genes used in the
+    # nucleus comparison for one cell at a time.
+    common_genes = expr_nucleus.columns.intersection(count_genes)
+    gene_positions = count_genes.get_indexer(common_genes)
     expr_nucleus = expr_nucleus[common_genes]
-    expr_cells = expr_cells[common_genes]
 
-    rows = []
+    # Identify transcripts that are both assigned to the focal cell and located
+    # inside its matched nucleus, analogous to the intersection used in
+    # similarity_nucleus_cytoplasm().
+    best_nuc_map = match_df.set_index(shapes_cell_id_key)["nucleus_id"]
+    tx_nuc["nucleus_id"] = tx_nuc[points_cell_id_key].map(best_nuc_map)
+    tx_nuc["in_intersection"] = tx_nuc["region_id"].eq(tx_nuc["nucleus_id"])
+
+    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
+
+    counts_intersection = (
+        tx_nuc[tx_nuc["in_intersection"]]
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
+        .reindex(index=all_cells, columns=common_genes, fill_value=0)
+    )
+
+    # Materialize the already-dense nucleus/intersection count matrices once so
+    # parallel workers do not repeatedly perform pandas row indexing.
+    expr_nucleus_values = expr_nucleus.to_numpy(dtype=int, copy=False)
+    nucleus_positions = {nid: i for i, nid in enumerate(expr_nucleus.index)}
+    counts_intersection_values = counts_intersection.to_numpy(dtype=int, copy=False)
+    intersection_positions = {cid: i for i, cid in enumerate(counts_intersection.index)}
+
+    seeds = _cell_seeds(len(match_df), random_state)
+
+    def _cell_count_vector(cid) -> np.ndarray:
+        row = counts[cell_positions.loc[cid], gene_positions]
+        if hasattr(row, "toarray"):
+            row = row.toarray()
+        return np.asarray(row).ravel()
+
+    # test
+    problems = []
+
     for _, row in match_df.iterrows():
+        cid = row[shapes_cell_id_key]
+        nid = row["nucleus_id"]
+
+        if pd.isna(nid):
+            continue
+
+        x_cell = _cell_count_vector(cid)
+        x_overlap = counts_intersection.loc[cid].to_numpy()
+
+        if x_overlap.sum() > x_cell.sum():
+            problems.append(
+                {
+                    "cell_id": cid,
+                    "cell_total": x_cell.sum(),
+                    "overlap_total": x_overlap.sum(),
+                    "difference": x_overlap.sum() - x_cell.sum(),
+                }
+            )
+
+    problems = pd.DataFrame(problems)
+
+    problems_gene = []
+
+    for _, row in match_df.iterrows():
+        cid = row[shapes_cell_id_key]
+        nid = row["nucleus_id"]
+
+        if pd.isna(nid):
+            continue
+
+        x_cell = _cell_count_vector(cid)
+        x_overlap = counts_intersection.loc[cid].to_numpy()
+
+        bad = x_overlap > x_cell
+
+        if bad.any():
+            problems_gene.append(
+                {
+                    "cell_id": cid,
+                    "n_genes": bad.sum(),
+                    "excess_transcripts": (x_overlap[bad] - x_cell[bad]).sum(),
+                }
+            )
+
+    problems_gene = pd.DataFrame(problems_gene)
+
+    def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
 
         if pd.isna(nid):
-            sim = np.nan
+            base_metrics = {
+                "similarity": np.nan,
+                "similarity_p_value": np.nan,
+            }
         else:
-            x = expr_cells.loc[cid].to_numpy()
-            y = expr_nucleus.loc[nid].to_numpy()
-
-            sim = _cosine_similarity_two_vectors(
-                x,
-                y,
+            base_metrics = _two_profile_similarity_metrics(
+                _cell_count_vector(cid),
+                expr_nucleus_values[nucleus_positions[nid]],
+                x_overlap=counts_intersection_values[intersection_positions[cid]],
+                n_permutations=n_permutations,
                 min_transcripts=min_transcripts,
                 min_genes=min_genes,
                 scale=scale,
+                rng=np.random.default_rng(int(seed)),
             )
 
-        rows.append(
-            {
-                tables_cell_id_key: cid,
-                "nucleus_id": nid,
-                "iou": row.iou,
-                "nucleus_fraction": row.nucleus_fraction,
-                "similarity_nucleus_cell": sim,
-            }
-        )
+        return {
+            tables_cell_id_key: cid,
+            "nucleus_id": nid,
+            "iou": row.iou,
+            "nucleus_fraction": row.nucleus_fraction,
+            **_rename_similarity_metrics(
+                base_metrics,
+                "similarity_nucleus_cell",
+            ),
+        }
 
-    corr_df = pd.DataFrame(rows)
+    # Permutations are independent across cells, so parallelize at the cell level.
+    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+        delayed(_compute_one)(row, seed) for (_, row), seed in zip(match_df.iterrows(), seeds, strict=False)
+    )
+
+    out = pd.DataFrame(rows)
 
     if inplace:
         merge_into_obs(
             sdata=sdata,
             tables_key=tables_key,
-            df_to_merge=corr_df,
+            df_to_merge=out,
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=tables_cell_id_key,
         )
 
-    return corr_df
+    return out
 
 
 def similarity_nucleus_cytoplasm(
@@ -337,18 +459,19 @@ def similarity_nucleus_cytoplasm(
     scale: float = 1e4,
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
-    n_jobs: int = -1,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
+    n_permutations: int = 200,
+    random_state: int | None = 42,
 ) -> pd.DataFrame:
-    """
-    Compute the cosine similarity between nuclear and cytoplasmic
-    expression profiles for each cell.
+    """Compare matched nuclear and cytoplasmic profiles using PFlog1pPF cosine similarity.
 
-    The point estimate is computed from count matrices for the part of the cell
-    overlapping the matched nucleus and the remaining part of the cell, using
-    genes detected in at least one of the two regions, followed by row-wise
-    library-size normalization and log1p transformation.
+    For each cell, transcripts are separated into those inside the matched
+    nucleus and those in the remaining cytoplasmic region. The two count profiles
+    are PFlog1pPF-transformed before cosine similarity is computed. When
+    `n_permutations >= 100`, a lower-tail permutation p-value tests whether the
+    observed similarity is smaller than expected under a shared-profile null.
 
     Parameters
     ----------
@@ -385,7 +508,7 @@ def similarity_nucleus_cytoplasm(
         Minimum number of non-zero genes required across nuclear and
         cytoplasmic regions.
     scale : float, default=1e4
-        Library-size normalization scale used before log1p.
+        Common target sum used for the first and second proportional-fitting steps.
     select_by : str, default="nucleus_fraction"
         Score used to select the best-matching nucleus per cell. Options:
         - "iou": maximize Intersection-over-Union (cell vs nucleus).
@@ -394,24 +517,29 @@ def similarity_nucleus_cytoplasm(
     min_intersection_area : float, default=0.0
         Minimum area (cell ∩ nucleus) required to consider a nucleus as a
         candidate. Overlaps <= this threshold are ignored.
-    n_jobs : int, default=-1
-        Number of jobs for computing cell-nucleus matches if they have not yet
-        been calculated. Default `-1` uses all available CPU cores.
-        parallel_backend : str, optional
-        Parallelization backend to use with joblib. Default is "threading".
+    n_jobs : int  or None, default=None
+        Number of parallel jobs across cells. `-1` uses all available CPU cores.
+    parallel_backend : str, default="threading"
+        Parallelization backend passed to joblib.
     inplace : bool, default=True
         Whether to merge the results into `sdata.tables[tables_key].obs`.
+    n_permutations : int, default=200
+        Number of conditional permutations per cell. Must be >= 100.
+    random_state : int or None, default=42
+        Seed for reproducible cell-wise permutations.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns:
-            - cell id column
-            - `nucleus_id`
-            - `iou`
-            - `nucleus_fraction`
-            - `similarity_nucleus_cytoplasm`
+        One row per cell with nucleus-match information and null-calibrated
+        nucleus-cytoplasm similarity score and its permutation p-value.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
+
     assert nucleus_shapes_key is not None, (
         "Cannot compute nucleus-cytoplasm similarity: `nucleus_shapes_key` is None. "
         "Define a valid nucleus shape layer before running this metric."
@@ -495,7 +623,7 @@ def similarity_nucleus_cytoplasm(
 
     counts_intersection = (
         tx[tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
@@ -503,41 +631,45 @@ def similarity_nucleus_cytoplasm(
 
     counts_cytoplasm = (
         tx[~tx["in_intersection"]]
-        .groupby([points_cell_id_key, points_gene_key])
+        .groupby([points_cell_id_key, points_gene_key], observed=True)
         .size()
         .unstack(fill_value=0)
         .reindex(index=all_cells, columns=all_genes, fill_value=0)
     )
 
-    rows = []
-    for cid in all_cells:
-        nid = best_nuc_map.get(cid)
+    # Materialize dense count matrices once before entering the parallel loop.
+    counts_intersection_values = counts_intersection.to_numpy(dtype=int, copy=False)
+    counts_cytoplasm_values = counts_cytoplasm.to_numpy(dtype=int, copy=False)
+    has_nucleus = best_nuc_map.reindex(all_cells).notna().to_numpy()
 
-        if pd.isna(nid):
-            sim = np.nan
+    seeds = _cell_seeds(len(all_cells), random_state)
+
+    def _compute_one(i, cid, seed: np.uint32) -> dict:
+        if not has_nucleus[i]:
+            base_metrics = {"similarity": np.nan}
+            if n_permutations > 0:
+                base_metrics["similarity_p_value"] = np.nan
         else:
-            x = counts_intersection.loc[cid].to_numpy(dtype=float)
-            y = counts_cytoplasm.loc[cid].to_numpy(dtype=float)
-
-            sim = _cosine_similarity_two_vectors(
-                x,
-                y,
+            base_metrics = _two_profile_similarity_metrics(
+                counts_intersection_values[i],
+                counts_cytoplasm_values[i],
+                n_permutations=n_permutations,
                 min_transcripts=min_transcripts,
                 min_genes=min_genes,
                 scale=scale,
+                rng=np.random.default_rng(int(seed)),
             )
+        return {
+            id_key: cid,
+            **_rename_similarity_metrics(base_metrics, "similarity_nucleus_cytoplasm"),
+        }
 
-        rows.append(
-            {
-                id_key: cid,
-                "similarity_nucleus_cytoplasm": sim,
-            }
-        )
+    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+        delayed(_compute_one)(i, cid, seed) for i, (cid, seed) in enumerate(zip(all_cells, seeds, strict=False))
+    )
 
     sim_df = pd.DataFrame(rows)
-    match_df = match_df.reset_index(drop=True)
-    out = match_df.merge(sim_df, on=id_key, how="left")
-
+    out = match_df.reset_index(drop=True).merge(sim_df, on=id_key, how="left")
     if inplace:
         merge_into_obs(
             sdata=sdata,
@@ -546,320 +678,18 @@ def similarity_nucleus_cytoplasm(
             tables_cell_id_key=tables_cell_id_key,
             df_cell_id_key=id_key,
         )
-
-    return out
-
-
-def similarity_center_border(
-    sdata: sd.SpatialData,
-    tables_key: str = "table",
-    tables_cell_id_key: str = "cell_id",
-    tables_gene_key: str | None = None,
-    shapes_key: str = "cell_boundaries",
-    points_key: str = "transcripts",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_gene_key: str = "feature_name",
-    border_fraction_of_radius: float = 0.2,
-    buffer_fraction_of_radius: float = 0.1,
-    min_transcripts: int = 10,
-    min_genes: int = 5,
-    scale: float = 1e4,
-    inplace: bool = True,
-) -> pd.DataFrame:
-    """
-    Compute the cosine similarity between the center and border expression
-    profiles of each cell.
-
-    The point estimate is computed from center and border count matrices
-    obtained via `_get_center_border_counts`, using row-wise library-size
-    normalization followed by log1p.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned
-        spatial transcriptomics data.
-    tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
-    shapes_key : str, default="cell_boundaries"
-        Key in `sdata.shapes` for cell boundary polygons.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for spot/transcript-level data.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript/spot to a cell.
-    points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
-    border_fraction_of_radius : float, default=0.2
-        Fraction of the equivalent radius used to define the thickness of the
-        border region (outer ring).
-    buffer_fraction_of_radius : float, default=0.1
-        Additional fraction of the equivalent radius used to define the gap
-        between the border and center regions.
-    min_transcripts : int, default=10
-        Minimum number of transcripts required in both center and border.
-    min_genes : int, default=5
-        Minimum number of non-zero genes required across center and border.
-    scale : float, default=1e4
-        Library-size normalization scale used before log1p.
-    inplace : bool, default=True
-        Whether to merge the results into `sdata.tables[tables_key].obs`.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns:
-            - cell id column
-            - `similarity_center_border`
-    """
-    id_key = sdata.shapes[shapes_key].index.name
-
-    expr_center, expr_border = _get_center_border_counts(
-        sdata=sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        tables_gene_key=tables_gene_key,
-        border_fraction_of_radius=border_fraction_of_radius,
-        buffer_fraction_of_radius=buffer_fraction_of_radius,
-    )
-
-    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = _get_genes(
-        adata=sdata.tables[tables_key],
-        gene_key=tables_gene_key,
-    )
-
-    # ensure all cells/genes are present even if zero counts
-    expr_center = expr_center.reindex(index=all_cells, columns=all_genes, fill_value=0)
-    expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
-
-    rows = []
-    for cid in all_cells:
-        x_center = expr_center.loc[cid].to_numpy()
-        x_border = expr_border.loc[cid].to_numpy()
-
-        sim = _cosine_similarity_two_vectors(
-            x_center,
-            x_border,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-        )
-
-        rows.append(
-            {
-                id_key: cid,
-                "similarity_center_border": sim,
-            }
-        )
-
-    out = pd.DataFrame(rows)
-
-    if out.empty:
-        raise ValueError(
-            "Could not compute center-border cosine similarities. "
-            "Try different parameters for border_fraction_of_radius. "
-            f"You used {border_fraction_of_radius=}."
-        )
-
-    if inplace:
-        merge_into_obs(
-            sdata=sdata,
-            tables_key=tables_key,
-            df_to_merge=out,
-            tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
-        )
-
-    return out
-
-
-def similarity_border_neighborhood(
-    sdata: sd.SpatialData,
-    tables_key: str = "table",
-    tables_cell_id_key: str = "cell_id",
-    tables_gene_key: str | None = None,
-    shapes_key: str = "cell_boundaries",
-    points_key: str = "transcripts",
-    points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED",
-    points_x_key: str = "x",
-    points_y_key: str = "y",
-    points_gene_key: str = "feature_name",
-    border_fraction_of_radius: float = 0.2,
-    buffer_fraction_of_radius: float = 0.1,
-    neighborhood_radius_factor: float = 1.0,
-    min_transcripts: int = 10,
-    min_genes: int = 5,
-    scale: float = 1e4,
-    inplace: bool = True,
-) -> pd.DataFrame:
-    """
-    Compute the cosine similarity between the border and neighborhood expression
-    profiles of each cell.
-
-    The point estimate is computed from the border count matrix obtained via
-    `_get_center_border_counts` and the neighborhood count matrix obtained via
-    `_get_neighborhood_counts`, using row-wise library-size normalization
-    followed by log1p.
-
-    Parameters
-    ----------
-    sdata : SpatialData
-        A `SpatialData` object containing segmented and transcript-assigned
-        spatial transcriptomics data.
-    tables_key : str, default="table"
-        Key in `sdata.tables` for the cell-level metadata table.
-    tables_cell_id_key : str, default="cell_id"
-        Column in the cell table uniquely identifying each cell.
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
-    shapes_key : str, default="cell_boundaries"
-        Key in `sdata.shapes` for cell boundary polygons.
-    points_key : str, default="transcripts"
-        Key in `sdata.points` for spot/transcript-level data.
-    points_cell_id_key : str, default="cell_id"
-        Column in the points table linking each transcript/spot to a cell.
-    points_background_id : str or int, default="UNASSIGNED"
-        Identifier for transcripts not assigned to any cell.
-    points_x_key : str, default="x"
-        Column for the x-coordinate of each transcript/spot.
-    points_y_key : str, default="y"
-        Column for the y-coordinate of each transcript/spot.
-    points_gene_key : str, default="feature_name"
-        Column specifying the gene/feature name for each transcript/spot.
-    border_fraction_of_radius : float, default=0.2
-        Fraction of the equivalent radius used to define the thickness of the
-        border region.
-    buffer_fraction_of_radius : float, default=0.1
-        Additional fraction of the equivalent radius used to define the gap
-        between the border and center regions.
-    neighborhood_radius_factor : float, default=1.0
-        Neighbor distance threshold used by `_get_neighborhood_counts`.
-    min_transcripts : int, default=10
-        Minimum number of transcripts required in both border and neighborhood.
-    min_genes : int, default=5
-        Minimum number of non-zero genes required across border and neighborhood.
-    scale : float, default=1e4
-        Library-size normalization scale used before log1p.
-    inplace : bool, default=True
-        Whether to merge the results into `sdata.tables[tables_key].obs`.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns:
-            - cell id column
-            - `similarity_border_neighborhood`
-    """
-    id_key = sdata.shapes[shapes_key].index.name
-
-    _, expr_border = _get_center_border_counts(
-        sdata=sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_x_key=points_x_key,
-        points_y_key=points_y_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        tables_gene_key=tables_gene_key,
-        border_fraction_of_radius=border_fraction_of_radius,
-        buffer_fraction_of_radius=buffer_fraction_of_radius,
-    )
-
-    # neighborhood expression aggregated from nearby cells
-    expr_neighborhood, _n_neighbors = _get_neighborhood_counts(
-        sdata=sdata,
-        tables_key=tables_key,
-        tables_cell_id_key=tables_cell_id_key,
-        shapes_key=shapes_key,
-        points_key=points_key,
-        points_gene_key=points_gene_key,
-        points_cell_id_key=points_cell_id_key,
-        points_background_id=points_background_id,
-        tables_gene_key=tables_gene_key,
-        neighborhood_radius_factor=neighborhood_radius_factor,
-    )
-
-    all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = _get_genes(
-        adata=sdata.tables[tables_key],
-        gene_key=tables_gene_key,
-    )
-
-    expr_border = expr_border.reindex(index=all_cells, columns=all_genes, fill_value=0)
-    expr_neighborhood = expr_neighborhood.reindex(index=all_cells, columns=all_genes, fill_value=0)
-
-    rows = []
-    for cid in all_cells:
-        x_border = expr_border.loc[cid].to_numpy()
-        x_neighborhood = expr_neighborhood.loc[cid].to_numpy()
-
-        sim = _cosine_similarity_two_vectors(
-            x_border,
-            x_neighborhood,
-            min_transcripts=min_transcripts,
-            min_genes=min_genes,
-            scale=scale,
-        )
-
-        rows.append({id_key: cid, "similarity_border_neighborhood": sim})
-
-    out = pd.DataFrame(rows)
-
-    if out.empty:
-        raise ValueError(
-            "Could not compute border-neighborhood cosine similarities. "
-            "Try different parameters for border_fraction_of_radius or "
-            "neighborhood_radius_factor. You used "
-            f"{border_fraction_of_radius=} and {neighborhood_radius_factor=}."
-        )
-
-    if inplace:
-        merge_into_obs(
-            sdata=sdata,
-            tables_key=tables_key,
-            df_to_merge=out,
-            tables_cell_id_key=tables_cell_id_key,
-            df_cell_id_key=id_key,
-        )
-
     return out
 
 
 def border_admixture_score(
-    sdata,
+    sdata: sd.SpatialData,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
     tables_gene_key: str | None = None,
     shapes_key: str = "cell_boundaries",
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
-    points_background_id: str = "UNASSIGNED",
+    points_background_id: str | int = "UNASSIGNED",
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
@@ -869,31 +699,20 @@ def border_admixture_score(
     min_transcripts: int = 10,
     min_genes: int = 5,
     pseudocount: float = 0.5,
-    n_boot: int = 0,
-    ci_level: float = 0.95,
-    random_state: int | None = None,
-    n_jobs: int = -1,
+    n_permutations: int = 200,
+    random_state: int | None = 42,
+    n_jobs: int | None = None,
     parallel_backend: str = "threading",
     inplace: bool = True,
 ) -> pd.DataFrame:
-    """
-    Compute a per-cell border admixture score with bootstrap confidence
-    intervals.
+    """Return null-corrected border admixture improvement and permutation p-value.
 
-    For each focal cell, transcripts are grouped into center, border, and
-    neighborhood regions. The border profile is compared against a center-only
-    model and a fitted center-neighborhood mixture model. The reported score is
-    the relative improvement of the mixture model over the center-only model.
-
-    If `n_boot` is set, bootstrap confidence intervals are obtained by multinomial resampling of
-    the observed per-region gene count vectors within each focal cell.
-
-    Notes
-    -----
-    - The center and border count matrices are computed using
-      `_get_center_border_counts`.
-    - Neighborhood counts are computed by summing transcript count vectors of
-      neighboring cells returned by `_find_neighbors_by_distance`.
+    The metric asks whether a cell's border profile is better explained as a
+    mixture of its center and neighboring-cell expression than by its center
+    alone. The mixture coefficient is fitted between the center and neighborhood
+    profiles, and the resulting improvement quantifies how much adding the neighborhood
+    component improves the border fit. The observed improvement is calibrated against
+    a permutation null, with bootstrap confidence intervals used to summarize uncertainty.
 
     Parameters
     ----------
@@ -912,7 +731,7 @@ def border_admixture_score(
         Key in `sdata.points` containing transcript points.
     points_cell_id_key : str, default="cell_id"
         Column in the transcript table containing transcript-assigned cell ids.
-    points_background_id : str, default="UNASSIGNED"
+    points_background_id : str or int, default="UNASSIGNED"
         Identifier used for background or unassigned transcripts.
     points_x_key : str, default="x"
         X-coordinate column in the transcript table.
@@ -927,36 +746,37 @@ def border_admixture_score(
         Additional fraction of the equivalent radius used to define the gap
         between the border and center regions.
     neighborhood_radius_factor : float, default=1.0
-        Neighbor distance threshold expressed as a multiple of the focal cell's
-        equivalent radius.
+        Neighbor distance threshold expressed as a multiple of the median
+        equivalent cell radius.
     min_transcripts : int, default=10
         Minimum number of transcripts required in each region.
     min_genes : int, default=5
         Minimum number of genes required across the three regions combined.
     pseudocount : float, default=0.5
         Pseudocount used when converting counts to proportions.
-    n_boot : int, default=0
-        Number of bootstrap replicates per cell.
-    ci_level : float, default=0.95
-        Percentile confidence interval level.
-    random_state : int | None, default=None
-        Random seed for reproducible bootstrap resampling.
-    n_jobs : int, default=-1
-        Number of parallel jobs across cells. Default `-1` uses all available CPU cores.
-    parallel_backend : str, optional
-        Parallelization backend to use with joblib. Default is "threading".
+    n_permutations : int, default=200
+        Number of permutations per cell. Must be >= 100.
+    random_state : int or None, default=42
+        Seed for reproducible cell-wise permutations.
+    n_jobs : int  or None, default=None
+        Number of parallel jobs across cells. `-1` uses all available CPU cores.
+    parallel_backend : str, default="threading"
+        Parallelization backend passed to joblib.
     inplace : bool, default=True
         If True, merge the results into `sdata.tables[tables_key].obs`.
 
     Returns
     -------
     pd.DataFrame
-        One row per cell with columns:
-        - cell id column
-        - `border_admixture_score`
-        - `border_admixture_score_ci_low`
-        - `border_admixture_score_ci_high`
+        One row per cell with null-corrected border-admixture score and
+        permutation p-value.
     """
+    if n_jobs is None:
+        n_jobs = settings.n_jobs
+
+    if n_permutations < 100:
+        raise ValueError("`n_permutations` must be >= 100.")
+
     id_key = sdata.shapes[shapes_key].index.name
 
     expr_center, expr_border = _get_center_border_counts(
@@ -995,50 +815,34 @@ def border_admixture_score(
     expr_border = expr_border.loc[common_cells]
     expr_neighborhood = expr_neighborhood.loc[common_cells]
 
-    seed_rng = np.random.default_rng(random_state)
+    # Materialize dense matrices once before entering the parallel loop.
+    expr_center_values = expr_center.to_numpy(dtype=int, copy=False)
+    expr_border_values = expr_border.to_numpy(dtype=int, copy=False)
+    expr_neighborhood_values = expr_neighborhood.to_numpy(dtype=int, copy=False)
 
-    # independent RNG seeds per cell for reproducible parallel bootstrap
-    seeds = seed_rng.integers(
-        0,
-        np.iinfo(np.uint32).max,
-        size=len(common_cells),
-        dtype=np.uint32,
-    )
+    seeds = _cell_seeds(len(common_cells), random_state)
 
-    def _bootstrap_mixture_fit_one_cell(cid, seed):
-        rng = np.random.default_rng(int(seed))
-
-        res = _bootstrap_mixture_fit(
-            x_center=expr_center.loc[cid].to_numpy(dtype=int),
-            x_border=expr_border.loc[cid].to_numpy(dtype=int),
-            x_neighborhood=expr_neighborhood.loc[cid].to_numpy(dtype=int),
-            n_boot=n_boot,
+    def _one_cell(i, cid, seed):
+        result = _border_admixture_permutation_metrics(
+            x_center=expr_center_values[i],
+            x_border=expr_border_values[i],
+            x_neighborhood=expr_neighborhood_values[i],
+            n_permutations=n_permutations,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             pseudocount=pseudocount,
-            ci_level=ci_level,
-            rng=rng,
+            rng=np.random.default_rng(int(seed)),
         )
-
-        return {
-            id_key: cid,
-            "border_admixture_score": res["border_admixture_score"],
-            "border_admixture_score_ci_low": res["border_admixture_score_ci_low"],
-            "border_admixture_score_ci_high": res["border_admixture_score_ci_high"],
-        }
+        return {id_key: cid, **result}
 
     rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
-        delayed(_bootstrap_mixture_fit_one_cell)(cid, seed) for cid, seed in zip(common_cells, seeds, strict=False)
+        delayed(_one_cell)(i, cid, seed) for i, (cid, seed) in enumerate(zip(common_cells, seeds, strict=False))
     )
-
     out = pd.DataFrame(rows)
-
     if out.empty:
         raise ValueError(
             "Could not compute border admixture scores. "
-            "Try different parameters for border_fraction_of_radius or neighborhood_radius_factor. "
-            "You used "
-            f"{border_fraction_of_radius=} and {neighborhood_radius_factor=}."
+            f"You used {border_fraction_of_radius=} and {neighborhood_radius_factor=}."
         )
 
     if inplace:

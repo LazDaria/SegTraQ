@@ -2,6 +2,8 @@ import pandas as pd
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref, markers):
     assert "celltype" in adata_ref.obs.columns

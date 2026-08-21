@@ -4,6 +4,7 @@ __author__ = """Daria Lazic, Matthias Meyer-Bender, Martin Emons"""
 __email__ = "daria.lazic@embl.de, matthias.meyerbender@embl.de, martin.emons@uzh.ch"
 
 from . import bl, cs, pl, ps, rs, sp, vl
+from ._settings import settings
 from .SegTraQ import SegTraQ
 from .utils import (
     bins_to_transcripts,
@@ -40,4 +41,5 @@ __all__ = [
     "cellpose",
     "filter_cells",
     "SegTraQ",
+    "settings",
 ]

@@ -2,6 +2,8 @@ import pandas as pd
 
 import segtraq as st
 
+st.settings.n_jobs = -1
+
 
 def test_vertical_signal_integrity_per_cell_type(sdata_new):
     n_celltypes = 10

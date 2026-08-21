@@ -21,12 +21,9 @@
 # generalizable readers. To facilitate the process of getting your data into the correct format,
 # we provide examples for some segmentation methods.
 #
-# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/iGxVy8qtZnwHOju).
+# To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
-import anndata as ad
-
-ad_test = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
 
 # %%
 import spatialdata_io  # noqa
@@ -43,6 +40,7 @@ import spatialdata as sd
 import gzip
 import shapely
 import json
+import cv2
 
 from pathlib import Path
 from rasterio.features import shapes
@@ -232,11 +230,12 @@ cell_shapes_gdf = labels_to_shapes(cell_labels, simplify_tolerance=0.5)
 nucleus_shapes_gdf = labels_to_shapes(nucleus_labels, simplify_tolerance=0.5)
 
 # %% [markdown]
-# `BIDCell` filters the Xenium transcripts file prior to segmentation by removing
-# low-quality transcripts (qv < 20) and control probes.
-# However, the cell IDs in the processed transcripts file (`transcripts_processed.csv`)
-# still correspond to the original Xenium segmentation. Therefore,
-# we reassign cell IDs based on the BIDCell segmentation masks.
+# BIDCell filters the Xenium transcripts file prior to segmentation by removing
+# low-quality transcripts (`qv < 20`) and control probes. However, the cell IDs in the
+# processed transcripts file (`transcripts_processed.csv`) still correspond to the
+# original Xenium segmentation. Therefore, we reassign cell IDs based on the BIDCell
+# segmentation masks, following the same coordinate scaling and mask-based assignment
+# used by BIDCell to ensure that transcript assignments match the reported expression matrix.
 
 # %%
 transcripts_path = data_path / "bidcell_output/transcripts_processed.csv"
@@ -245,9 +244,26 @@ transcripts_df = pd.read_csv(transcripts_path, index_col=0)
 transcripts_df.rename(
     columns={"cell_id": "original_cell_id", "x_location": "x", "y_location": "y", "z_location": "z"}, inplace=True
 )
-x = np.rint(transcripts_df["x"]).astype(int)
-y = np.rint(transcripts_df["y"]).astype(int)
-transcripts_df["cell_id"] = cell_labels[y, x]  # reassign BIDCell cell IDs
+
+scale_pix_x = 0.2125  # config.affine.scale_pix_x
+scale_pix_y = 0.2125  # config.affine.scale_pix_y
+
+height, width = cell_labels.shape
+
+height_pix = np.round(height / scale_pix_y).astype(int)
+width_pix = np.round(width / scale_pix_x).astype(int)
+
+cell_labels_rescaled = cv2.resize(
+    cell_labels.astype(np.int32),
+    (width_pix, height_pix),
+    interpolation=cv2.INTER_NEAREST,
+)
+
+x = transcripts_df["x"].div(scale_pix_x).round().astype(int)
+
+y = transcripts_df["y"].div(scale_pix_y).round().astype(int)
+
+transcripts_df["cell_id"] = cell_labels_rescaled[y, x]
 transcripts_df["feature_name"] = transcripts_df["feature_name"].astype("category")
 
 # %% [markdown]
@@ -340,16 +356,41 @@ st_bidcell = segtraq.SegTraQ(
 # Below, we show how to read data from the older proseg version 2 into the `SpatialData` format.
 # Proseg version 2 does not output a `SpatialData` object, so the latter has to be built from scratch.
 #
-# We first build the `AnnData` object.
+# We first load the Proseg transcript metadata and reconstruct the cell-by-gene count matrix
+# from the hard transcript assignments. This ensures that the expression matrix and
+# transcript-level cell assignments represent the same segmentation.
 
 # %%
-counts_df = pd.read_csv(data_path / "proseg_output_v2/expected-counts.csv.gz", compression="gzip")
-X = csr_matrix(np.rint(counts_df.values).astype(int, copy=False))
+# Read transcript-level ProSeg assignments
+transcripts_df = pd.read_csv(
+    data_path / "proseg_output_v2/transcript-metadata.csv.gz",
+    compression="gzip",
+)
 
-obs = pd.read_csv(data_path / "proseg_output_v2/cell-metadata.csv.gz", compression="gzip")
+background_id = 2**32 - 1
+
+# Build integer cell × gene counts from hard transcript assignments
+counts_df = (
+    transcripts_df.loc[transcripts_df["assignment"] != background_id]
+    .groupby(["assignment", "gene"], observed=True)
+    .size()
+    .unstack(fill_value=0)
+)
+
+# Cell metadata
+obs = pd.read_csv(
+    data_path / "proseg_output_v2/cell-metadata.csv.gz",
+    compression="gzip",
+)
 obs["region"] = "cell_boundaries"
-obs["region"] = obs["region"].astype("category")  # required for new version of SpatialData
+obs["region"] = obs["region"].astype("category")
+
+# Align count matrix to ProSeg cells
+counts_df = counts_df.reindex(index=obs["cell"], fill_value=0)
+
+X = csr_matrix(counts_df.to_numpy(dtype=np.int32))
 var = pd.DataFrame(index=counts_df.columns.astype(str))
+
 adata = ad.AnnData(X=X, obs=obs, var=var)
 
 # %% [markdown]
@@ -383,7 +424,6 @@ shapes_dict["cell_boundaries"].set_index("cell", drop=True, inplace=True)
 # We will rename these columns to avoid misalignment when cropping the data via `query.bounding_box()`.
 
 # %%
-transcripts_df = pd.read_csv(data_path / "proseg_output_v2/transcript-metadata.csv.gz", compression="gzip")
 transcripts_df["gene"] = transcripts_df["gene"].astype("category")
 transcripts_df = transcripts_df.rename(
     columns={
