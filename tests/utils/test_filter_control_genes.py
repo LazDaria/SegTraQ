@@ -2,7 +2,6 @@ import numpy as np
 
 from segtraq.utils import _filter_control_and_low_quality_transcripts
 
-
 CONTROL_PREFIXES = (
     "NegControlProbe_",
     "antisense_",
