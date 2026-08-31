@@ -573,69 +573,6 @@ def _get_center_border_counts(
     return expr_center, expr_border
 
 
-def _cosine_sim(x: np.ndarray, y: np.ndarray) -> float:
-    """Compute cosine similarity between two numeric vectors."""
-    x_norm = np.linalg.norm(x)
-    y_norm = np.linalg.norm(y)
-    if x_norm == 0.0 or y_norm == 0.0:
-        return np.nan
-    return float(np.dot(x, y) / (x_norm * y_norm))
-
-
-def _pf_log1p_pf(
-    x: np.ndarray,
-    scale: float = 1e4,
-) -> np.ndarray:
-    """Apply PFlog1pPF (shifted CLR) to one count vector.
-
-    Counts are first converted to proportions and scaled, followed by `log1p`.
-    The transformed profile is then centered by subtracting its mean across
-    genes. A zero-depth profile is returned as zeros.
-    """
-    if scale <= 0:
-        raise ValueError("`scale` must be > 0.")
-
-    x = np.asarray(x, dtype=float)
-
-    if x.ndim != 1:
-        raise ValueError("`x` must be a one-dimensional array.")
-
-    total = x.sum()
-    if total <= 0:
-        return np.zeros_like(x, dtype=float)
-
-    transformed = np.log1p(scale * x / total)
-    transformed -= transformed.mean()
-
-    return transformed
-
-
-def _cosine_similarity_two_vectors(
-    x_a: np.ndarray,
-    x_b: np.ndarray,
-    scale: float,
-) -> float:
-    """Compute cosine similarity between PFlog1pPF-transformed count profiles."""
-    x_a = np.rint(np.asarray(x_a)).astype(int)
-    x_b = np.rint(np.asarray(x_b)).astype(int)
-
-    # Genes that are zero in both profiles contribute identical centered values
-    # after PFlog1pPF. Keep them in the cosine analytically while avoiding work on
-    # thousands of zero entries for sparse expression profiles.
-    mask = (x_a + x_b) > 0
-    if not mask.any():
-        return np.nan
-
-    sim = _cosine_similarity_rows(
-        x_a[mask][None, :],
-        x_b[mask][None, :],
-        scale=scale,
-        n_features_total=len(x_a),
-    )[0]
-
-    return float(sim) if np.isfinite(sim) else np.nan
-
-
 def _cosine_similarity_rows(
     x_a: np.ndarray,
     x_b: np.ndarray,

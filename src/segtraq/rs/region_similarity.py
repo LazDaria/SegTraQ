@@ -340,56 +340,7 @@ def similarity_nucleus_cell(
         if hasattr(row, "toarray"):
             row = row.toarray()
         return np.asarray(row).ravel()
-
-    # test
-    problems = []
-
-    for _, row in match_df.iterrows():
-        cid = row[shapes_cell_id_key]
-        nid = row["nucleus_id"]
-
-        if pd.isna(nid):
-            continue
-
-        x_cell = _cell_count_vector(cid)
-        x_overlap = counts_intersection.loc[cid].to_numpy()
-
-        if x_overlap.sum() > x_cell.sum():
-            problems.append(
-                {
-                    "cell_id": cid,
-                    "cell_total": x_cell.sum(),
-                    "overlap_total": x_overlap.sum(),
-                    "difference": x_overlap.sum() - x_cell.sum(),
-                }
-            )
-
-    problems = pd.DataFrame(problems)
-
-    problems_gene = []
-
-    for _, row in match_df.iterrows():
-        cid = row[shapes_cell_id_key]
-        nid = row["nucleus_id"]
-
-        if pd.isna(nid):
-            continue
-
-        x_cell = _cell_count_vector(cid)
-        x_overlap = counts_intersection.loc[cid].to_numpy()
-
-        bad = x_overlap > x_cell
-
-        if bad.any():
-            problems_gene.append(
-                {
-                    "cell_id": cid,
-                    "n_genes": bad.sum(),
-                    "excess_transcripts": (x_overlap[bad] - x_cell[bad]).sum(),
-                }
-            )
-
-    problems_gene = pd.DataFrame(problems_gene)
+        
 
     def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]

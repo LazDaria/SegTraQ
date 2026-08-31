@@ -147,7 +147,7 @@ class SegTraQ:
         filter_kwargs : dict or None, optional
             If `filter_low_quality_transcripts` is True, these keyword arguments are forwarded
             to the filtering function.
-            Possible keys are: `min_qv`, `control_genes`, `control_prefixes`, `inplace`.
+            Possible keys are: `min_qv`, `control_prefixes`, `inplace`.
             Please refer to the function `_filter_control_and_low_quality_transcripts` for details.
 
         Notes
@@ -1505,13 +1505,11 @@ class _SPFacade:
     def mutually_exclusive_coexpression_rate(
         self,
         markers: dict[str, dict[str, list[str]]],
-        pseudocount: float = 0.5,
         inplace: bool = True,
     ):
         return sp.mutually_exclusive_coexpression_rate(
             sdata=self._p.sdata,
             markers=markers,
-            pseudocount=pseudocount,
             tables_key=self._p.tables_key,
             tables_gene_key=self._p.tables_gene_key,
             tables_raw_counts_layer=self._p.tables_raw_counts_layer,

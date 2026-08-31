@@ -16,46 +16,47 @@ def mutually_exclusive_coexpression_rate(
     tables_key: str = "table",
     tables_gene_key: str | None = None,
     tables_raw_counts_layer: str | None = None,
-    pseudocount: float = 0.5,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Compute mutual exclusivity between marker genes using Fisher's exact test.
-    Returns a DataFrame with one row per unordered gene pair.
+    Assess co-expression of marker genes expected to be mutually exclusive.
+
+    Candidate gene pairs are defined from positive and negative marker sets.
+    For each pair, a one-sided Fisher's exact test evaluates whether the genes
+    are detected together less frequently than expected under independence.
 
     Parameters
     ----------
     sdata : SpatialData-like
-        Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
+        Must contain `tables[tables_key]` as an AnnData with expression data.
     markers : dict
-        A dictionary mapping cell types to their positive and negative markers, in the format
+        Mapping of cell types to positive and negative markers:
         {cell_type: {"positive": list[str], "negative": list[str]}}.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
     tables_gene_key : str or None, default=None
         Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
-    tables_raw_counts_layer : str | None, optional
-        Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts.
-        If a layer is specified, it must exist and contain count-like values.
-    pseudocount : float, optional, default=0.5
-        Pseudocount added to all cells of the contingency table to avoid
-        division by zero when computing odds ratios.
-        This is equivalent to the Haldane-Anscombe correction, see https://pmc.ncbi.nlm.nih.gov/articles/PMC7398076.
+        If None, `var_names` are used.
+    tables_raw_counts_layer : str or None, optional
+        Layer containing raw counts. If None, `adata.X` is used.
     inplace : bool, optional, default=True
-        If True, store the resulting DataFrame in `sdata.tables[tables_key].uns["MECR"]`.
+        If True, store the resulting DataFrame in
+        `sdata.tables[tables_key].uns["mutually_exclusive_coexpression_rate"]`.
 
     Returns
     -------
     pd.DataFrame
-        Columns: ``gene1``, ``gene2``, ``odds_ratio``, ``pvalue``, ``a``, ``b``, ``c``, ``d``,
-        where (a, b, c, d) are the counts in the contingency table.
+        One row per candidate marker-gene pair with columns:
+        `gene1`, `gene2`, `odds_ratio`, `pvalue`, `a`, `b`, `c`, and `d`.
+
+        Odds ratios below 1 indicate less co-expression than expected under
+        independence. The one-sided Fisher p-value quantifies evidence for
+        such mutual exclusivity.
     """
     adata = sdata.tables[tables_key]
 
     X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
-    X_dense = X.toarray() if hasattr(X, "toarray") else X
+    X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
     var_index = _get_genes(
         adata=adata,
@@ -63,7 +64,6 @@ def mutually_exclusive_coexpression_rate(
     )
 
     n_cells = X_dense.shape[0]
-    pseudocount = float(pseudocount)
 
     # --- build unique unordered candidate pairs ---
     candidate_pairs = set()
@@ -112,20 +112,21 @@ def mutually_exclusive_coexpression_rate(
             "Please report this to the developers of SegTraQ."
         )
 
-        # Fisher's exact returns exact p-value for under-co-occurrence (mutual exclusivity)
+        # Fisher's exact test for under-co-occurrence (mutual exclusivity)
         try:
-            _, pval = fisher_exact([[a, b], [c, d]], alternative="less")
+            odds_ratio, pval = fisher_exact(
+                [[a, b], [c, d]],
+                alternative="less",
+            )
         except Exception:
+            odds_ratio = np.nan
             pval = np.nan
-
-        # odds ratio is computed with a pseudocount (Haldane–Anscombe correction)
-        or_pseudocount = ((a + pseudocount) * (d + pseudocount)) / ((b + pseudocount) * (c + pseudocount))
 
         rows.append(
             {
                 "gene1": g1,
                 "gene2": g2,
-                "odds_ratio": float(or_pseudocount),
+                "odds_ratio": float(odds_ratio) if np.isfinite(odds_ratio) else odds_ratio,
                 "pvalue": float(pval) if np.isfinite(pval) else np.nan,
                 "a": a,
                 "b": b,
@@ -228,7 +229,7 @@ def neighbor_contamination(
             stacklevel=2,
         )
         adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
-        sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
+        sq.gr.spatial_neighbors_delaunay(adata)
 
     # extract neighbor indices
     G = adata.obsp[neighbors_key]
@@ -506,7 +507,7 @@ def marker_purity(
             stacklevel=2,
         )
         adata.obsm["spatial"] = adata.obs[[tables_centroid_x_key, tables_centroid_y_key]].to_numpy()
-        sq.gr.spatial_neighbors(adata, delaunay=True, coord_type="generic")
+        sq.gr.spatial_neighbors_delaunay(adata)
 
     G = adata.obsp[neighbors_key]
     if sparse.issparse(G):
