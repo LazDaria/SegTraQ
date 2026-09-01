@@ -1,3 +1,5 @@
+import numpy as np
+
 import segtraq as st
 
 
@@ -13,9 +15,7 @@ def test_cluster_connectedness(sdata_new):
 def test_cluster_connectedness_single_cluster(sdata_new):
     # Use a very low resolution to force a single cluster
     cc = st.cs.cluster_connectedness(sdata_new, resolution=0.0001, key_prefix="leiden_single_cluster", random_state=42)
-    assert isinstance(cc, float), "Cluster connectedness should be a float"
-    # NaN check (NaN is defined to be unequal to everything, including itself)
-    assert cc != cc, "Cluster connectedness should be NaN when only one cluster is produced"
+    assert np.isnan(cc), "Cluster connectedness should be NaN when only one cluster is produced"
     assert "cluster_connectedness" in sdata_new.tables["table"].uns.keys(), (
         "'cluster_connectedness' should be present in uns"
     )
