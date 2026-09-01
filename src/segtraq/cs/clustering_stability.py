@@ -76,7 +76,7 @@ def cluster_connectedness(
     """
     adata = sdata.tables[tables_key]
 
-    if isinstance(resolution, float):
+    if isinstance(resolution, float | int):
         resolution = [resolution]
 
     best_distance = np.nan
