@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import segtraq as st
 
@@ -10,6 +11,16 @@ def test_silhouette_score(sdata_new):
     assert "silhouette_score" in sdata_new.tables["table"].uns.keys(), (
         "Silhouette score should be stored in sdata_new.uns"
     )
+
+
+def test_silhouette_score_invalid_resolution(sdata_new):
+    with pytest.raises(ValueError):
+        st.cs.silhouette_score(
+            sdata_new,
+            resolution=-0.5,
+            key_prefix="leiden_subset",
+            random_state=42,  # Invalid negative resolution
+        )
 
 
 def test_silhouette_score_single_cluster(sdata_new):

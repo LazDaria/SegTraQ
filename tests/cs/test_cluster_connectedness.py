@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import segtraq as st
 
@@ -10,6 +11,16 @@ def test_cluster_connectedness(sdata_new):
     assert "cluster_connectedness" in sdata_new.tables["table"].uns.keys(), (
         "'cluster_connectedness' should be present in uns"
     )
+
+
+def test_cluster_connectedness_invalid_resolution(sdata_new):
+    with pytest.raises(ValueError):
+        st.cs.cluster_connectedness(
+            sdata_new,
+            resolution=-0.5,
+            key_prefix="leiden_subset",
+            random_state=42,
+        )
 
 
 def test_cluster_connectedness_single_cluster(sdata_new):

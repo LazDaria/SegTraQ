@@ -9,6 +9,17 @@ from sklearn.metrics import adjusted_rand_score, confusion_matrix
 from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
 
 
+def _validate_resolution(resolution: list[float] | tuple[float, ...] | float | int) -> list[float]:
+    if isinstance(resolution, float | int):
+        resolution = [resolution]
+    for res in resolution:
+        if not isinstance(res, float | int):
+            raise ValueError(f"Resolution {res} is not a float or int.")
+        if res <= 0:
+            raise ValueError(f"Resolution {res} must be positive.")
+    return resolution
+
+
 def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
     """
     Return a view of adata excluding cells with zero total counts.

@@ -9,6 +9,7 @@ from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
 from ..utils import _get_pca_and_neighbors, merge_into_uns
 from .utils import (
     _cluster_connectedness,
+    _validate_resolution,
     ari_mean,
     ari_pairwise,
     purity_mean,
@@ -75,9 +76,8 @@ def cluster_connectedness(
         The best (highest) cluster connectedness across resolutions.
     """
     adata = sdata.tables[tables_key]
-
-    if isinstance(resolution, float | int):
-        resolution = [resolution]
+    # transforming the resolutions into a list if it is not already one
+    resolution = _validate_resolution(resolution)
 
     best_distance = np.nan
     if cell_type_key is not None:
@@ -202,8 +202,8 @@ def silhouette_score(
     key = None
 
     best_silhouette_score = np.nan
-    if not isinstance(resolution, list | tuple):
-        resolution = [resolution]
+    # transforming the resolutions into a list if it is not already one
+    resolution = _validate_resolution(resolution)
 
     if cell_type_key is not None:
         if cell_type_key not in adata.obs:
