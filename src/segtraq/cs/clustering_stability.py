@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import spatialdata as sd
@@ -7,6 +9,7 @@ from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
 from ..utils import _get_pca_and_neighbors, merge_into_uns
 from .utils import (
     _cluster_connectedness,
+    _validate_resolution,
     ari_mean,
     ari_pairwise,
     purity_mean,
@@ -73,11 +76,10 @@ def cluster_connectedness(
         The best (highest) cluster connectedness across resolutions.
     """
     adata = sdata.tables[tables_key]
+    # transforming the resolutions into a list if it is not already one
+    resolution = _validate_resolution(resolution)
 
-    if isinstance(resolution, float):
-        resolution = [resolution]
-
-    best_distance = 0.0
+    best_distance = np.nan
     if cell_type_key is not None:
         if cell_type_key not in adata.obs:
             raise ValueError(
@@ -111,7 +113,8 @@ def cluster_connectedness(
             key_prefix=key_prefix,
             random_state=random_state,
             use_hvg=use_hvg,
-            recompute_neighbors=False,
+            recompute_neighbors=True,
+            filter_zero_count_cells=True,
             leiden_kwargs=leiden_kwargs,
         )
         labels = adata.obs[key_added].values
@@ -127,8 +130,13 @@ def cluster_connectedness(
                 valid_labels,
                 use_weights=use_weights,
             )
-            if distance_val > best_distance:
+            if np.isnan(best_distance) or distance_val > best_distance:
                 best_distance = float(distance_val)
+        else:
+            warnings.warn(
+                f"Leiden clustering at resolution {res} produced only one cluster. Skipping connectedness calculation.",
+                stacklevel=2,
+            )
 
     if inplace:
         merge_into_uns(sdata, tables_key=tables_key, updates={"cluster_connectedness": best_distance})
@@ -194,9 +202,9 @@ def silhouette_score(
     adata = sdata.tables[tables_key]
     key = None
 
-    best_silhouette_score = -float("inf")
-    if not isinstance(resolution, list | tuple):
-        resolution = [resolution]
+    best_silhouette_score = np.nan
+    # transforming the resolutions into a list if it is not already one
+    resolution = _validate_resolution(resolution)
 
     if cell_type_key is not None:
         if cell_type_key not in adata.obs:
@@ -241,7 +249,8 @@ def silhouette_score(
                 key_prefix=key_prefix,
                 random_state=random_state,
                 use_hvg=use_hvg,
-                recompute_neighbors=False,
+                recompute_neighbors=True,
+                filter_zero_count_cells=True,
                 leiden_kwargs=leiden_kwargs,
             )
 
@@ -253,8 +262,14 @@ def silhouette_score(
 
                 silhouette_avg = _silhouette_score(pca, labels, metric=metric)
 
-                if silhouette_avg > best_silhouette_score:
+                if np.isnan(best_silhouette_score) or silhouette_avg > best_silhouette_score:
                     best_silhouette_score = float(silhouette_avg)
+            else:
+                warnings.warn(
+                    f"Leiden clustering at resolution {res} produced only one cluster. "
+                    f"Skipping silhouette score calculation.",
+                    stacklevel=2,
+                )
 
     if inplace and key is not None:
         merge_into_uns(sdata, tables_key=tables_key, updates={key: best_silhouette_score})
@@ -316,8 +331,16 @@ def purity(
         )
         cluster_keys.append(key_added)
 
-    purity_matrix = purity_pairwise(adata, cluster_keys)
-    mean_purity = float(purity_mean(purity_matrix))
+    n_clusters_per_key = [adata.obs[k].nunique() for k in cluster_keys]
+    if all(n <= 1 for n in n_clusters_per_key):
+        warnings.warn(
+            "All clustering results produced only one cluster. Please increase the clustering resolution.",
+            stacklevel=2,
+        )
+        mean_purity = float("nan")
+    else:
+        purity_matrix = purity_pairwise(adata, cluster_keys)
+        mean_purity = float(purity_mean(purity_matrix))
 
     if inplace:
         merge_into_uns(sdata, tables_key=tables_key, updates={"mean_purity": mean_purity})
@@ -379,8 +402,17 @@ def adjusted_rand_index(
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
-    pairwise_aris = ari_pairwise(adata, cluster_keys)
-    mean_ari = float(ari_mean(pairwise_aris))
+
+    n_clusters_per_key = [adata.obs[k].nunique() for k in cluster_keys]
+    if all(n <= 1 for n in n_clusters_per_key):
+        warnings.warn(
+            "All clustering results produced only one cluster. Please increase the clustering resolution.",
+            stacklevel=2,
+        )
+        mean_ari = float("nan")
+    else:
+        pairwise_aris = ari_pairwise(adata, cluster_keys)
+        mean_ari = float(ari_mean(pairwise_aris))
 
     if inplace:
         merge_into_uns(sdata, tables_key=tables_key, updates={"mean_ari": mean_ari})

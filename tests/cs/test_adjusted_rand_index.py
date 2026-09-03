@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 import segtraq as st
@@ -25,3 +26,10 @@ def test_adjusted_rand_index_invalid_leiden_kwargs(sdata_new):
         st.cs.adjusted_rand_index(
             sdata_new, resolution=1.0, key_prefix="leiden_subset", leiden_kwargs={"invalid_key": "invalid_value"}
         )
+
+
+def test_adjusted_rand_index_single_cluster(sdata_new):
+    # Use a very low resolution to force a single cluster
+    ari = st.cs.adjusted_rand_index(sdata_new, resolution=0, key_prefix="leiden_single_cluster")
+    assert np.isnan(ari), "ARI should be NaN when only one cluster is produced"
+    assert "mean_ari" in sdata_new.tables["table"].uns.keys(), "'mean_ari' should be present in uns"
