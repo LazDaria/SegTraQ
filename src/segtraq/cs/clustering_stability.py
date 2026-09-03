@@ -113,7 +113,8 @@ def cluster_connectedness(
             key_prefix=key_prefix,
             random_state=random_state,
             use_hvg=use_hvg,
-            recompute_neighbors=False,
+            recompute_neighbors=True,
+            filter_zero_count_cells=True,
             leiden_kwargs=leiden_kwargs,
         )
         labels = adata.obs[key_added].values
@@ -248,7 +249,8 @@ def silhouette_score(
                 key_prefix=key_prefix,
                 random_state=random_state,
                 use_hvg=use_hvg,
-                recompute_neighbors=False,
+                recompute_neighbors=True,
+                filter_zero_count_cells=True,
                 leiden_kwargs=leiden_kwargs,
             )
 

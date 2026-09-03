@@ -17,7 +17,7 @@ def test_silhouette_score_invalid_resolution(sdata_new):
     with pytest.raises(ValueError):
         st.cs.silhouette_score(
             sdata_new,
-            resolution=-0.5,
+            resolution=-1,
             key_prefix="leiden_subset",
             random_state=42,  # Invalid negative resolution
         )
@@ -26,7 +26,7 @@ def test_silhouette_score_invalid_resolution(sdata_new):
 def test_silhouette_score_single_cluster(sdata_new):
     # Use a very low resolution to force a single cluster
     silhouette_score = st.cs.silhouette_score(
-        sdata_new, resolution=0.0001, key_prefix="leiden_single_cluster", random_state=42
+        sdata_new, resolution=0, key_prefix="leiden_single_cluster", random_state=42
     )
     assert np.isnan(silhouette_score), "Silhouette score should be NaN when only one cluster is produced"
     assert "silhouette_score" in sdata_new.tables["table"].uns.keys(), (

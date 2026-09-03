@@ -25,7 +25,7 @@ def test_purity_invalid_frac_cells_subset(sdata_new):
 
 def test_purity_single_cluster(sdata_new):
     # Use a very low resolution to force a single cluster
-    purity = st.cs.purity(sdata_new, resolution=0.0001, key_prefix="leiden_single_cluster")
+    purity = st.cs.purity(sdata_new, resolution=0, key_prefix="leiden_single_cluster")
     assert np.isnan(purity), "Purity should be NaN when only one cluster is produced"
     assert "mean_purity" in sdata_new.tables["table"].uns.keys(), (
         "Mean purity should be stored in sdata_new.tables['table'].uns"
