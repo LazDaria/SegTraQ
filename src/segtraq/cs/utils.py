@@ -191,6 +191,7 @@ def ari_pairwise(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:
 
             # Restrict to cells with non-missing labels in both clusterings
             mask = labels_i.notna() & labels_j.notna()
+
             labels_i_valid = labels_i[mask]
             labels_j_valid = labels_j[mask]
 
