@@ -9,7 +9,18 @@ from sklearn.metrics import adjusted_rand_score, confusion_matrix
 from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
 
 
-def filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
+def _validate_resolution(resolution: list[float] | tuple[float, ...] | float | int) -> list[float]:
+    if isinstance(resolution, float | int):
+        resolution = [resolution]
+    for res in resolution:
+        if not isinstance(res, float | int):
+            raise ValueError(f"Resolution {res} is not a float or int.")
+        if res < 0:
+            raise ValueError(f"Resolution {res} must be positive.")
+    return resolution
+
+
+def _filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
     """
     Return a view of adata excluding cells with zero total counts.
     Does NOT modify the original object.
@@ -123,11 +134,19 @@ def run_leiden_clustering_on_random_subset(
     key_prefix: str = "leiden",
     random_state: int = 42,
     use_hvg: bool = False,
-    recompute_neighbors: bool = True,
+    filter_zero_count_cells: bool = True,
     leiden_kwargs: dict | None = None,
 ):
+    # neighbors are only recomputed when necessary,
+    # i.e. if there are zero-cound cells or no result is cached
+    recompute_neighbors = False
     adata_full = sdata.tables[tables_key]
-    adata = filter_zero_count_cells(adata_full)
+    num_zero_count_cells = (
+        (adata_full.X.sum(axis=1) == 0).sum() if sp.issparse(adata_full.X) else (adata_full.X.sum(axis=1) == 0).sum()
+    )
+    if num_zero_count_cells > 0 and filter_zero_count_cells:
+        adata = _filter_zero_count_cells(adata_full)
+        recompute_neighbors = True
 
     # --- Perform subsetting --- #
     adata_subset, subset_label = subset_adata(
