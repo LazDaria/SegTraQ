@@ -1,6 +1,10 @@
 from pathlib import Path
 
 import anndata as ad
+import hashlib
+import json
+import numpy as np
+import pandas as pd
 import pytest
 import spatialdata as sd
 from spatialdata import SpatialData
@@ -140,3 +144,90 @@ def test_markers(adata_ref):
         ref_cell_type="celltype",
         ref_raw_counts_layer="raw",
     )
+
+
+def _normalize_snapshot_value(value):
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, (np.floating, float)):
+        return round(float(value), 8)
+    if isinstance(value, (np.integer, int)):
+        return int(value)
+    if isinstance(value, (np.bool_, bool)):
+        return bool(value)
+    if isinstance(value, (pd.Timestamp, np.datetime64)):
+        return str(value)
+    return str(value)
+
+
+def _df_snapshot(df: pd.DataFrame):
+    records = []
+    for record in df.to_dict(orient="records"):
+        records.append({str(k): _normalize_snapshot_value(v) for k, v in record.items()})
+    records.sort(key=lambda x: json.dumps(x, sort_keys=True, separators=(",", ":")))
+    payload = json.dumps(records, sort_keys=True, separators=(",", ":"))
+    return {
+        "columns": sorted([str(c) for c in df.columns]),
+        "shape": [int(df.shape[0]), int(df.shape[1])],
+        "sha256": hashlib.sha256(payload.encode()).hexdigest(),
+    }
+
+
+def _scalar_snapshot(value):
+    return _normalize_snapshot_value(value)
+
+
+def _markers_snapshot(markers):
+    normalized = {}
+    for cell_type, marker_dict in markers.items():
+        normalized[str(cell_type)] = {
+            "positive": sorted([str(g) for g in marker_dict["positive"]]),
+            "negative": sorted([str(g) for g in marker_dict["negative"]]),
+        }
+    payload = json.dumps(normalized, sort_keys=True, separators=(",", ":"))
+    return {
+        "cell_types": sorted(list(normalized.keys())),
+        "sha256": hashlib.sha256(payload.encode()).hexdigest(),
+    }
+
+
+def _axes_snapshot(axes):
+    flat_axes = []
+    for item in axes:
+        if isinstance(item, list):
+            flat_axes.extend(item)
+        else:
+            flat_axes.append(item)
+
+    snapshots = []
+    for ax in flat_axes:
+        lines = []
+        for line in ax.lines:
+            x = [_normalize_snapshot_value(v) for v in line.get_xdata()]
+            y = [_normalize_snapshot_value(v) for v in line.get_ydata()]
+            lines.append({"x": x, "y": y})
+
+        snapshots.append(
+            {
+                "title": ax.get_title(),
+                "xlabel": ax.get_xlabel(),
+                "ylabel": ax.get_ylabel(),
+                "xlim": [_normalize_snapshot_value(v) for v in ax.get_xlim()],
+                "ylim": [_normalize_snapshot_value(v) for v in ax.get_ylim()],
+                "line_count": len(ax.lines),
+                "sha256": hashlib.sha256(json.dumps(lines, sort_keys=True).encode()).hexdigest(),
+            }
+        )
+
+    snapshots.sort(key=lambda x: json.dumps(x, sort_keys=True, separators=(",", ":")))
+    return snapshots
+
+
+@pytest.fixture(scope="session", name="snapshot_helpers")
+def test_snapshot_helpers():
+    return {
+        "scalar": _scalar_snapshot,
+        "df": _df_snapshot,
+        "markers": _markers_snapshot,
+        "axes": _axes_snapshot,
+    }
