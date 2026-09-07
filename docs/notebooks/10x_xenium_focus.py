@@ -1417,24 +1417,11 @@ for method, st in st_dict.items():
 df = pd.DataFrame(rows)
 
 # Order methods by mean OR
-mean_order = (
-    df.groupby("method")["Fisher_OR"]
-    .mean()
-    .sort_values()
-    .index
-    .tolist()
-)
+mean_order = df.groupby("method")["Fisher_OR"].mean().sort_values().index.tolist()
 
-means = (
-    df.groupby("method")["Fisher_OR"]
-    .mean()
-    .reindex(mean_order)
-)
+means = df.groupby("method")["Fisher_OR"].mean().reindex(mean_order)
 
-xtick_labels = [
-    f"{m}\nmean: {means[m]:.2f}"
-    for m in mean_order
-]
+xtick_labels = [f"{m}\nmean: {means[m]:.2f}" for m in mean_order]
 
 plt.figure(figsize=(6, 4))
 
@@ -1472,9 +1459,7 @@ ax.set_xticklabels(xtick_labels)
 
 ax.set_ylabel("Mutually exclusive marker co-expression (odds ratio)")
 ax.set_xlabel("")
-ax.set_title(
-    "Significantly mutually exclusive marker pairs"
-)
+ax.set_title("Significantly mutually exclusive marker pairs")
 
 plt.grid(axis="y", alpha=0.3)
 plt.tight_layout()

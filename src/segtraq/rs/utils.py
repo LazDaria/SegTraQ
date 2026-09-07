@@ -3,10 +3,12 @@ import warnings
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import shapely
 import spatialdata as sd
 from geopandas import GeoDataFrame
 from pandas import Series
 from rtree.index import Index
+from scipy.sparse import coo_matrix
 from shapely.geometry.base import BaseGeometry
 
 from ..utils import _get_genes, _is_background, filter_cells
@@ -699,11 +701,7 @@ def _two_profile_similarity_metrics(
         # Disjoint profiles: repartition pooled transcripts. Generate all draws at
         # once to avoid Python overhead across permutations.
         pooled = x_a + x_b
-        x_a_null = rng.multivariate_hypergeometric(
-            pooled,
-            n_a,
-            size=n_permutations,
-        )
+        x_a_null = rng.multivariate_hypergeometric(pooled, n_a, size=n_permutations, method="count")
         x_b_null = pooled[None, :] - x_a_null
 
     else:
@@ -721,19 +719,12 @@ def _two_profile_similarity_metrics(
         # The overlap draws can be generated as a batch. The second draw is
         # conditional on the remaining counts of each permutation and therefore
         # still needs to be sampled once per permutation.
-        overlap_null = rng.multivariate_hypergeometric(
-            pooled,
-            n_overlap,
-            size=n_permutations,
-        )
+        overlap_null = rng.multivariate_hypergeometric(pooled, n_overlap, size=n_permutations, method="count")
         remaining = pooled[None, :] - overlap_null
 
         x_a_only_null = np.empty_like(remaining)
         for i in range(n_permutations):
-            x_a_only_null[i] = rng.multivariate_hypergeometric(
-                remaining[i],
-                n_a_only,
-            )
+            x_a_only_null[i] = rng.multivariate_hypergeometric(remaining[i], n_a_only, method="count")
 
         x_b_only_null = remaining - x_a_only_null
         x_a_null = x_a_only_null + overlap_null
@@ -826,20 +817,40 @@ def _get_neighborhood_counts(
         radius_factor=neighborhood_radius_factor,
     )
 
-    expr_neighborhood = pd.DataFrame(0, index=all_cells, columns=all_genes, dtype=np.int64)
-    n_neighbors = pd.Series(0, index=all_cells, dtype=np.int64, name="n_neighbors")
+    # build a sparse focal-by-neighbor adjacency matrix and get every cell's
+    # neighborhood sum in one sparse-dense matrix multiply against `counts_cells`
+    id_to_pos = {cid: pos for pos, cid in enumerate(all_cells)}
 
-    for focal_id in all_cells:
-        nbrs = neighbor_map.get(focal_id, [])
-        n_neighbors.loc[focal_id] = len(nbrs)
+    n_neighbors_raw = {}
+    focal_pos_list = []
+    neighbor_pos_list = []
+    for focal_id, nbrs in neighbor_map.items():
+        n_neighbors_raw[focal_id] = len(nbrs)
+        f_pos = id_to_pos.get(focal_id)
+        if f_pos is None or not nbrs:
+            continue
+        for nbr in nbrs:
+            n_pos = id_to_pos.get(nbr)  # mirrors the original's nbrs.isin(counts_cells.index) filter
+            if n_pos is not None:
+                focal_pos_list.append(f_pos)
+                neighbor_pos_list.append(n_pos)
 
-        if len(nbrs) == 0:
-            continue
-        nbrs = pd.Index(nbrs)
-        nbrs = nbrs[nbrs.isin(counts_cells.index)]
-        if len(nbrs) == 0:
-            continue
-        expr_neighborhood.loc[focal_id] = counts_cells.loc[nbrs].sum(axis=0).to_numpy(dtype=np.int64)
+    n_neighbors = pd.Series(n_neighbors_raw, dtype=np.int64, name="n_neighbors").reindex(all_cells, fill_value=0)
+
+    if focal_pos_list:
+        n = len(all_cells)
+        adjacency = coo_matrix(
+            (np.ones(len(focal_pos_list), dtype=np.float64), (focal_pos_list, neighbor_pos_list)),
+            shape=(n, n),
+        ).tocsr()
+        summed = adjacency @ counts_cells.to_numpy(dtype=np.float64)
+        expr_neighborhood = pd.DataFrame(
+            np.rint(summed).astype(np.int64),
+            index=all_cells,
+            columns=all_genes,
+        )
+    else:
+        expr_neighborhood = pd.DataFrame(0, index=all_cells, columns=all_genes, dtype=np.int64)
 
     return expr_neighborhood, n_neighbors
 
@@ -895,28 +906,39 @@ def _find_neighbors_by_distance(
     # Use one global distance threshold so neighborhood definitions are comparable across cells.
     max_dist = float(np.median(radii)) * radius_factor
 
+    index_arr = cells_gdf.index.to_numpy()
+    neighbors = {cid: [] for cid in index_arr}
+
+    geoms = cells_gdf.geometry.to_numpy()
+    valid = shapely.is_valid(geoms) & ~shapely.is_empty(geoms)
+    valid_pos = np.flatnonzero(valid)
+
+    if len(valid_pos) == 0:
+        return neighbors
+
     sindex = cells_gdf.sindex
-    neighbors = {}
+    bounds = cells_gdf.geometry.bounds.to_numpy()  # columns: minx, miny, maxx, maxy
+    boxes = shapely.box(
+        bounds[valid_pos, 0] - max_dist,
+        bounds[valid_pos, 1] - max_dist,
+        bounds[valid_pos, 2] + max_dist,
+        bounds[valid_pos, 3] + max_dist,
+    )
 
-    for focal_id, focal_geom in cells_gdf.geometry.items():
-        if focal_geom is None or focal_geom.is_empty or not focal_geom.is_valid:
-            neighbors[focal_id] = []
-            continue
+    query_pos, cand_pos = sindex.query(boxes, predicate=None)
+    focal_pos = valid_pos[query_pos]
 
-        minx, miny, maxx, maxy = focal_geom.bounds
-        candidate_idx = list(sindex.intersection((minx - max_dist, miny - max_dist, maxx + max_dist, maxy + max_dist)))
-        candidates = cells_gdf.iloc[candidate_idx]
+    # drop self-matches and candidates with invalid/empty geometry (same
+    # checks the original applied per-candidate inside the loop)
+    keep = (focal_pos != cand_pos) & valid[cand_pos]
+    focal_pos, cand_pos = focal_pos[keep], cand_pos[keep]
 
-        nbrs = []
-        for other_id, other_geom in candidates.geometry.items():
-            if other_id == focal_id:
-                continue
-            if other_geom is None or other_geom.is_empty or not other_geom.is_valid:
-                continue
-            if other_geom.distance(focal_geom) <= max_dist:
-                nbrs.append(other_id)
+    d = shapely.distance(geoms[focal_pos], geoms[cand_pos])
+    within = d <= max_dist
+    focal_pos, cand_pos = focal_pos[within], cand_pos[within]
 
-        neighbors[focal_id] = nbrs
+    for f_pos, c_pos in zip(focal_pos.tolist(), cand_pos.tolist(), strict=True):
+        neighbors[index_arr[f_pos]].append(index_arr[c_pos])
 
     return neighbors
 
@@ -1128,9 +1150,7 @@ def _border_admixture_permutation_metrics(
     pooled_mask = pooled > 0
     center_null = np.zeros((n_permutations, len(pooled)), dtype=int)
     center_null[:, pooled_mask] = rng.multivariate_hypergeometric(
-        pooled[pooled_mask],
-        n_center,
-        size=n_permutations,
+        pooled[pooled_mask], n_center, size=n_permutations, method="count"
     )
     border_null = pooled[None, :] - center_null
 

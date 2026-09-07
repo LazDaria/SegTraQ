@@ -4,10 +4,10 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import polars as pl
+import shapely
 import spatialdata as sd
 from joblib import Parallel, delayed
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
-from shapely.ops import unary_union
 
 from .._settings import settings
 from ..rs.utils import _two_profile_similarity_metrics
@@ -442,63 +442,87 @@ def fraction_heterotypic_overlap(
 
     # pick representative polygon per cell: max area across layers
     rep_idx = gdf_all.groupby("_cell_id")["_area"].idxmax()
-    reps = gdf_all.loc[rep_idx].copy()
     # get spatial index for cells in bbox around gdf polygons
     sindex = gdf_all.sindex
 
+    # ------------------------------------------------------------------
+    # Precompute plain numpy arrays once so the per-cell loop below never
+    # touches pandas/GeoDataFrame indexing machinery.
+    # ------------------------------------------------------------------
+    cell_id_arr = gdf_all["_cell_id"].to_numpy()
+    z_arr = gdf_all["_z_layer"].to_numpy()
+    is_unknown_arr = gdf_all["_is_unknown"].to_numpy()
+    geom_arr = gdf_all.geometry.to_numpy()
+
+    # factorize cell types to integer codes -> int comparisons instead of
+    # object/string comparisons in the hot loop. NaN -> code -1.
+    type_codes, _type_uniques = pd.factorize(gdf_all["_cell_type"].to_numpy())
+
+    # positions (integer locations) of representative rows within gdf_all
+    rep_positions = gdf_all.index.get_indexer(rep_idx.to_numpy())
+
+    reps_cell_id = cell_id_arr[rep_positions]
+    reps_z = z_arr[rep_positions]
+    reps_type_code = type_codes[rep_positions]
+    reps_geom = geom_arr[rep_positions]
+    reps_area = gdf_all["_area"].to_numpy()[rep_positions]
+    reps_is_unknown = is_unknown_arr[rep_positions]
+
     # compute overlap fraction only for representative polygons
     out_rows = []
-    for i, row in reps.iterrows():
-        cid = row["_cell_id"]
-        z_i = row["_z_layer"]
-        t_i = row["_cell_type"]
-        geom_i = row.geometry
-        area_i = row["_area"]
+    for k in range(len(rep_positions)):
+        i = rep_positions[k]
+        cid = reps_cell_id[k]
+        z_i = reps_z[k]
+        t_i = reps_type_code[k]
+        geom_i = reps_geom[k]
+        area_i = reps_area[k]
+
         # store invalid cell areas
         if area_i is None or np.isnan(area_i) or area_i <= 0:
             out_rows.append((cid, np.nan, np.nan))
             continue
 
         if unknown_policy == "exclude":
-            if bool(row["_is_unknown"]) or pd.isna(t_i):
+            if bool(reps_is_unknown[k]) or t_i == -1:
                 out_rows.append((cid, np.nan, np.nan))
                 continue
+
         # get indices of the intersections of the spatial index with the
         # target cell
-        cand_idx = list(sindex.intersection(geom_i.bounds))
+        cand_idx = np.fromiter(sindex.intersection(geom_i.bounds), dtype=np.int64, count=-1)
         # exclude itself
-        cand_idx = [j for j in cand_idx if j != i]
+        cand_idx = cand_idx[cand_idx != i]
         # if empty add 0.0 - do here to avoid empty indexing
-        if not cand_idx:
+        if cand_idx.size == 0:
             out_rows.append((cid, 0.0, 0.0))
             continue
 
-        cands = gdf_all.iloc[cand_idx]
-        # only consider candidates that are not in the same $z$-layer
-        cands = cands[cands["_z_layer"] != z_i]
-        # only consider cells that are not the same cell_id (across $z$)
-        cands = cands[cands["_cell_id"] != cid]
-
+        # only consider candidates that are not in the same $z$-layer,
+        # not the same cell_id (across $z$), and not of the same cell type
+        mask = (z_arr[cand_idx] != z_i) & (cell_id_arr[cand_idx] != cid) & (type_codes[cand_idx] != t_i)
         if unknown_policy == "exclude":
-            cands = cands[~cands["_is_unknown"]]
-        # only consider cell types that are not of the same cell type
-        cands = cands[cands["_cell_type"] != t_i]
+            mask &= ~is_unknown_arr[cand_idx]
+
+        cand_idx = cand_idx[mask]
+
         # if empty add 0.0
-        if cands.empty:
+        if cand_idx.size == 0:
             out_rows.append((cid, 0.0, 0.0))
             continue
-        # compute area intersections between candidate cells and
-        # target cell
-        inter_geoms = []
-        for geom_j in cands.geometry:
-            inter = geom_i.intersection(geom_j)
-            if (not inter.is_empty) and (inter.area > 0):
-                inter_geoms.append(inter)
 
-        if not inter_geoms:
+        # compute area intersections between candidate cells and
+        # target cell (vectorized over all candidates at once)
+        cand_geoms = geom_arr[cand_idx]
+        inter = shapely.intersection(geom_i, cand_geoms)
+        areas = shapely.area(inter)
+        valid = (~shapely.is_empty(inter)) & (areas > 0)
+        inter_geoms = inter[valid]
+
+        if inter_geoms.size == 0:
             overlap_area = 0.0
         else:
-            overlap_area = float(unary_union(inter_geoms).area)
+            overlap_area = float(shapely.union_all(inter_geoms).area)
 
         out_rows.append((cid, overlap_area, overlap_area / float(area_i)))
 

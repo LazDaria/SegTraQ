@@ -730,24 +730,11 @@ rows.extend(
 df = pd.DataFrame(rows)
 
 # Order by mean odds ratio
-mean_order = (
-    df.groupby("method")["coexpression_odds_ratio"]
-    .mean()
-    .sort_values()
-    .index
-    .tolist()
-)
+mean_order = df.groupby("method")["coexpression_odds_ratio"].mean().sort_values().index.tolist()
 
-means = (
-    df.groupby("method")["coexpression_odds_ratio"]
-    .mean()
-    .reindex(mean_order)
-)
+means = df.groupby("method")["coexpression_odds_ratio"].mean().reindex(mean_order)
 
-xtick_labels = [
-    f"{m}\nmean: {means[m]:.2f}"
-    for m in mean_order
-]
+xtick_labels = [f"{m}\nmean: {means[m]:.2f}" for m in mean_order]
 
 plt.figure(figsize=(3, 4))
 

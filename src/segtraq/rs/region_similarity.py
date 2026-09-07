@@ -340,7 +340,6 @@ def similarity_nucleus_cell(
         if hasattr(row, "toarray"):
             row = row.toarray()
         return np.asarray(row).ravel()
-        
 
     def _compute_one(row: pd.Series, seed: np.uint32) -> dict:
         cid, nid = row[shapes_cell_id_key], row["nucleus_id"]
