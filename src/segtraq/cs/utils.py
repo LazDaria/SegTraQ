@@ -135,15 +135,18 @@ def run_leiden_clustering_on_random_subset(
     random_state: int = 42,
     use_hvg: bool = False,
     filter_zero_count_cells: bool = True,
-    recompute_neighbors: bool = True,
     leiden_kwargs: dict | None = None,
 ):
+    # neighbors are only recomputed when necessary,
+    # i.e. if there are zero-cound cells or no result is cached
+    recompute_neighbors = False
     adata_full = sdata.tables[tables_key]
-    if filter_zero_count_cells:
-        assert recompute_neighbors, (
-            "Cannot filter zero-count cells without recomputing neighbors. Please set recompute_neighbors=True."
-        )
+    num_zero_count_cells = (
+        (adata_full.X.sum(axis=1) == 0).sum() if sp.issparse(adata_full.X) else (adata_full.X.sum(axis=1) == 0).sum()
+    )
+    if num_zero_count_cells > 0 and filter_zero_count_cells:
         adata = _filter_zero_count_cells(adata_full)
+        recompute_neighbors = True
 
     # --- Perform subsetting --- #
     adata_subset, subset_label = subset_adata(
