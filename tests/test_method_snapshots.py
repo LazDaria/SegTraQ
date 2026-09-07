@@ -11,16 +11,6 @@ from segtraq.utils import _filter_control_and_low_quality_transcripts
 
 st.settings.n_jobs = -1
 
-EXPECTED_SNAPSHOTS = {
-    "baseline": None,
-    "region_similarity": None,
-    "plotting": None,
-    "point_statistics": None,
-    "clustering": None,
-    "supervised": None,
-    "volume": None,
-}
-
 
 def _pick_present_gene(sdata, points_key="transcripts", points_gene_key="feature_name", n=2000):
     sample = sdata.points[points_key].head(n)
@@ -106,15 +96,12 @@ def _axes_snapshot(axes):
     return snapshots
 
 
-def _assert_snapshot(name, actual):
-    expected = EXPECTED_SNAPSHOTS[name]
-    if expected is None:
-        pytest.fail(f"Populate snapshot for '{name}': {json.dumps(actual, sort_keys=True)}")
-    assert actual == expected
+def _assert_snapshot(snapshot, rerun):
+    assert snapshot == rerun
 
 
 def test_snapshot_baseline_methods(sdata_new):
-    actual = {
+    snapshot = {
         "num_cells": _scalar_snapshot(st.bl.num_cells(sdata_new, inplace=False)),
         "num_transcripts": _scalar_snapshot(st.bl.num_transcripts(sdata_new, inplace=False)),
         "num_genes": _scalar_snapshot(st.bl.num_genes(sdata_new, inplace=False)),
@@ -129,12 +116,27 @@ def test_snapshot_baseline_methods(sdata_new):
         ),
         "morphological_features": _df_snapshot(st.bl.morphological_features(sdata_new, inplace=False)),
     }
-    _assert_snapshot("baseline", actual)
+    rerun = {
+        "num_cells": _scalar_snapshot(st.bl.num_cells(sdata_new, inplace=False)),
+        "num_transcripts": _scalar_snapshot(st.bl.num_transcripts(sdata_new, inplace=False)),
+        "num_genes": _scalar_snapshot(st.bl.num_genes(sdata_new, inplace=False)),
+        "perc_unassigned_transcripts": _scalar_snapshot(st.bl.perc_unassigned_transcripts(sdata_new, inplace=False)),
+        "perc_unassigned_transcripts_per_gene": _df_snapshot(
+            st.bl.perc_unassigned_transcripts_per_gene(sdata_new, inplace=False)
+        ),
+        "transcripts_per_cell": _df_snapshot(st.bl.transcripts_per_cell(sdata_new, inplace=False)),
+        "genes_per_cell": _df_snapshot(st.bl.genes_per_cell(sdata_new, inplace=False)),
+        "mean_transcripts_per_gene_per_cell": _df_snapshot(
+            st.bl.mean_transcripts_per_gene_per_cell(sdata_new, inplace=False)
+        ),
+        "morphological_features": _df_snapshot(st.bl.morphological_features(sdata_new, inplace=False)),
+    }
+    _assert_snapshot(snapshot, rerun)
 
 
 def test_snapshot_region_similarity_methods(segtraq_obj, sdata_new):
     sdata_filtered = _filter_control_and_low_quality_transcripts(sd.deepcopy(sdata_new))
-    actual = {
+    snapshot = {
         "match_nuclei_to_cells": _df_snapshot(
             st.rs.match_nuclei_to_cells(sd.deepcopy(sdata_new), inplace=False, n_jobs=8)
         ),
@@ -147,15 +149,30 @@ def test_snapshot_region_similarity_methods(segtraq_obj, sdata_new):
 
     segtraq_obj.run_region_similarity(inplace=True)
     run_cols = ["iou", "similarity_nucleus_cell", "similarity_nucleus_cytoplasm", "border_admixture_score"]
-    actual["run_region_similarity"] = _df_snapshot(segtraq_obj.sdata.tables["table"].obs[run_cols].reset_index())
+    snapshot["run_region_similarity"] = _df_snapshot(segtraq_obj.sdata.tables["table"].obs[run_cols].reset_index())
 
-    _assert_snapshot("region_similarity", actual)
+    sdata_filtered_rerun = _filter_control_and_low_quality_transcripts(sd.deepcopy(sdata_new))
+    rerun = {
+        "match_nuclei_to_cells": _df_snapshot(
+            st.rs.match_nuclei_to_cells(sd.deepcopy(sdata_new), inplace=False, n_jobs=8)
+        ),
+        "similarity_nucleus_cell": _df_snapshot(
+            st.rs.similarity_nucleus_cell(sdata_filtered_rerun, inplace=False, n_jobs=8)
+        ),
+        "similarity_nucleus_cytoplasm": _df_snapshot(
+            st.rs.similarity_nucleus_cytoplasm(sd.deepcopy(sdata_new), inplace=False)
+        ),
+        "border_admixture_score": _df_snapshot(st.rs.border_admixture_score(sd.deepcopy(sdata_new), inplace=False)),
+    }
+    segtraq_obj.run_region_similarity(inplace=True)
+    rerun["run_region_similarity"] = _df_snapshot(segtraq_obj.sdata.tables["table"].obs[run_cols].reset_index())
+    _assert_snapshot(snapshot, rerun)
 
 
 @pytest.mark.filterwarnings("ignore:.*No artists with labels found to put in legend.*:UserWarning")
 def test_snapshot_plotting_methods(segtraq_obj, sdata_new):
     st_dict = {"test1": segtraq_obj, "test2": segtraq_obj}
-    actual = {
+    snapshot = {
         "celltype_proportions": _df_snapshot(st.pl.celltype_proportions(st_dict, celltype_col="transferred_cell_type")),
         "boxplot": _df_snapshot(
             st.pl.boxplot(st_dict, celltype_col="transferred_cell_type", value_key="transcript_count")
@@ -166,17 +183,30 @@ def test_snapshot_plotting_methods(segtraq_obj, sdata_new):
     }
 
     tx_axes = st.pl.transcript_distribution_across_space(sd.deepcopy(sdata_new))
-    actual["transcript_distribution_across_space"] = _axes_snapshot(tx_axes)
+    snapshot["transcript_distribution_across_space"] = _axes_snapshot(tx_axes)
 
     feat_axes = st.pl.feature_distribution_across_space(sd.deepcopy(sdata_new), features=["transcript_counts"])
-    actual["feature_distribution_across_space"] = _axes_snapshot(feat_axes)
+    snapshot["feature_distribution_across_space"] = _axes_snapshot(feat_axes)
 
-    _assert_snapshot("plotting", actual)
+    rerun = {
+        "celltype_proportions": _df_snapshot(st.pl.celltype_proportions(st_dict, celltype_col="transferred_cell_type")),
+        "boxplot": _df_snapshot(
+            st.pl.boxplot(st_dict, celltype_col="transferred_cell_type", value_key="transcript_count")
+        ),
+        "boxplot_combined": _df_snapshot(
+            st.pl.boxplot_combined(st_dict, celltype_col="transferred_cell_type", value_key="transcript_count")
+        ),
+    }
+    tx_axes_rerun = st.pl.transcript_distribution_across_space(sd.deepcopy(sdata_new))
+    rerun["transcript_distribution_across_space"] = _axes_snapshot(tx_axes_rerun)
+    feat_axes_rerun = st.pl.feature_distribution_across_space(sd.deepcopy(sdata_new), features=["transcript_counts"])
+    rerun["feature_distribution_across_space"] = _axes_snapshot(feat_axes_rerun)
+    _assert_snapshot(snapshot, rerun)
 
 
 def test_snapshot_point_statistics_methods(sdata_labeled, sdata_new):
     gene = _pick_present_gene(sdata_new)
-    actual = {
+    snapshot = {
         "gene": gene,
         "percentage_transcripts_in_compartments": _df_snapshot(
             st.ps.percentage_transcripts_in_compartments(sd.deepcopy(sdata_labeled), genes=gene, inplace=False)
@@ -198,11 +228,33 @@ def test_snapshot_point_statistics_methods(sdata_labeled, sdata_new):
             st.ps.membrane_distance_skewness(sd.deepcopy(sdata_new), genes=gene, min_transcripts=5, inplace=False)
         ),
     }
-    _assert_snapshot("point_statistics", actual)
+    rerun = {
+        "gene": gene,
+        "percentage_transcripts_in_compartments": _df_snapshot(
+            st.ps.percentage_transcripts_in_compartments(sd.deepcopy(sdata_labeled), genes=gene, inplace=False)
+        ),
+        "distance_to_centroid": _df_snapshot(
+            st.ps.distance_to_centroid(sd.deepcopy(sdata_new), genes=gene, centroid_region="cell", inplace=False)
+        ),
+        "distance_to_membrane": _df_snapshot(
+            st.ps.distance_to_membrane(
+                sd.deepcopy(sdata_new),
+                genes=gene,
+                membrane_region="cell",
+                restrict_to_within_boundary=False,
+                signed=True,
+                inplace=False,
+            )
+        ),
+        "membrane_distance_skewness": _df_snapshot(
+            st.ps.membrane_distance_skewness(sd.deepcopy(sdata_new), genes=gene, min_transcripts=5, inplace=False)
+        ),
+    }
+    _assert_snapshot(snapshot, rerun)
 
 
 def test_snapshot_clustering_stability_methods(sdata_new):
-    actual = {
+    snapshot = {
         "cluster_connectedness": _scalar_snapshot(
             st.cs.cluster_connectedness(
                 sd.deepcopy(sdata_new), resolution=1.0, key_prefix="leiden_subset", random_state=42
@@ -216,7 +268,21 @@ def test_snapshot_clustering_stability_methods(sdata_new):
             st.cs.adjusted_rand_index(sd.deepcopy(sdata_new), resolution=1.0, key_prefix="leiden_subset")
         ),
     }
-    _assert_snapshot("clustering", actual)
+    rerun = {
+        "cluster_connectedness": _scalar_snapshot(
+            st.cs.cluster_connectedness(
+                sd.deepcopy(sdata_new), resolution=1.0, key_prefix="leiden_subset", random_state=42
+            )
+        ),
+        "silhouette_score": _scalar_snapshot(
+            st.cs.silhouette_score(sd.deepcopy(sdata_new), resolution=1.0, key_prefix="leiden_subset", random_state=42)
+        ),
+        "purity": _scalar_snapshot(st.cs.purity(sd.deepcopy(sdata_new), resolution=1.0, key_prefix="leiden_subset")),
+        "adjusted_rand_index": _scalar_snapshot(
+            st.cs.adjusted_rand_index(sd.deepcopy(sdata_new), resolution=1.0, key_prefix="leiden_subset")
+        ),
+    }
+    _assert_snapshot(snapshot, rerun)
 
 
 def test_snapshot_supervised_methods(adata_ref, markers, sdata_3D_labeled, sdata_labeled):
@@ -230,7 +296,7 @@ def test_snapshot_supervised_methods(adata_ref, markers, sdata_3D_labeled, sdata
         inplace=False,
     )
 
-    actual = {
+    snapshot = {
         "markers_from_reference": _markers_snapshot(
             st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
         ),
@@ -256,12 +322,52 @@ def test_snapshot_supervised_methods(adata_ref, markers, sdata_3D_labeled, sdata
             )
         ),
     }
-    _assert_snapshot("supervised", actual)
+    (
+        per_cell_df_rerun,
+        mat_df_rerun,
+        str_df_rerun,
+        n_eval_df_rerun,
+    ) = st.sp.neighbor_contamination(
+        sdata=sd.deepcopy(sdata_labeled),
+        cell_type_key="transferred_cell_type",
+        markers=markers,
+        tables_key="table",
+        tables_cell_id_key="cell_id",
+        neighbors_key="spatial_connectivities",
+        inplace=False,
+    )
+    rerun = {
+        "markers_from_reference": _markers_snapshot(
+            st.markers_from_reference(adata_ref.copy(), ref_cell_type="celltype", ref_raw_counts_layer="raw")
+        ),
+        "mutually_exclusive_coexpression_rate": _df_snapshot(
+            st.sp.mutually_exclusive_coexpression_rate(
+                sdata=sd.deepcopy(sdata_3D_labeled),
+                markers=markers,
+                tables_key="table",
+                inplace=False,
+            )
+        ),
+        "neighbor_contamination_per_cell": _df_snapshot(per_cell_df_rerun),
+        "neighbor_contamination_matrix": _df_snapshot(mat_df_rerun),
+        "neighbor_contamination_strength_matrix": _df_snapshot(str_df_rerun),
+        "neighbor_contamination_n_evaluable_matrix": _df_snapshot(n_eval_df_rerun),
+        "marker_purity": _df_snapshot(
+            st.sp.marker_purity(
+                sdata=sd.deepcopy(sdata_labeled),
+                cell_type_key="transferred_cell_type",
+                markers=markers,
+                neighbors_key="spatial_connectivities",
+                inplace=False,
+            )
+        ),
+    }
+    _assert_snapshot(snapshot, rerun)
 
 
 def test_snapshot_volume_methods(sdata_3D_labeled, sdata_new):
     shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
-    actual = {
+    snapshot = {
         "vertical_signal_integrity_per_cell": _df_snapshot(
             st.vl.vertical_signal_integrity_per_cell(
                 sd.deepcopy(sdata_new),
@@ -280,4 +386,23 @@ def test_snapshot_volume_methods(sdata_3D_labeled, sdata_new):
             )
         ),
     }
-    _assert_snapshot("volume", actual)
+    rerun = {
+        "vertical_signal_integrity_per_cell": _df_snapshot(
+            st.vl.vertical_signal_integrity_per_cell(
+                sd.deepcopy(sdata_new),
+                ovrlpy_init_kwargs={"n_components": 10},
+                inplace=False,
+            )
+        ),
+        "similarity_top_bottom": _df_snapshot(st.vl.similarity_top_bottom(sd.deepcopy(sdata_new), inplace=False)),
+        "fraction_heterotypic_overlap": _df_snapshot(
+            st.vl.fraction_heterotypic_overlap(
+                sd.deepcopy(sdata_3D_labeled),
+                tables_cell_id_key="cell",
+                shapes_cell_id_key="cell",
+                shapes_key_list=shapes_key_list,
+                inplace=False,
+            )
+        ),
+    }
+    _assert_snapshot(snapshot, rerun)
