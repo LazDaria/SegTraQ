@@ -764,11 +764,7 @@ def _two_profile_similarity_metrics(
         # Disjoint profiles: repartition pooled transcripts. Generate all draws at
         # once to avoid Python overhead across permutations.
         pooled = x_a + x_b
-        x_a_null = rng.multivariate_hypergeometric(
-            pooled,
-            n_a,
-            size=n_permutations,
-        )
+        x_a_null = rng.multivariate_hypergeometric(pooled, n_a, size=n_permutations, method="count")
         x_b_null = pooled[None, :] - x_a_null
 
     else:
@@ -786,19 +782,12 @@ def _two_profile_similarity_metrics(
         # The overlap draws can be generated as a batch. The second draw is
         # conditional on the remaining counts of each permutation and therefore
         # still needs to be sampled once per permutation.
-        overlap_null = rng.multivariate_hypergeometric(
-            pooled,
-            n_overlap,
-            size=n_permutations,
-        )
+        overlap_null = rng.multivariate_hypergeometric(pooled, n_overlap, size=n_permutations, method="count")
         remaining = pooled[None, :] - overlap_null
 
         x_a_only_null = np.empty_like(remaining)
         for i in range(n_permutations):
-            x_a_only_null[i] = rng.multivariate_hypergeometric(
-                remaining[i],
-                n_a_only,
-            )
+            x_a_only_null[i] = rng.multivariate_hypergeometric(remaining[i], n_a_only, method="count")
 
         x_b_only_null = remaining - x_a_only_null
         x_a_null = x_a_only_null + overlap_null
@@ -1224,9 +1213,7 @@ def _border_admixture_permutation_metrics(
     pooled_mask = pooled > 0
     center_null = np.zeros((n_permutations, len(pooled)), dtype=int)
     center_null[:, pooled_mask] = rng.multivariate_hypergeometric(
-        pooled[pooled_mask],
-        n_center,
-        size=n_permutations,
+        pooled[pooled_mask], n_center, size=n_permutations, method="count"
     )
     border_null = pooled[None, :] - center_null
 
