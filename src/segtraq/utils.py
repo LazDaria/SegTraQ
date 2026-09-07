@@ -340,6 +340,16 @@ def _get_norm_log(
     sc.pp.normalize_total(tmp, target_sum=target_sum)
     sc.pp.log1p(tmp)
 
+    # PF / CLR centering:
+    # subtract each cell's mean log-expression across genes
+    # cell_mean = np.asarray(tmp.X.mean(axis=1)).ravel()
+
+    # if sparse.issparse(tmp.X):
+    #     tmp.X = tmp.X.toarray()
+
+    # cell_mean = np.asarray(tmp.X.mean(axis=1)).ravel()
+    # tmp.X -= cell_mean[:, None]
+
     adata.layers[NORM_LOG_LAYER] = tmp.X
     return adata
 

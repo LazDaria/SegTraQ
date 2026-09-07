@@ -692,8 +692,7 @@ plt.show()
 # Candidate pairs are constructed as unique, unordered combinations of positive and negative
 # markers across cell types, excluding gene pairs that co-occur as positive markers in any cell type.
 # Fisher’s exact test with `alternative="less"` is used to test whether genes co-occur less often
-# than expected under independence, while odds ratios are reported with a pseudocount correction
-# to avoid infinities in sparse data. By conditioning on the marginal detection frequencies of each gene,
+# than expected under independence. By conditioning on the marginal detection frequencies of each gene,
 # Fisher’s exact test does not favor methods with low overall transcript counts.
 
 # %%
@@ -709,46 +708,63 @@ rows = []
 tbl = st.sdata.tables["table"]
 mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
 
-# Filter significant, finite odds ratios and p-values
-df_sig = mecr_df[
+# Keep marker pairs with significant mutual exclusivity
+df_sig = mecr_df.loc[
     mecr_df["odds_ratio"].notna()
     & np.isfinite(mecr_df["odds_ratio"])
     & mecr_df["pvalue"].notna()
     & np.isfinite(mecr_df["pvalue"])
+    & (mecr_df["odds_ratio"] < 1)
     & (mecr_df["pvalue"] < 0.05)
-]
+].copy()
 
-# Build rows
-rows.extend({"method": "Xenium", "Fisher_OR": np.log2(row["odds_ratio"])} for _, row in df_sig.iterrows())
+# Build plotting dataframe
+rows.extend(
+    {
+        "method": "Xenium",
+        "coexpression_odds_ratio": row["odds_ratio"],
+    }
+    for _, row in df_sig.iterrows()
+)
 
 df = pd.DataFrame(rows)
 
-median_order = df.groupby("method")["Fisher_OR"].median().sort_values().index.tolist()
+# Order by mean odds ratio
+mean_order = (
+    df.groupby("method")["coexpression_odds_ratio"]
+    .mean()
+    .sort_values()
+    .index
+    .tolist()
+)
 
-# Compute medians in plotting order
-medians = df.groupby("method")["Fisher_OR"].median().reindex(median_order)
+means = (
+    df.groupby("method")["coexpression_odds_ratio"]
+    .mean()
+    .reindex(mean_order)
+)
 
-# Build x-axis labels with medians
-xtick_labels = [f"{m}\nmedian:({medians[m]:.2f})" for m in median_order]
+xtick_labels = [
+    f"{m}\nmean: {means[m]:.2f}"
+    for m in mean_order
+]
 
 plt.figure(figsize=(3, 4))
 
-# --- Violin plot ---
 ax = sns.violinplot(
     data=df,
     x="method",
-    y="Fisher_OR",
-    order=median_order,
+    y="coexpression_odds_ratio",
+    order=mean_order,
     palette="Set2",
     linewidth=2,
 )
 
-# --- Stripplot overlay ---
 sns.stripplot(
     data=df,
     x="method",
-    y="Fisher_OR",
-    order=median_order,
+    y="coexpression_odds_ratio",
+    order=mean_order,
     color="black",
     size=2.5,
     alpha=0.35,
@@ -756,15 +772,20 @@ sns.stripplot(
     ax=ax,
 )
 
-# Reference line: OR = 1
-ax.axhline(0, ls="--", lw=1, color="gray", alpha=0.6)
+# OR = 1 corresponds to independence
+ax.axhline(
+    1,
+    ls="--",
+    lw=1,
+    color="gray",
+    alpha=0.6,
+)
 
-# Apply new x-axis labels
 ax.set_xticklabels(xtick_labels)
 
-ax.set_ylabel("log2 Fisher odds ratio")
+ax.set_ylabel("Marker co-expression odds ratio")
 ax.set_xlabel("")
-ax.set_title("Significant associations among candidate mutually exclusive marker pairs")
+ax.set_title("Significantly mutually exclusive marker pairs")
 
 plt.grid(axis="y", alpha=0.3)
 plt.tight_layout()

@@ -1384,10 +1384,10 @@ for method, st in st_dict.items():
     )
 
 # %% [markdown]
-# Across all methods, positive and negative markers co-occur less frequently than expected
-# under independence, indicating a consistent depletion of co-expression.
-# Although the differences are minor, Proseg shows the strongest depletion of co-expression
-# of positive and negative markers.
+# Across all methods, marker pairs with significant mutual exclusivity show substantially
+# lower co-expression than expected under independence.
+# Although the differences are minor, ProSeg shows the strongest depletion of co-expression
+# among these marker pairs.
 
 # %%
 rows = []
@@ -1396,24 +1396,45 @@ for method, st in st_dict.items():
     tbl = st.sdata.tables["table"]
     mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
 
-    # Filter significant, finite odds ratios and p-values
-    df_sig = mecr_df[
+    # Keep marker pairs with significant mutual exclusivity
+    df_sig = mecr_df.loc[
         mecr_df["odds_ratio"].notna()
         & np.isfinite(mecr_df["odds_ratio"])
         & mecr_df["pvalue"].notna()
         & np.isfinite(mecr_df["pvalue"])
+        & (mecr_df["odds_ratio"] < 1)
         & (mecr_df["pvalue"] < 0.05)
-    ]
+    ].copy()
 
-    # Build rows
-    rows.extend({"method": str(method), "Fisher_OR": np.log2(row["odds_ratio"])} for _, row in df_sig.iterrows())
+    rows.extend(
+        {
+            "method": str(method),
+            "Fisher_OR": row["odds_ratio"],
+        }
+        for _, row in df_sig.iterrows()
+    )
 
 df = pd.DataFrame(rows)
 
-median_order = df.groupby("method")["Fisher_OR"].median().sort_values().index.tolist()
-medians = df.groupby("method")["Fisher_OR"].median().reindex(median_order)
+# Order methods by mean OR
+mean_order = (
+    df.groupby("method")["Fisher_OR"]
+    .mean()
+    .sort_values()
+    .index
+    .tolist()
+)
 
-xtick_labels = [f"{m}\nmedian:({medians[m]:.2f})" for m in median_order]
+means = (
+    df.groupby("method")["Fisher_OR"]
+    .mean()
+    .reindex(mean_order)
+)
+
+xtick_labels = [
+    f"{m}\nmean: {means[m]:.2f}"
+    for m in mean_order
+]
 
 plt.figure(figsize=(6, 4))
 
@@ -1421,7 +1442,7 @@ ax = sns.violinplot(
     data=df,
     x="method",
     y="Fisher_OR",
-    order=median_order,
+    order=mean_order,
     palette="Set2",
     linewidth=2,
 )
@@ -1430,7 +1451,7 @@ sns.stripplot(
     data=df,
     x="method",
     y="Fisher_OR",
-    order=median_order,
+    order=mean_order,
     color="black",
     size=2.5,
     alpha=0.35,
@@ -1438,14 +1459,22 @@ sns.stripplot(
     ax=ax,
 )
 
-# Reference line: OR = 1
-ax.axhline(0, ls="--", lw=1, color="gray", alpha=0.6)
+# OR = 1 corresponds to independence
+ax.axhline(
+    1,
+    ls="--",
+    lw=1,
+    color="gray",
+    alpha=0.6,
+)
 
 ax.set_xticklabels(xtick_labels)
 
-ax.set_ylabel("log2 Fisher odds ratio")
+ax.set_ylabel("Mutually exclusive marker co-expression (odds ratio)")
 ax.set_xlabel("")
-ax.set_title("Significant associations among candidate mutually exclusive marker pairs")
+ax.set_title(
+    "Significantly mutually exclusive marker pairs"
+)
 
 plt.grid(axis="y", alpha=0.3)
 plt.tight_layout()
