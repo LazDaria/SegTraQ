@@ -329,33 +329,52 @@ def _cluster_connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_
     float
         Mean cluster connectedness in [0, 1].
     """
+
     if not sp.issparse(connectivities):
         raise ValueError("connectivities must be a scipy sparse matrix")
+
     if connectivities.shape[0] != len(labels):
         raise ValueError("connectivities and labels must have compatible shapes")
 
     G = connectivities.tocsr()
+
     labels = np.asarray(labels)
-    valid_mask = ~pd.isna(labels)
+    # Define which cells are labeled (non-missing)
+    # to avoid false negatives in comparison below
+    labeled_mask = ~pd.isna(labels)
+
     n = G.shape[0]
+    per_cell = np.empty(n)
+    per_cell.fill(np.nan)
 
-    if not use_weights:
-        G = G.copy()
-        G.data[:] = 1.0  # binarize
+    for i in range(n):
+        if not labeled_mask[i]:
+            continue
 
-    # one-hot encode labels (only valid rows populated)
-    codes = pd.factorize(labels[valid_mask])[0]
-    k = codes.max() + 1 if len(codes) else 0
-    row_idx = np.flatnonzero(valid_mask)
-    L = sp.csr_matrix((np.ones(len(codes)), (row_idx, codes)), shape=(n, k))
+        start, end = G.indptr[i], G.indptr[i + 1]
+        neighbors = G.indices[start:end]
 
-    # numerator: weight/count of same-label neighbors, per cell
-    numer = np.asarray((G @ L).multiply(L).sum(axis=1)).ravel()
-    # denominator: total weight/count of labeled neighbors, per cell
-    denom = np.asarray(G @ valid_mask.astype(float)).ravel()
+        if len(neighbors) == 0:
+            continue
 
-    per_cell = np.full(n, np.nan)
-    compute_mask = valid_mask & (denom > 0)
-    per_cell[compute_mask] = numer[compute_mask] / denom[compute_mask]
+        # Only consider labeled neighbors
+        neigh_labeled = labeled_mask[neighbors]
+        if not np.any(neigh_labeled):
+            continue
 
-    return float(np.nanmean(per_cell))
+        neighbors = neighbors[neigh_labeled]
+        same = labels[neighbors] == labels[i]
+
+        if use_weights:
+            row_w = G.data[start:end]
+            row_w = row_w[neigh_labeled]
+            denom = row_w.sum()
+            if denom <= 0:
+                continue
+
+            per_cell[i] = float(row_w[same].sum() / denom)
+
+        else:
+            per_cell[i] = float(np.mean(same))
+
+    return np.nanmean(per_cell)
