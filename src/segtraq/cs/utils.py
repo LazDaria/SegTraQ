@@ -56,25 +56,18 @@ def run_leiden_clustering_on_adata(
     n_neighbors: int = 15,
     leiden_kwargs: dict | None = None,
 ):
-    """Run Leiden clustering using a PCA that has already been computed."""
+    """Run Leiden clustering on an AnnData with precomputed SegTraQ PCA."""
     adata = adata_input.copy()
 
     if recompute_neighbors:
-        if PCA_KEY not in adata.obsm:
-            raise ValueError(
-                f"Cannot recompute neighbors because {PCA_KEY!r} is missing from `adata.obsm`. "
-                "Compute PCA before cell subsetting."
-            )
-        sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep=PCA_KEY)
+        sc.pp.neighbors(
+            adata,
+            n_neighbors=n_neighbors,
+            use_rep=PCA_KEY,
+        )
     else:
-        if PCA_KEY in adata.obsm and NEIGHBORS_KEY in adata.uns and CONNECTIVITIES_KEY in adata.obsp:
-            adata.uns["neighbors"] = adata.uns[NEIGHBORS_KEY]
-            adata.obsp["connectivities"] = adata.obsp[CONNECTIVITIES_KEY]
-        else:
-            raise ValueError(
-                "Cannot reuse neighbors and PCA from adata because required keys are missing. "
-                "Please set recompute_neighbors=True or ensure the required keys are present."
-            )
+        adata.uns["neighbors"] = adata.uns[NEIGHBORS_KEY]
+        adata.obsp["connectivities"] = adata.obsp[CONNECTIVITIES_KEY]
 
     sc.tl.leiden(
         adata,
@@ -84,8 +77,7 @@ def run_leiden_clustering_on_adata(
         **(leiden_kwargs or {}),
     )
 
-    embedding = adata.obsm[PCA_KEY] if PCA_KEY in adata.obsm else None
-    return adata.obs[key_added].copy(), embedding
+    return adata.obs[key_added].copy(), adata.obsm[PCA_KEY]
 
 
 def subset_adata(
@@ -115,40 +107,27 @@ def subset_adata(
 
 def run_leiden_clustering_on_random_subset(
     sdata: sd.SpatialData,
+    adata_prepared: ad.AnnData,
     tables_key: str,
     resolution: float = 1.0,
     frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden",
     random_state: int = 42,
-    use_hvg: bool | None = None,
-    filter_zero_count_cells: bool = True,
     n_neighbors: int = 15,
-    n_pcs: int = 50,
-    target_sum: float | None = None,
-    adata_prepared: ad.AnnData | None = None,
     leiden_kwargs: dict | None = None,
 ):
     adata_full = sdata.tables[tables_key]
 
-    if adata_prepared is not None:
-        adata = adata_prepared
-    else:
-        adata = _filter_zero_count_cells(adata_full) if filter_zero_count_cells else adata_full
-        adata = _get_pca_and_neighbors(
-            adata,
-            n_neighbors=n_neighbors,
-            n_pcs=n_pcs,
-            target_sum=target_sum,
-            use_hvg=use_hvg,
-        )
-
     adata_subset, subset_label = subset_adata(
-        adata,
+        adata_prepared,
         frac_cells_subset=frac_cells_subset,
         random_state=random_state,
     )
 
-    key_added = f"{key_prefix}_{subset_label}_res{resolution}_seed{random_state}"
+    key_added = (
+        f"{key_prefix}_{subset_label}_"
+        f"res{resolution}_seed{random_state}"
+    )
 
     labels, pca = run_leiden_clustering_on_adata(
         adata_subset,
@@ -159,7 +138,10 @@ def run_leiden_clustering_on_random_subset(
         leiden_kwargs=leiden_kwargs,
     )
 
-    full_labels = pd.Series(index=adata_full.obs_names, dtype=object)
+    full_labels = pd.Series(
+        index=adata_full.obs_names,
+        dtype=object,
+    )
     full_labels.loc[adata_subset.obs_names] = labels.values
     adata_full.obs[key_added] = full_labels
 

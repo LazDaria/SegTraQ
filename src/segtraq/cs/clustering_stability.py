@@ -130,18 +130,14 @@ def cluster_connectedness(
 
     for res in resolution:
         _, _, labels = run_leiden_clustering_on_random_subset(
-            sdata,
+            sdata=sdata,
+            adata_prepared=adata,
             tables_key=tables_key,
             resolution=res,
-            frac_cells_subset=1.0,  # Use all non-zero-count cells
+            frac_cells_subset=1.0,
             key_prefix=key_prefix,
             random_state=random_state,
-            use_hvg=use_hvg,
-            filter_zero_count_cells=True,
             n_neighbors=n_neighbors,
-            n_pcs=n_pcs,
-            target_sum=target_sum,
-            adata_prepared=adata,
             leiden_kwargs=leiden_kwargs,
         )
         valid_labels = labels[~pd.isna(labels)]
@@ -261,20 +257,15 @@ def silhouette_score(
     else:
         key = "silhouette_score"
         for res in resolution:
-            # Run clustering for each resolution
             _, pca, labels = run_leiden_clustering_on_random_subset(
-                sdata,
+                sdata=sdata,
+                adata_prepared=adata,
                 tables_key=tables_key,
                 resolution=res,
-                frac_cells_subset=1.0,  # Use all cells
+                frac_cells_subset=1.0,
                 key_prefix=key_prefix,
                 random_state=random_state,
-                use_hvg=use_hvg,
-                filter_zero_count_cells=True,
                 n_neighbors=n_neighbors,
-                n_pcs=n_pcs,
-                target_sum=target_sum,
-                adata_prepared=adata,
                 leiden_kwargs=leiden_kwargs,
             )
 
@@ -346,13 +337,12 @@ def purity(
     for random_state in range(5):
         key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
+            adata_prepared=adata,
             tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
-            use_hvg=use_hvg,
             random_state=random_state,
-            adata_prepared=adata_prepared,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
@@ -425,13 +415,12 @@ def adjusted_rand_index(
     for random_state in range(5):
         key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
+            adata_prepared=adata,
             tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
-            use_hvg=use_hvg,
             random_state=random_state,
-            adata_prepared=adata_prepared,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
