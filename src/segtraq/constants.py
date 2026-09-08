@@ -14,6 +14,7 @@ PCA_KEY = "X_pca_segtraq"
 
 # ── Uns ───────────────────────────────────────────────────────────────────────
 NEIGHBORS_KEY = "neighbors_segtraq"
+PCA_NEIGHBORS_CONFIG_KEY = "pca_neighbors_config_segtraq"
 
 # ── Obsp ──────────────────────────────────────────────────────────────────────
 CONNECTIVITIES_KEY = "connectivities_segtraq"

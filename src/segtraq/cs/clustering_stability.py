@@ -337,7 +337,7 @@ def purity(
     for random_state in range(5):
         key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
-            adata_prepared=adata,
+            adata_prepared=adata_prepared,
             tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
@@ -415,7 +415,7 @@ def adjusted_rand_index(
     for random_state in range(5):
         key_added, _, _ = run_leiden_clustering_on_random_subset(
             sdata,
-            adata_prepared=adata,
+            adata_prepared=adata_prepared,
             tables_key=tables_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
