@@ -3277,7 +3277,7 @@ requires-dist = [
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'" },
-    { name = "squidpy", specifier = ">=1.6.2" },
+    { name = "squidpy", specifier = ">=1.8.3" },
     { name = "tqdm" },
     { name = "ty", marker = "extra == 'test'" },
     { name = "typer" },
@@ -3583,7 +3583,7 @@ wheels = [
 
 [[package]]
 name = "squidpy"
-version = "1.8.1"
+version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -3617,9 +3617,9 @@ dependencies = [
     { name = "xarray" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dc/76/e2b54dc1859c7779b49fa383db52a8b823d1f4d8576ee1ac317f24307678/squidpy-1.8.1.tar.gz", hash = "sha256:d692581ffe1d897605d0825eb40b786482bdf16a4c5f7d5e71ebe3fb46dfc7fd", size = 6127745, upload-time = "2026-02-09T13:29:13.589Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/d8/e635e473e4a7605bfcb7ff5f0e5ee977beadde7c388d147e002cd7b86a85/squidpy-1.8.3.tar.gz", hash = "sha256:66d90f47193707a872de0e700645f57ddd5c5bcb60c5b64b5a58648043231ede", size = 6115213, upload-time = "2026-06-29T11:52:53.612Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/99/81e01d2df1e0ce4e1b2f373527eddaabe3eac5a5ffc18bf3f3c4a2960f2c/squidpy-1.8.1-py3-none-any.whl", hash = "sha256:6ce56c96d640c719f566311af83ff5b91731a7020330499537f007e47e916fe3", size = 193867, upload-time = "2026-02-09T13:29:12.008Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/5c/3c5e524ee2aa8acdd05b298dd285ef7abbbdb3333b15e29738d34e0372bc/squidpy-1.8.3-py3-none-any.whl", hash = "sha256:05fd5da00db697e6d0dbb91ff543ff5b27d0046666ce5a7348548076b3310efc", size = 280536, upload-time = "2026-06-29T11:52:51.973Z" },
 ]
 
 [[package]]

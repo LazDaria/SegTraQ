@@ -168,7 +168,7 @@ plt.show()
 # %%
 ccs = {}
 for method, st in st_dict.items():
-    ccs[method] = st.cs.cluster_connectedness(use_weights=True, leiden_kwargs={"flavor": "igraph"})
+    ccs[method] = st.cs.cluster_connectedness(leiden_kwargs={"flavor": "igraph"})
 ccs
 
 # %% [markdown]

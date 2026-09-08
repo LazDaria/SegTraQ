@@ -88,12 +88,13 @@ def run_leiden_clustering_on_adata(
                 "Please set recompute_neighbors=True or ensure the required keys are present."
             )
 
+    # setting the default resolution to 2, but allowing the user to override it via leiden_kwargs
+    kwargs = {"n_iterations": 2, **(leiden_kwargs or {})}
     sc.tl.leiden(
         adata,
         resolution=resolution,
-        n_iterations=2,
         key_added=key_added,
-        **(leiden_kwargs or {}),
+        **kwargs,
     )
 
     if "X_pca" not in adata.obsm:
@@ -141,11 +142,16 @@ def run_leiden_clustering_on_random_subset(
     # i.e. if there are zero-cound cells or no result is cached
     recompute_neighbors = False
     adata_full = sdata.tables[tables_key]
+
     num_zero_count_cells = (
         (adata_full.X.sum(axis=1) == 0).sum() if sp.issparse(adata_full.X) else (adata_full.X.sum(axis=1) == 0).sum()
     )
     if num_zero_count_cells > 0 and filter_zero_count_cells:
         adata = _filter_zero_count_cells(adata_full)
+        recompute_neighbors = True
+    else:
+        adata = adata_full
+        # TODO: this is a hotfix, and should be fixed properly soon
         recompute_neighbors = True
 
     # --- Perform subsetting --- #

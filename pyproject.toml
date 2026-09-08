@@ -26,7 +26,7 @@ dependencies = [
   "geopandas",
   "rtree",
   "rasterio",
-  "squidpy>=1.6.2",
+  "squidpy>=1.8.3",
   "tqdm",
   "anndata>=0.12", # to support zarr v3
   "ovrlpy>=1.2.0",
