@@ -586,7 +586,7 @@ class SegTraQ:
     def run_clustering_stability(
         self,
         key_prefix: str = "leiden_subset",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         inplace: bool = True,
         connectedness_kwargs: dict | None = None,
         silhouette_kwargs: dict | None = None,
@@ -613,8 +613,9 @@ class SegTraQ:
         key_prefix : str, default="leiden_subset"
             Prefix for Leiden clustering labels written to `.obs` by the underlying
             methods (where applicable).
-        use_hvg: bool, optional
-            Whether to use highly variable genes (HVGs) for PCA. By default False.
+        use_hvg: bool or None, optional
+            If `None`, use 2,000 HVGs for PCA when the panel contains more than
+            8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
         inplace : bool, default=True
             If True, metrics are written to `sdata.tables["table"].uns` by the
             underlying methods and this function returns None. If False, the
@@ -1047,7 +1048,7 @@ class SegTraQ:
         gn_min: float = 5.0,
         gn_max: float = np.inf,
         cell_type_key: str = "transferred_cell_type",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
         inplace: bool = True,
     ):
@@ -1748,7 +1749,7 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1772,7 +1773,7 @@ class _CSFacade:
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1794,7 +1795,7 @@ class _CSFacade:
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1818,7 +1819,7 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ):

@@ -6,7 +6,8 @@ import scipy.sparse as sp
 import spatialdata as sd
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
-from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
+from ..constants import CONNECTIVITIES_KEY, DISTANCES_KEY, HVG_KEY, NEIGHBORS_KEY, PCA_KEY
+from ..utils import _get_pca_and_neighbors
 
 
 def _validate_resolution(resolution: list[float] | tuple[float, ...] | float | int) -> list[float]:
@@ -22,64 +23,51 @@ def _validate_resolution(resolution: list[float] | tuple[float, ...] | float | i
 
 def _filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
     """
-    Return a view of adata excluding cells with zero total counts.
-    Does NOT modify the original object.
+    Return an AnnData excluding cells with zero total counts.
+
+    If no zero-count cells are present, return the original object so existing
+    SegTraQ PCA/neighbors can be reused. If cells are removed, return a copy
+    and discard inherited HVG/PCA/neighbor state so it is recomputed on the
+    filtered cells.
     """
     if sp.issparse(adata.X):
-        total_counts = np.array(adata.X.sum(axis=1)).flatten()
+        total_counts = np.asarray(adata.X.sum(axis=1)).ravel()
     else:
-        total_counts = adata.X.sum(axis=1)
+        total_counts = np.asarray(adata.X.sum(axis=1)).ravel()
 
     mask = total_counts > 0
-    return adata[mask, :]
+    if mask.all():
+        return adata
+
+    adata_filtered = adata[mask, :].copy()
+    adata_filtered.var.drop(columns=[HVG_KEY], errors="ignore", inplace=True)
+    adata_filtered.obsm.pop(PCA_KEY, None)
+    adata_filtered.uns.pop(NEIGHBORS_KEY, None)
+    adata_filtered.obsp.pop(CONNECTIVITIES_KEY, None)
+    adata_filtered.obsp.pop(DISTANCES_KEY, None)
+    return adata_filtered
 
 
 def run_leiden_clustering_on_adata(
     adata_input,
     resolution: float = 1.0,
     key_added: str = "leiden",
-    use_hvg: bool = False,
     recompute_neighbors: bool = True,
+    n_neighbors: int = 15,
     leiden_kwargs: dict | None = None,
 ):
-    """
-    Run Leiden clustering on a provided AnnData object.
-
-    Parameters
-    ----------
-    adata_input : AnnData
-        The AnnData object to cluster (can be a subset of cells).
-    resolution : float
-        Resolution parameter for Leiden.
-    key_added : str
-        Key under which to store clustering result in `.obs`.
-    use_hvg: bool, optional
-        Whether to use highly variable genes (HVGs) for PCA. By default False.
-    recompute_neighbors : bool
-        Whether to recompute neighbors before clustering.
-    leiden_kwargs : dict, optional
-        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
-        For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-
-    Returns
-    -------
-    labels : pd.Series
-        The Leiden cluster labels.
-    embedding : np.ndarray or None
-        The PCA embedding used for clustering, or None if not available.
-    """
+    """Run Leiden clustering using a PCA that has already been computed."""
     adata = adata_input.copy()
 
     if recompute_neighbors:
-        # we do not use _compute_pca_and_neighbors() here since we want to allow using HVGs for PCA if desired
-        # in this case, we explicitly do not want to use and cached results
-        sc.pp.pca(adata, mask_var="highly_variable" if use_hvg else None)
-        sc.pp.neighbors(adata)
+        if PCA_KEY not in adata.obsm:
+            raise ValueError(
+                f"Cannot recompute neighbors because {PCA_KEY!r} is missing from `adata.obsm`. "
+                "Compute PCA before cell subsetting."
+            )
+        sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep=PCA_KEY)
     else:
         if PCA_KEY in adata.obsm and NEIGHBORS_KEY in adata.uns and CONNECTIVITIES_KEY in adata.obsp:
-            # since we copied the anndata object,
-            # we can set the neighbors and connectivities without modifying the original adata
-            adata.obsm["X_pca"] = adata.obsm[PCA_KEY]
             adata.uns["neighbors"] = adata.uns[NEIGHBORS_KEY]
             adata.obsp["connectivities"] = adata.obsp[CONNECTIVITIES_KEY]
         else:
@@ -96,11 +84,7 @@ def run_leiden_clustering_on_adata(
         **(leiden_kwargs or {}),
     )
 
-    if "X_pca" not in adata.obsm:
-        embedding = None
-    else:
-        embedding = adata.obsm["X_pca"]
-
+    embedding = adata.obsm[PCA_KEY] if PCA_KEY in adata.obsm else None
     return adata.obs[key_added].copy(), embedding
 
 
@@ -122,6 +106,9 @@ def subset_adata(
             "Please increase frac_cells_subset or provide more cells."
         )
 
+    if n_cells_subset == n_cells:
+        return adata.copy(), f"cells{n_cells_subset}"
+
     cell_idx = rng.choice(n_cells, size=n_cells_subset, replace=False)
     return adata[cell_idx, :], f"cells{n_cells_subset}"
 
@@ -133,22 +120,28 @@ def run_leiden_clustering_on_random_subset(
     frac_cells_subset: float = 0.63,
     key_prefix: str = "leiden",
     random_state: int = 42,
-    use_hvg: bool = False,
+    use_hvg: bool | None = None,
     filter_zero_count_cells: bool = True,
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
+    adata_prepared: ad.AnnData | None = None,
     leiden_kwargs: dict | None = None,
 ):
-    # neighbors are only recomputed when necessary,
-    # i.e. if there are zero-cound cells or no result is cached
-    recompute_neighbors = False
     adata_full = sdata.tables[tables_key]
-    num_zero_count_cells = (
-        (adata_full.X.sum(axis=1) == 0).sum() if sp.issparse(adata_full.X) else (adata_full.X.sum(axis=1) == 0).sum()
-    )
-    if num_zero_count_cells > 0 and filter_zero_count_cells:
-        adata = _filter_zero_count_cells(adata_full)
-        recompute_neighbors = True
 
-    # --- Perform subsetting --- #
+    if adata_prepared is not None:
+        adata = adata_prepared
+    else:
+        adata = _filter_zero_count_cells(adata_full) if filter_zero_count_cells else adata_full
+        adata = _get_pca_and_neighbors(
+            adata,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            target_sum=target_sum,
+            use_hvg=use_hvg,
+        )
+
     adata_subset, subset_label = subset_adata(
         adata,
         frac_cells_subset=frac_cells_subset,
@@ -157,18 +150,15 @@ def run_leiden_clustering_on_random_subset(
 
     key_added = f"{key_prefix}_{subset_label}_res{resolution}_seed{random_state}"
 
-    # Run Leiden clustering
     labels, pca = run_leiden_clustering_on_adata(
         adata_subset,
         resolution=resolution,
         key_added=key_added,
-        use_hvg=use_hvg,
-        recompute_neighbors=recompute_neighbors,
+        recompute_neighbors=frac_cells_subset < 1.0,
+        n_neighbors=n_neighbors,
         leiden_kwargs=leiden_kwargs,
     )
 
-    # Store labels in the full AnnData
-    # For cell subsetting, missing cells get NaN
     full_labels = pd.Series(index=adata_full.obs_names, dtype=object)
     full_labels.loc[adata_subset.obs_names] = labels.values
     adata_full.obs[key_added] = full_labels

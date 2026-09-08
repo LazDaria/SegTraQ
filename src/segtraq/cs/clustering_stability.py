@@ -5,10 +5,11 @@ import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
-from ..constants import CONNECTIVITIES_KEY, NEIGHBORS_KEY, PCA_KEY
+from ..constants import CONNECTIVITIES_KEY, PCA_KEY
 from ..utils import _get_pca_and_neighbors, merge_into_uns
 from .utils import (
     _cluster_connectedness,
+    _filter_zero_count_cells,
     _validate_resolution,
     ari_mean,
     ari_pairwise,
@@ -16,6 +17,28 @@ from .utils import (
     purity_pairwise,
     run_leiden_clustering_on_random_subset,
 )
+
+
+def _prepare_cs_adata(
+    sdata: sd.SpatialData,
+    tables_key: str,
+    use_hvg: bool | None,
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
+):
+    """Prepare non-zero-count cells while reusing stored PCA when possible."""
+    adata = _filter_zero_count_cells(sdata.tables[tables_key])
+    if adata.n_obs < 2:
+        raise ValueError("Fewer than two non-zero-count cells remain for clustering stability analysis.")
+
+    return _get_pca_and_neighbors(
+        adata,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        target_sum=target_sum,
+        use_hvg=use_hvg,
+    )
 
 
 def cluster_connectedness(
@@ -26,7 +49,7 @@ def cluster_connectedness(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
-    use_hvg: bool = False,
+    use_hvg: bool | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -55,8 +78,9 @@ def cluster_connectedness(
         Seed for reproducibility, by default 42.
     cell_type_key : str, optional
         If provided, compute cluster connectedness for this clustering only.
-    use_hvg: bool, optional
-        Whether to use highly variable genes (HVGs) for PCA. By default False.
+    use_hvg: bool or None, optional
+        If `None`, use 2,000 HVGs for PCA when the panel contains more than
+        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -75,7 +99,14 @@ def cluster_connectedness(
     float
         The best (highest) cluster connectedness across resolutions.
     """
-    adata = sdata.tables[tables_key]
+    adata = _prepare_cs_adata(
+        sdata,
+        tables_key=tables_key,
+        use_hvg=use_hvg,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        target_sum=target_sum,
+    )
     # transforming the resolutions into a list if it is not already one
     resolution = _validate_resolution(resolution)
 
@@ -88,9 +119,6 @@ def cluster_connectedness(
         labels = adata.obs[cell_type_key].values
         valid_labels = labels[~pd.isna(labels)]
         if len(pd.unique(valid_labels)) > 1:
-            if CONNECTIVITIES_KEY not in adata.obsp:
-                adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
-                sdata.tables[tables_key] = adata
             distance_val = _cluster_connectedness(
                 adata.obsp[CONNECTIVITIES_KEY],
                 labels,
@@ -100,33 +128,28 @@ def cluster_connectedness(
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
-    if NEIGHBORS_KEY not in adata.uns:
-        adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
-        sdata.tables[tables_key] = adata
-
     for res in resolution:
-        key_added, _, _ = run_leiden_clustering_on_random_subset(
+        _, _, labels = run_leiden_clustering_on_random_subset(
             sdata,
             tables_key=tables_key,
             resolution=res,
-            frac_cells_subset=1.0,  # Use all cells
+            frac_cells_subset=1.0,  # Use all non-zero-count cells
             key_prefix=key_prefix,
             random_state=random_state,
             use_hvg=use_hvg,
             filter_zero_count_cells=True,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            target_sum=target_sum,
+            adata_prepared=adata,
             leiden_kwargs=leiden_kwargs,
         )
-        labels = adata.obs[key_added].values
-        valid_mask = ~pd.isna(labels)
-        valid_labels = labels[valid_mask]
+        valid_labels = labels[~pd.isna(labels)]
 
         if len(pd.unique(valid_labels)) > 1:
-            # Slice connectivity matrix to valid cells only — both rows AND columns
-            connectivity_subset = adata.obsp[CONNECTIVITIES_KEY][np.ix_(valid_mask, valid_mask)]
-
             distance_val = _cluster_connectedness(
-                connectivity_subset,
-                valid_labels,
+                adata.obsp[CONNECTIVITIES_KEY],
+                labels,
                 use_weights=use_weights,
             )
             if np.isnan(best_distance) or distance_val > best_distance:
@@ -151,7 +174,7 @@ def silhouette_score(
     key_prefix: str = "leiden_subset",
     random_state: int = 42,
     cell_type_key: str | None = None,
-    use_hvg: bool = False,
+    use_hvg: bool | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -178,8 +201,9 @@ def silhouette_score(
         Seed for reproducibility, by default 42.
     cell_type_key : str, optional
         If provided, compute the silhouette score for provided labels.
-    use_hvg: bool, optional
-        Whether to use highly variable genes (HVGs) for PCA. By default False.
+    use_hvg: bool or None, optional
+        If `None`, use 2,000 HVGs for PCA when the panel contains more than
+        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -198,7 +222,14 @@ def silhouette_score(
     float
         The silhouette score of the clustering.
     """
-    adata = sdata.tables[tables_key]
+    adata = _prepare_cs_adata(
+        sdata,
+        tables_key=tables_key,
+        use_hvg=use_hvg,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        target_sum=target_sum,
+    )
     key = None
 
     best_silhouette_score = np.nan
@@ -213,9 +244,6 @@ def silhouette_score(
 
         labels_nn = adata.obs[cell_type_key].dropna()
         if labels_nn.nunique() > 1:  # Ensure more than one cluster exists
-            if PCA_KEY not in adata.obsm:
-                adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
-                sdata.tables[tables_key] = adata
             # remove NaN labels
             adata_subset = adata[~pd.isna(adata.obs[cell_type_key]), :]
             labels = adata_subset.obs[cell_type_key].values
@@ -231,12 +259,6 @@ def silhouette_score(
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     else:
-        # ensure that we already have neighbors computed
-        # this way we avoid recomputing neighbors multiple times (for the different resolutions)
-        if NEIGHBORS_KEY not in adata.uns:
-            adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
-            sdata.tables[tables_key] = adata
-
         key = "silhouette_score"
         for res in resolution:
             # Run clustering for each resolution
@@ -249,15 +271,14 @@ def silhouette_score(
                 random_state=random_state,
                 use_hvg=use_hvg,
                 filter_zero_count_cells=True,
+                n_neighbors=n_neighbors,
+                n_pcs=n_pcs,
+                target_sum=target_sum,
+                adata_prepared=adata,
                 leiden_kwargs=leiden_kwargs,
             )
 
             if len(pd.unique(labels)) > 1:  # Ensure more than one cluster exists
-                if pca is None:
-                    adata = _get_pca_and_neighbors(adata, n_neighbors=n_neighbors, n_pcs=n_pcs, target_sum=target_sum)
-                    sdata.tables[tables_key] = adata
-                    pca = adata.obsm[PCA_KEY]
-
                 silhouette_avg = _silhouette_score(pca, labels, metric=metric)
 
                 if np.isnan(best_silhouette_score) or silhouette_avg > best_silhouette_score:
@@ -281,7 +302,7 @@ def purity(
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
-    use_hvg: bool = False,
+    use_hvg: bool | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -300,8 +321,9 @@ def purity(
         The fraction of cells to subset for clustering, by default 0.63.
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
-    use_hvg: bool, optional
-        Whether to use highly variable genes (HVGs) for PCA. By default False.
+    use_hvg: bool or None, optional
+        If `None`, use 2,000 HVGs for PCA when the panel contains more than
+        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -314,6 +336,11 @@ def purity(
         The average pairwise purity across the specified cluster keys.
     """
     adata = sdata.tables[tables_key]
+    adata_prepared = _prepare_cs_adata(
+        sdata,
+        tables_key=tables_key,
+        use_hvg=use_hvg,
+    )
     cluster_keys = []
 
     for random_state in range(5):
@@ -325,6 +352,7 @@ def purity(
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             random_state=random_state,
+            adata_prepared=adata_prepared,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
@@ -352,7 +380,7 @@ def adjusted_rand_index(
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
-    use_hvg: bool = False,
+    use_hvg: bool | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -371,8 +399,9 @@ def adjusted_rand_index(
         The key in sdata.tables where the relevant AnnData is stored, by default "table".
     key_prefix : str, optional
         The prefix for the keys under which the clustering results are stored, by default "leiden_subset".
-    use_hvg: bool, optional
-        Whether to use highly variable genes (HVGs) for PCA. By default False.
+    use_hvg: bool or None, optional
+        If `None`, use 2,000 HVGs for PCA when the panel contains more than
+        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -385,6 +414,11 @@ def adjusted_rand_index(
         The average pairwise ARI across the specified cluster keys.
     """
     adata = sdata.tables[tables_key]
+    adata_prepared = _prepare_cs_adata(
+        sdata,
+        tables_key=tables_key,
+        use_hvg=use_hvg,
+    )
     cluster_keys = []
 
     # Run clustering on random subsets of genes
@@ -397,6 +431,7 @@ def adjusted_rand_index(
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             random_state=random_state,
+            adata_prepared=adata_prepared,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)

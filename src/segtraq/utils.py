@@ -33,7 +33,17 @@ from spatialdata.transformations import (
 
 from ._settings import settings
 from .bl import baseline as bl
-from .constants import CONNECTIVITIES_KEY, DISTANCES_KEY, NEIGHBORS_KEY, NORM_LOG_LAYER, PCA_KEY, SEGTRAQ_CELL_ID_KEY
+from .constants import (
+    CONNECTIVITIES_KEY,
+    DISTANCES_KEY,
+    HVG_KEY,
+    HVG_PANEL_SIZE_THRESHOLD,
+    NEIGHBORS_KEY,
+    NORM_LOG_LAYER,
+    N_HVG,
+    PCA_KEY,
+    SEGTRAQ_CELL_ID_KEY,
+)
 
 
 def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
@@ -65,12 +75,56 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
     return np.all(samp >= 0) and np.allclose(samp, np.round(samp), atol=tol)
 
 
+def _resolve_use_hvg(n_genes: int, use_hvg: bool | None) -> bool:
+    """Resolve whether HVGs should be used based on panel size and user override."""
+    if use_hvg is None:
+        return n_genes > HVG_PANEL_SIZE_THRESHOLD
+    return use_hvg
+
+
+def _compute_hvg_mask(
+    adata: AnnData,
+    *,
+    n_top_genes: int = N_HVG,
+    exclude_gene_prefixes: tuple[str, ...] = (),
+) -> np.ndarray:
+    """Compute an HVG mask from SegTraQ's normalized-log expression layer."""
+    if NORM_LOG_LAYER not in adata.layers:
+        raise KeyError(f"{NORM_LOG_LAYER!r} not found in `adata.layers`.")
+
+    tmp = AnnData(
+        X=adata.layers[NORM_LOG_LAYER].copy(),
+        var=adata.var.copy(),
+    )
+    sc.pp.highly_variable_genes(
+        tmp,
+        flavor="seurat",
+        n_top_genes=min(n_top_genes, tmp.n_vars),
+        inplace=True,
+    )
+
+    mask = tmp.var["highly_variable"].to_numpy().copy()
+
+    if exclude_gene_prefixes:
+        genes = np.asarray(adata.var_names.astype(str))
+        excluded = np.array(
+            [
+                any(g.upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes)
+                for g in genes
+            ]
+        )
+        mask &= ~excluded
+
+    return mask
+
+
 def _get_pca_and_neighbors(
     adata: AnnData,
     raw_layer: str | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = 1e4,
+    use_hvg: bool | None = None,
 ) -> AnnData:
     """
     Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
@@ -78,6 +132,7 @@ def _get_pca_and_neighbors(
     All results are stored under namespaced keys so they can be
     distinguished from any externally-computed PCA/neighbors:
     - adata.layers[NORM_LOG_LAYER]
+    - adata.var[HVG_KEY] if HVGs are used
     - adata.obsm[PCA_KEY]
     - adata.uns[NEIGHBORS_KEY]
     - adata.obsp[CONNECTIVITIES_KEY], adata.obsp[DISTANCES_KEY]
@@ -94,28 +149,38 @@ def _get_pca_and_neighbors(
     target_sum: float or None
         If not None, passed as `target_sum` to `sc.pp.normalize_total` when
         computing the norm_log layer. Ignored if the norm_log layer already exists.
+    use_hvg : bool or None, default=None
+        If `None`, use HVGs automatically when the panel contains more than
+        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
 
     Returns
     -------
     AnnData
         The same object (modified in place), returned for convenience.
     """
-    # Step 1: ensure norm_log layer exists
     adata = _get_norm_log(adata, layer=raw_layer, target_sum=target_sum)
 
-    # Step 2: PCA on norm_log if not already done by this pipeline
+    resolved_use_hvg = _resolve_use_hvg(adata.n_vars, use_hvg)
+    if resolved_use_hvg and HVG_KEY not in adata.var:
+        adata.var[HVG_KEY] = _compute_hvg_mask(adata)
+
     if PCA_KEY not in adata.obsm:
-        tmp = AnnData(X=adata.layers[NORM_LOG_LAYER].copy())
-        sc.pp.pca(tmp, n_comps=n_pcs)
+        tmp = AnnData(
+            X=adata.layers[NORM_LOG_LAYER].copy(),
+            var=adata.var.copy(),
+        )
+        sc.pp.pca(
+            tmp,
+            n_comps=n_pcs,
+            mask_var=HVG_KEY if resolved_use_hvg else None,
+        )
         adata.obsm[PCA_KEY] = tmp.obsm["X_pca"]
 
-    # Step 3: neighbor graph on pipeline PCA if not already done
     if NEIGHBORS_KEY not in adata.uns:
         tmp = AnnData(X=adata.layers[NORM_LOG_LAYER].copy())
         tmp.obsm["X_pca"] = adata.obsm[PCA_KEY]
         sc.pp.neighbors(tmp, n_neighbors=n_neighbors, n_pcs=n_pcs)
 
-        # Store under namespaced keys
         adata.uns[NEIGHBORS_KEY] = tmp.uns["neighbors"]
         adata.obsp[CONNECTIVITIES_KEY] = tmp.obsp["connectivities"]
         adata.obsp[DISTANCES_KEY] = tmp.obsp["distances"]
@@ -435,7 +500,7 @@ def run_label_transfer(
     gn_max: float = np.inf,
     cell_type_key: str = "transferred_cell_type",
     ref_gene_key: str | None = None,
-    use_hvg: bool = False,
+    use_hvg: bool | None = None,
     exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
     inplace: bool = True,
 ) -> pd.DataFrame | None:
@@ -490,9 +555,10 @@ def run_label_transfer(
     ref_gene_key : str or None, default=None
         Column in `adata_ref.var` containing gene identifiers.
         If `None`, `adata_ref.var_names` are used.
-    use_hvg : bool, default=False
-        If `True`, restrict label transfer to highly variable genes computed
-        from the reference dataset.
+    use_hvg : bool or None, default=None
+        If `None`, restrict label transfer to 2,000 highly variable genes when
+        more than 8,000 genes are shared between query and reference. If
+        `True`, always use HVGs. If `False`, always use all shared genes.
     exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
         Gene prefixes to exclude from the HVG set before label transfer. Set to
         an empty tuple to disable this filtering.
@@ -572,27 +638,23 @@ def run_label_transfer(
     ref_mean_df = norm_log_counts_df.groupby("celltype", observed=True).mean()
 
     genes_to_use = None
+    query_genes = _get_genes(adata_q, query_gene_key)
+    common_genes = adata_ref.var_names.intersection(query_genes)
 
-    if use_hvg:
-        sc.pp.highly_variable_genes(
-            adata_ref,
-            flavor="seurat",
-            n_top_genes=2000,
-            layer=NORM_LOG_LAYER,
-            inplace=True,
+    if len(common_genes) == 0:
+        raise ValueError("No common genes found between query and reference.")
+
+    resolved_use_hvg = _resolve_use_hvg(len(common_genes), use_hvg)
+
+    if resolved_use_hvg:
+        # Compute HVGs only within the gene universe that can actually be used
+        # for query-reference correlation.
+        ref_common = adata_ref[:, adata_ref.var_names.isin(common_genes)].copy()
+        hvg_mask = _compute_hvg_mask(
+            ref_common,
+            exclude_gene_prefixes=exclude_gene_prefixes,
         )
-
-        ref_hvg_mask = adata_ref.var["highly_variable"].to_numpy()
-        hvgs = set(genes[ref_hvg_mask])
-
-        if exclude_gene_prefixes:
-            hvgs = {
-                g
-                for g in hvgs
-                if not any(str(g).upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes)
-            }
-
-        genes_to_use = hvgs
+        genes_to_use = set(ref_common.var_names[hvg_mask])
 
     # using the normalized and log-transformed data for label transfer
     adata_q.X = adata_q.layers[NORM_LOG_LAYER]
