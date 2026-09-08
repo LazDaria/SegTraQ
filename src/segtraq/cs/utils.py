@@ -151,6 +151,8 @@ def run_leiden_clustering_on_random_subset(
         recompute_neighbors = True
     else:
         adata = adata_full
+        # TODO: this is a hotfix, and should be fixed properly soon
+        recompute_neighbors = True
 
     # --- Perform subsetting --- #
     adata_subset, subset_label = subset_adata(
