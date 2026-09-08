@@ -88,12 +88,13 @@ def run_leiden_clustering_on_adata(
                 "Please set recompute_neighbors=True or ensure the required keys are present."
             )
 
+    # setting the default resolution to 2, but allowing the user to override it via leiden_kwargs
+    kwargs = {"n_iterations": 2, **(leiden_kwargs or {})}
     sc.tl.leiden(
         adata,
         resolution=resolution,
-        n_iterations=2,
         key_added=key_added,
-        **(leiden_kwargs or {}),
+        **kwargs,
     )
 
     if "X_pca" not in adata.obsm:
