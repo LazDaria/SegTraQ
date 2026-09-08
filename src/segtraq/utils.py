@@ -42,7 +42,6 @@ from .constants import (
     NORM_LOG_LAYER,
     N_HVG,
     PCA_KEY,
-    PCA_NEIGHBORS_CONFIG_KEY,
     SEGTRAQ_CELL_ID_KEY,
 )
 
@@ -162,24 +161,6 @@ def _get_pca_and_neighbors(
     adata = _get_norm_log(adata, layer=raw_layer, target_sum=target_sum)
 
     resolved_use_hvg = _resolve_use_hvg(adata.n_vars, use_hvg)
-
-    config = {
-        "use_hvg": resolved_use_hvg,
-        "n_pcs": n_pcs,
-        "n_neighbors": n_neighbors,
-        "target_sum": target_sum,
-        "raw_layer": raw_layer,
-    }
-
-    cached_config = adata.uns.get(PCA_NEIGHBORS_CONFIG_KEY)
-
-    if cached_config != config:
-        adata.var.drop(columns=[HVG_KEY], errors="ignore", inplace=True)
-        adata.obsm.pop(PCA_KEY, None)
-        adata.uns.pop(NEIGHBORS_KEY, None)
-        adata.obsp.pop(CONNECTIVITIES_KEY, None)
-        adata.obsp.pop(DISTANCES_KEY, None)
-
     if resolved_use_hvg and HVG_KEY not in adata.var:
         adata.var[HVG_KEY] = _compute_hvg_mask(adata)
 
