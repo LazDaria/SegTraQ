@@ -141,12 +141,15 @@ def run_leiden_clustering_on_random_subset(
     # i.e. if there are zero-cound cells or no result is cached
     recompute_neighbors = False
     adata_full = sdata.tables[tables_key]
+
     num_zero_count_cells = (
         (adata_full.X.sum(axis=1) == 0).sum() if sp.issparse(adata_full.X) else (adata_full.X.sum(axis=1) == 0).sum()
     )
     if num_zero_count_cells > 0 and filter_zero_count_cells:
         adata = _filter_zero_count_cells(adata_full)
         recompute_neighbors = True
+    else:
+        adata = adata_full
 
     # --- Perform subsetting --- #
     adata_subset, subset_label = subset_adata(
