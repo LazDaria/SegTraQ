@@ -698,7 +698,6 @@ plt.show()
 # %%
 mecr = st.sp.mutually_exclusive_coexpression_rate(
     markers=markers,
-    pseudocount=0.5,
     inplace=True,
 )
 

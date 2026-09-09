@@ -7,7 +7,6 @@ NORM_LOG_LAYER = "norm_log_segtraq"
 # ── Highly variable genes ─────────────────────────────────────────────────────
 HVG_KEY = "highly_variable_segtraq"
 HVG_PANEL_SIZE_THRESHOLD = 8_000
-N_HVG = 2_000
 
 # ── Obsm ──────────────────────────────────────────────────────────────────────
 PCA_KEY = "X_pca_segtraq"

@@ -6,10 +6,10 @@ import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
 from ..constants import CONNECTIVITIES_KEY, PCA_KEY
-from ..utils import _get_pca_and_neighbors, merge_into_uns
+from ..utils import merge_into_uns
 from .utils import (
     _cluster_connectedness,
-    _filter_zero_count_cells,
+    _prepare_cs_adata,
     _validate_resolution,
     ari_mean,
     ari_pairwise,
@@ -17,28 +17,6 @@ from .utils import (
     purity_pairwise,
     run_leiden_clustering_on_random_subset,
 )
-
-
-def _prepare_cs_adata(
-    sdata: sd.SpatialData,
-    tables_key: str,
-    use_hvg: bool | None,
-    n_neighbors: int = 15,
-    n_pcs: int = 50,
-    target_sum: float | None = None,
-):
-    """Prepare non-zero-count cells while reusing stored PCA when possible."""
-    adata = _filter_zero_count_cells(sdata.tables[tables_key])
-    if adata.n_obs < 2:
-        raise ValueError("Fewer than two non-zero-count cells remain for clustering stability analysis.")
-
-    return _get_pca_and_neighbors(
-        adata,
-        n_neighbors=n_neighbors,
-        n_pcs=n_pcs,
-        target_sum=target_sum,
-        use_hvg=use_hvg,
-    )
 
 
 def cluster_connectedness(
@@ -50,6 +28,7 @@ def cluster_connectedness(
     random_state: int = 42,
     cell_type_key: str | None = None,
     use_hvg: bool | None = None,
+    exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -81,6 +60,9 @@ def cluster_connectedness(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+    exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
+        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
+        not used.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -103,6 +85,7 @@ def cluster_connectedness(
         sdata,
         tables_key=tables_key,
         use_hvg=use_hvg,
+        exclude_gene_prefixes=exclude_gene_prefixes,
         n_neighbors=n_neighbors,
         n_pcs=n_pcs,
         target_sum=target_sum,
@@ -171,6 +154,7 @@ def silhouette_score(
     random_state: int = 42,
     cell_type_key: str | None = None,
     use_hvg: bool | None = None,
+    exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -200,6 +184,9 @@ def silhouette_score(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+    exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
+        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
+        not used.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -222,6 +209,7 @@ def silhouette_score(
         sdata,
         tables_key=tables_key,
         use_hvg=use_hvg,
+        exclude_gene_prefixes=exclude_gene_prefixes,
         n_neighbors=n_neighbors,
         n_pcs=n_pcs,
         target_sum=target_sum,
@@ -294,6 +282,10 @@ def purity(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool | None = None,
+    exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -315,6 +307,16 @@ def purity(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+    exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
+        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
+        not used.
+    n_neighbors: int, optional
+        Number of neighbors to use for computing the connectivity matrix. Default is 15.
+    n_pcs: int, optional
+        Number of principal components to compute for PCA. Default is 50.
+    target_sum: float | None, optional
+        Target sum for normalization in `scanpy.pp.normalize_total()` before PCA.
+        Default is None.
     inplace : bool, optional
         Whether to store the computed purity in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -331,6 +333,10 @@ def purity(
         sdata,
         tables_key=tables_key,
         use_hvg=use_hvg,
+        exclude_gene_prefixes=exclude_gene_prefixes,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        target_sum=target_sum,
     )
     cluster_keys = []
 
@@ -343,6 +349,7 @@ def purity(
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
             random_state=random_state,
+            n_neighbors=n_neighbors,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)
@@ -371,6 +378,10 @@ def adjusted_rand_index(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool | None = None,
+    exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
 ) -> float:
@@ -392,6 +403,16 @@ def adjusted_rand_index(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+    exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
+        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
+        not used.
+    n_neighbors: int, optional
+        Number of neighbors to use for computing the connectivity matrix. Default is 15.
+    n_pcs: int, optional
+        Number of principal components to compute for PCA. Default is 50.
+    target_sum: float | None, optional
+        Target sum for normalization in `scanpy.pp.normalize_total()` before PCA.
+        Default is None.
     inplace : bool, optional
         Whether to store the computed ARI in sdata.uns, by default True.
     leiden_kwargs : dict, optional
@@ -408,6 +429,10 @@ def adjusted_rand_index(
         sdata,
         tables_key=tables_key,
         use_hvg=use_hvg,
+        exclude_gene_prefixes=exclude_gene_prefixes,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        target_sum=target_sum,
     )
     cluster_keys = []
 
@@ -421,6 +446,7 @@ def adjusted_rand_index(
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
             random_state=random_state,
+            n_neighbors=n_neighbors,
             leiden_kwargs=leiden_kwargs,
         )
         cluster_keys.append(key_added)

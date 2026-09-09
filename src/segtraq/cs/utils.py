@@ -4,10 +4,125 @@ import pandas as pd
 import scanpy as sc
 import scipy.sparse as sp
 import spatialdata as sd
+from anndata import AnnData
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
-from ..constants import CONNECTIVITIES_KEY, DISTANCES_KEY, HVG_KEY, NEIGHBORS_KEY, PCA_KEY
-from ..utils import _get_pca_and_neighbors
+from ..constants import (
+    CONNECTIVITIES_KEY,
+    DISTANCES_KEY,
+    HVG_KEY,
+    NEIGHBORS_KEY,
+    NORM_LOG_LAYER,
+    PCA_KEY,
+)
+from ..utils import (
+    _compute_hvg_mask,
+    _get_norm_log,
+    _resolve_use_hvg,
+)
+
+
+def _get_pca_and_neighbors(
+    adata: AnnData,
+    raw_layer: str | None = None,
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = 1e4,
+    use_hvg: bool | None = None,
+    exclude_gene_prefixes: tuple[str, ...] = (),
+) -> AnnData:
+    """
+    Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
+
+    All results are stored under namespaced keys so they can be
+    distinguished from any externally-computed PCA/neighbors:
+    - adata.layers[NORM_LOG_LAYER]
+    - adata.var[HVG_KEY] if HVGs are used
+    - adata.obsm[PCA_KEY]
+    - adata.uns[NEIGHBORS_KEY]
+    - adata.obsp[CONNECTIVITIES_KEY], adata.obsp[DISTANCES_KEY]
+
+    Parameters
+    ----------
+    adata : AnnData
+    raw_layer : str or None
+        Layer with raw counts. None → use `.X`.
+    n_neighbors: int
+        Number of neighbors for `sc.pp.neighbors`.
+    n_pcs: int
+        Number of PCs for `sc.pp.pca` and `sc.pp.neighbors`.
+    target_sum: float or None
+        If not None, passed as `target_sum` to `sc.pp.normalize_total` when
+        computing the norm_log layer. Ignored if the norm_log layer already exists.
+    use_hvg : bool or None, default=None
+        If `None`, use HVGs automatically when the panel contains more than
+        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+    exclude_gene_prefixes : tuple of str, default=()
+        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
+        not used.
+
+    Returns
+    -------
+    AnnData
+        The same object (modified in place), returned for convenience.
+    """
+    adata = _get_norm_log(
+        adata,
+        layer=raw_layer,
+        target_sum=target_sum,
+    )
+
+    resolved_use_hvg = _resolve_use_hvg(
+        adata.n_vars,
+        use_hvg,
+    )
+
+    if resolved_use_hvg and HVG_KEY not in adata.var:
+        adata.var[HVG_KEY] = _compute_hvg_mask(adata, exclude_gene_prefixes=exclude_gene_prefixes)
+
+    if PCA_KEY not in adata.obsm:
+        sc.pp.pca(
+            adata,
+            n_comps=n_pcs,
+            layer=NORM_LOG_LAYER,
+            mask_var=HVG_KEY if resolved_use_hvg else None,
+            key_added=PCA_KEY,
+        )
+
+    if NEIGHBORS_KEY not in adata.uns:
+        sc.pp.neighbors(
+            adata,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            use_rep=PCA_KEY,
+            key_added=NEIGHBORS_KEY,
+        )
+
+    return adata
+
+
+def _prepare_cs_adata(
+    sdata: sd.SpatialData,
+    tables_key: str,
+    use_hvg: bool | None,
+    exclude_gene_prefixes: tuple[str, ...] = (),
+    n_neighbors: int = 15,
+    n_pcs: int = 50,
+    target_sum: float | None = None,
+):
+    """Prepare non-zero-count cells while reusing stored PCA when possible."""
+    adata = _filter_zero_count_cells(sdata.tables[tables_key])
+    if adata.n_obs < 2:
+        raise ValueError("Fewer than two non-zero-count cells remain for clustering stability analysis.")
+
+    return _get_pca_and_neighbors(
+        adata,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        target_sum=target_sum,
+        use_hvg=use_hvg,
+        exclude_gene_prefixes=exclude_gene_prefixes,
+    )
 
 
 def _validate_resolution(resolution: list[float] | tuple[float, ...] | float | int) -> list[float]:
@@ -30,10 +145,7 @@ def _filter_zero_count_cells(adata: ad.AnnData) -> ad.AnnData:
     and discard inherited HVG/PCA/neighbor state so it is recomputed on the
     filtered cells.
     """
-    if sp.issparse(adata.X):
-        total_counts = np.asarray(adata.X.sum(axis=1)).ravel()
-    else:
-        total_counts = np.asarray(adata.X.sum(axis=1)).ravel()
+    total_counts = np.asarray(adata.X.sum(axis=1)).ravel()
 
     mask = total_counts > 0
     if mask.all():
@@ -155,10 +267,7 @@ def run_leiden_clustering_on_random_subset(
         random_state=random_state,
     )
 
-    key_added = (
-        f"{key_prefix}_{subset_label}_"
-        f"res{resolution}_seed{random_state}"
-    )
+    key_added = f"{key_prefix}_{subset_label}_res{resolution}_seed{random_state}"
 
     labels = run_leiden_clustering_on_adata(
         adata_subset,

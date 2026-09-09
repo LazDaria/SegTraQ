@@ -34,14 +34,7 @@ from spatialdata.transformations import (
 from ._settings import settings
 from .bl import baseline as bl
 from .constants import (
-    CONNECTIVITIES_KEY,
-    DISTANCES_KEY,
-    HVG_KEY,
-    HVG_PANEL_SIZE_THRESHOLD,
-    NEIGHBORS_KEY,
     NORM_LOG_LAYER,
-    N_HVG,
-    PCA_KEY,
     SEGTRAQ_CELL_ID_KEY,
 )
 
@@ -78,14 +71,14 @@ def _looks_like_counts(x, n: int = 1000, tol: float = 1e-8) -> bool:
 def _resolve_use_hvg(n_genes: int, use_hvg: bool | None) -> bool:
     """Resolve whether HVGs should be used based on panel size and user override."""
     if use_hvg is None:
-        return n_genes > HVG_PANEL_SIZE_THRESHOLD
+        return n_genes > 8000
     return use_hvg
 
 
 def _compute_hvg_mask(
     adata: AnnData,
     *,
-    n_top_genes: int = N_HVG,
+    n_top_genes: int = 200,
     exclude_gene_prefixes: tuple[str, ...] = (),
 ) -> np.ndarray:
     """Compute an HVG mask from SegTraQ's normalized-log expression layer."""
@@ -105,89 +98,11 @@ def _compute_hvg_mask(
     if exclude_gene_prefixes:
         genes = adata.var_names.astype(str)
         excluded = np.array(
-            [
-                any(g.upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes)
-                for g in genes
-            ]
+            [any(g.upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes) for g in genes]
         )
         mask &= ~excluded
 
     return mask
-
-
-def _get_pca_and_neighbors(
-    adata: AnnData,
-    raw_layer: str | None = None,
-    n_neighbors: int = 15,
-    n_pcs: int = 50,
-    target_sum: float | None = 1e4,
-    use_hvg: bool | None = None,
-) -> AnnData:
-    """
-    Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
-
-    All results are stored under namespaced keys so they can be
-    distinguished from any externally-computed PCA/neighbors:
-    - adata.layers[NORM_LOG_LAYER]
-    - adata.var[HVG_KEY] if HVGs are used
-    - adata.obsm[PCA_KEY]
-    - adata.uns[NEIGHBORS_KEY]
-    - adata.obsp[CONNECTIVITIES_KEY], adata.obsp[DISTANCES_KEY]
-
-    Parameters
-    ----------
-    adata : AnnData
-    raw_layer : str or None
-        Layer with raw counts. None → use `.X`.
-    n_neighbors: int
-        Number of neighbors for `sc.pp.neighbors`.
-    n_pcs: int
-        Number of PCs for `sc.pp.pca` and `sc.pp.neighbors`.
-    target_sum: float or None
-        If not None, passed as `target_sum` to `sc.pp.normalize_total` when
-        computing the norm_log layer. Ignored if the norm_log layer already exists.
-    use_hvg : bool or None, default=None
-        If `None`, use HVGs automatically when the panel contains more than
-        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-
-    Returns
-    -------
-    AnnData
-        The same object (modified in place), returned for convenience.
-    """
-    adata = _get_norm_log(
-        adata,
-        layer=raw_layer,
-        target_sum=target_sum,
-    )
-
-    resolved_use_hvg = _resolve_use_hvg(
-        adata.n_vars,
-        use_hvg,
-    )
-
-    if resolved_use_hvg and HVG_KEY not in adata.var:
-        adata.var[HVG_KEY] = _compute_hvg_mask(adata)
-
-    if PCA_KEY not in adata.obsm:
-        sc.pp.pca(
-            adata,
-            n_comps=n_pcs,
-            layer=NORM_LOG_LAYER,
-            mask_var=HVG_KEY if resolved_use_hvg else None,
-            key_added=PCA_KEY,
-        )
-
-    if NEIGHBORS_KEY not in adata.uns:
-        sc.pp.neighbors(
-            adata,
-            n_neighbors=n_neighbors,
-            n_pcs=n_pcs,
-            use_rep=PCA_KEY,
-            key_added=NEIGHBORS_KEY,
-        )
-
-    return adata
 
 
 def _apply_overlap_filter(marker_dict: dict[str, list[str]], t, n_ct) -> dict[str, list[str]]:
@@ -370,7 +285,7 @@ def _get_norm_log(
     layer: str | None = None,
     target_sum: float = 1e4,
     layer_arg: str = "raw_layer",
-) -> str:
+) -> AnnData:
     """
     Ensure `adata.layers[NORM_LOG_LAYER]` exists and return its key.
 
@@ -391,8 +306,8 @@ def _get_norm_log(
 
     Returns
     -------
-    str
-        The key of the normalized+log layer (`NORM_LOG_LAYER`).
+    AnnData
+        The AnnData object with `NORM_LOG_LAYER` added.
     """
     if NORM_LOG_LAYER in adata.layers:
         return adata
@@ -560,8 +475,8 @@ def run_label_transfer(
         more than 8,000 genes are shared between query and reference. If
         `True`, always use HVGs. If `False`, always use all shared genes.
     exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
-        Gene prefixes to exclude from the HVG set before label transfer. Set to
-        an empty tuple to disable this filtering.
+        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
+        not used.
     inplace : bool, default=True
         If `True`, write transferred labels to
         `sdata.tables[tables_key].obs[cell_type_key]` and return `None`.
@@ -588,7 +503,7 @@ def run_label_transfer(
     need_tx = "transcript_count" not in tbl.obs.columns
     need_gn = "gene_count" not in tbl.obs.columns
 
-    if need_tx or need_gn:
+    if need_tx:
         bl.transcripts_per_cell(
             sdata,
             tables_cell_id_key=tables_cell_id_key,
@@ -596,6 +511,8 @@ def run_label_transfer(
             points_cell_id_key=points_cell_id_key,
             tables_key=tables_key,
         )
+        tbl = sdata.tables[tables_key]
+    if need_gn:
         bl.genes_per_cell(
             sdata,
             tables_cell_id_key=tables_cell_id_key,

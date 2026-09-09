@@ -128,7 +128,7 @@ for _method, st in st_dict.items():
 
 # %% [markdown]
 # We will first examine the z-distribution of transcripts in Xenium data.
-# Proseg includes a correction step for z-drift, which can occur when the slide
+# Z-drift can occur when the slide
 # is not perfectly flat—for example due to tissue cutting and mounting—or due to
 # imaging-related effects (e.g. microscope settings or slight unevenness of the
 # slide and imaging surface).
@@ -202,9 +202,11 @@ def plot_transcripts_across_z_bins(sdata, method, n_z_bins, xy_bin_size=5.0):
 # In lower z-planes (e.g. Z plane 3), transcripts are more densely detected on the left
 # side of the field of view, whereas in higher z-planes the transcript density shifts towards the right.
 #
-# Prosegs explicitly corrects for this type of depth-related variation and produces
+# Proseg v3 explicitly corrects for this type of depth-related variation and produces
 # normalized z values, as can be seen
-# [here](https://github.com/dcjones/proseg/blob/main/src/sampler/transcripts.rs#L162).
+# [here](https://github.com/dcjones/proseg/blob/main/src/sampler/transcripts.rs#L162)
+# (TODO - Check newest proseg version for raw z-coordinates. If still missing, copy them
+# from Xenium as was done for proseg v2 in io.ipynb).
 
 # %%
 for method, st in st_dict.items():
@@ -226,13 +228,13 @@ for method, st in st_dict.items():
 # similarity, while negative values indicate that the top and bottom are less similar than expected.
 # The accompanying lower-tail p-value identifies cells with evidence for unusually low similarity.
 #
-# Optionally, global z-drift can be corrected before defining the top and bottom regions
+# By default, global z-drift is corrected before defining the top and bottom regions
 # (`correct_z_drift=True`). Cells without sufficient transcripts or detected genes in both regions are
 # not evaluated.
 
 # %%
 for method, st in st_dict.items():
-    if method.startswith("p"):
+    if method == "proseg3":
         _cos_sim = st.vl.similarity_top_bottom(
             correct_z_drift=False
         )  # correct for z drift already done internally in proseg
@@ -569,10 +571,8 @@ for _method, st in st_dict.items():
     _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes})
 
 # %% [markdown]
-# We compare `similarity_top_bottom` with vertical signal integrity only among cells with a
-# significant lower-tail permutation p-value (`p < 0.05`). This restricts the comparison to
-# cells whose top and bottom expression profiles are less similar than expected under the
-# conditional null. VSI is an independent spatial measure of vertical mixing, so their
+# We compare `similarity_top_bottom` with vertical signal integrity.
+# VSI is an independent spatial measure of vertical mixing, so their
 # association can indicate whether expression-level depth inconsistency coincides with
 # transcript-level vertical signal disruption.
 
@@ -594,7 +594,6 @@ for ax, (method, st) in zip(axes, st_dict.items(), strict=False):
         ]
         .dropna()
     )
-    df = df[df["similarity_top_bottom_p_value"] < 0.05]
 
     r = np.corrcoef(df["vertical_signal_integrity"], df["similarity_top_bottom"])[0, 1]
     r2 = r**2
