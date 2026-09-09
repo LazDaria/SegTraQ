@@ -92,21 +92,18 @@ def _compute_hvg_mask(
     if NORM_LOG_LAYER not in adata.layers:
         raise KeyError(f"{NORM_LOG_LAYER!r} not found in `adata.layers`.")
 
-    tmp = AnnData(
-        X=adata.layers[NORM_LOG_LAYER].copy(),
-        var=adata.var.copy(),
-    )
-    sc.pp.highly_variable_genes(
-        tmp,
+    hvg = sc.pp.highly_variable_genes(
+        adata,
         flavor="seurat",
-        n_top_genes=min(n_top_genes, tmp.n_vars),
-        inplace=True,
+        n_top_genes=min(n_top_genes, adata.n_vars),
+        layer=NORM_LOG_LAYER,
+        inplace=False,
     )
 
-    mask = tmp.var["highly_variable"].to_numpy().copy()
+    mask = hvg["highly_variable"].to_numpy()
 
     if exclude_gene_prefixes:
-        genes = np.asarray(adata.var_names.astype(str))
+        genes = adata.var_names.astype(str)
         excluded = np.array(
             [
                 any(g.upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes)
@@ -158,32 +155,37 @@ def _get_pca_and_neighbors(
     AnnData
         The same object (modified in place), returned for convenience.
     """
-    adata = _get_norm_log(adata, layer=raw_layer, target_sum=target_sum)
+    adata = _get_norm_log(
+        adata,
+        layer=raw_layer,
+        target_sum=target_sum,
+    )
 
-    resolved_use_hvg = _resolve_use_hvg(adata.n_vars, use_hvg)
+    resolved_use_hvg = _resolve_use_hvg(
+        adata.n_vars,
+        use_hvg,
+    )
+
     if resolved_use_hvg and HVG_KEY not in adata.var:
         adata.var[HVG_KEY] = _compute_hvg_mask(adata)
 
     if PCA_KEY not in adata.obsm:
-        tmp = AnnData(
-            X=adata.layers[NORM_LOG_LAYER].copy(),
-            var=adata.var.copy(),
-        )
         sc.pp.pca(
-            tmp,
+            adata,
             n_comps=n_pcs,
+            layer=NORM_LOG_LAYER,
             mask_var=HVG_KEY if resolved_use_hvg else None,
+            key_added=PCA_KEY,
         )
-        adata.obsm[PCA_KEY] = tmp.obsm["X_pca"]
 
     if NEIGHBORS_KEY not in adata.uns:
-        tmp = AnnData(X=adata.layers[NORM_LOG_LAYER].copy())
-        tmp.obsm["X_pca"] = adata.obsm[PCA_KEY]
-        sc.pp.neighbors(tmp, n_neighbors=n_neighbors, n_pcs=n_pcs)
-
-        adata.uns[NEIGHBORS_KEY] = tmp.uns["neighbors"]
-        adata.obsp[CONNECTIVITIES_KEY] = tmp.obsp["connectivities"]
-        adata.obsp[DISTANCES_KEY] = tmp.obsp["distances"]
+        sc.pp.neighbors(
+            adata,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            use_rep=PCA_KEY,
+            key_added=NEIGHBORS_KEY,
+        )
 
     return adata
 
@@ -400,22 +402,20 @@ def _get_norm_log(
 
     raw = _get_count_matrix(adata, layer=layer, layer_arg=layer_arg)  # validates integer counts
 
-    # Work on a temporary AnnData so sc.pp.* don't touch .X in place
-    tmp = AnnData(X=raw.copy())
-    sc.pp.normalize_total(tmp, target_sum=target_sum)
-    sc.pp.log1p(tmp)
+    # Preserve raw counts and create the SegTraQ-normalized layer.
+    adata.layers[NORM_LOG_LAYER] = raw.copy()
 
-    # PF / CLR centering:
-    # subtract each cell's mean log-expression across genes
-    # cell_mean = np.asarray(tmp.X.mean(axis=1)).ravel()
+    sc.pp.normalize_total(
+        adata,
+        target_sum=target_sum,
+        layer=NORM_LOG_LAYER,
+    )
 
-    # if sparse.issparse(tmp.X):
-    #     tmp.X = tmp.X.toarray()
+    sc.pp.log1p(
+        adata,
+        layer=NORM_LOG_LAYER,
+    )
 
-    # cell_mean = np.asarray(tmp.X.mean(axis=1)).ravel()
-    # tmp.X -= cell_mean[:, None]
-
-    adata.layers[NORM_LOG_LAYER] = tmp.X
     return adata
 
 

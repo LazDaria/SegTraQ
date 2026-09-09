@@ -56,7 +56,35 @@ def run_leiden_clustering_on_adata(
     n_neighbors: int = 15,
     leiden_kwargs: dict | None = None,
 ):
-    """Run Leiden clustering on an AnnData with precomputed SegTraQ PCA."""
+    """
+    Run Leiden clustering on a provided AnnData object with a precomputed SegTraQ PCA.
+
+    Parameters
+    ----------
+    adata_input : AnnData
+        The AnnData object to cluster. Can be a subset of cells, but must contain
+        precomputed PCA coordinates in `adata_input.obsm[PCA_KEY]`.
+    resolution : float
+        Resolution parameter for Leiden.
+    key_added : str
+        Key under which to store clustering results in `.obs`.
+    recompute_neighbors : bool
+        Whether to recompute the neighbor graph from the precomputed SegTraQ PCA.
+        If `False`, the existing SegTraQ neighbor graph is reused.
+    n_neighbors : int, default=15
+        Number of neighbors used when recomputing the neighbor graph.
+        Ignored if `recompute_neighbors=False`.
+    leiden_kwargs : dict, optional
+        Additional keyword arguments to pass to `scanpy.tl.leiden()`.
+        By default, `n_iterations=2` is used. This can be overridden via
+        `leiden_kwargs`. For example, `flavor="igraph"` can be used to specify
+        the Leiden implementation.
+
+    Returns
+    -------
+    labels : pd.Series
+        The Leiden cluster labels.
+    """
     adata = adata_input.copy()
 
     if recompute_neighbors:
@@ -69,15 +97,18 @@ def run_leiden_clustering_on_adata(
         adata.uns["neighbors"] = adata.uns[NEIGHBORS_KEY]
         adata.obsp["connectivities"] = adata.obsp[CONNECTIVITIES_KEY]
 
+    # setting the default number of Leiden iterations to 2,
+    # while allowing the user to override it via leiden_kwargs
+    kwargs = {"n_iterations": 2, **(leiden_kwargs or {})}
+
     sc.tl.leiden(
         adata,
         resolution=resolution,
-        n_iterations=2,
         key_added=key_added,
-        **(leiden_kwargs or {}),
+        **kwargs,
     )
 
-    return adata.obs[key_added].copy(), adata.obsm[PCA_KEY]
+    return adata.obs[key_added].copy()
 
 
 def subset_adata(
@@ -129,7 +160,7 @@ def run_leiden_clustering_on_random_subset(
         f"res{resolution}_seed{random_state}"
     )
 
-    labels, pca = run_leiden_clustering_on_adata(
+    labels = run_leiden_clustering_on_adata(
         adata_subset,
         resolution=resolution,
         key_added=key_added,
@@ -145,7 +176,7 @@ def run_leiden_clustering_on_random_subset(
     full_labels.loc[adata_subset.obs_names] = labels.values
     adata_full.obs[key_added] = full_labels
 
-    return key_added, pca, labels.values
+    return key_added, labels.values
 
 
 def ari_pairwise(adata: ad.AnnData, cluster_keys: list[str]) -> np.ndarray:

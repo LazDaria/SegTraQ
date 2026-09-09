@@ -19,14 +19,14 @@ classifiers = [
 license = "MIT"
 dependencies = [
   "typer",
-  "scanpy>=1.12",  # not strictly required
+  "scanpy>=1.12", 
   "spatialdata>=0.8.0",  # not strictly required
   "spatialdata-plot>=0.4.0",  # not strictly required
   "joblib",
   "geopandas",
   "rtree",
   "rasterio",
-  "squidpy>=1.6.2",
+  "squidpy>=1.8.3",
   "tqdm",
   "anndata>=0.12", # to support zarr v3
   "ovrlpy>=1.2.0",

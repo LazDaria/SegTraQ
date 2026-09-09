@@ -16,8 +16,8 @@ PCA_KEY = "X_pca_segtraq"
 NEIGHBORS_KEY = "neighbors_segtraq"
 
 # ── Obsp ──────────────────────────────────────────────────────────────────────
-CONNECTIVITIES_KEY = "connectivities_segtraq"
-DISTANCES_KEY = "distances_segtraq"
+CONNECTIVITIES_KEY = f"{NEIGHBORS_KEY}_connectivities"
+DISTANCES_KEY = f"{NEIGHBORS_KEY}_distances"
 
 # ── Cell ID ───────────────────────────────────────────────────────────────────
 SEGTRAQ_CELL_ID_KEY = "segtraq_id"

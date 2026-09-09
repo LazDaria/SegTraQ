@@ -129,7 +129,7 @@ def cluster_connectedness(
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     for res in resolution:
-        _, _, labels = run_leiden_clustering_on_random_subset(
+        _, labels = run_leiden_clustering_on_random_subset(
             sdata=sdata,
             adata_prepared=adata,
             tables_key=tables_key,
@@ -257,7 +257,7 @@ def silhouette_score(
     else:
         key = "silhouette_score"
         for res in resolution:
-            _, pca, labels = run_leiden_clustering_on_random_subset(
+            _, labels = run_leiden_clustering_on_random_subset(
                 sdata=sdata,
                 adata_prepared=adata,
                 tables_key=tables_key,
@@ -270,7 +270,7 @@ def silhouette_score(
             )
 
             if len(pd.unique(labels)) > 1:  # Ensure more than one cluster exists
-                silhouette_avg = _silhouette_score(pca, labels, metric=metric)
+                silhouette_avg = _silhouette_score(adata.obsm[PCA_KEY], labels, metric=metric)
 
                 if np.isnan(best_silhouette_score) or silhouette_avg > best_silhouette_score:
                     best_silhouette_score = float(silhouette_avg)
@@ -335,7 +335,7 @@ def purity(
     cluster_keys = []
 
     for random_state in range(5):
-        key_added, _, _ = run_leiden_clustering_on_random_subset(
+        key_added, _ = run_leiden_clustering_on_random_subset(
             sdata,
             adata_prepared=adata_prepared,
             tables_key=tables_key,
@@ -413,7 +413,7 @@ def adjusted_rand_index(
 
     # Run clustering on random subsets of genes
     for random_state in range(5):
-        key_added, _, _ = run_leiden_clustering_on_random_subset(
+        key_added, _ = run_leiden_clustering_on_random_subset(
             sdata,
             adata_prepared=adata_prepared,
             tables_key=tables_key,
