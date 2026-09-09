@@ -443,7 +443,7 @@ document.write(`
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;dask.config.set at 0x7ffeea6d34d0&gt;
+&lt;dask.config.set at 0x7ffee840b890&gt;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -459,8 +459,8 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0bc590&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3c1fa10&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
 </pre></div></div>
 </div>
 <p>Let’s have a quick look at the data.</p>
@@ -502,9 +502,9 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;F2&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;Human_PTEN_G129E_WT:A&#39;, &#39;CYP2A6&#39;]). This may reflect differences in the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;HPV18-E6&#39;, &#39;CYP2A6&#39;, &#39;Human_PTEN_G129E_WT:A&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;ocnokblm-1&#39;, &#39;obnphglo-1&#39;, &#39;hmbkphlg-1&#39;, &#39;hljkefam-1&#39;, &#39;obnkiokn-1&#39;]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;obnpmdml-1&#39;, &#39;obnhammk-1&#39;, &#39;hledllmd-1&#39;, &#39;obnpldod-1&#39;, &#39;obnpohfm-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -906,7 +906,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.8144674387497693
+0.8208639323610152
 </pre></div></div>
 </div>
 <p>We can do the same with the silhouette score.</p>
@@ -924,7 +924,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
--0.03633752837777138
+-0.040036726742982864
 </pre></div></div>
 </div>
 <p>Next, we can check how stable the clustering is when we only take a subset (63%) of our genes and run clustering on this. We do this five times, and then assess the quality with the adjusted Rand index (ARI) and the purity. For more details on these metrics, refer to the section on this module.</p>
@@ -942,7 +942,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.5906698766026561
+0.6602554723281012
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -959,7 +959,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.7491603025132378
+0.8013457030532878
 </pre></div></div>
 </div>
 </section>
@@ -1096,8 +1096,8 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>0.0</td>
       <td>0.617026</td>
       <td>1.000000</td>
-      <td>-0.000056</td>
-      <td>0.512438</td>
+      <td>0.000147</td>
+      <td>0.542289</td>
     </tr>
     <tr>
       <th>1</th>
@@ -1105,8 +1105,8 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>1.0</td>
       <td>0.556906</td>
       <td>0.999997</td>
-      <td>-0.030855</td>
-      <td>0.009950</td>
+      <td>-0.030584</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>2</th>
@@ -1114,8 +1114,8 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>2.0</td>
       <td>0.427579</td>
       <td>0.997749</td>
-      <td>-0.002319</td>
-      <td>0.497512</td>
+      <td>-0.000677</td>
+      <td>0.532338</td>
     </tr>
     <tr>
       <th>3</th>
@@ -1123,7 +1123,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>3.0</td>
       <td>0.708851</td>
       <td>1.000000</td>
-      <td>-0.014600</td>
+      <td>-0.014015</td>
       <td>0.104478</td>
     </tr>
     <tr>
@@ -1132,8 +1132,8 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>4.0</td>
       <td>0.543778</td>
       <td>1.000000</td>
-      <td>-0.001856</td>
-      <td>0.402985</td>
+      <td>-0.000529</td>
+      <td>0.472637</td>
     </tr>
   </tbody>
 </table>
@@ -1189,8 +1189,8 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>0.0</td>
       <td>0.617026</td>
       <td>1.000000</td>
-      <td>-0.037595</td>
-      <td>0.189055</td>
+      <td>-0.036996</td>
+      <td>0.119403</td>
     </tr>
     <tr>
       <th>1</th>
@@ -1198,7 +1198,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>1.0</td>
       <td>0.556906</td>
       <td>0.999997</td>
-      <td>-0.099810</td>
+      <td>-0.102345</td>
       <td>0.004975</td>
     </tr>
     <tr>
@@ -1207,8 +1207,8 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>2.0</td>
       <td>0.427579</td>
       <td>0.997749</td>
-      <td>-0.017182</td>
-      <td>0.343284</td>
+      <td>-0.015371</td>
+      <td>0.388060</td>
     </tr>
     <tr>
       <th>3</th>
@@ -1225,7 +1225,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
       <td>4.0</td>
       <td>0.543778</td>
       <td>1.000000</td>
-      <td>-0.136411</td>
+      <td>-0.129977</td>
       <td>0.004975</td>
     </tr>
   </tbody>
@@ -1276,32 +1276,32 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
     <tr>
       <th>0</th>
       <td>acceakgj-1</td>
-      <td>0.011469</td>
-      <td>0.412935</td>
+      <td>0.007429</td>
+      <td>0.437811</td>
     </tr>
     <tr>
       <th>1</th>
       <td>accebped-1</td>
-      <td>0.105905</td>
+      <td>0.111726</td>
       <td>0.074627</td>
     </tr>
     <tr>
       <th>2</th>
       <td>accedpdh-1</td>
-      <td>0.294026</td>
-      <td>0.024876</td>
+      <td>0.294730</td>
+      <td>0.014925</td>
     </tr>
     <tr>
       <th>3</th>
       <td>acceejoe-1</td>
-      <td>0.203938</td>
-      <td>0.019900</td>
+      <td>0.200051</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>4</th>
       <td>acceekkh-1</td>
-      <td>0.130126</td>
-      <td>0.034826</td>
+      <td>0.142848</td>
+      <td>0.019900</td>
     </tr>
   </tbody>
 </table>
@@ -1330,7 +1330,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 </div>
 <section id="Computing-cell-type-specific-markers">
 <h3>Computing cell-type specific markers<a class="headerlink" href="#Computing-cell-type-specific-markers" title="Link to this heading">#</a></h3>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
@@ -1346,6 +1346,14 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
     <span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
+</pre></div></div>
 </div>
 <p>Below, we show the number of negative markers that overlap with the positive markers of each cell type. To reliably estimate contamination, each cell type should share <strong>at least ~5 negative markers</strong> with the positive marker set of every other cell type. If these overlaps are too small, contamination estimates become unstable.</p>
 <p>In such cases, the marker definition can be relaxed by adjusting the thresholds used in <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code> above.</p>
@@ -1592,13 +1600,21 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0de350&gt;: None
 <section id="Label-transfer">
 <h3>Label transfer<a class="headerlink" href="#Label-transfer" title="Link to this heading">#</a></h3>
 <p>Before we can do statistics on the spatial data, we first need to transfer our cell type labels onto the spatial transcriptomics data. We can do this simply by calling <code class="docutils literal notranslate"><span class="pre">run_label_transfer()</span></code>.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
+</pre></div></div>
 </div>
 <p>Let’s quickly verify that this worked by plotting the data.</p>
 <div class="nbinput nblast docutils container">
@@ -1651,7 +1667,7 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-blue-fg">INFO    </span> Creating graph using `generic` coordinates and `<span class="ansi-magenta-fg">None</span>` transform and `<span class="ansi-cyan-intense-fg ansi-bold">1</span>` libraries.
+<span class="ansi-blue-fg">INFO    </span> Creating graph using `<span class="ansi-magenta-fg">None</span>` transform and `<span class="ansi-cyan-intense-fg ansi-bold">1</span>` libraries.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1898,6 +1914,14 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
 </pre></div>
@@ -1934,58 +1958,58 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
   <tbody>
     <tr>
       <th>0</th>
-      <td>COL18A1</td>
-      <td>RUBCNL</td>
-      <td>1.033139</td>
-      <td>0.564529</td>
-      <td>8</td>
-      <td>451</td>
-      <td>319</td>
-      <td>17533</td>
+      <td>ARRB2</td>
+      <td>DNASE1L3</td>
+      <td>1.873397</td>
+      <td>0.930218</td>
+      <td>4</td>
+      <td>720</td>
+      <td>52</td>
+      <td>17535</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>FAT2</td>
-      <td>HDC</td>
-      <td>1.224311</td>
-      <td>0.670068</td>
-      <td>0</td>
-      <td>45</td>
-      <td>162</td>
-      <td>18104</td>
+      <td>DUSP5</td>
+      <td>P2RX5</td>
+      <td>0.478774</td>
+      <td>0.000036</td>
+      <td>26</td>
+      <td>1338</td>
+      <td>661</td>
+      <td>16286</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>PMAIP1</td>
-      <td>PRRX1</td>
-      <td>0.328876</td>
-      <td>0.061647</td>
-      <td>1</td>
-      <td>302</td>
-      <td>267</td>
-      <td>17741</td>
+      <td>ENPP3</td>
+      <td>MAPK11</td>
+      <td>0.000000</td>
+      <td>0.574829</td>
+      <td>0</td>
+      <td>72</td>
+      <td>140</td>
+      <td>18099</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>CD47</td>
-      <td>NRP1</td>
-      <td>1.551269</td>
-      <td>0.977470</td>
-      <td>25</td>
-      <td>1610</td>
-      <td>168</td>
-      <td>16508</td>
+      <td>ADGRA2</td>
+      <td>CD151</td>
+      <td>2.808765</td>
+      <td>0.999700</td>
+      <td>14</td>
+      <td>237</td>
+      <td>372</td>
+      <td>17688</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>FBLN5</td>
-      <td>PTP4A3</td>
-      <td>4.097436</td>
-      <td>0.988321</td>
-      <td>3</td>
-      <td>91</td>
-      <td>168</td>
-      <td>18049</td>
+      <td>CD82</td>
+      <td>IFI44L</td>
+      <td>2.184316</td>
+      <td>0.999726</td>
+      <td>25</td>
+      <td>191</td>
+      <td>1023</td>
+      <td>17072</td>
     </tr>
   </tbody>
 </table>
@@ -2042,32 +2066,32 @@ transcripts from overlapping cells.</p>
     <tr>
       <th>0</th>
       <td>acceakgj-1</td>
-      <td>-0.011592</td>
-      <td>0.179104</td>
+      <td>-0.009827</td>
+      <td>0.189055</td>
     </tr>
     <tr>
       <th>1</th>
       <td>accebped-1</td>
-      <td>-0.128813</td>
+      <td>-0.124454</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>2</th>
       <td>accedpdh-1</td>
-      <td>0.040675</td>
+      <td>0.038066</td>
       <td>0.696517</td>
     </tr>
     <tr>
       <th>3</th>
       <td>acceejoe-1</td>
-      <td>-0.161718</td>
-      <td>0.019900</td>
+      <td>-0.165040</td>
+      <td>0.009950</td>
     </tr>
     <tr>
       <th>4</th>
       <td>acceekkh-1</td>
-      <td>-0.187343</td>
-      <td>0.009950</td>
+      <td>-0.185124</td>
+      <td>0.004975</td>
     </tr>
   </tbody>
 </table>
@@ -2142,38 +2166,38 @@ transcripts from overlapping cells.</p>
   <tbody>
     <tr>
       <th>0</th>
-      <td>aelegcjd-1</td>
-      <td>1.559941</td>
-      <td>258.884963</td>
-      <td>0.096952</td>
-    </tr>
-    <tr>
-      <th>1</th>
       <td>aeldpbbo-1</td>
       <td>2.507427</td>
       <td>176.880632</td>
       <td>0.188533</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>1</th>
       <td>hjbdpmpc-1</td>
       <td>1.811994</td>
       <td>262.673512</td>
       <td>0.111802</td>
     </tr>
     <tr>
-      <th>3</th>
+      <th>2</th>
       <td>hjbcgooh-1</td>
       <td>1.801255</td>
       <td>102.683823</td>
       <td>0.177756</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>3</th>
       <td>aeldbffd-1</td>
       <td>1.841093</td>
       <td>135.493824</td>
       <td>0.158167</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>hjbddfam-1</td>
+      <td>3.342148</td>
+      <td>303.922122</td>
+      <td>0.191710</td>
     </tr>
   </tbody>
 </table>
@@ -2247,10 +2271,10 @@ transcripts from overlapping cells.</p>
     </tr>
     <tr>
       <th>4</th>
-      <td>aeldconk-1</td>
-      <td>0.840261</td>
-      <td>81.666930</td>
-      <td>0.092980</td>
+      <td>hjbancln-1</td>
+      <td>2.751999</td>
+      <td>154.525538</td>
+      <td>0.221385</td>
     </tr>
   </tbody>
 </table>

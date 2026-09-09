@@ -355,7 +355,7 @@ document.write(`
   <section id="Module:-Clustering-Stability">
 <h1>Module: Clustering Stability<a class="headerlink" href="#Module:-Clustering-Stability" title="Link to this heading">#</a></h1>
 <p>When analyzing (spatial) transcriptomics data, cells are typically clustered into cell types based on their RNA expression. If the segmentation of a spatial transcriptomics dataset went well, we would assume that this clustering is somewhat stable, even if we only cluster on parts of the data. The <code class="docutils literal notranslate"><span class="pre">clustering</span> <span class="pre">stability</span></code> (<code class="docutils literal notranslate"><span class="pre">cs</span></code>) module includes some functions to apply clustering and assess its robustness. The figure below shows a bad clustering (lots of overlap) vs. a good clustering.</p>
-<center><p><img alt="589613b0084a44b6988edf902ebd79ae" class="no-scaled-link" src="../_images/clustering_stability.png" style="width: 90%;" /></p>
+<center><p><img alt="46ea32634ba249b8bce28a749d9918c0" class="no-scaled-link" src="../_images/clustering_stability.png" style="width: 90%;" /></p>
 </center><p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
@@ -473,37 +473,37 @@ document.write(`
 <div class="highlight"><pre>
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 84 occur only in the table (e.g. [np.int32(1539), np.int32(15875), np.int32(17923), np.int32(17924), np.int32(17927)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 84 occur only in the table (e.g. [np.int32(1539), np.int32(15875), np.int32(17923), np.int32(17924), np.int32(17927)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee868f380&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee86bf9d0&gt;: None
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 23 cell IDs in shapes: [&#39;afnajpkp-1&#39;, &#39;ipkoiika-1&#39;, &#39;ipnffmib-1&#39;, &#39;ipleocce-1&#39;, &#39;icjcpgce-1&#39;]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffec2702660&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee0206c10&gt;: None
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: UserWarning: Missing 23 cell IDs in shapes: [&#39;injfnpkl-1&#39;, &#39;ocnlagnn-1&#39;, &#39;icaegooe-1&#39;, &#39;ickihlob-1&#39;, &#39;ibemmeld-1&#39;]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1931: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 23 occur only in the table (e.g. [&#39;afnajpkp-1&#39;, &#39;afhghnki-1&#39;, &#39;ibhbpipc-1&#39;, &#39;hlkjoojk-1&#39;, &#39;ibemmeld-1&#39;]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 23 occur only in the table (e.g. [&#39;injfnpkl-1&#39;, &#39;ibemmeld-1&#39;, &#39;ibnnajcn-1&#39;, &#39;ipnffmib-1&#39;, &#39;afnajpkp-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee86bf9d0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee0207110&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee02216e0&gt;: None
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1931: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_PTEN_G129E_WT:A&#39;, &#39;F2&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;HPV18-E6&#39;]). This may reflect differences in the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;CYP2A6&#39;, &#39;HPV18-E6&#39;, &#39;F2&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;hmbkphlg-1&#39;, &#39;oemmoifk-1&#39;, &#39;obnphglo-1&#39;, &#39;ocodkfdf-1&#39;, &#39;ocnkohki-1&#39;]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;obnhjnca-1&#39;, &#39;ipkibnin-1&#39;, &#39;ocobfnak-1&#39;, &#39;afhffpfj-1&#39;, &#39;icdfihnh-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1931: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -557,17 +557,17 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2320539/4287800528.py:14: UserWarning: Some cells have zero counts
+/tmp/ipykernel_2155267/4287800528.py:14: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
-/tmp/ipykernel_2320539/4287800528.py:14: UserWarning: Some cells have zero counts
+/tmp/ipykernel_2155267/4287800528.py:14: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
-/tmp/ipykernel_2320539/4287800528.py:14: UserWarning: Some cells have zero counts
+/tmp/ipykernel_2155267/4287800528.py:14: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
@@ -596,29 +596,16 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:340: UserWarning: Some cells have zero counts
-  sc.pp.normalize_total(tmp, target_sum=target_sum)
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:340: UserWarning: Some cells have zero counts
-  sc.pp.normalize_total(tmp, target_sum=target_sum)
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:340: UserWarning: Some cells have zero counts
-  sc.pp.normalize_total(tmp, target_sum=target_sum)
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: 0.8563720035778078,
- &#39;segger&#39;: 0.8466160972236606,
- &#39;xenium&#39;: 0.8634159310548122,
- &#39;proseg2&#39;: 0.893332413313264}
+{&#39;bidcell&#39;: 0.8749258962916,
+ &#39;segger&#39;: 0.8476235465589034,
+ &#39;xenium&#39;: 0.8530953079217248,
+ &#39;proseg2&#39;: 0.9145228472842566}
 </pre></div></div>
 </div>
 </section>
@@ -643,10 +630,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: -0.04372580721974373,
- &#39;segger&#39;: -0.023498695343732834,
- &#39;xenium&#39;: -0.04129785671830177,
- &#39;proseg2&#39;: -0.018551334738731384}
+{&#39;bidcell&#39;: -0.04400060325860977,
+ &#39;segger&#39;: -0.04242357984185219,
+ &#39;xenium&#39;: -0.039701782166957855,
+ &#39;proseg2&#39;: -0.010777926072478294}
 </pre></div></div>
 </div>
 </section>
@@ -674,10 +661,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: 0.7718980027799993,
- &#39;segger&#39;: 0.7910004423052064,
- &#39;xenium&#39;: 0.7706210831559697,
- &#39;proseg2&#39;: 0.7897683533617259}
+{&#39;bidcell&#39;: 0.7436022795067505,
+ &#39;segger&#39;: 0.7371308456579522,
+ &#39;xenium&#39;: 0.7838707591010627,
+ &#39;proseg2&#39;: 0.7556335610977832}
 </pre></div></div>
 </div>
 </section>
@@ -701,10 +688,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: 0.6295157856958684,
- &#39;segger&#39;: 0.6705695313773333,
- &#39;xenium&#39;: 0.6371819876775503,
- &#39;proseg2&#39;: 0.6747543059586979}
+{&#39;bidcell&#39;: 0.5789360451186919,
+ &#39;segger&#39;: 0.6483239002783863,
+ &#39;xenium&#39;: 0.649824385076499,
+ &#39;proseg2&#39;: 0.6056068432729137}
 </pre></div></div>
 </div>
 <p>At the end, all of our metrics are stored in the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code> object.</p>
@@ -724,10 +711,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee85f7a80&gt;: None
 <div class="highlight"><pre>
 AnnData object with n_obs × n_vars = 17885 × 5094
     obs: &#39;cell&#39;, &#39;original_cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;, &#39;fov&#39;, &#39;cluster&#39;, &#39;volume&#39;, &#39;scale&#39;, &#39;population&#39;, &#39;region&#39;, &#39;cell_area&#39;, &#39;leiden_subset_cells16914_res0.6_seed42&#39;, &#39;leiden_subset_cells16914_res0.8_seed42&#39;, &#39;leiden_subset_cells16914_res1.0_seed42&#39;, &#39;leiden_subset_cells10655_res1.0_seed0&#39;, &#39;leiden_subset_cells10655_res1.0_seed1&#39;, &#39;leiden_subset_cells10655_res1.0_seed2&#39;, &#39;leiden_subset_cells10655_res1.0_seed3&#39;, &#39;leiden_subset_cells10655_res1.0_seed4&#39;
-    uns: &#39;spatialdata_attrs&#39;, &#39;neighbors_segtraq&#39;, &#39;cluster_connectedness&#39;, &#39;silhouette_score&#39;, &#39;mean_purity&#39;, &#39;mean_ari&#39;
-    obsm: &#39;X_pca_segtraq&#39;
-    layers: &#39;norm_log_segtraq&#39;
-    obsp: &#39;connectivities_segtraq&#39;, &#39;distances_segtraq&#39;
+    uns: &#39;spatialdata_attrs&#39;, &#39;cluster_connectedness&#39;, &#39;silhouette_score&#39;, &#39;mean_purity&#39;, &#39;mean_ari&#39;
 </pre></div></div>
 </div>
 </section>
@@ -828,19 +812,27 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1931: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -851,22 +843,13 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:340: UserWarning: Some cells have zero counts
-  sc.pp.normalize_total(tmp, target_sum=target_sum)
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.7018210235044767
+0.7038992677080759
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -883,7 +866,7 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.01080644316971302
+0.011787918396294117
 </pre></div></div>
 </div>
 </section>

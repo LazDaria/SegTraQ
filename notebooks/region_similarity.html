@@ -355,7 +355,7 @@ document.write(`
   <section id="Module:-Region-Similarity">
 <h1>Module: Region Similarity<a class="headerlink" href="#Module:-Region-Similarity" title="Link to this heading">#</a></h1>
 <p>Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.</p>
-<center><p><img alt="896816ffa6ed422692e5c03b74dcd8ea" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
+<center><p><img alt="f6cd52cd907546ee8956f5306d9cd718" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module compares transcript composition between different subcellular regions to identify cells with unexpected spatial differences in expression.</p>
 <p>Because profiles with fewer transcripts are inherently more variable and therefore tend to appear less similar even when sampled from the same underlying expression profile, SegTraQ accounts for this finite-count effect using a permutation-based expectation. The reported scores measure similarity relative to this expectation: values around zero indicate the expected level of similarity, negative values indicate lower similarity than expected, and positive values indicate higher similarity than
 expected. The accompanying p-value identifies cells with unusually low similarity.</p>
@@ -529,9 +529,9 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 <div class="highlight"><pre>
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -557,7 +557,7 @@ with coordinate systems:
 </pre></div></div>
 </div>
 <p>We can optionally transfer cell-type labels from a scRNA-seq reference. These labels are not required to compute the <code class="docutils literal notranslate"><span class="pre">region_similarity</span></code> metrics, but help interpret them—for example, by assessing whether low similarity is more common at boundaries between different cell types.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
@@ -566,6 +566,14 @@ with coordinate systems:
 <span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
+</pre></div></div>
 </div>
 <p>As you can see, the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code>dataset contains cell and nuclear masks as <code class="docutils literal notranslate"><span class="pre">shapes</span></code>. It is important that you have a nuclear segmentation in your object, otherwise you will not be able to compute the metrics below.</p>
 <section id="Intersection-over-Union-between-cell-and-nucleus-masks">
@@ -933,7 +941,7 @@ with coordinate systems:
       <td>6327.0</td>
       <td>0.051420</td>
       <td>1.0</td>
-      <td>-0.149144</td>
+      <td>-0.146316</td>
       <td>0.004975</td>
     </tr>
     <tr>
@@ -942,8 +950,8 @@ with coordinate systems:
       <td>6328.0</td>
       <td>0.064608</td>
       <td>1.0</td>
-      <td>-0.032734</td>
-      <td>0.248756</td>
+      <td>-0.028276</td>
+      <td>0.308458</td>
     </tr>
     <tr>
       <th>2</th>
@@ -951,8 +959,8 @@ with coordinate systems:
       <td>6330.0</td>
       <td>0.047572</td>
       <td>1.0</td>
-      <td>-0.090591</td>
-      <td>0.024876</td>
+      <td>-0.085832</td>
+      <td>0.039801</td>
     </tr>
     <tr>
       <th>3</th>
@@ -960,8 +968,8 @@ with coordinate systems:
       <td>6331.0</td>
       <td>0.042835</td>
       <td>1.0</td>
-      <td>-0.066339</td>
-      <td>0.054726</td>
+      <td>-0.069625</td>
+      <td>0.049751</td>
     </tr>
     <tr>
       <th>4</th>
@@ -969,8 +977,8 @@ with coordinate systems:
       <td>6332.0</td>
       <td>0.041484</td>
       <td>1.0</td>
-      <td>-0.043669</td>
-      <td>0.149254</td>
+      <td>-0.044115</td>
+      <td>0.159204</td>
     </tr>
   </tbody>
 </table>
@@ -1178,32 +1186,32 @@ contains the nuclear transcripts themselves.</p>
     <tr>
       <th>0</th>
       <td>6327</td>
-      <td>0.149936</td>
-      <td>0.069652</td>
+      <td>0.144494</td>
+      <td>0.084577</td>
     </tr>
     <tr>
       <th>1</th>
       <td>6328</td>
-      <td>0.252905</td>
-      <td>0.024876</td>
+      <td>0.248748</td>
+      <td>0.029851</td>
     </tr>
     <tr>
       <th>2</th>
       <td>6330</td>
-      <td>-0.117952</td>
-      <td>0.925373</td>
+      <td>-0.121840</td>
+      <td>0.920398</td>
     </tr>
     <tr>
       <th>3</th>
       <td>6331</td>
-      <td>0.390063</td>
+      <td>0.397265</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>4</th>
       <td>6332</td>
-      <td>0.024209</td>
-      <td>0.368159</td>
+      <td>0.027329</td>
+      <td>0.328358</td>
     </tr>
     <tr>
       <th>...</th>
@@ -1214,32 +1222,32 @@ contains the nuclear transcripts themselves.</p>
     <tr>
       <th>1557</th>
       <td>95953</td>
-      <td>0.428372</td>
+      <td>0.439227</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>1558</th>
       <td>95954</td>
-      <td>0.235525</td>
+      <td>0.228213</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>1559</th>
       <td>95955</td>
-      <td>0.003808</td>
-      <td>0.293532</td>
+      <td>0.007347</td>
+      <td>0.273632</td>
     </tr>
     <tr>
       <th>1560</th>
       <td>95959</td>
-      <td>0.187398</td>
-      <td>0.029851</td>
+      <td>0.191630</td>
+      <td>0.004975</td>
     </tr>
     <tr>
       <th>1561</th>
       <td>95960</td>
-      <td>0.182119</td>
-      <td>0.024876</td>
+      <td>0.175061</td>
+      <td>0.064677</td>
     </tr>
   </tbody>
 </table>
