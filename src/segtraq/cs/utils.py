@@ -213,6 +213,8 @@ def run_leiden_clustering_on_adata(
     # while allowing the user to override it via leiden_kwargs
     kwargs = {"n_iterations": 2, **(leiden_kwargs or {})}
 
+    # setting the default resolution to 2, but allowing the user to override it via leiden_kwargs
+    kwargs = {"n_iterations": 2, **(leiden_kwargs or {})}
     sc.tl.leiden(
         adata,
         resolution=resolution,
