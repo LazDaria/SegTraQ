@@ -29,7 +29,7 @@ def _get_pca_and_neighbors(
     n_pcs: int = 50,
     target_sum: float | None = 1e4,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: tuple[str, ...] = (),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
 ) -> AnnData:
     """
     Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
@@ -57,9 +57,9 @@ def _get_pca_and_neighbors(
     use_hvg : bool or None, default=None
         If `None`, use HVGs automatically when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : tuple of str, default=()
-        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
-        not used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=None
+        Gene prefix(es) to exclude from the HVG set. If None, no genes are
+        excluded based on their prefix. Has no effect if HVGs are not used.
 
     Returns
     -------
@@ -105,7 +105,7 @@ def _prepare_cs_adata(
     sdata: sd.SpatialData,
     tables_key: str,
     use_hvg: bool | None,
-    exclude_gene_prefixes: tuple[str, ...] = (),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,

@@ -79,7 +79,7 @@ def _compute_hvg_mask(
     adata: AnnData,
     *,
     n_top_genes: int = 200,
-    exclude_gene_prefixes: tuple[str, ...] = (),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
 ) -> np.ndarray:
     """Compute an HVG mask from SegTraQ's normalized-log expression layer."""
     if NORM_LOG_LAYER not in adata.layers:
@@ -95,7 +95,12 @@ def _compute_hvg_mask(
 
     mask = hvg["highly_variable"].to_numpy()
 
-    if exclude_gene_prefixes:
+    if exclude_gene_prefixes is not None:
+        if isinstance(exclude_gene_prefixes, str):
+            exclude_gene_prefixes = (exclude_gene_prefixes,)
+        else:
+            exclude_gene_prefixes = tuple(exclude_gene_prefixes)
+
         genes = adata.var_names.astype(str)
         excluded = np.array(
             [any(g.upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes) for g in genes]
@@ -416,7 +421,7 @@ def run_label_transfer(
     cell_type_key: str = "transferred_cell_type",
     ref_gene_key: str | None = None,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
@@ -474,9 +479,9 @@ def run_label_transfer(
         If `None`, restrict label transfer to 2,000 highly variable genes when
         more than 8,000 genes are shared between query and reference. If
         `True`, always use HVGs. If `False`, always use all shared genes.
-    exclude_gene_prefixes : tuple of str, default=("MT-", "RPL", "RPS")
-        Gene prefixes to exclude from the HVG set. Has no effect if HVGs are
-        not used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefix(es) to exclude from the HVG set. If None, no genes are
+        excluded based on their prefix. Has no effect if HVGs are not used.
     inplace : bool, default=True
         If `True`, write transferred labels to
         `sdata.tables[tables_key].obs[cell_type_key]` and return `None`.
