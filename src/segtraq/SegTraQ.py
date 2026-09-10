@@ -586,7 +586,7 @@ class SegTraQ:
     def run_clustering_stability(
         self,
         key_prefix: str = "leiden_subset",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
         inplace: bool = True,
         connectedness_kwargs: dict | None = None,
         silhouette_kwargs: dict | None = None,
@@ -613,8 +613,9 @@ class SegTraQ:
         key_prefix : str, default="leiden_subset"
             Prefix for Leiden clustering labels written to `.obs` by the underlying
             methods (where applicable).
-        use_hvg: bool, optional
-            Whether to use highly variable genes (HVGs) for PCA. By default False.
+        use_hvg: bool or None, optional
+            If `None`, use 2,000 HVGs for PCA when the panel contains more than
+            8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
         inplace : bool, default=True
             If True, metrics are written to `sdata.tables["table"].uns` by the
             underlying methods and this function returns None. If False, the
@@ -1047,8 +1048,8 @@ class SegTraQ:
         gn_min: float = 5.0,
         gn_max: float = np.inf,
         cell_type_key: str = "transferred_cell_type",
-        use_hvg: bool = False,
-        exclude_gene_prefixes: tuple[str, ...] = ("MT-", "RPL", "RPS"),
+        use_hvg: bool | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
         inplace: bool = True,
     ):
         """
@@ -1459,7 +1460,7 @@ class _RSFacade:
         min_genes: int = 5,
         pseudocount: float = 0.5,
         n_permutations: int = 200,
-        random_state: int | None = None,
+        random_state: int | None = 42,
         n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
@@ -1748,7 +1749,11 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        n_neighbors: int = 15,
+        n_pcs: int = 50,
+        target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1761,6 +1766,10 @@ class _CSFacade:
             random_state=random_state,
             cell_type_key=cell_type_key,
             use_hvg=use_hvg,
+            exclude_gene_prefixes=exclude_gene_prefixes,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )
@@ -1772,7 +1781,11 @@ class _CSFacade:
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        n_neighbors: int = 15,
+        n_pcs: int = 50,
+        target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1783,6 +1796,10 @@ class _CSFacade:
             tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             use_hvg=use_hvg,
+            exclude_gene_prefixes=exclude_gene_prefixes,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )
@@ -1794,7 +1811,11 @@ class _CSFacade:
         resolution: float = 1.0,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        n_neighbors: int = 15,
+        n_pcs: int = 50,
+        target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ) -> float:
@@ -1805,6 +1826,10 @@ class _CSFacade:
             key_prefix=key_prefix,
             tables_key=self._p.tables_key,
             use_hvg=use_hvg,
+            exclude_gene_prefixes=exclude_gene_prefixes,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )
@@ -1818,7 +1843,11 @@ class _CSFacade:
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
         cell_type_key: str | None = None,
-        use_hvg: bool = False,
+        use_hvg: bool | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        n_neighbors: int = 15,
+        n_pcs: int = 50,
+        target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
     ):
@@ -1831,6 +1860,10 @@ class _CSFacade:
             random_state=random_state,
             cell_type_key=cell_type_key,
             use_hvg=use_hvg,
+            exclude_gene_prefixes=exclude_gene_prefixes,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
         )

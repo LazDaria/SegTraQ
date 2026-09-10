@@ -19,7 +19,7 @@ classifiers = [
 license = "MIT"
 dependencies = [
   "typer",
-  "scanpy>=1.12",  # not strictly required
+  "scanpy>=1.12", 
   "spatialdata>=0.8.0",  # not strictly required
   "spatialdata-plot>=0.4.0",  # not strictly required
   "joblib",

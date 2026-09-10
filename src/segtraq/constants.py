@@ -4,6 +4,10 @@
 # ── Layers ────────────────────────────────────────────────────────────────────
 NORM_LOG_LAYER = "norm_log_segtraq"
 
+# ── Highly variable genes ─────────────────────────────────────────────────────
+HVG_KEY = "highly_variable_segtraq"
+HVG_PANEL_SIZE_THRESHOLD = 8_000
+
 # ── Obsm ──────────────────────────────────────────────────────────────────────
 PCA_KEY = "X_pca_segtraq"
 
@@ -11,8 +15,8 @@ PCA_KEY = "X_pca_segtraq"
 NEIGHBORS_KEY = "neighbors_segtraq"
 
 # ── Obsp ──────────────────────────────────────────────────────────────────────
-CONNECTIVITIES_KEY = "connectivities_segtraq"
-DISTANCES_KEY = "distances_segtraq"
+CONNECTIVITIES_KEY = f"{NEIGHBORS_KEY}_connectivities"
+DISTANCES_KEY = f"{NEIGHBORS_KEY}_distances"
 
 # ── Cell ID ───────────────────────────────────────────────────────────────────
 SEGTRAQ_CELL_ID_KEY = "segtraq_id"
