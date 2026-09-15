@@ -285,8 +285,13 @@ def similarity_nucleus_cell(
 
     counts = _get_count_matrix(adata, layer=tables_raw_counts_layer)
 
+    all_count_genes = _get_genes(
+            adata=adata,
+            gene_key=tables_gene_key,
+        )
+
     count_genes = _exclude_genes_by_prefix(
-        pd.Index(_get_genes(adata=adata, gene_key=tables_gene_key)),
+        all_count_genes,
         exclude_gene_prefixes,
     )
 
@@ -316,7 +321,7 @@ def similarity_nucleus_cell(
     # Keep the cell count matrix sparse and materialize only the genes used in the
     # nucleus comparison for one cell at a time.
     common_genes = expr_nucleus.columns.intersection(count_genes)
-    gene_positions = count_genes.get_indexer(common_genes)
+    gene_positions = all_count_genes.get_indexer(common_genes)
     expr_nucleus = expr_nucleus[common_genes]
 
     # Identify transcripts that are both assigned to the focal cell and located
