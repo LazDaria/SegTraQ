@@ -194,8 +194,8 @@ def similarity_top_bottom(
         Column for the y-coordinate of each transcript.
     points_z_key : str, default="z"
         Column specifying the z coordinate / depth for each transcript.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
-        Gene prefixes excluded from label transfer. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded. By default, mitochondrial
         and ribosomal genes are excluded. Set to None to use all genes.
     correct_z_drift : bool, default=True
         If True, correct global z-drift before computing within-cell z-quantiles.
@@ -256,7 +256,7 @@ def similarity_top_bottom(
     )
 
     tx = tx[tx[points_gene_key].isin(all_genes)]
-    
+
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
 

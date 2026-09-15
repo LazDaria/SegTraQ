@@ -1776,10 +1776,11 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.silhouette_score(
-            self._p.sdata,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             metric=metric,
-            tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             random_state=random_state,
             cell_type_key=cell_type_key,
@@ -1808,10 +1809,11 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.purity(
-            self._p.sdata,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
-            tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             exclude_gene_prefixes=exclude_gene_prefixes,
@@ -1838,11 +1840,12 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.adjusted_rand_index(
-            self._p.sdata,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
-            tables_key=self._p.tables_key,
             use_hvg=use_hvg,
             exclude_gene_prefixes=exclude_gene_prefixes,
             n_neighbors=n_neighbors,
@@ -1871,10 +1874,11 @@ class _CSFacade:
     ):
         return cs.cluster_connectedness(
             sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             use_weights=use_weights,
             key_prefix=key_prefix,
-            tables_key=self._p.tables_key,
             random_state=random_state,
             cell_type_key=cell_type_key,
             use_hvg=use_hvg,

@@ -20,12 +20,14 @@ from ..utils import (
     _compute_hvg_mask,
     _get_norm_log,
     _resolve_use_hvg,
-    _exclude_genes_by_prefix
+    _exclude_genes_by_prefix,
+    _get_genes
 )
 
 
 def _get_pca_and_neighbors(
     adata: AnnData,
+    gene_key: str | None = None, 
     raw_layer: str | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
@@ -49,6 +51,9 @@ def _get_pca_and_neighbors(
     adata : AnnData
     raw_layer : str or None
         Layer with raw counts. None → use `.X`.
+    gene_key : str or None, default=None
+        Column in `adata` containing gene identifiers.
+        If `None`, `adata.var_names` are used.
     n_neighbors: int
         Number of neighbors for `sc.pp.neighbors`.
     n_pcs: int
@@ -58,11 +63,12 @@ def _get_pca_and_neighbors(
         computing the norm_log layer. Ignored if the norm_log layer already exists.
     use_hvg : bool or None, default=None
         If `None`, use HVGs automatically when the panel contains more than
-        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+        8,000 genes. If `True`, always use HVGs. If False, use all genes
+        remaining after `exclude_gene_prefixes` filtering.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=None
-        Gene prefixes excluded from label transfer. By default, mitochondrial
-        and ribosomal genes are excluded. This filtering is applied independently
-        of HVG selection. Set to None to use all shared genes.
+        Gene prefixes excluded from PCA feature selection. By default,
+        mitochondrial and ribosomal genes are excluded. This filtering is
+        applied independently of HVG selection. Set to None to use all genes.
 
     Returns
     -------
@@ -75,7 +81,7 @@ def _get_pca_and_neighbors(
         target_sum=target_sum,
     )
 
-    genes = pd.Index(adata.var_names)
+    genes = _get_genes(adata, gene_key)
     genes_to_use = _exclude_genes_by_prefix(
         genes,
         exclude_gene_prefixes,
@@ -122,6 +128,7 @@ def _prepare_cs_adata(
     sdata: sd.SpatialData,
     tables_key: str,
     use_hvg: bool | None,
+    tables_gene_key: str | None = None,
     exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
@@ -134,6 +141,7 @@ def _prepare_cs_adata(
 
     return _get_pca_and_neighbors(
         adata,
+        gene_key=tables_gene_key,
         n_neighbors=n_neighbors,
         n_pcs=n_pcs,
         target_sum=target_sum,

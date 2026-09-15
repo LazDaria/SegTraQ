@@ -81,13 +81,14 @@ def _compute_hvg_mask(
     adata: AnnData,
     *,
     n_top_genes: int = 2000,
+    gene_key: str | None = None, 
     exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
 ) -> np.ndarray:
     """Compute an HVG mask from SegTraQ's normalized-log expression layer."""
     if NORM_LOG_LAYER not in adata.layers:
         raise KeyError(f"{NORM_LOG_LAYER!r} not found in `adata.layers`.")
 
-    genes = pd.Index(adata.var_names)
+    genes = _get_genes(adata, gene_key)
     genes_to_use = _exclude_genes_by_prefix(
         genes,
         exclude_gene_prefixes,
@@ -952,6 +953,9 @@ def markers_from_reference(
     ref_raw_counts_layer : str or None, default=None
         Layer containing raw counts. If `None`, raw counts are expected in
         `adata.X`.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+            Gene prefixes excluded. By default, mitochondrial
+            and ribosomal genes are excluded. 
     mode : {"auc", "de"}, optional (default: "de")
         - "auc": compute markers using pairwise AUC/pAUC.
         - "de" : compute markers using pairwise DE.

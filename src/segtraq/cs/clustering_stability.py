@@ -21,6 +21,7 @@ from .utils import (
 
 def cluster_connectedness(
     sdata: sd.SpatialData,
+    tables_gene_key: str | None = None,
     resolution: float | list[float] = 0.2,
     use_weights: bool = False,
     tables_key: str = "table",
@@ -44,6 +45,9 @@ def cluster_connectedness(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     resolution : float or list of float, optional
         The resolution parameter(s) for Leiden clustering, by default 0.2.
     use_weights: bool
@@ -60,10 +64,10 @@ def cluster_connectedness(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
-        Gene prefixes excluded from label transfer. By default, mitochondrial
-        and ribosomal genes are excluded. This filtering is applied independently
-        of HVG selection. Set to None to use all genes.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded from PCA feature selection. By default,
+        mitochondrial and ribosomal genes are excluded. This filtering is
+        applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -85,6 +89,7 @@ def cluster_connectedness(
     adata = _prepare_cs_adata(
         sdata,
         tables_key=tables_key,
+        tables_gene_key=tables_gene_key,
         use_hvg=use_hvg,
         exclude_gene_prefixes=exclude_gene_prefixes,
         n_neighbors=n_neighbors,
@@ -148,6 +153,7 @@ def cluster_connectedness(
 
 def silhouette_score(
     sdata: sd.SpatialData,
+    tables_gene_key: str | None = None,
     resolution: float | list[float] = 0.2,
     metric: str = "euclidean",
     tables_key: str = "table",
@@ -170,6 +176,9 @@ def silhouette_score(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     resolution : float, optional
         The resolution parameter for Leiden clustering, by default 0.2.
     metric : str, optional
@@ -185,10 +194,10 @@ def silhouette_score(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
-        Gene prefixes excluded from label transfer. By default, mitochondrial
-        and ribosomal genes are excluded. This filtering is applied independently
-        of HVG selection. Set to None to use all genes.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded from PCA feature selection. By default,
+        mitochondrial and ribosomal genes are excluded. This filtering is
+        applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -210,6 +219,7 @@ def silhouette_score(
     adata = _prepare_cs_adata(
         sdata,
         tables_key=tables_key,
+        tables_gene_key=tables_gene_key,
         use_hvg=use_hvg,
         exclude_gene_prefixes=exclude_gene_prefixes,
         n_neighbors=n_neighbors,
@@ -279,6 +289,7 @@ def silhouette_score(
 
 def purity(
     sdata: sd.SpatialData,
+    tables_gene_key: str | None = None,
     resolution: float = 0.2,
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
@@ -298,6 +309,9 @@ def purity(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     resolution : float, optional
         The resolution parameter for Leiden clustering, by default 0.2.
     tables_key : str, optional
@@ -309,10 +323,10 @@ def purity(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
-        Gene prefixes excluded from label transfer. By default, mitochondrial
-        and ribosomal genes are excluded. This filtering is applied independently
-        of HVG selection. Set to None to use all genes.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded from PCA feature selection. By default,
+        mitochondrial and ribosomal genes are excluded. This filtering is
+        applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -335,6 +349,7 @@ def purity(
     adata_prepared = _prepare_cs_adata(
         sdata,
         tables_key=tables_key,
+        tables_gene_key=tables_gene_key,
         use_hvg=use_hvg,
         exclude_gene_prefixes=exclude_gene_prefixes,
         n_neighbors=n_neighbors,
@@ -376,6 +391,7 @@ def purity(
 
 def adjusted_rand_index(
     sdata: sd.SpatialData,
+    tables_gene_key: str | None = None,
     resolution: float = 0.2,
     frac_cells_subset: float = 0.63,
     tables_key: str = "table",
@@ -395,6 +411,9 @@ def adjusted_rand_index(
     ----------
     sdata : sd.SpatialData
         The SpatialData object containing clustering information.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
     resolution : float, optional
         The resolution parameter for Leiden clustering, by default 0.2.
     frac_cells_subset : float, optional
@@ -406,10 +425,10 @@ def adjusted_rand_index(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
-        Gene prefixes excluded from label transfer. By default, mitochondrial
-        and ribosomal genes are excluded. This filtering is applied independently
-        of HVG selection. Set to None to use all genes.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded from PCA feature selection. By default,
+        mitochondrial and ribosomal genes are excluded. This filtering is
+        applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -432,6 +451,7 @@ def adjusted_rand_index(
     adata_prepared = _prepare_cs_adata(
         sdata,
         tables_key=tables_key,
+        tables_gene_key=tables_gene_key,
         use_hvg=use_hvg,
         exclude_gene_prefixes=exclude_gene_prefixes,
         n_neighbors=n_neighbors,
