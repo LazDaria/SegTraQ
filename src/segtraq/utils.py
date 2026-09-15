@@ -5,6 +5,7 @@ import warnings
 from collections.abc import Callable
 from importlib.metadata import version
 
+import shapely
 import dask.dataframe as dd
 import geopandas as gpd
 import numpy as np
@@ -78,22 +79,15 @@ def _resolve_use_hvg(n_genes: int, use_hvg: bool | None) -> bool:
 def _compute_hvg_mask(
     adata: AnnData,
     *,
-    n_top_genes: int = 200,
+    n_top_genes: int = 2000,
     exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
 ) -> np.ndarray:
     """Compute an HVG mask from SegTraQ's normalized-log expression layer."""
     if NORM_LOG_LAYER not in adata.layers:
         raise KeyError(f"{NORM_LOG_LAYER!r} not found in `adata.layers`.")
 
-    hvg = sc.pp.highly_variable_genes(
-        adata,
-        flavor="seurat",
-        n_top_genes=min(n_top_genes, adata.n_vars),
-        layer=NORM_LOG_LAYER,
-        inplace=False,
-    )
-
-    mask = hvg["highly_variable"].to_numpy()
+    # First exclude unwanted genes
+    keep = np.ones(adata.n_vars, dtype=bool)
 
     if exclude_gene_prefixes is not None:
         if isinstance(exclude_gene_prefixes, str):
@@ -102,10 +96,30 @@ def _compute_hvg_mask(
             exclude_gene_prefixes = tuple(exclude_gene_prefixes)
 
         genes = adata.var_names.astype(str)
-        excluded = np.array(
-            [any(g.upper().startswith(prefix.upper()) for prefix in exclude_gene_prefixes) for g in genes]
+        keep = np.array(
+            [
+                not any(
+                    g.upper().startswith(prefix.upper())
+                    for prefix in exclude_gene_prefixes
+                )
+                for g in genes
+            ]
         )
-        mask &= ~excluded
+
+    # Work on a copy 
+    adata_hvg = adata[:, keep].copy()
+
+    hvg = sc.pp.highly_variable_genes(
+        adata_hvg,
+        flavor="seurat",
+        n_top_genes=min(n_top_genes, adata_hvg.n_vars),
+        layer=NORM_LOG_LAYER,
+        inplace=False,
+    )
+
+    # Map HVGs back to the original gene space
+    mask = np.zeros(adata.n_vars, dtype=bool)
+    mask[np.flatnonzero(keep)] = hvg["highly_variable"].to_numpy()
 
     return mask
 
@@ -844,6 +858,35 @@ def _pairwise_de(
     return (ct_a, ct_b, pos_a["names"].tolist(), True), (ct_b, ct_a, pos_b["names"].tolist(), True)
 
 
+def _store_segtraq_markers(
+    adata: AnnData,
+    markers: dict[str, dict[str, list[str]]],
+    query_gene_key: str | None = None,
+) -> None:
+    """Store SegTraQ markers in `.uns` as gene indices."""
+
+    genes = _get_genes(adata=adata, gene_key=query_gene_key)
+
+    def _to_indices(marker_genes):
+        idx = genes.get_indexer(marker_genes)
+
+        if np.any(idx < 0):
+            missing = np.asarray(marker_genes)[idx < 0]
+            raise ValueError(
+                f"Marker genes not found in table genes: {missing.tolist()}"
+            )
+
+        return idx.astype(np.int32)
+
+    adata.uns["segtraq_markers"] = {
+        cell_type: {
+            "positive": _to_indices(marker_sets["positive"]),
+            "negative": _to_indices(marker_sets["negative"]),
+        }
+        for cell_type, marker_sets in markers.items()
+    }
+
+
 def markers_from_reference(
     adata: AnnData,
     ref_cell_type: str,
@@ -1232,76 +1275,82 @@ def _ensure_index(
 
 def bins_to_transcripts(
     sdata: sd.SpatialData,
-    tables_key: str,
+    bins_tables_key: str,
+    cells_tables_key: str,
     cell_shapes_key: str,
-    tables_gene_key: str | None = None,
+    bins_tables_gene_key: str | None = None,
     bins_shapes_key: str | None = None,
     coordinate_system: str | None = None,
     bins_points_key: str | None = None,
-    cell_id_key: str = "cell_id",
+    tables_cell_id_key: str = "cell_id",
+    shapes_cell_id_key: str = "cell_id",
     background_id: str | int = "UNASSIGNED",
     chunk_bins: int = 50_000,
+    max_molecules_per_chunk: int = 2_000_000,
 ) -> sd.SpatialData:
     """
-    Convert per-bin/spot counts in sdata.tables[table_key] into per-transcript points.
+    Convert per-bin/spot counts into transcript-like points.
+
+    Bin centroids are assigned to segmented cells and each count is expanded
+    into one point. Processing is chunked to limit peak memory usage.
+
+    Cells that are not represented by any generated transcript-like points
+    are set to zero counts in the cell-level count table. This is relevant
+    for 10x Visium HD, where `spatialdata_io` excludes bins outside the tissue
+    mask (`in_tissue=False`) when reading the bin-level count table, while the
+    cell-level table can contain counts derived from these bins.
 
     Parameters
     ----------
     sdata : SpatialData
         SpatialData object containing tables, shapes and/or points layers.
-    tables_key : str
-        Key in `sdata.tables` containing the per-bin or per-spot count matrix
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
+    bins_tables_key : str
+        Key in `sdata.tables` containing the per-bin/spot count matrix.
+    cells_tables_key : str
+        Key in `sdata.tables` containing the per-cell count matrix.
     cell_shapes_key : str
-        Key in `sdata.shapes` containing cell segmentation polygons used to
-        assign each bin/spot to a `cell_id`.
+        Key in `sdata.shapes` containing cell polygons.
+    bins_tables_gene_key : str or None, default=None
+        Column in `sdata.tables[bins_tables_key].var` containing gene identifiers.
+        If None, `var_names` are used.
     bins_shapes_key : str or None, optional
-        Key in `sdata.shapes` describing bin/spot geometries. If provided,
-        centroids will be computed from these shapes. Exactly one of
-        `bins_shapes_key` or `bins_points_key` must be given.
+        Key containing bin/spot geometries. Centroids are computed from these
+        shapes. Exactly one of `bins_shapes_key` or `bins_points_key` must be provided.
     coordinate_system : str or None, optional
-        Coordinate system used when computing centroids from `bins_shapes_key`.
-        Required if `bins_shapes_key` is provided.
+        Coordinate system used when computing centroids from bin shapes.
     bins_points_key : str or None, optional
-        Key in `sdata.points` containing precomputed bin/spot centroids with
-        x/y coordinates. Used instead of computing centroids from shapes.
-    cell_id_key : str, default="cell_id"
-        Column or index name in `sdata.shapes[cell_shapes_key]` identifying
-        individual cells.
+        Key containing precomputed bin/spot centroid points.
+    tables_cell_id_key : str, optional
+        Column name identifying cells in `cells_tables_key`.
+    shapes_cell_id_key : str, default="cell_id"
+        Column or index name identifying cells in `cell_shapes_key`.
     background_id : str or int, default="UNASSIGNED"
-        Identifier assigned to bins/spots that do not intersect any cell.
+        ID assigned to bins not intersecting any cell.
     chunk_bins : int, default=50_000
-        Number of bins processed per chunk when expanding counts into
-        transcripts. Smaller values reduce peak memory usage but may increase
-        runtime.
+        Maximum number of input bins per expansion partition.
+    max_molecules_per_chunk : int, default=2_000_000
+        Approximate maximum number of output transcript rows per partition.
 
     Returns
     -------
     SpatialData
-        Updated `SpatialData` object where per-bin counts have been expanded
-        into a transcript-level points layer.
-
-    Requirements
-    ------------
-    - sdata.tables[table_key] is AnnData-like with X = counts (n_bins x n_genes).
-    - You can provide either:
-        (A) bins_shapes_key (+ coordinate_system) to compute centroids, OR
-        (B) bins_points_key containing x/y for each bin/spot.
-    - cell_shapes_key contains cell polygons with a column (or index) cell_id_key.
+        SpatialData object with a `"transcripts"` points element.
     """
-
     if (bins_shapes_key is None) == (bins_points_key is None):
         raise ValueError("Provide exactly one of bins_shapes_key or bins_points_key.")
+    if chunk_bins <= 0:
+        raise ValueError("chunk_bins must be > 0.")
+    if max_molecules_per_chunk <= 0:
+        raise ValueError("max_molecules_per_chunk must be > 0.")
 
-    adata = sdata.tables[tables_key]
-    if not sparse.issparse(adata.X):
-        X = sparse.csr_matrix(adata.X)
-    else:
-        X = adata.X.tocsr()
+    bins_adata = sdata.tables[bins_tables_key]
+    cells_adata = sdata.tables[cells_tables_key]
+    X = bins_adata.X.tocsr() if sparse.issparse(bins_adata.X) else sparse.csr_matrix(bins_adata.X)
 
-    genes = _get_genes(adata, tables_gene_key)
+    if X.nnz and (np.any(X.data < 0) or not np.allclose(X.data, np.round(X.data))):
+        raise ValueError("The count matrix must contain non-negative integer counts.")
+
+    genes = _get_genes(bins_adata, bins_tables_gene_key)
     gene_names = np.asarray(genes)
 
     # build centroid points for bins/spots
@@ -1313,88 +1362,163 @@ def bins_to_transcripts(
             sdata.shapes[bins_shapes_key],
             coordinate_system=coordinate_system,
         )
-        # copy transforms so points align with images/shapes
         centroids.attrs["transform"] = sdata.shapes[bins_shapes_key].attrs.get("transform", None)
 
-        # save in sdata.points under a new key
         bins_points_key = f"{bins_shapes_key}_centroids"
         sdata.points[bins_points_key] = centroids
 
     cent = sdata.points[bins_points_key]
-
-    # Dask dataframe - compute only necessary cols once
     cent_pd = cent[["x", "y"]].compute()
 
-    # ensure same order
-    if "location_id" in adata.obs.columns:
-        cent_pd = cent_pd.reindex(adata.obs["location_id"].to_numpy())
+    # ensure same order as count matrix
+    if "location_id" in bins_adata.obs.columns:
+        bin_ids = bins_adata.obs["location_id"].to_numpy()
     else:
-        cent_pd = cent_pd.reindex(adata.obs_names)
+        bin_ids = bins_adata.obs_names
+
+    cent_pd = cent_pd.reindex(bin_ids)
 
     if cent_pd[["x", "y"]].isna().any().any():
         raise ValueError(
-            "Centroid x/y contains NaNs after alignment. Check bins_points/bins_shapes vs table row identifiers."
+            "Centroid x/y contains NaNs after alignment. Check bin points/shapes against table row identifiers."
         )
+    if len(cent_pd) != X.shape[0]:
+        raise ValueError("Number of aligned bin coordinates does not match the number of rows in the count matrix.")
 
-    x_all = cent_pd["x"].to_numpy(dtype=np.float32, copy=False)
-    y_all = cent_pd["y"].to_numpy(dtype=np.float32, copy=False)
+    x_spatial = cent_pd["x"].to_numpy(copy=False)
+    y_spatial = cent_pd["y"].to_numpy(copy=False)
 
-    # assign each bin/spot to a cell_id
+    # only cast for transcript output
+    x_all = x_spatial.astype(np.float32, copy=False)
+    y_all = y_spatial.astype(np.float32, copy=False)
 
-    points_gdf = gpd.GeoDataFrame(  # spatial join
-        cent_pd.copy(),
-        geometry=gpd.points_from_xy(cent_pd["x"], cent_pd["y"]),
-    )
-
+    # assign bins/spots to cells using a spatial index
     cells = sdata.shapes[cell_shapes_key]
 
-    # ensure cell_id_key exists as column (if it's in index, expose it)
-    cells_gdf = cells[["geometry"]].copy()
-    if cell_id_key in cells.columns:
-        cells_gdf[cell_id_key] = cells[cell_id_key].values
-    elif cells.index.name == cell_id_key:
-        cells_gdf[cell_id_key] = cells.index.values
+    if shapes_cell_id_key in cells.columns:
+        cell_ids = cells[shapes_cell_id_key].to_numpy()
+    elif cells.index.name == shapes_cell_id_key:
+        cell_ids = cells.index.to_numpy()
     else:
         raise ValueError(
-            f"cell_id_key={cell_id_key!r} not found as a column or index name in sdata.shapes[{cell_shapes_key!r}]."
+            f"cell_id_key={shapes_cell_id_key!r} not found as a column or index name "
+            f"in sdata.shapes[{cell_shapes_key!r}]."
         )
 
-    joined = gpd.sjoin(
-        points_gdf[["geometry"]],
-        cells_gdf,
-        how="left",
-        predicate="intersects",
-    )
+    cell_ids = np.asarray(cell_ids)
 
-    cell_id_series = (
-        joined[cell_id_key].groupby(level=0).first().reindex(points_gdf.index).fillna(background_id)  # centroid index
-    )
+    if not pd.Index(cell_ids).is_unique:
+        raise ValueError(f"Cell identifiers in {cell_shapes_key!r} must be unique.")
 
-    # expand sparse counts -> per-transcript rows (x, y, gene, cell_id)
-    cell_cat = cell_id_series.astype("category")  # categorical codes (memory-friendly)
-    cell_codes = cell_cat.cat.codes.to_numpy(dtype=np.int32, copy=False)
-    cell_categories = cell_cat.cat.categories.to_numpy()
+    cell_geometries = cells.geometry.to_numpy()
+
+    usable_cells = (
+        ~shapely.is_empty(cell_geometries)
+        & ~shapely.is_missing(cell_geometries)
+    )
+    usable_cell_pos = np.flatnonzero(usable_cells)
+
+    if len(usable_cell_pos) == 0:
+        raise ValueError(f"No usable cell geometries found in {cell_shapes_key!r}.")
+
+    tree = shapely.STRtree(cell_geometries[usable_cell_pos])
+
+    cell_categories = np.concatenate([cell_ids.astype(object), np.asarray([background_id], dtype=object)])
+    background_code = len(cell_ids)
+    bin_cell_codes = np.full(X.shape[0], background_code, dtype=np.int32)
+
+    # spatial assignment is chunked to avoid constructing all bin geometries at once
+    for start in range(0, X.shape[0], chunk_bins):
+        end = min(start + chunk_bins, X.shape[0])
+        bin_points = shapely.points(x_spatial[start:end], y_spatial[start:end])
+        matches = tree.query(bin_points, predicate="intersects")
+
+        if matches.size == 0:
+            continue
+
+        query_idx, tree_idx = matches
+        original_cell_idx = usable_cell_pos[tree_idx]
+
+        # if polygons overlap, select the first cell deterministically
+        order = np.lexsort((original_cell_idx, query_idx))
+        query_sorted = query_idx[order]
+        cell_sorted = original_cell_idx[order]
+        first = np.r_[True, query_sorted[1:] != query_sorted[:-1]]
+
+        bin_cell_codes[start + query_sorted[first]] = cell_sorted[first].astype(np.int32, copy=False)
+
+    # define chunks based on both number of bins and resulting number of molecules
+    molecules_per_bin = np.asarray(X.sum(axis=1)).ravel().astype(np.int64, copy=False)
+
+    # zero cell-table counts for cells absent from generated points
+    bins_with_molecules = molecules_per_bin > 0
+    represented_codes = np.unique(
+        bin_cell_codes[bins_with_molecules & (bin_cell_codes != background_code)]
+    )
+    represented_cell_ids = pd.Index(cell_ids[represented_codes].astype(str))
+
+    if tables_cell_id_key in cells_adata.obs.columns:
+        table_cell_ids = cells_adata.obs[tables_cell_id_key].astype(str)
+    else:
+        raise ValueError(
+            f"cell_id_key={tables_cell_id_key!r} not found as a column name "
+            f"in sdata.tables[{cells_tables_key!r}].obs."
+        )
+
+    missing_from_points = ~table_cell_ids.isin(represented_cell_ids)
+    missing_from_points = np.asarray(missing_from_points)
+
+    if sparse.issparse(cells_adata.X):
+        cells_adata.X = cells_adata.X.multiply((~missing_from_points)[:, None]).tocsr()
+        cells_adata.X.eliminate_zeros()
+    else:
+        cells_adata.X[missing_from_points, :] = 0
+
+    cumulative = np.cumsum(molecules_per_bin, dtype=np.int64)
+
+    if len(cumulative):
+        molecule_bucket = np.maximum(cumulative - 1, 0) // max_molecules_per_chunk
+        bin_bucket = np.arange(X.shape[0], dtype=np.int64) // chunk_bins
+        boundaries = np.flatnonzero(
+            (molecule_bucket[1:] != molecule_bucket[:-1]) | (bin_bucket[1:] != bin_bucket[:-1])
+        ) + 1
+        starts = np.r_[0, boundaries]
+        ends = np.r_[boundaries, X.shape[0]]
+        chunks = list(zip(starts, ends, strict=True))
+    else:
+        chunks = []
+
+    # categorical IDs avoid repeated Python strings for every molecule
+    gene_dtype = pd.CategoricalDtype(categories=pd.Index(gene_names), ordered=False)
+    cell_dtype = pd.CategoricalDtype(categories=pd.Index(cell_categories), ordered=False)
 
     @delayed
     def chunk_to_molecules(start: int, end: int) -> pd.DataFrame:
         Xc = X[start:end].tocoo()
+
         if Xc.nnz == 0:
-            return pd.DataFrame({"x": [], "y": [], "feature_name": [], "cell_id": []})
+            return pd.DataFrame(
+                {
+                    "x": pd.Series(dtype="float32"),
+                    "y": pd.Series(dtype="float32"),
+                    "feature_name": pd.Series(pd.Categorical([], dtype=gene_dtype)),
+                    "cell_id": pd.Series(pd.Categorical([], dtype=cell_dtype)),
+                }
+            )
 
-        bin_idx = (Xc.row + start).astype(np.int64, copy=False)
-        gene_idx = Xc.col.astype(np.int32, copy=False)
-        counts = Xc.data.astype(np.int32, copy=False)
+        counts = np.rint(Xc.data).astype(np.int64, copy=False)
+        bin_idx = Xc.row.astype(np.int64, copy=False) + start
 
-        # expand each (bin,gene,count) into `count` molecules
         bin_rep = np.repeat(bin_idx, counts)
-        gene_rep = np.repeat(gene_idx, counts)
+        gene_codes = np.repeat(Xc.col.astype(np.int32, copy=False), counts)
+        cell_codes = bin_cell_codes[bin_rep]
 
         return pd.DataFrame(
             {
                 "x": x_all[bin_rep],
                 "y": y_all[bin_rep],
-                "feature_name": gene_names[gene_rep].astype(object),
-                "cell_id": cell_categories[cell_codes[bin_rep]].astype(object),
+                "feature_name": pd.Categorical.from_codes(gene_codes, dtype=gene_dtype),
+                "cell_id": pd.Categorical.from_codes(cell_codes, dtype=cell_dtype),
             }
         )
 
@@ -1402,19 +1526,16 @@ def bins_to_transcripts(
         {
             "x": pd.Series(dtype="float32"),
             "y": pd.Series(dtype="float32"),
-            "feature_name": pd.Series(dtype="object"),
-            "cell_id": pd.Series(dtype="object"),
+            "feature_name": pd.Series(pd.Categorical([], dtype=gene_dtype)),
+            "cell_id": pd.Series(pd.Categorical([], dtype=cell_dtype)),
         }
     )
 
-    n_bins = X.shape[0]
-    parts = [chunk_to_molecules(start, min(start + chunk_bins, n_bins)) for start in range(0, n_bins, chunk_bins)]
+    parts = [chunk_to_molecules(int(start), int(end)) for start, end in chunks]
     molecules_ddf = dd.from_delayed(parts, meta=meta)
-    # molecules_ddf = molecules_ddf.reset_index(drop=True)
 
-    # wrap as SpatialData points with transforms
+    # wrap as SpatialData points
     transforms = cent.attrs.get("transform", None)
-
     molecules_points = PointsModel.parse(
         molecules_ddf,
         feature_key="feature_name",

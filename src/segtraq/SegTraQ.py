@@ -12,13 +12,13 @@ from .constants import SEGTRAQ_CELL_ID_KEY
 from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
-from .utils import run_label_transfer as _run_label_transfer
+from .utils import run_label_transfer as _run_label_transfer, _store_segtraq_markers
 
 DEFAULT_FILTER_KWARGS = {
     "min_qv": 20,
     "control_prefixes": (
         "NegControlProbe_",
-        "antisense_",
+        "antisense_", 
         "NegControlCodeword",
         "BLANK_",
         "Blank-",
@@ -983,7 +983,9 @@ class SegTraQ:
         t_neg: float = 1.0,
         min_cells_per_celltype: int = 10,
         n_jobs: int | None = None,
+        inplace: bool = True
     ):
+        
         sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
 
         # copies gene identifiers into var_names and makes them unique (if needed)
@@ -1020,6 +1022,13 @@ class SegTraQ:
             n_jobs=n_jobs,
         )
 
+        if inplace:
+            _store_segtraq_markers(
+                adata=self.sdata.tables[self.tables_key],
+                query_gene_key=query_gene_key,
+                markers=markers,
+            )
+
         return markers
 
     markers_from_reference.__doc__ = _markers_from_reference.__doc__ + dedent(
@@ -1031,8 +1040,16 @@ class SegTraQ:
                 Additional parameter only used when ``markers_from_reference`` is called
                 as a method of a ``SegTraQ`` instance. Specifies the column in
                 ``self.sdata.tables[tables_key].var`` containing the query gene
-                identifiers. If ``None``, ``var_names`` are used. These identifiers are
-                used to subset the reference genes before marker selection.
+                identifiers that match ``ref_gene_key``. This is separate from
+                ``tables_gene_key`` because the gene identifiers used during SegTraQ
+                initialization must match ``points_gene_key``, whereas a different gene
+                annotation in the table may match the identifiers used in the reference.
+                If ``None``, ``var_names`` are used. These identifiers are used to subset
+                the reference genes before marker selection.
+            inplace : bool, default=True
+                Additional parameter only used when ``markers_from_reference`` is called
+                as a method of a ``SegTraQ`` instance. If ``True``, stores the positive
+                and negative markers in ``self.sdata.tables[tables_key].uns``.
             """
     )
 
@@ -1975,7 +1992,6 @@ class _VLFacade:
         )
 
     vertical_signal_integrity_per_cell.__doc__ = vl.vertical_signal_integrity_per_cell.__doc__
-
 
 class _PLFacade:
     """
