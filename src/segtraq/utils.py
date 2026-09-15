@@ -580,7 +580,6 @@ def run_label_transfer(
     norm_log_counts_df["celltype"] = celltypes.values
     ref_mean_df = norm_log_counts_df.groupby("celltype", observed=True).mean()
 
-    genes_to_use = None
     query_genes = _get_genes(adata_q, query_gene_key)
     common_genes = adata_ref.var_names.intersection(query_genes)
 
@@ -592,11 +591,11 @@ def run_label_transfer(
     if len(common_genes) == 0:
         raise ValueError("No common genes found between query and reference.")
 
+    genes_to_use = set(common_genes)
+
     resolved_use_hvg = _resolve_use_hvg(len(common_genes), use_hvg)
 
     if resolved_use_hvg:
-        # Compute HVGs only within the gene universe that can actually be used
-        # for query-reference correlation.
         ref_common = adata_ref[:, adata_ref.var_names.isin(common_genes)].copy()
         hvg_mask = _compute_hvg_mask(ref_common)
         genes_to_use = set(ref_common.var_names[hvg_mask])

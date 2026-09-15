@@ -52,7 +52,7 @@ def _get_pca_and_neighbors(
     raw_layer : str or None
         Layer with raw counts. None → use `.X`.
     gene_key : str or None, default=None
-        Column in `adata` containing gene identifiers.
+        Column in `adat.var` containing gene identifiers.
         If `None`, `adata.var_names` are used.
     n_neighbors: int
         Number of neighbors for `sc.pp.neighbors`.
@@ -65,7 +65,7 @@ def _get_pca_and_neighbors(
         If `None`, use HVGs automatically when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If False, use all genes
         remaining after `exclude_gene_prefixes` filtering.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=None
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
         Gene prefixes excluded from PCA feature selection. By default,
         mitochondrial and ribosomal genes are excluded. This filtering is
         applied independently of HVG selection. Set to None to use all genes.
@@ -89,7 +89,7 @@ def _get_pca_and_neighbors(
     gene_mask = genes.isin(genes_to_use)
 
     resolved_use_hvg = _resolve_use_hvg(
-        adata.n_vars,
+        len(genes_to_use),
         use_hvg,
     )
 
@@ -97,6 +97,7 @@ def _get_pca_and_neighbors(
         if HVG_KEY not in adata.var:
             adata.var[HVG_KEY] = _compute_hvg_mask(
                 adata,
+                gene_key=gene_key,
                 exclude_gene_prefixes=exclude_gene_prefixes,
             )
         pca_mask = HVG_KEY

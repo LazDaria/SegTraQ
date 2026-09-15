@@ -60,8 +60,9 @@ def percentage_transcripts_in_compartments(
         If None, all genes except those matching `exclude_gene_prefixes`
         are used.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-            Gene prefixes excluded. By default, mitochondrial
-            and ribosomal genes are excluded. 
+        Gene prefixes excluded when `genes=None`. By default, mitochondrial
+        and ribosomal genes are excluded. Has no effect when `genes` is
+        explicitly specified. Set to None to use all genes.
     cell_type_key : str
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -120,6 +121,10 @@ def percentage_transcripts_in_compartments(
     assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
         "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
     )
+
+    all_genes = genes is None
+
+    all_genes = genes is None
 
     if genes is None:
         genes = _exclude_genes_by_prefix(
@@ -248,7 +253,7 @@ def percentage_transcripts_in_compartments(
     out["perc_cytoplasm"] = np.where(out["num_total"] > 0, 100.0 * out["num_in_cytoplasm"] / out["num_total"], np.nan)
 
     # generate column names
-    if genes is None:
+    if all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
@@ -414,6 +419,8 @@ def distance_to_centroid(
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
         )
 
+    all_genes = genes is None
+
     if genes is None:
         genes = _exclude_genes_by_prefix(
             _get_genes(sdata.tables[tables_key], tables_gene_key),
@@ -489,7 +496,7 @@ def distance_to_centroid(
         how="inner",
     )
 
-    if genes is None:
+    if all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
@@ -656,6 +663,8 @@ def distance_to_membrane(
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
         )
 
+    all_genes = genes is None
+
     if genes is None:
         genes = _exclude_genes_by_prefix(
             _get_genes(sdata.tables[tables_key], tables_gene_key),
@@ -757,7 +766,7 @@ def distance_to_membrane(
         dist = dist.where(is_within, -dist)
 
     # decide feature label
-    if genes is None:
+    if all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
@@ -888,6 +897,8 @@ def membrane_distance_skewness(
     ValueError
         If no transcripts remain after filtering/joining/within-cell restriction.
     """
+    all_genes = genes is None
+
     if genes is None:
         genes = _exclude_genes_by_prefix(
             _get_genes(sdata.tables[tables_key], tables_gene_key),
@@ -895,7 +906,7 @@ def membrane_distance_skewness(
         ).tolist()
 
     # decide feature label for column naming
-    if genes is None:
+    if all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
