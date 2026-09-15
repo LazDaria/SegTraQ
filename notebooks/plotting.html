@@ -463,17 +463,17 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea0aae40&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea196850&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea031950&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea431ba0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff7ddae900&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff7dc65d10&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff7e606850&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff7e257950&gt;: None
 </pre></div></div>
 </div>
 </section>
 <section id="Run-desired-metrics">
 <h2>Run desired metrics<a class="headerlink" href="#Run-desired-metrics" title="Link to this heading">#</a></h2>
 <p>Now, we can run all of the metrics we want on this dataset. For now, we simply run a label transfer and run some <code class="docutils literal notranslate"><span class="pre">scanpy</span></code> functions to compute the UMAP coordinates.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
@@ -485,6 +485,17 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffeea431ba0&gt;: None
     <span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+WARNING: adata.X seems to be already log-transformed.
+WARNING: adata.X seems to be already log-transformed.
+WARNING: adata.X seems to be already log-transformed.
+WARNING: adata.X seems to be already log-transformed.
+</pre></div></div>
 </div>
 </section>
 </section>

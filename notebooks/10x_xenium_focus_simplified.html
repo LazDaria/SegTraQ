@@ -433,7 +433,7 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
 </pre></div></div>
 </div>
@@ -443,7 +443,7 @@ document.write(`
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;dask.config.set at 0x7ffee840b890&gt;
+&lt;dask.config.set at 0x7fff7e4bb750&gt;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -459,8 +459,8 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3c1fa10&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff7dc87a10&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff7dc9a0d0&gt;: None
 </pre></div></div>
 </div>
 <p>Let’s have a quick look at the data.</p>
@@ -502,9 +502,9 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;HPV18-E6&#39;, &#39;CYP2A6&#39;, &#39;Human_PTEN_G129E_WT:A&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;CYP2A6&#39;, &#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;F2&#39;, &#39;Human_PTEN_G129E_WT:A&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;obnpmdml-1&#39;, &#39;obnhammk-1&#39;, &#39;hledllmd-1&#39;, &#39;obnpldod-1&#39;, &#39;obnpohfm-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;ibgnelbc-1&#39;, &#39;ipkonddj-1&#39;, &#39;ocnkohki-1&#39;, &#39;obnkiokn-1&#39;, &#39;japgdane-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -906,7 +906,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.8208639323610152
+0.8205399021229313
 </pre></div></div>
 </div>
 <p>We can do the same with the silhouette score.</p>
@@ -924,7 +924,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
--0.040036726742982864
+-0.03765101730823517
 </pre></div></div>
 </div>
 <p>Next, we can check how stable the clustering is when we only take a subset (63%) of our genes and run clustering on this. We do this five times, and then assess the quality with the adjusted Rand index (ARI) and the purity. For more details on these metrics, refer to the section on this module.</p>
@@ -942,7 +942,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.6602554723281012
+0.6582868904489151
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -959,7 +959,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.8013457030532878
+0.7935927271283308
 </pre></div></div>
 </div>
 </section>
@@ -1004,6 +1004,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
       <th>nucleus_id</th>
       <th>iou</th>
       <th>nucleus_fraction</th>
+      <th>num_nuclei</th>
     </tr>
   </thead>
   <tbody>
@@ -1013,6 +1014,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
       <td>0.0</td>
       <td>0.617026</td>
       <td>1.000000</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>1</th>
@@ -1020,6 +1022,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
       <td>1.0</td>
       <td>0.556906</td>
       <td>0.999997</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>2</th>
@@ -1027,6 +1030,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
       <td>2.0</td>
       <td>0.427579</td>
       <td>0.997749</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>3</th>
@@ -1034,6 +1038,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
       <td>3.0</td>
       <td>0.708851</td>
       <td>1.000000</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>4</th>
@@ -1041,6 +1046,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
       <td>4.0</td>
       <td>0.543778</td>
       <td>1.000000</td>
+      <td>1.0</td>
     </tr>
   </tbody>
 </table>
@@ -1276,32 +1282,32 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d46210&gt;: None
     <tr>
       <th>0</th>
       <td>acceakgj-1</td>
-      <td>0.007429</td>
-      <td>0.437811</td>
+      <td>0.013326</td>
+      <td>0.378109</td>
     </tr>
     <tr>
       <th>1</th>
       <td>accebped-1</td>
-      <td>0.111726</td>
-      <td>0.074627</td>
+      <td>0.102202</td>
+      <td>0.094527</td>
     </tr>
     <tr>
       <th>2</th>
       <td>accedpdh-1</td>
-      <td>0.294730</td>
-      <td>0.014925</td>
+      <td>0.299454</td>
+      <td>0.019900</td>
     </tr>
     <tr>
       <th>3</th>
       <td>acceejoe-1</td>
-      <td>0.200051</td>
-      <td>0.004975</td>
+      <td>0.206444</td>
+      <td>0.009950</td>
     </tr>
     <tr>
       <th>4</th>
       <td>acceekkh-1</td>
-      <td>0.142848</td>
-      <td>0.019900</td>
+      <td>0.137160</td>
+      <td>0.054726</td>
     </tr>
   </tbody>
 </table>
@@ -1958,58 +1964,58 @@ WARNING: adata.X seems to be already log-transformed.
   <tbody>
     <tr>
       <th>0</th>
-      <td>ARRB2</td>
-      <td>DNASE1L3</td>
-      <td>1.873397</td>
-      <td>0.930218</td>
-      <td>4</td>
-      <td>720</td>
-      <td>52</td>
-      <td>17535</td>
+      <td>IL3RA</td>
+      <td>TRBC1</td>
+      <td>0.424552</td>
+      <td>0.001375</td>
+      <td>11</td>
+      <td>236</td>
+      <td>1787</td>
+      <td>16277</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>DUSP5</td>
-      <td>P2RX5</td>
-      <td>0.478774</td>
-      <td>0.000036</td>
-      <td>26</td>
-      <td>1338</td>
-      <td>661</td>
-      <td>16286</td>
+      <td>NLRP1</td>
+      <td>TRIM29</td>
+      <td>0.438054</td>
+      <td>0.094415</td>
+      <td>3</td>
+      <td>420</td>
+      <td>287</td>
+      <td>17601</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>ENPP3</td>
-      <td>MAPK11</td>
-      <td>0.000000</td>
-      <td>0.574829</td>
-      <td>0</td>
-      <td>72</td>
-      <td>140</td>
-      <td>18099</td>
+      <td>ITGA2B</td>
+      <td>SLC2A1</td>
+      <td>3.632042</td>
+      <td>0.993404</td>
+      <td>4</td>
+      <td>31</td>
+      <td>627</td>
+      <td>17649</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>ADGRA2</td>
-      <td>CD151</td>
-      <td>2.808765</td>
-      <td>0.999700</td>
-      <td>14</td>
-      <td>237</td>
-      <td>372</td>
-      <td>17688</td>
+      <td>CYP27A1</td>
+      <td>HES4</td>
+      <td>8.606262</td>
+      <td>0.998063</td>
+      <td>2</td>
+      <td>136</td>
+      <td>31</td>
+      <td>18142</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>CD82</td>
-      <td>IFI44L</td>
-      <td>2.184316</td>
-      <td>0.999726</td>
-      <td>25</td>
-      <td>191</td>
-      <td>1023</td>
-      <td>17072</td>
+      <td>PDGFRB</td>
+      <td>PSD3</td>
+      <td>2.154061</td>
+      <td>0.980095</td>
+      <td>7</td>
+      <td>368</td>
+      <td>157</td>
+      <td>17779</td>
     </tr>
   </tbody>
 </table>
