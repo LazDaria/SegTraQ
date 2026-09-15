@@ -52,7 +52,7 @@ def _get_pca_and_neighbors(
     raw_layer : str or None
         Layer with raw counts. None → use `.X`.
     gene_key : str or None, default=None
-        Column in `adat.var` containing gene identifiers.
+        Column in `adata.var` containing gene identifiers.
         If `None`, `adata.var_names` are used.
     n_neighbors: int
         Number of neighbors for `sc.pp.neighbors`.

@@ -124,8 +124,6 @@ def percentage_transcripts_in_compartments(
 
     all_genes = genes is None
 
-    all_genes = genes is None
-
     if genes is None:
         genes = _exclude_genes_by_prefix(
             _get_genes(sdata.tables[tables_key], tables_gene_key),
