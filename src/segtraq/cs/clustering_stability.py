@@ -5,7 +5,7 @@ import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
-from ..constants import CONNECTIVITIES_KEY, PCA_KEY
+from ..constants import CONNECTIVITIES_KEY, PCA_KEY, DEFAULT_EXCLUDE_GENE_PREFIXES
 from ..utils import merge_into_uns
 from .utils import (
     _cluster_connectedness,
@@ -28,7 +28,7 @@ def cluster_connectedness(
     random_state: int = 42,
     cell_type_key: str | None = None,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -60,9 +60,10 @@ def cluster_connectedness(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. This filtering is applied independently
+        of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -154,7 +155,7 @@ def silhouette_score(
     random_state: int = 42,
     cell_type_key: str | None = None,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -184,9 +185,10 @@ def silhouette_score(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. This filtering is applied independently
+        of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -282,7 +284,7 @@ def purity(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -307,9 +309,10 @@ def purity(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. This filtering is applied independently
+        of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional
@@ -378,7 +381,7 @@ def adjusted_rand_index(
     tables_key: str = "table",
     key_prefix: str = "leiden_subset",
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -403,9 +406,10 @@ def adjusted_rand_index(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. This filtering is applied independently
+        of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
         Number of neighbors to use for computing the connectivity matrix. Default is 15.
     n_pcs: int, optional

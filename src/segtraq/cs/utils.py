@@ -14,11 +14,13 @@ from ..constants import (
     NEIGHBORS_KEY,
     NORM_LOG_LAYER,
     PCA_KEY,
+    DEFAULT_EXCLUDE_GENE_PREFIXES
 )
 from ..utils import (
     _compute_hvg_mask,
     _get_norm_log,
     _resolve_use_hvg,
+    _exclude_genes_by_prefix
 )
 
 
@@ -29,7 +31,7 @@ def _get_pca_and_neighbors(
     n_pcs: int = 50,
     target_sum: float | None = 1e4,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
 ) -> AnnData:
     """
     Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
@@ -58,8 +60,9 @@ def _get_pca_and_neighbors(
         If `None`, use HVGs automatically when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=None
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. This filtering is applied independently
+        of HVG selection. Set to None to use all shared genes.
 
     Returns
     -------
@@ -72,22 +75,36 @@ def _get_pca_and_neighbors(
         target_sum=target_sum,
     )
 
+    genes = pd.Index(adata.var_names)
+    genes_to_use = _exclude_genes_by_prefix(
+        genes,
+        exclude_gene_prefixes,
+    )
+    gene_mask = genes.isin(genes_to_use)
+
     resolved_use_hvg = _resolve_use_hvg(
         adata.n_vars,
         use_hvg,
     )
 
-    if resolved_use_hvg and HVG_KEY not in adata.var:
-        adata.var[HVG_KEY] = _compute_hvg_mask(adata, exclude_gene_prefixes=exclude_gene_prefixes)
+    if resolved_use_hvg:
+        if HVG_KEY not in adata.var:
+            adata.var[HVG_KEY] = _compute_hvg_mask(
+                adata,
+                exclude_gene_prefixes=exclude_gene_prefixes,
+            )
+        pca_mask = HVG_KEY
+    else:
+        pca_mask = gene_mask
 
     if PCA_KEY not in adata.obsm:
         sc.pp.pca(
-            adata,
-            n_comps=n_pcs,
-            layer=NORM_LOG_LAYER,
-            mask_var=HVG_KEY if resolved_use_hvg else None,
-            key_added=PCA_KEY,
-        )
+        adata,
+        n_comps=n_pcs,
+        layer=NORM_LOG_LAYER,
+        mask_var=pca_mask,
+        key_added=PCA_KEY,
+    )
 
     if NEIGHBORS_KEY not in adata.uns:
         sc.pp.neighbors(
@@ -105,7 +122,7 @@ def _prepare_cs_adata(
     sdata: sd.SpatialData,
     tables_key: str,
     use_hvg: bool | None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,

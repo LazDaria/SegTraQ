@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 from pandas import DataFrame
 
 from .._settings import settings
-from ..utils import _get_count_matrix, _get_genes, merge_into_obs
+from ..utils import _get_count_matrix, _get_genes, merge_into_obs, _exclude_genes_by_prefix
 from .utils import (
     _border_admixture_permutation_metrics,
     _get_center_border_counts,
@@ -14,6 +14,7 @@ from .utils import (
     _match_nucleus_one_cell,
     _two_profile_similarity_metrics,
 )
+from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 
 
 def match_nuclei_to_cells(
@@ -156,6 +157,7 @@ def similarity_nucleus_cell(
     points_x_key: str = "x",
     points_y_key: str = "y",
     tables_raw_counts_layer: str | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     min_transcripts: int = 10,
     min_genes: int = 5,
     scale: float = 1e4,
@@ -207,6 +209,9 @@ def similarity_nucleus_cell(
         Layer containing count data. If `None`, `adata.X` is used if it looks
         like counts. If a layer is specified, it must exist and contain
         count-like values.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. Set to None to use all genes.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both cell and nucleus.
     min_genes : int, default=5
@@ -279,7 +284,12 @@ def similarity_nucleus_cell(
         match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
 
     counts = _get_count_matrix(adata, layer=tables_raw_counts_layer)
-    count_genes = pd.Index(_get_genes(adata=adata, gene_key=tables_gene_key))
+
+    count_genes = _exclude_genes_by_prefix(
+        pd.Index(_get_genes(adata=adata, gene_key=tables_gene_key)),
+        exclude_gene_prefixes,
+    )
+
     cell_positions = pd.Series(
         np.arange(adata.n_obs),
         index=adata.obs[tables_cell_id_key],
@@ -404,6 +414,7 @@ def similarity_nucleus_cytoplasm(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     min_transcripts: int = 10,
     min_genes: int = 5,
     scale: float = 1e4,
@@ -451,6 +462,9 @@ def similarity_nucleus_cytoplasm(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. Set to None to use all genes.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both nuclear and
         cytoplasmic regions.
@@ -566,9 +580,12 @@ def similarity_nucleus_cytoplasm(
     tx["in_intersection"] = tx["region_id"].eq(tx["nucleus_id"])
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
-    all_genes = _get_genes(
-        adata=sdata.tables[tables_key],
-        gene_key=tables_gene_key,
+    all_genes = _exclude_genes_by_prefix(
+        _get_genes(
+            adata=sdata.tables[tables_key],
+            gene_key=tables_gene_key,
+        ),
+        exclude_gene_prefixes,
     )
 
     counts_intersection = (
@@ -643,6 +660,7 @@ def border_admixture_score(
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_gene_key: str = "feature_name",
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     border_fraction_of_radius: float = 0.2,
     buffer_fraction_of_radius: float = 0.1,
     neighborhood_radius_factor: float = 1.0,
@@ -689,6 +707,9 @@ def border_admixture_score(
         Y-coordinate column in the transcript table.
     points_gene_key : str, default="feature_name"
         Column containing gene names.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. Set to None to use all genes.
     border_fraction_of_radius : float, default=0.2
         Fraction of the equivalent radius used to define the thickness of the
         border region (outer ring).
@@ -761,9 +782,16 @@ def border_admixture_score(
 
     # restrict to cells with all three profiles available
     common_cells = expr_center.index.intersection(expr_border.index).intersection(expr_neighborhood.index)
-    expr_center = expr_center.loc[common_cells]
-    expr_border = expr_border.loc[common_cells]
-    expr_neighborhood = expr_neighborhood.loc[common_cells]
+    all_genes = _exclude_genes_by_prefix(
+        _get_genes(
+            adata=sdata.tables[tables_key],
+            gene_key=tables_gene_key,
+        ),
+        exclude_gene_prefixes,
+    )
+    expr_center = expr_center.loc[common_cells, all_genes]
+    expr_border = expr_border.loc[common_cells, all_genes]
+    expr_neighborhood = expr_neighborhood.loc[common_cells, all_genes]
 
     # Materialize dense matrices once before entering the parallel loop.
     expr_center_values = expr_center.to_numpy(dtype=int, copy=False)

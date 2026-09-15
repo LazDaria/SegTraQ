@@ -37,6 +37,7 @@ from .bl import baseline as bl
 from .constants import (
     NORM_LOG_LAYER,
     SEGTRAQ_CELL_ID_KEY,
+    DEFAULT_EXCLUDE_GENE_PREFIXES
 )
 
 
@@ -86,25 +87,12 @@ def _compute_hvg_mask(
     if NORM_LOG_LAYER not in adata.layers:
         raise KeyError(f"{NORM_LOG_LAYER!r} not found in `adata.layers`.")
 
-    # First exclude unwanted genes
-    keep = np.ones(adata.n_vars, dtype=bool)
-
-    if exclude_gene_prefixes is not None:
-        if isinstance(exclude_gene_prefixes, str):
-            exclude_gene_prefixes = (exclude_gene_prefixes,)
-        else:
-            exclude_gene_prefixes = tuple(exclude_gene_prefixes)
-
-        genes = adata.var_names.astype(str)
-        keep = np.array(
-            [
-                not any(
-                    g.upper().startswith(prefix.upper())
-                    for prefix in exclude_gene_prefixes
-                )
-                for g in genes
-            ]
-        )
+    genes = pd.Index(adata.var_names)
+    genes_to_use = _exclude_genes_by_prefix(
+        genes,
+        exclude_gene_prefixes,
+    )
+    keep = genes.isin(genes_to_use)
 
     # Work on a copy 
     adata_hvg = adata[:, keep].copy()
@@ -386,6 +374,23 @@ def _get_genes(
     return genes
 
 
+def _exclude_genes_by_prefix(
+    genes: pd.Index,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
+) -> pd.Index:
+    """Return genes excluding those matching the specified prefixes."""
+    if exclude_gene_prefixes is None:
+        return genes
+
+    if isinstance(exclude_gene_prefixes, str):
+        exclude_gene_prefixes = (exclude_gene_prefixes,)
+
+    prefixes = tuple(prefix.upper() for prefix in exclude_gene_prefixes)
+    keep = ~genes.astype(str).str.upper().str.startswith(prefixes)
+
+    return genes[keep]
+
+
 def _make_ref_genes_unique(
     adata_ref: AnnData,
     ref_gene_key: str | None = None,
@@ -435,7 +440,7 @@ def run_label_transfer(
     cell_type_key: str = "transferred_cell_type",
     ref_gene_key: str | None = None,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     inplace: bool = True,
 ) -> pd.DataFrame | None:
     """
@@ -494,8 +499,9 @@ def run_label_transfer(
         more than 8,000 genes are shared between query and reference. If
         `True`, always use HVGs. If `False`, always use all shared genes.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. This filtering is applied independently
+        of HVG selection. Set to None to use all shared genes.
     inplace : bool, default=True
         If `True`, write transferred labels to
         `sdata.tables[tables_key].obs[cell_type_key]` and return `None`.
@@ -577,6 +583,11 @@ def run_label_transfer(
     query_genes = _get_genes(adata_q, query_gene_key)
     common_genes = adata_ref.var_names.intersection(query_genes)
 
+    common_genes = _exclude_genes_by_prefix(
+        common_genes,
+        exclude_gene_prefixes,
+    )
+
     if len(common_genes) == 0:
         raise ValueError("No common genes found between query and reference.")
 
@@ -586,10 +597,7 @@ def run_label_transfer(
         # Compute HVGs only within the gene universe that can actually be used
         # for query-reference correlation.
         ref_common = adata_ref[:, adata_ref.var_names.isin(common_genes)].copy()
-        hvg_mask = _compute_hvg_mask(
-            ref_common,
-            exclude_gene_prefixes=exclude_gene_prefixes,
-        )
+        hvg_mask = _compute_hvg_mask(ref_common)
         genes_to_use = set(ref_common.var_names[hvg_mask])
 
     # using the normalized and log-transformed data for label transfer
@@ -892,6 +900,7 @@ def markers_from_reference(
     ref_cell_type: str,
     ref_gene_key: str | None = None,
     ref_raw_counts_layer: str | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     mode: str = "de",
     max_fpr: float | None = None,
     auc_pos_thresh: float = 0.9,
@@ -1000,6 +1009,13 @@ def markers_from_reference(
 
     # copies gene identifiers into var_names and makes them unique (if needed)
     adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
+
+    genes_to_use = _exclude_genes_by_prefix(
+        pd.Index(adata.var_names),
+        exclude_gene_prefixes,
+    )
+
+    adata = adata[:, adata.var_names.isin(genes_to_use)].copy()
 
     # getting gene names and mapping to indices for later use
     var_names = adata.var_names

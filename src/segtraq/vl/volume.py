@@ -11,8 +11,9 @@ from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 
 from .._settings import settings
 from ..rs.utils import _two_profile_similarity_metrics
-from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs
+from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs, _exclude_genes_by_prefix
 from .utils import _correct_z_drift, _run_ovrlpy
+from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 
 
 def vertical_signal_integrity_per_cell(
@@ -142,6 +143,7 @@ def similarity_top_bottom(
     points_x_key: str = "x",
     points_y_key: str = "y",
     points_z_key: str = "z",
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     correct_z_drift: bool = True,
     max_points: int = 1_000_000,
     seed: int | None = 0,
@@ -192,6 +194,9 @@ def similarity_top_bottom(
         Column for the y-coordinate of each transcript.
     points_z_key : str, default="z"
         Column specifying the z coordinate / depth for each transcript.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=DEFAULT_EXCLUDE_GENE_PREFIXES
+        Gene prefixes excluded from label transfer. By default, mitochondrial
+        and ribosomal genes are excluded. Set to None to use all genes.
     correct_z_drift : bool, default=True
         If True, correct global z-drift before computing within-cell z-quantiles.
         The corrected values are used only for defining top/bottom subsets.
@@ -242,12 +247,16 @@ def similarity_top_bottom(
     # Remove background transcripts and genes that are absent from the cell table.
     is_bg = _is_background(tx[points_cell_id_key], points_background_id)
     tx = tx[~is_bg]
-    all_genes = _get_genes(
-        adata=sdata.tables[tables_key],
-        gene_key=tables_gene_key,
+    all_genes = _exclude_genes_by_prefix(
+        _get_genes(
+            adata=sdata.tables[tables_key],
+            gene_key=tables_gene_key,
+        ),
+        exclude_gene_prefixes,
     )
-    tx = tx[tx[points_gene_key].isin(all_genes)]
 
+    tx = tx[tx[points_gene_key].isin(all_genes)]
+    
     tx = tx.compute() if hasattr(tx, "compute") else tx
     tx = tx.reset_index(drop=True)
 

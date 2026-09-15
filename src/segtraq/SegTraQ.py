@@ -8,27 +8,11 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
-from .constants import SEGTRAQ_CELL_ID_KEY
+from .constants import SEGTRAQ_CELL_ID_KEY, DEFAULT_FILTER_KWARGS, DEFAULT_EXCLUDE_GENE_PREFIXES
 from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer, _store_segtraq_markers
-
-DEFAULT_FILTER_KWARGS = {
-    "min_qv": 20,
-    "control_prefixes": (
-        "NegControlProbe_",
-        "antisense_", 
-        "NegControlCodeword",
-        "BLANK_",
-        "Blank-",
-        "NegPrb",
-        "DeprecatedCodeword_",
-        "UnassignedCodeword_",
-        "Intergenic_Region_",
-    ),
-    "inplace": True,
-}
 
 
 class SegTraQ:
@@ -615,7 +599,8 @@ class SegTraQ:
             methods (where applicable).
         use_hvg: bool or None, optional
             If `None`, use 2,000 HVGs for PCA when the panel contains more than
-            8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+            8,000 genes. If `True`, always use HVGs. If `False`, use all genes
+            remaining after `exclude_gene_prefixes` filtering.
         inplace : bool, default=True
             If True, metrics are written to `sdata.tables["table"].uns` by the
             underlying methods and this function returns None. If False, the
@@ -970,6 +955,7 @@ class SegTraQ:
         ref_gene_key: str | None = None,
         query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         mode: str = "de",
         max_fpr: float | None = None,
         auc_pos_thresh: float = 0.9,
@@ -1007,6 +993,7 @@ class SegTraQ:
             ref_cell_type=ref_cell_type,
             ref_gene_key=ref_gene_key,
             ref_raw_counts_layer=ref_raw_counts_layer,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             mode=mode,
             max_fpr=max_fpr,
             auc_pos_thresh=auc_pos_thresh,
@@ -1066,7 +1053,7 @@ class SegTraQ:
         gn_max: float = np.inf,
         cell_type_key: str = "transferred_cell_type",
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         inplace: bool = True,
     ):
         """
@@ -1389,6 +1376,7 @@ class _RSFacade:
 
     def similarity_nucleus_cell(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
@@ -1414,6 +1402,7 @@ class _RSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
@@ -1430,6 +1419,7 @@ class _RSFacade:
 
     def similarity_nucleus_cytoplasm(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
@@ -1454,6 +1444,7 @@ class _RSFacade:
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
@@ -1470,6 +1461,7 @@ class _RSFacade:
 
     def border_admixture_score(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         border_fraction_of_radius: float = 0.2,
         buffer_fraction_of_radius: float = 0.1,
         neighborhood_radius_factor: float = 1.0,
@@ -1494,6 +1486,7 @@ class _RSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             border_fraction_of_radius=border_fraction_of_radius,
             buffer_fraction_of_radius=buffer_fraction_of_radius,
             neighborhood_radius_factor=neighborhood_radius_factor,
@@ -1600,6 +1593,7 @@ class _PSFacade:
     def percentage_transcripts_in_compartments(
         self,
         genes: str | list[str] = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
@@ -1612,6 +1606,7 @@ class _PSFacade:
         return ps.percentage_transcripts_in_compartments(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1638,6 +1633,7 @@ class _PSFacade:
     def distance_to_centroid(
         self,
         genes: str | list[str] = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         centroid_region: Literal["cell", "nucleus"] = "cell",
@@ -1651,6 +1647,7 @@ class _PSFacade:
         return ps.distance_to_centroid(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1679,6 +1676,7 @@ class _PSFacade:
     def distance_to_membrane(
         self,
         genes: str | list[str] | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         restrict_to_within_boundary: bool = False,
@@ -1693,6 +1691,7 @@ class _PSFacade:
         return ps.distance_to_membrane(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1722,6 +1721,7 @@ class _PSFacade:
     def membrane_distance_skewness(
         self,
         genes: str | list[str] | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         min_transcripts: int = 5,
@@ -1730,6 +1730,7 @@ class _PSFacade:
         return ps.membrane_distance_skewness(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1767,7 +1768,7 @@ class _CSFacade:
         random_state: int = 42,
         cell_type_key: str | None = None,
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1799,7 +1800,7 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1829,7 +1830,7 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1861,7 +1862,7 @@ class _CSFacade:
         random_state: int = 42,
         cell_type_key: str | None = None,
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1900,6 +1901,7 @@ class _VLFacade:
 
     def similarity_top_bottom(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         correct_z_drift: bool = True,
         max_points: int = 1_000_000,
         seed: int | None = 0,
@@ -1925,6 +1927,7 @@ class _VLFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_z_key=self._p.points_z_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             correct_z_drift=correct_z_drift,
             max_points=max_points,
             seed=seed,
