@@ -13,6 +13,7 @@ from .utils import (
     _filter_control_and_low_quality_transcripts,
     _get_genes,
     _make_ref_genes_unique,
+    _require_reference,
     _warn_always,
     validate_spatialdata,
 )
@@ -478,11 +479,17 @@ class SegTraQ:
 
             If `inplace=False`, returns a dictionary with available metric results.
         """
-
         assert self.points_z_key is not None, (
             "Cannot run volume metrics for 2D data: `points_z_key` is None. "
             "If available, define the column for z-coordinate of transcripts when initializing SegTraQ."
         )
+
+        if adata_ref is not None and ref_cell_type is None:
+            _require_reference(
+                adata_ref,
+                ref_cell_type,
+                condition="`adata_ref` is provided",
+            )
 
         label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
         similarity_kwargs = {} if similarity_kwargs is None else dict(similarity_kwargs)
@@ -793,13 +800,12 @@ class SegTraQ:
         label_transfer_result = None
 
         needs_reference = cell_type_key is None or markers is None
-
         if needs_reference:
-            if adata_ref is None:
-                raise ValueError("`adata_ref` is required when `cell_type_key=None` or `markers=None`.")
-
-            if ref_cell_type is None:
-                raise ValueError("`ref_cell_type` is required when `cell_type_key=None` or `markers=None`.")
+            _require_reference(
+                adata_ref,
+                ref_cell_type,
+                condition="`cell_type_key=None` or `markers=None`",
+            )
 
         if cell_type_key is None:
             cell_type_key = "transferred_cell_type"
@@ -1122,7 +1128,6 @@ class SegTraQ:
 
         for name, runner in runners.items():
             try:
-                print(f"Running {name} metrics...")
                 results[name] = runner()
             except Exception as exc:
                 # for some reason, warnings.warn() doesn't always show the warning in the notebook
