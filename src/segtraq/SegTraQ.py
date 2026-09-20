@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Callable
 from textwrap import dedent
 from typing import Any, Literal
@@ -10,7 +9,13 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from .constants import SEGTRAQ_CELL_ID_KEY
-from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
+from .utils import (
+    _filter_control_and_low_quality_transcripts,
+    _get_genes,
+    _make_ref_genes_unique,
+    _warn_always,
+    validate_spatialdata,
+)
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer
@@ -1074,10 +1079,8 @@ class SegTraQ:
                 )
                 cell_type_key = "transferred_cell_type"
             except Exception as exc:
-                warnings.warn(
-                    f"Could not run label transfer ({exc}). Cell-type-aware metrics will be limited.",
-                    stacklevel=2,
-                )
+                # for some reason, warnings.warn() doesn't always show the warning in the notebook
+                _warn_always(f"Could not run label transfer ({exc}). Cell-type-aware metrics will be limited.")
 
         reference_kwargs = dict(
             adata_ref=adata_ref,
@@ -1119,9 +1122,11 @@ class SegTraQ:
 
         for name, runner in runners.items():
             try:
+                print(f"Running {name} metrics...")
                 results[name] = runner()
             except Exception as exc:
-                warnings.warn(f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).", stacklevel=2)
+                # for some reason, warnings.warn() doesn't always show the warning in the notebook
+                _warn_always(f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).")
                 skipped[name] = str(exc)
                 results[name] = None
 

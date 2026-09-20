@@ -45,7 +45,6 @@
 # ## Load data into SegTraQ and run label transfer
 
 # %%
-import warnings
 
 import anndata as ad
 import matplotlib.pyplot as plt
@@ -58,8 +57,6 @@ import spatialdata_plot  # noqa
 import segtraq
 
 segtraq.settings.n_jobs = -1  # Use all available CPU cores
-
-warnings.filterwarnings(action="ignore")
 
 # %% [markdown]
 # We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium

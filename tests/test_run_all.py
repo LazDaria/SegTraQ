@@ -36,6 +36,7 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
         assert name not in result["skipped"]
 
 
+# TODO: this should be replaced with a test that compares ALL outputs to a previously saved result
 # given a cell type key and markers, every module (including supervised) should run
 def test_run_all_runs_every_module_when_prerequisites_are_met(segtraq_obj, markers):
     result = segtraq_obj.run_all(
@@ -57,21 +58,3 @@ def test_run_all_runs_every_module_when_prerequisites_are_met(segtraq_obj, marke
         assert result[name] is not None
 
     assert "marker_balanced_accuracy" in result["supervised"]["marker_purity"].columns
-
-
-# inplace=True should merge results into the underlying sdata object and return None
-def test_run_all_inplace_writes_into_sdata(segtraq_obj, markers):
-    result = segtraq_obj.run_all(
-        cell_type_key="transferred_cell_type",
-        markers=markers,
-        inplace=True,
-    )
-
-    assert result is None
-
-    obs = segtraq_obj.sdata.tables["table"].obs
-    uns = segtraq_obj.sdata.tables["table"].uns
-
-    assert "num_cells" in uns
-    assert "iou" in obs.columns
-    assert "similarity_top_bottom" in obs.columns

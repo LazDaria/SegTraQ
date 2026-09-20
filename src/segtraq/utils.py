@@ -2480,3 +2480,9 @@ def pearson_residuals(x: np.ndarray, theta, clip: None):
     residuals = np.nan_to_num(residuals, nan=0.0)
 
     return residuals
+
+
+def _warn_always(message: str) -> None:
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.warn(message, stacklevel=3)
