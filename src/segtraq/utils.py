@@ -2620,3 +2620,22 @@ def pearson_residuals(x: np.ndarray, theta, clip: None):
     residuals = np.nan_to_num(residuals, nan=0.0)
 
     return residuals
+
+
+def _warn_always(message: str) -> None:
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.warn(message, stacklevel=3)
+
+
+def _require_reference(
+    adata_ref: AnnData | None,
+    ref_cell_type: str | None,
+    *,
+    condition: str,
+) -> None:
+    """Raise if `adata_ref` / `ref_cell_type` are missing when a reference is needed."""
+    if adata_ref is None:
+        raise ValueError(f"`adata_ref` is required when {condition}.")
+    if ref_cell_type is None:
+        raise ValueError(f"`ref_cell_type` is required when {condition}.")

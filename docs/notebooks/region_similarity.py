@@ -206,19 +206,20 @@ results_df = st.rs.match_nuclei_to_cells()
 results_df.head()
 
 # %% [markdown]
-# For each `cell_id`, we obtain the ID (`nucleus_id`) of the nucleus mask with the highest `nucleus_fraction`.
+# For each `cell_id`, we count the number of nuclei and obtain the ID (`nucleus_id`)
+# of the nucleus mask with the highest `nucleus_fraction`.
 # If a cell does not overlap with any nucleus, the function returns a missing value for `nucleus_id`.
 # If the nucleus has an invalid geometry, `iou` and `nucleus_fraction` are reported as `NA`.
 
 # %% [markdown]
-# Let's see what this looks like when we plot the `iou` and `nucleus_fraction` spatially.
+# Let's see what this looks like when we plot `num_nuclei`, `iou` and `nucleus_fraction` spatially.
 
 # %%
 # link annotations with cell boundaries
 st.sdata.tables[st.tables_key].obs["region"] = st.shapes_key
 st.sdata.set_table_annotates_spatialelement(st.tables_key, region=st.shapes_key)
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 6), constrained_layout=True)
+fig, axes = plt.subplots(1, 3, figsize=(22, 6), constrained_layout=True)
 
 # IoU
 st.sdata.pl.render_shapes(
@@ -259,6 +260,27 @@ st.sdata.pl.render_shapes(
 ).pl.show(
     ax=axes[1],
     title="Nucleus fraction",
+    colorbar=True,
+)
+
+# Number of nuclei
+st.sdata.pl.render_shapes(
+    element=st.shapes_key,
+    color="num_nuclei",
+    cmap="viridis",
+    fill_alpha=0.5,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color="black",
+).pl.render_shapes(
+    element=st.nucleus_shapes_key,
+    fill_alpha=0.2,
+    outline_alpha=1.0,
+    outline_width=0.5,
+    outline_color="black",
+).pl.show(
+    ax=axes[2],
+    title="Number of nuclei",
     colorbar=True,
 )
 
