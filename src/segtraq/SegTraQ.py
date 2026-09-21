@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
@@ -8,19 +7,18 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
-from .constants import SEGTRAQ_CELL_ID_KEY, DEFAULT_FILTER_KWARGS, DEFAULT_EXCLUDE_GENE_PREFIXES
-
+from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
 from .utils import (
     _filter_control_and_low_quality_transcripts,
-    _get_genes,
-    _make_ref_genes_unique,
+    _get_segtraq_markers,
     _require_reference,
+    _store_segtraq_markers,
     _warn_always,
     validate_spatialdata,
 )
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
-from .utils import run_label_transfer as _run_label_transfer, _store_segtraq_markers, _get_segtraq_markers
+from .utils import run_label_transfer as _run_label_transfer
 
 
 class SegTraQ:
@@ -430,7 +428,7 @@ class SegTraQ:
             If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
             Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key` is used. 
+            `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key` is used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
@@ -491,7 +489,6 @@ class SegTraQ:
         label_transfer_result = None
 
         if cell_type_key is None and adata_ref is not None:
-
             cell_type_key = "transferred_cell_type"
 
             label_transfer_kwargs["cell_type_key"] = cell_type_key
@@ -791,18 +788,13 @@ class SegTraQ:
         adata = self.sdata.tables[self.tables_key]
         has_stored_markers = "segtraq_markers" in adata.uns
 
-        needs_reference = (
-            cell_type_key is None
-            or (markers is None and not has_stored_markers)
-        )
+        needs_reference = cell_type_key is None or (markers is None and not has_stored_markers)
 
         if needs_reference:
             _require_reference(
                 adata_ref,
                 ref_cell_type,
-                condition=(
-                    "`cell_type_key=None` or no explicit/stored markers are available"
-                ),
+                condition=("`cell_type_key=None` or no explicit/stored markers are available"),
             )
 
         if cell_type_key is None:
@@ -824,7 +816,7 @@ class SegTraQ:
             if has_stored_markers:
                 markers = _get_segtraq_markers(
                     adata,
-                    markers = markers,
+                    markers=markers,
                     tables_gene_key=self.tables_gene_key,
                 )
             else:
@@ -1013,8 +1005,8 @@ class SegTraQ:
         accepts a `cell_type_key`, instead of each module running its own label transfer.
 
         A module whose prerequisites are not met (e.g. `run_volume` on 2D data, or
-        `run_supervised` without explicit markers, stored markers, or a reference) is skipped with 
-        a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which 
+        `run_supervised` without explicit markers, stored markers, or a reference) is skipped with
+        a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which
         modules ran and why any others were skipped.
 
         Parameters
@@ -1080,7 +1072,6 @@ class SegTraQ:
         # Run label transfer once upfront (if possible), so every module below that accepts a
         # `cell_type_key` can reuse the same labels instead of each recomputing them independently.
         if cell_type_key is None and adata_ref is not None and ref_cell_type is not None:
-
             try:
                 label_transfer_kwargs["cell_type_key"] = "transferred_cell_type"
                 label_transfer_kwargs["inplace"] = True
@@ -1091,8 +1082,6 @@ class SegTraQ:
                     ref_gene_key=ref_gene_key,
                     query_gene_key=query_gene_key,
                     ref_raw_counts_layer=ref_raw_counts_layer,
-                    cell_type_key="transferred_cell_type",
-                    inplace=True,
                     **label_transfer_kwargs,
                 )
                 cell_type_key = "transferred_cell_type"
@@ -1153,7 +1142,6 @@ class SegTraQ:
         results["skipped"] = skipped
         return results
 
-
     def markers_from_reference(
         self,
         adata_ref: AnnData,
@@ -1212,7 +1200,6 @@ class SegTraQ:
 
         return markers
 
-    
     def run_label_transfer(
         self,
         adata_ref: AnnData,
@@ -2173,6 +2160,7 @@ class _VLFacade:
         )
 
     vertical_signal_integrity_per_cell.__doc__ = vl.vertical_signal_integrity_per_cell.__doc__
+
 
 class _PLFacade:
     """

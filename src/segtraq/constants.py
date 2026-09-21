@@ -26,7 +26,7 @@ DEFAULT_FILTER_KWARGS = {
     "min_qv": 20,
     "control_prefixes": (
         "NegControlProbe_",
-        "antisense_", 
+        "antisense_",
         "NegControlCodeword",
         "BLANK_",
         "Blank-",

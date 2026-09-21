@@ -209,9 +209,9 @@ st.sdata.pl.render_shapes(
 # (default = 1.0) and `pval_adj_thresh` (default = 0.05).
 #
 # All computations can be parallelized by specifying the number of jobs via `n_jobs`.
-# By default, `markers_from_reference()` stores the identified positive and negative markers in 
-# `sdata.tables["table"].uns["segtraq_markers"]`. Markers are stored as gene indices to minimize 
-# memory usage and are automatically used by the supervised metrics when `markers=None`. 
+# By default, `markers_from_reference()` stores the identified positive and negative markers in
+# `sdata.tables["table"].uns["segtraq_markers"]`. Markers are stored as gene indices to minimize
+# memory usage and are automatically used by the supervised metrics when `markers=None`.
 # Alternatively, markers can be passed explicitly to the individual metrics.
 
 # %%

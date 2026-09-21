@@ -5,7 +5,7 @@ import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
-from ..constants import CONNECTIVITIES_KEY, PCA_KEY, DEFAULT_EXCLUDE_GENE_PREFIXES
+from ..constants import CONNECTIVITIES_KEY, DEFAULT_EXCLUDE_GENE_PREFIXES, PCA_KEY
 from ..utils import merge_into_uns
 from .utils import (
     _cluster_connectedness,

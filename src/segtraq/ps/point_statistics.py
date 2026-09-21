@@ -9,7 +9,7 @@ from .._settings import settings
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 from ..rs.region_similarity import match_nuclei_to_cells
 from ..rs.utils import _get_filtered_points_df, _join_points_regions
-from ..utils import merge_into_obs, xy_scale, _exclude_genes_by_prefix, _get_genes
+from ..utils import _exclude_genes_by_prefix, _get_genes, merge_into_obs, xy_scale
 from .utils import _fisher_pearson_sample_skew, _get_cell_geometry_lookup
 
 
@@ -341,7 +341,7 @@ def distance_to_centroid(
         are used.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
                 Gene prefixes excluded. By default, mitochondrial
-                and ribosomal genes are excluded. 
+                and ribosomal genes are excluded.
     cell_type_key : str
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -582,7 +582,7 @@ def distance_to_membrane(
         are used.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
                 Gene prefixes excluded. By default, mitochondrial
-                and ribosomal genes are excluded. 
+                and ribosomal genes are excluded.
     cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -845,7 +845,7 @@ def membrane_distance_skewness(
         are used.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
                 Gene prefixes excluded. By default, mitochondrial
-                and ribosomal genes are excluded. 
+                and ribosomal genes are excluded.
     cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional

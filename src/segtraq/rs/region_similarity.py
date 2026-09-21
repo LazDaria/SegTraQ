@@ -5,7 +5,8 @@ from joblib import Parallel, delayed
 from pandas import DataFrame
 
 from .._settings import settings
-from ..utils import _get_count_matrix, _get_genes, merge_into_obs, _exclude_genes_by_prefix
+from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
+from ..utils import _exclude_genes_by_prefix, _get_count_matrix, _get_genes, merge_into_obs
 from .utils import (
     _border_admixture_permutation_metrics,
     _get_center_border_counts,
@@ -14,7 +15,6 @@ from .utils import (
     _match_nucleus_one_cell,
     _two_profile_similarity_metrics,
 )
-from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 
 
 def match_nuclei_to_cells(
@@ -286,9 +286,9 @@ def similarity_nucleus_cell(
     counts = _get_count_matrix(adata, layer=tables_raw_counts_layer)
 
     all_count_genes = _get_genes(
-            adata=adata,
-            gene_key=tables_gene_key,
-        )
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
 
     count_genes = _exclude_genes_by_prefix(
         all_count_genes,

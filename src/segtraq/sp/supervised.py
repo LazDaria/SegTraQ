@@ -7,14 +7,7 @@ import squidpy as sq
 from scipy import sparse
 from scipy.stats import fisher_exact
 
-from ..utils import (
-    _get_count_matrix,
-    _get_genes,
-    merge_into_obs,
-    merge_into_uns,
-)
-
-from .utils import _get_segtraq_markers
+from ..utils import _get_count_matrix, _get_genes, _get_segtraq_markers, merge_into_obs, merge_into_uns
 
 
 def mutually_exclusive_coexpression_rate(
@@ -96,7 +89,7 @@ def mutually_exclusive_coexpression_rate(
         pos_a = set((markers[ct_a] or {}).get("positive", []) or [])
         neg_a = set((markers[ct_a] or {}).get("negative", []) or [])
 
-        for ct_b in celltypes[i + 1:]:
+        for ct_b in celltypes[i + 1 :]:
             pos_b = set((markers[ct_b] or {}).get("positive", []) or [])
             neg_b = set((markers[ct_b] or {}).get("negative", []) or [])
 

@@ -9,25 +9,19 @@ from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
 from ..constants import (
     CONNECTIVITIES_KEY,
+    DEFAULT_EXCLUDE_GENE_PREFIXES,
     DISTANCES_KEY,
     HVG_KEY,
     NEIGHBORS_KEY,
     NORM_LOG_LAYER,
     PCA_KEY,
-    DEFAULT_EXCLUDE_GENE_PREFIXES
 )
-from ..utils import (
-    _compute_hvg_mask,
-    _get_norm_log,
-    _resolve_use_hvg,
-    _exclude_genes_by_prefix,
-    _get_genes
-)
+from ..utils import _compute_hvg_mask, _exclude_genes_by_prefix, _get_genes, _get_norm_log, _resolve_use_hvg
 
 
 def _get_pca_and_neighbors(
     adata: AnnData,
-    gene_key: str | None = None, 
+    gene_key: str | None = None,
     raw_layer: str | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
@@ -106,12 +100,12 @@ def _get_pca_and_neighbors(
 
     if PCA_KEY not in adata.obsm:
         sc.pp.pca(
-        adata,
-        n_comps=n_pcs,
-        layer=NORM_LOG_LAYER,
-        mask_var=pca_mask,
-        key_added=PCA_KEY,
-    )
+            adata,
+            n_comps=n_pcs,
+            layer=NORM_LOG_LAYER,
+            mask_var=pca_mask,
+            key_added=PCA_KEY,
+        )
 
     if NEIGHBORS_KEY not in adata.uns:
         sc.pp.neighbors(

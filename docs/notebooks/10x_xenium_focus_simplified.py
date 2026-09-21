@@ -413,9 +413,6 @@ plt.show()
 # increase mutual exclusivity, `vote_frac_pos=0.3`) co-occur less often than expected under independence.
 
 # %%
-tbl = st.sdata["table"]
-common_genes = tbl.var_names[tbl.var_names.isin(adata_ref.var_names)]
-adata_ref = adata_ref[:, common_genes].copy()
 
 markers = st.markers_from_reference(
     adata_ref,

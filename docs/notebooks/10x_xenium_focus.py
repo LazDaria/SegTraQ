@@ -1065,7 +1065,7 @@ overlap_df
 # arise mainly from local contamination by neighboring cells.
 
 # %%
-for method, st in st_dict.items():
+for _, st in st_dict.items():
     purity = st.sp.marker_purity(
         cell_type_key="transferred_cell_type",
         inplace=True,
@@ -1211,10 +1211,8 @@ plt.show()
 # We therefore compute neighborhood contamination.
 
 # %%
-for method, st in st_dict.items():
-    per_cell_df, _, cont_bin, _ = st.sp.neighbor_contamination(
-        cell_type_key="transferred_cell_type"
-    )
+for _, st in st_dict.items():
+    per_cell_df, _, cont_bin, _ = st.sp.neighbor_contamination(cell_type_key="transferred_cell_type")
 
 # %% [markdown]
 # Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination.
@@ -1368,7 +1366,7 @@ plt.show()
 
 # %%
 
-for method, st in st_dict.items():
+for _, st in st_dict.items():
     _ = st.markers_from_reference(
         adata_ref,
         ref_cell_type="celltype_major",
@@ -1417,7 +1415,7 @@ mean_order = df.groupby("method")["Fisher_OR"].mean().sort_values().index.tolist
 
 means = df.groupby("method")["Fisher_OR"].mean().reindex(mean_order)
 
-xtick_labels = [f"{m}\nmean: {means[m]:.2f}" for m in mean_order]
+xtick_labels = [f"{m}\nmean: {means[m]:.3f}" for m in mean_order]
 
 plt.figure(figsize=(6, 4))
 
@@ -1578,7 +1576,7 @@ keys = []
 values = []
 
 for key, df in border_distance_negative.items():
-    for val in df["distance_to_cell_membrane_438_genes"]:
+    for val in df["distance_to_cell_membrane_norm_438_genes"]:
         keys.append(key)
         values.append(val)
 

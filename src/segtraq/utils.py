@@ -5,12 +5,12 @@ import warnings
 from collections.abc import Callable
 from importlib.metadata import version
 
-import shapely
 import dask.dataframe as dd
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import shapely
 import spatialdata as sd
 import xarray as xr
 from anndata import AnnData
@@ -34,11 +34,7 @@ from spatialdata.transformations import (
 
 from ._settings import settings
 from .bl import baseline as bl
-from .constants import (
-    NORM_LOG_LAYER,
-    SEGTRAQ_CELL_ID_KEY,
-    DEFAULT_EXCLUDE_GENE_PREFIXES
-)
+from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, NORM_LOG_LAYER, SEGTRAQ_CELL_ID_KEY
 
 
 def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
@@ -81,7 +77,7 @@ def _compute_hvg_mask(
     adata: AnnData,
     *,
     n_top_genes: int = 2000,
-    gene_key: str | None = None, 
+    gene_key: str | None = None,
     exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
 ) -> np.ndarray:
     """Compute an HVG mask from SegTraQ's normalized-log expression layer."""
@@ -95,7 +91,7 @@ def _compute_hvg_mask(
     )
     keep = genes.isin(genes_to_use)
 
-    # Work on a copy 
+    # Work on a copy
     adata_hvg = adata[:, keep].copy()
 
     hvg = sc.pp.highly_variable_genes(
@@ -431,11 +427,7 @@ def _align_query_reference_genes(
     only shared genes, with `var_names` set to the corresponding
     `tables_gene_key` identifiers.
     """
-    matching_gene_key = (
-        query_gene_key
-        if query_gene_key is not None
-        else tables_gene_key
-    )
+    matching_gene_key = query_gene_key if query_gene_key is not None else tables_gene_key
 
     query_genes = _get_genes(
         adata=adata_q,
@@ -446,14 +438,6 @@ def _align_query_reference_genes(
         adata=adata_q,
         gene_key=tables_gene_key,
     )
-
-    if not query_genes.is_unique:
-        duplicated = query_genes[query_genes.duplicated()].unique()
-        raise ValueError(
-            "Gene identifiers used to match query and reference must be unique. "
-            f"Found {len(duplicated)} duplicated identifiers, e.g. "
-            f"{duplicated[:5].tolist()}."
-        )
 
     # Put reference matching identifiers into var_names.
     adata_ref = _make_ref_genes_unique(
@@ -480,9 +464,7 @@ def _align_query_reference_genes(
         index=query_genes,
     )
 
-    canonical_genes = pd.Index(
-        query_to_table.loc[shared_matching_genes].to_numpy()
-    )
+    canonical_genes = pd.Index(query_to_table.loc[shared_matching_genes].to_numpy())
 
     adata_ref.var_names = canonical_genes
 
@@ -491,9 +473,7 @@ def _align_query_reference_genes(
 
     query_genes_subset = query_genes[query_mask]
 
-    adata_q.var_names = pd.Index(
-        query_to_table.loc[query_genes_subset].to_numpy()
-    )
+    adata_q.var_names = pd.Index(query_to_table.loc[query_genes_subset].to_numpy())
 
     # Put both objects in exactly the same gene order.
     adata_q = adata_q[:, adata_ref.var_names].copy()
@@ -676,9 +656,7 @@ def run_label_transfer(
     )
 
     if len(genes_to_use) == 0:
-        raise ValueError(
-            "No genes remain after applying `exclude_gene_prefixes`."
-        )
+        raise ValueError("No genes remain after applying `exclude_gene_prefixes`.")
 
     resolved_use_hvg = _resolve_use_hvg(
         len(genes_to_use),
@@ -686,9 +664,7 @@ def run_label_transfer(
     )
 
     if resolved_use_hvg:
-        ref_common = adata_ref[
-            :, adata_ref.var_names.isin(genes_to_use)
-        ].copy()
+        ref_common = adata_ref[:, adata_ref.var_names.isin(genes_to_use)].copy()
 
         hvg_mask = _compute_hvg_mask(ref_common)
         genes_to_use = set(ref_common.var_names[hvg_mask])
@@ -1011,9 +987,7 @@ def _store_segtraq_markers(
 
         if np.any(idx < 0):
             missing = np.asarray(marker_genes)[idx < 0]
-            raise ValueError(
-                f"Marker genes not found in table genes: {missing.tolist()}"
-            )
+            raise ValueError(f"Marker genes not found in table genes: {missing.tolist()}")
 
         return idx.astype(np.int32)
 
@@ -1107,7 +1081,7 @@ def markers_from_reference(
         `adata.X`.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
             Gene prefixes excluded. By default, mitochondrial
-            and ribosomal genes are excluded. 
+            and ribosomal genes are excluded.
     mode : {"auc", "de"}, optional (default: "de")
         - "auc": compute markers using pairwise AUC/pAUC.
         - "de" : compute markers using pairwise DE.
@@ -1120,7 +1094,7 @@ def markers_from_reference(
         Minimum AUC/pAUC for a gene to be considered "up in c_i vs c_j".
     method : str, optional (default: "wilcoxon")
         (DE mode only)
-        DE method passed to `sc.tl.rank_genes_groups` ("wilcoxon", "t-test", "logreg", ...).
+        DE method passed to `sc.tl.rank_genes_groups` ("wilcoxon", "t-test", ...).
     pval_adj_thresh : float, optional (default: 0.05)
         (DE mode only)
         FDR (adjusted p-value) cutoff for positive markers.
@@ -1178,9 +1152,10 @@ def markers_from_reference(
         exclude_gene_prefixes,
     )
 
-    adata_ref = adata_ref[
-        :, adata_ref.var_names.isin(genes_to_use)
-    ].copy()
+    if len(genes_to_use) == 0:
+        raise ValueError("No genes remain after applying `exclude_gene_prefixes`.")
+
+    adata_ref = adata_ref[:, adata_ref.var_names.isin(genes_to_use)].copy()
 
     # getting gene names and mapping to indices for later use
     var_names = adata_ref.var_names
@@ -1592,10 +1567,7 @@ def bins_to_transcripts(
 
     cell_geometries = cells.geometry.to_numpy()
 
-    usable_cells = (
-        ~shapely.is_empty(cell_geometries)
-        & ~shapely.is_missing(cell_geometries)
-    )
+    usable_cells = ~shapely.is_empty(cell_geometries) & ~shapely.is_missing(cell_geometries)
     usable_cell_pos = np.flatnonzero(usable_cells)
 
     if len(usable_cell_pos) == 0:
@@ -1632,17 +1604,14 @@ def bins_to_transcripts(
 
     # zero cell-table counts for cells absent from generated points
     bins_with_molecules = molecules_per_bin > 0
-    represented_codes = np.unique(
-        bin_cell_codes[bins_with_molecules & (bin_cell_codes != background_code)]
-    )
+    represented_codes = np.unique(bin_cell_codes[bins_with_molecules & (bin_cell_codes != background_code)])
     represented_cell_ids = pd.Index(cell_ids[represented_codes].astype(str))
 
     if tables_cell_id_key in cells_adata.obs.columns:
         table_cell_ids = cells_adata.obs[tables_cell_id_key].astype(str)
     else:
         raise ValueError(
-            f"cell_id_key={tables_cell_id_key!r} not found as a column name "
-            f"in sdata.tables[{cells_tables_key!r}].obs."
+            f"cell_id_key={tables_cell_id_key!r} not found as a column name in sdata.tables[{cells_tables_key!r}].obs."
         )
 
     missing_from_points = ~table_cell_ids.isin(represented_cell_ids)
@@ -1659,9 +1628,9 @@ def bins_to_transcripts(
     if len(cumulative):
         molecule_bucket = np.maximum(cumulative - 1, 0) // max_molecules_per_chunk
         bin_bucket = np.arange(X.shape[0], dtype=np.int64) // chunk_bins
-        boundaries = np.flatnonzero(
-            (molecule_bucket[1:] != molecule_bucket[:-1]) | (bin_bucket[1:] != bin_bucket[:-1])
-        ) + 1
+        boundaries = (
+            np.flatnonzero((molecule_bucket[1:] != molecule_bucket[:-1]) | (bin_bucket[1:] != bin_bucket[:-1])) + 1
+        )
         starts = np.r_[0, boundaries]
         ends = np.r_[boundaries, X.shape[0]]
         chunks = list(zip(starts, ends, strict=True))

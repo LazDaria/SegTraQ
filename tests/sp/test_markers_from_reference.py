@@ -13,6 +13,7 @@ def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref, mark
     # Basic structure
     assert isinstance(markers, dict)
     assert set(markers.keys()) == set(pd.Categorical(adata_ref.obs["celltype"]).categories)
+
     for _ct, d in markers.items():
         assert set(d.keys()) == {"positive", "negative"}
         assert isinstance(d["positive"], list)
@@ -22,27 +23,37 @@ def test_markers_from_reference_real_adata_structure_and_overlap(adata_ref, mark
 
     pos_all = [g for genes in (markers[ct]["positive"] for ct in markers) for g in genes]
     pos_counts = pd.Series(pos_all, dtype="object").value_counts()
+
     if len(pos_counts) > 0:
-        assert (pos_counts <= (0.25 * n_types)).all(), (
+        assert (pos_counts < (0.25 * n_types)).all(), (
             "Positive overlap filter failed: some genes appear in too many types"
         )
+
     neg_all = [g for genes in (markers[ct]["negative"] for ct in markers) for g in genes]
     neg_counts = pd.Series(neg_all, dtype="object").value_counts()
+
     if len(neg_counts) > 0:
         assert (neg_counts < n_types).all(), (
             "Negative overlap filter failed: a gene appears in all types' negative lists"
         )
 
 
-def test_markers_from_reference_auc(adata_ref):
+def test_markers_from_reference_auc(sdata_labeled, adata_ref):
     n_types = adata_ref.obs["celltype"].nunique()
+
     markers_auc = st.markers_from_reference(
-        adata_ref.copy(), ref_cell_type="celltype", t_pos=0.5, ref_raw_counts_layer="raw", mode="auc"
+        sdata=sdata_labeled,
+        adata_ref=adata_ref.copy(),
+        ref_cell_type="celltype",
+        t_pos=0.5,
+        ref_raw_counts_layer="raw",
+        mode="auc",
     )
 
     # Basic structure
     assert isinstance(markers_auc, dict)
     assert set(markers_auc.keys()) == set(pd.Categorical(adata_ref.obs["celltype"]).categories)
+
     for _ct, d in markers_auc.items():
         assert set(d.keys()) == {"positive", "negative"}
         assert isinstance(d["positive"], list)
@@ -52,24 +63,36 @@ def test_markers_from_reference_auc(adata_ref):
 
     pos_all = [g for genes in (markers_auc[ct]["positive"] for ct in markers_auc) for g in genes]
     pos_counts = pd.Series(pos_all, dtype="object").value_counts()
+
     if len(pos_counts) > 0:
-        assert (pos_counts <= (0.25 * n_types)).all(), (
+        assert (pos_counts < (0.5 * n_types)).all(), (
             "Positive overlap filter failed: some genes appear in too many types"
         )
+
     neg_all = [g for genes in (markers_auc[ct]["negative"] for ct in markers_auc) for g in genes]
     neg_counts = pd.Series(neg_all, dtype="object").value_counts()
+
     if len(neg_counts) > 0:
         assert (neg_counts < n_types).all(), (
             "Negative overlap filter failed: a gene appears in all types' negative lists"
         )
 
 
-def test_overlap_filter_effect_without_internals(adata_ref):
+def test_overlap_filter_effect_without_internals(sdata_labeled, adata_ref):
     markers_loose = st.markers_from_reference(
-        adata_ref.copy(), ref_cell_type="celltype", t_pos=0.5, ref_raw_counts_layer="raw"
+        sdata=sdata_labeled,
+        adata_ref=adata_ref.copy(),
+        ref_cell_type="celltype",
+        t_pos=0.5,
+        ref_raw_counts_layer="raw",
     )
+
     markers_strict = st.markers_from_reference(
-        adata_ref.copy(), ref_cell_type="celltype", t_pos=0.1, ref_raw_counts_layer="raw"
+        sdata=sdata_labeled,
+        adata_ref=adata_ref.copy(),
+        ref_cell_type="celltype",
+        t_pos=0.1,
+        ref_raw_counts_layer="raw",
     )
 
     n_types = adata_ref.obs["celltype"].nunique()
@@ -81,9 +104,10 @@ def test_overlap_filter_effect_without_internals(adata_ref):
     pos_counts_loose = count_across_types(markers_loose, key="positive")
     pos_counts_strict = count_across_types(markers_strict, key="positive")
 
-    # 1) Contract checks: outputs must respect their own thresholds
+    # Outputs must respect their own thresholds
     if not pos_counts_loose.empty:
         assert (pos_counts_loose < (0.5 * n_types)).all(), "Loose markers violate t_pos=0.5 overlap contract"
+
     if not pos_counts_strict.empty:
         assert (pos_counts_strict < (0.1 * n_types)).all(), "Strict markers violate t_pos=0.1 overlap contract"
 

@@ -10,10 +10,10 @@ from joblib import Parallel, delayed
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 
 from .._settings import settings
-from ..rs.utils import _two_profile_similarity_metrics
-from ..utils import _ensure_index, _get_genes, _is_background, merge_into_obs, _exclude_genes_by_prefix
-from .utils import _correct_z_drift, _run_ovrlpy
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
+from ..rs.utils import _two_profile_similarity_metrics
+from ..utils import _ensure_index, _exclude_genes_by_prefix, _get_genes, _is_background, merge_into_obs
+from .utils import _correct_z_drift, _run_ovrlpy
 
 
 def vertical_signal_integrity_per_cell(
