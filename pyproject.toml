@@ -31,7 +31,8 @@ dependencies = [
   "anndata>=0.12", # to support zarr v3
   "ovrlpy>=1.2.0",
   "ome_zarr>=0.13.0",
-  "setuptools<82.0.0"  # setuptools==82.0.0 dropped pkg_resources, which is needed by xarray and thus spatialdata
+  "setuptools<82.0.0",  # setuptools==82.0.0 dropped pkg_resources, which is needed by xarray and thus spatialdata
+  "ipywidgets",  # required for nicer progress bars in notebooks
 ]
 requires-python = ">= 3.12"
 
