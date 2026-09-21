@@ -9,7 +9,14 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from .constants import SEGTRAQ_CELL_ID_KEY
-from .utils import _filter_control_and_low_quality_transcripts, _get_genes, _make_ref_genes_unique, validate_spatialdata
+from .utils import (
+    _filter_control_and_low_quality_transcripts,
+    _get_genes,
+    _make_ref_genes_unique,
+    _require_reference,
+    _warn_always,
+    validate_spatialdata,
+)
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer
@@ -472,11 +479,17 @@ class SegTraQ:
 
             If `inplace=False`, returns a dictionary with available metric results.
         """
-
         assert self.points_z_key is not None, (
             "Cannot run volume metrics for 2D data: `points_z_key` is None. "
             "If available, define the column for z-coordinate of transcripts when initializing SegTraQ."
         )
+
+        if adata_ref is not None and ref_cell_type is None:
+            _require_reference(
+                adata_ref,
+                ref_cell_type,
+                condition="`adata_ref` is provided",
+            )
 
         label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
         similarity_kwargs = {} if similarity_kwargs is None else dict(similarity_kwargs)
@@ -508,6 +521,7 @@ class SegTraQ:
             )
 
         # vertical_signal_integrity_per_cell
+        vsi = None
         if run_ovrlpy:
             ovrlp = vsi_kwargs.get("ovrlp")
 
@@ -786,13 +800,12 @@ class SegTraQ:
         label_transfer_result = None
 
         needs_reference = cell_type_key is None or markers is None
-
         if needs_reference:
-            if adata_ref is None:
-                raise ValueError("`adata_ref` is required when `cell_type_key=None` or `markers=None`.")
-
-            if ref_cell_type is None:
-                raise ValueError("`ref_cell_type` is required when `cell_type_key=None` or `markers=None`.")
+            _require_reference(
+                adata_ref,
+                ref_cell_type,
+                condition="`cell_type_key=None` or `markers=None`",
+            )
 
         if cell_type_key is None:
             cell_type_key = "transferred_cell_type"
@@ -962,6 +975,171 @@ class SegTraQ:
             "distance_to_membrane": dtm_df,
             "membrane_distance_skewness": mb_skw,
         }
+
+    def run_all(
+        self,
+        *,
+        adata_ref: AnnData | None = None,
+        ref_cell_type: str | None = None,
+        ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
+        cell_type_key: str | None = None,
+        markers: dict[str, dict[str, list[str]]] | None = None,
+        inplace: bool = True,
+        label_transfer_kwargs: dict[str, Any] | None = None,
+        baseline_kwargs: dict[str, Any] | None = None,
+        region_similarity_kwargs: dict[str, Any] | None = None,
+        volume_kwargs: dict[str, Any] | None = None,
+        clustering_stability_kwargs: dict[str, Any] | None = None,
+        supervised_kwargs: dict[str, Any] | None = None,
+        point_statistics_kwargs: dict[str, Any] | None = None,
+    ):
+        """
+        Run all SegTraQ metrics across all modules.
+
+        Convenience wrapper that calls, in order, `run_baseline`, `run_region_similarity`,
+        `run_volume`, `run_clustering_stability`, `run_supervised`, and `run_point_statistics`
+        via their respective facades.
+
+        If `cell_type_key` is `None` and both `adata_ref` and `ref_cell_type` are provided,
+        label transfer is run once upfront via `self.run_label_transfer()`, and the resulting
+        labels (stored under `"transferred_cell_type"`) are reused by every module that
+        accepts a `cell_type_key`, instead of each module running its own label transfer.
+
+        A module whose prerequisites are not met (e.g. `run_volume` on 2D data, or
+        `run_supervised` without a reference or markers) is skipped with a warning instead of
+        aborting the whole call. Pass `inplace=False` to see exactly which modules ran and
+        why any others were skipped.
+
+        Parameters
+        ----------
+        adata_ref : AnnData or None, default=None
+            Reference AnnData object used for label transfer and/or marker extraction.
+            Forwarded to `run_volume` and `run_supervised`.
+        ref_cell_type : str or None, default=None
+            Column in `adata_ref.obs` containing reference cell-type labels.
+        ref_gene_key : str or None, default=None
+            Column in `adata_ref.var` containing gene identifiers. If `None`, `adata_ref.var_names` are used.
+        query_gene_key : str or None, default=None
+            Column in `sdata.tables[tables_key].var` containing gene identifiers matching
+            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+        ref_raw_counts_layer : str or None, default=None
+            Layer containing raw counts in `adata_ref`. If `None`, raw counts are expected in `adata_ref.X`.
+        cell_type_key : str or None, default=None
+            Column in `sdata.tables[tables_key].obs` containing cell-type labels, reused by every
+            module that accepts one. If `None` and `adata_ref`/`ref_cell_type` are provided, label
+            transfer is run once upfront and its result is used instead.
+        markers : dict or None, default=None
+            Marker genes forwarded to `run_supervised`, in the form
+            `{cell_type: {"positive": list[str], "negative": list[str]}}`.
+            If `None`, `run_supervised` derives them from `adata_ref`.
+        inplace : bool, default=True
+            If `True`, results of every successfully run module are merged into `sdata` and
+            `None` is returned. If `False`, per-module results are returned in a dict.
+        label_transfer_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to the single, shared `self.run_label_transfer()` call.
+        baseline_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `run_baseline`.
+        region_similarity_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `run_region_similarity`.
+        volume_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `run_volume`.
+        clustering_stability_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `run_clustering_stability`.
+        supervised_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `run_supervised`.
+        point_statistics_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `run_point_statistics`.
+
+        Returns
+        -------
+        None or dict
+            If `inplace=True`, returns `None`.
+            If `inplace=False`, returns a dict with keys `"baseline"`, `"region_similarity"`,
+            `"volume"`, `"clustering_stability"`, `"supervised"`, and `"point_statistics"`
+            (each `None` for a module that was skipped), plus a `"skipped"` dict mapping the
+            name of every skipped module to the reason it could not be computed.
+        """
+        label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
+        baseline_kwargs = {} if baseline_kwargs is None else dict(baseline_kwargs)
+        region_similarity_kwargs = {} if region_similarity_kwargs is None else dict(region_similarity_kwargs)
+        volume_kwargs = {} if volume_kwargs is None else dict(volume_kwargs)
+        clustering_stability_kwargs = {} if clustering_stability_kwargs is None else dict(clustering_stability_kwargs)
+        supervised_kwargs = {} if supervised_kwargs is None else dict(supervised_kwargs)
+        point_statistics_kwargs = {} if point_statistics_kwargs is None else dict(point_statistics_kwargs)
+
+        # Run label transfer once upfront (if possible), so every module below that accepts a
+        # `cell_type_key` can reuse the same labels instead of each recomputing them independently.
+        if cell_type_key is None and adata_ref is not None and ref_cell_type is not None:
+            try:
+                self.run_label_transfer(
+                    adata_ref=adata_ref,
+                    ref_cell_type=ref_cell_type,
+                    ref_gene_key=ref_gene_key,
+                    query_gene_key=query_gene_key,
+                    ref_raw_counts_layer=ref_raw_counts_layer,
+                    cell_type_key="transferred_cell_type",
+                    inplace=True,
+                    **label_transfer_kwargs,
+                )
+                cell_type_key = "transferred_cell_type"
+            except Exception as exc:
+                # for some reason, warnings.warn() doesn't always show the warning in the notebook
+                _warn_always(f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed.")
+
+        reference_kwargs = dict(
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
+            ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+        )
+
+        runners: dict[str, Callable[[], Any]] = {
+            "baseline": lambda: self.run_baseline(inplace=inplace, **baseline_kwargs),
+            "region_similarity": lambda: self.run_region_similarity(inplace=inplace, **region_similarity_kwargs),
+            "volume": lambda: self.run_volume(
+                cell_type_key=cell_type_key,
+                inplace=inplace,
+                **reference_kwargs,
+                **volume_kwargs,
+            ),
+            "clustering_stability": lambda: self.run_clustering_stability(
+                inplace=inplace,
+                **clustering_stability_kwargs,
+            ),
+            "supervised": lambda: self.run_supervised(
+                cell_type_key=cell_type_key,
+                markers=markers,
+                inplace=inplace,
+                **reference_kwargs,
+                **supervised_kwargs,
+            ),
+            "point_statistics": lambda: self.run_point_statistics(
+                inplace=inplace,
+                **({"cell_type_key": cell_type_key} if cell_type_key is not None else {}),
+                **point_statistics_kwargs,
+            ),
+        }
+
+        results: dict[str, Any] = {}
+        skipped: dict[str, str] = {}
+
+        for name, runner in runners.items():
+            try:
+                results[name] = runner()
+            except Exception as exc:
+                # for some reason, warnings.warn() doesn't always show the warning in the notebook
+                _warn_always(f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).")
+                skipped[name] = str(exc)
+                results[name] = None
+
+        if inplace:
+            return None
+
+        results["skipped"] = skipped
+        return results
 
     def markers_from_reference(
         self,

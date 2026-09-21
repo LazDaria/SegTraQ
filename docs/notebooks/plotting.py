@@ -32,9 +32,6 @@
 # %load_ext autoreload
 # %autoreload 2
 
-import warnings
-
-warnings.filterwarnings(action="ignore")
 
 # %%
 import anndata as ad
