@@ -20,7 +20,7 @@ from .utils import (
 )
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
-from .utils import run_label_transfer as _run_label_transfer, _store_segtraq_markers
+from .utils import run_label_transfer as _run_label_transfer, _store_segtraq_markers, _get_segtraq_markers
 
 
 class SegTraQ:
@@ -85,7 +85,7 @@ class SegTraQ:
             Column in the cell table with the y-coordinate of the cell centroid.
 
         tables_gene_key : str or None, default=None
-            Column in `sdata.tables[tables_key].var` containing gene identifiers
+            Column in `sdata.tables[tables_key].var` containing unique gene identifiers
             matching those in `sdata.points[points_key][points_gene_key]`.
             If `None`, `sdata.tables[tables_key].var_names` are used.
 
@@ -430,7 +430,7 @@ class SegTraQ:
             If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
             Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+            `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key` is used. 
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
@@ -491,6 +491,7 @@ class SegTraQ:
         label_transfer_result = None
 
         if cell_type_key is None and adata_ref is not None:
+
             cell_type_key = "transferred_cell_type"
 
             label_transfer_kwargs["cell_type_key"] = cell_type_key
@@ -730,19 +731,21 @@ class SegTraQ:
             Column in `adata_ref.obs` containing reference cell-type labels.
             Required if `cell_type_key=None` or `markers=None`.
         ref_gene_key : str or None, default=None
-            Column in `adata_ref.var` containing gene identifiers.
-            If `None`, `adata_ref.var_names` are used.
+            Column in `adata_ref.var` containing gene identifiers matching the
+            query gene identifiers. If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
-            Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+            Column in `sdata.tables[tables_key].var` containing gene identifiers
+            matching `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key`
+            is used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
         markers : dict or None, default=None
-            Dictionary of marker genes in the form
+            Marker genes forwarded to `run_supervised`, in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
-            If `None`, markers are computed from `adata_ref` using
-            `self.markers_from_reference()`.
+            If `None`, markers stored in
+            `sdata.tables[tables_key].uns["segtraq_markers"]` are used if available.
+            Otherwise, markers are derived from `adata_ref`.
         cell_type_key: str | None = None
             Column in the query AnnData `.obs` with cell-type labels.
             If `None`, label transfer is run first using `adata_ref` and
@@ -785,12 +788,21 @@ class SegTraQ:
 
         label_transfer_result = None
 
-        needs_reference = cell_type_key is None or markers is None
+        adata = self.sdata.tables[self.tables_key]
+        has_stored_markers = "segtraq_markers" in adata.uns
+
+        needs_reference = (
+            cell_type_key is None
+            or (markers is None and not has_stored_markers)
+        )
+
         if needs_reference:
             _require_reference(
                 adata_ref,
                 ref_cell_type,
-                condition="`cell_type_key=None` or `markers=None`",
+                condition=(
+                    "`cell_type_key=None` or no explicit/stored markers are available"
+                ),
             )
 
         if cell_type_key is None:
@@ -809,14 +821,21 @@ class SegTraQ:
             )
 
         if markers is None:
-            markers = self.markers_from_reference(
-                adata=adata_ref,
-                ref_cell_type=ref_cell_type,
-                ref_gene_key=ref_gene_key,
-                query_gene_key=query_gene_key,
-                ref_raw_counts_layer=ref_raw_counts_layer,
-                **markers_from_reference_kwargs,
-            )
+            if has_stored_markers:
+                markers = _get_segtraq_markers(
+                    adata,
+                    markers = markers,
+                    tables_gene_key=self.tables_gene_key,
+                )
+            else:
+                markers = self.markers_from_reference(
+                    adata_ref=adata_ref,
+                    ref_cell_type=ref_cell_type,
+                    ref_gene_key=ref_gene_key,
+                    query_gene_key=query_gene_key,
+                    ref_raw_counts_layer=ref_raw_counts_layer,
+                    **markers_from_reference_kwargs,
+                )
 
         purity_inplace = purity_kwargs.pop("inplace", inplace)
         cont_inplace = contamination_kwargs.pop("inplace", inplace)
@@ -824,17 +843,20 @@ class SegTraQ:
 
         purity_df = self.sp.marker_purity(
             cell_type_key=cell_type_key,
+            markers=markers,
             inplace=purity_inplace,
             **purity_kwargs,
         )
 
         per_cell_cont_df, cont_strength_mat, cont_mat, cont_n = self.sp.neighbor_contamination(
             cell_type_key=cell_type_key,
+            markers=markers,
             inplace=cont_inplace,
             **contamination_kwargs,
         )
 
         mecr_df = self.sp.mutually_exclusive_coexpression_rate(
+            markers=markers,
             inplace=mecr_inplace,
             **mecr_kwargs,
         )
@@ -991,9 +1013,9 @@ class SegTraQ:
         accepts a `cell_type_key`, instead of each module running its own label transfer.
 
         A module whose prerequisites are not met (e.g. `run_volume` on 2D data, or
-        `run_supervised` without a reference or markers) is skipped with a warning instead of
-        aborting the whole call. Pass `inplace=False` to see exactly which modules ran and
-        why any others were skipped.
+        `run_supervised` without explicit markers, stored markers, or a reference) is skipped with 
+        a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which 
+        modules ran and why any others were skipped.
 
         Parameters
         ----------
@@ -1003,10 +1025,11 @@ class SegTraQ:
         ref_cell_type : str or None, default=None
             Column in `adata_ref.obs` containing reference cell-type labels.
         ref_gene_key : str or None, default=None
-            Column in `adata_ref.var` containing gene identifiers. If `None`, `adata_ref.var_names` are used.
+            Column in `adata_ref.var` containing gene identifiers matching the
+            query gene identifiers. If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
             Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+            `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key` is used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts in `adata_ref`. If `None`, raw counts are expected in `adata_ref.X`.
         cell_type_key : str or None, default=None
@@ -1016,7 +1039,9 @@ class SegTraQ:
         markers : dict or None, default=None
             Marker genes forwarded to `run_supervised`, in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
-            If `None`, `run_supervised` derives them from `adata_ref`.
+            If `None`, markers stored in
+            `sdata.tables[tables_key].uns["segtraq_markers"]` are used if available.
+            Otherwise, markers are derived from `adata_ref`.
         inplace : bool, default=True
             If `True`, results of every successfully run module are merged into `sdata` and
             `None` is returned. If `False`, per-module results are returned in a dict.
@@ -1055,7 +1080,11 @@ class SegTraQ:
         # Run label transfer once upfront (if possible), so every module below that accepts a
         # `cell_type_key` can reuse the same labels instead of each recomputing them independently.
         if cell_type_key is None and adata_ref is not None and ref_cell_type is not None:
+
             try:
+                label_transfer_kwargs["cell_type_key"] = "transferred_cell_type"
+                label_transfer_kwargs["inplace"] = True
+
                 self.run_label_transfer(
                     adata_ref=adata_ref,
                     ref_cell_type=ref_cell_type,
@@ -1124,9 +1153,10 @@ class SegTraQ:
         results["skipped"] = skipped
         return results
 
+
     def markers_from_reference(
         self,
-        adata: AnnData,
+        adata_ref: AnnData,
         ref_cell_type: str,
         ref_gene_key: str | None = None,
         query_gene_key: str | None = None,
@@ -1145,28 +1175,15 @@ class SegTraQ:
         t_neg: float = 1.0,
         min_cells_per_celltype: int = 10,
         n_jobs: int | None = None,
-        inplace: bool = True
+        inplace: bool = True,
     ):
-        
-        sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
-
-        # copies gene identifiers into var_names and makes them unique (if needed)
-        adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
-        sc_genes = adata.var_names
-
-        mask = sc_genes.isin(sp_genes)
-        if mask.sum() == 0:
-            raise ValueError(
-                "No genes in the reference remain after subsetting to query (SpatialData). "
-                "Check that `tables_gene_key` during SegTraQ initialization and `ref_gene_key`"
-                "in `markers_from_reference` point to the same gene identifiers."
-            )
-
-        adata = adata[:, mask].copy()
-
         markers = _markers_from_reference(
-            adata=adata,
+            sdata=self.sdata,
+            adata_ref=adata_ref,
             ref_cell_type=ref_cell_type,
+            tables_key=self.tables_key,
+            tables_gene_key=self.tables_gene_key,
+            query_gene_key=query_gene_key,
             ref_gene_key=ref_gene_key,
             ref_raw_counts_layer=ref_raw_counts_layer,
             exclude_gene_prefixes=exclude_gene_prefixes,
@@ -1187,35 +1204,15 @@ class SegTraQ:
 
         if inplace:
             _store_segtraq_markers(
-                adata=self.sdata.tables[self.tables_key],
-                query_gene_key=query_gene_key,
+                sdata=self.sdata,
+                tables_key=self.tables_key,
+                tables_gene_key=self.tables_gene_key,
                 markers=markers,
             )
 
         return markers
 
-    markers_from_reference.__doc__ = _markers_from_reference.__doc__ + dedent(
-        """
-
-            Notes
-            -----
-            query_gene_key : str | None
-                Additional parameter only used when ``markers_from_reference`` is called
-                as a method of a ``SegTraQ`` instance. Specifies the column in
-                ``self.sdata.tables[tables_key].var`` containing the query gene
-                identifiers that match ``ref_gene_key``. This is separate from
-                ``tables_gene_key`` because the gene identifiers used during SegTraQ
-                initialization must match ``points_gene_key``, whereas a different gene
-                annotation in the table may match the identifiers used in the reference.
-                If ``None``, ``var_names`` are used. These identifiers are used to subset
-                the reference genes before marker selection.
-            inplace : bool, default=True
-                Additional parameter only used when ``markers_from_reference`` is called
-                as a method of a ``SegTraQ`` instance. If ``True``, stores the positive
-                and negative markers in ``self.sdata.tables[tables_key].uns``.
-            """
-    )
-
+    
     def run_label_transfer(
         self,
         adata_ref: AnnData,
@@ -1245,6 +1242,7 @@ class SegTraQ:
             ref_gene_key=ref_gene_key,
             query_gene_key=query_gene_key,
             tables_key=self.tables_key,
+            tables_gene_key=self.tables_gene_key,
             tables_cell_id_key=self.tables_cell_id_key,
             tables_raw_counts_layer=self.tables_raw_counts_layer,
             points_key=self.points_key,
@@ -1260,7 +1258,7 @@ class SegTraQ:
             inplace=inplace,
         )
 
-        return None if inplace else result
+        return result
 
     run_label_transfer.__doc__ = _run_label_transfer.__doc__
 

@@ -184,7 +184,6 @@ def _resolve_obs_index_ambiguity(
 def _assign_celltype_by_pearson(
     adata: AnnData,
     ref_mean_df: pd.DataFrame,
-    tables_gene_key: str | None = None,
     tables_cell_id_key: str = "cell_id",
     genes_to_use: set[str] | None = None,
 ) -> pd.DataFrame:
@@ -197,9 +196,6 @@ def _assign_celltype_by_pearson(
         Query dataset after normalization and log1p transformation.
     ref_mean_df : pandas.DataFrame
         Reference mean expression profiles with cell types as rows and genes as columns.
-    tables_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers.
-        If `None`, `sdata.tables[tables_key].var_names` are used.
     tables_cell_id_key : str, default="cell_id"
         Column in `adata.obs` containing unique cell identifiers.
     genes_to_use : set of str or None, default=None
@@ -214,10 +210,7 @@ def _assign_celltype_by_pearson(
     if tables_cell_id_key not in adata.obs.columns:
         raise KeyError(f"'{tables_cell_id_key}' not found in `adata.obs`.")
 
-    genes = _get_genes(
-        adata=adata,
-        gene_key=tables_gene_key,
-    )
+    genes = adata.var_names
 
     X_query = pd.DataFrame(
         _to_ndarray(adata.X),
@@ -422,6 +415,92 @@ def _make_ref_genes_unique(
     return adata_ref
 
 
+def _align_query_reference_genes(
+    adata_q: AnnData,
+    adata_ref: AnnData,
+    tables_gene_key: str | None = None,
+    query_gene_key: str | None = None,
+    ref_gene_key: str | None = None,
+) -> tuple[AnnData, AnnData]:
+    """
+    Align query and reference genes and convert both to the canonical
+    table gene namespace.
+
+    `query_gene_key` and `ref_gene_key` define the identifiers used to
+    match query and reference genes. The returned AnnData objects contain
+    only shared genes, with `var_names` set to the corresponding
+    `tables_gene_key` identifiers.
+    """
+    matching_gene_key = (
+        query_gene_key
+        if query_gene_key is not None
+        else tables_gene_key
+    )
+
+    query_genes = _get_genes(
+        adata=adata_q,
+        gene_key=matching_gene_key,
+    )
+
+    table_genes = _get_genes(
+        adata=adata_q,
+        gene_key=tables_gene_key,
+    )
+
+    if not query_genes.is_unique:
+        duplicated = query_genes[query_genes.duplicated()].unique()
+        raise ValueError(
+            "Gene identifiers used to match query and reference must be unique. "
+            f"Found {len(duplicated)} duplicated identifiers, e.g. "
+            f"{duplicated[:5].tolist()}."
+        )
+
+    # Put reference matching identifiers into var_names.
+    adata_ref = _make_ref_genes_unique(
+        adata_ref,
+        ref_gene_key=ref_gene_key,
+    )
+
+    # Find reference genes present in the query.
+    mask = adata_ref.var_names.isin(query_genes)
+
+    if mask.sum() == 0:
+        raise ValueError(
+            "No common genes found between query and reference. "
+            "Check that `ref_gene_key` and `query_gene_key` contain "
+            "matching gene identifiers."
+        )
+
+    shared_matching_genes = adata_ref.var_names[mask]
+
+    adata_ref = adata_ref[:, mask].copy()
+
+    query_to_table = pd.Series(
+        table_genes.to_numpy(),
+        index=query_genes,
+    )
+
+    canonical_genes = pd.Index(
+        query_to_table.loc[shared_matching_genes].to_numpy()
+    )
+
+    adata_ref.var_names = canonical_genes
+
+    query_mask = query_genes.isin(shared_matching_genes)
+    adata_q = adata_q[:, query_mask].copy()
+
+    query_genes_subset = query_genes[query_mask]
+
+    adata_q.var_names = pd.Index(
+        query_to_table.loc[query_genes_subset].to_numpy()
+    )
+
+    # Put both objects in exactly the same gene order.
+    adata_q = adata_q[:, adata_ref.var_names].copy()
+
+    return adata_q, adata_ref
+
+
 def run_label_transfer(
     sdata,
     adata_ref: AnnData,
@@ -430,6 +509,7 @@ def run_label_transfer(
     ref_raw_counts_layer: str | None = None,
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
     query_gene_key: str | None = None,
     points_key: str = "transcripts",
     points_cell_id_key: str = "cell_id",
@@ -473,9 +553,13 @@ def run_label_transfer(
         Key identifying the cell-level AnnData table in `sdata.tables`.
     tables_cell_id_key : str, default="cell_id"
         Column in `sdata.tables[tables_key].obs` containing unique cell identifiers.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing the canonical gene
+        identifiers used by SegTraQ. If `None`, `var_names` are used.
     query_gene_key : str or None, default=None
-        Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-        `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+        Alternative column in `sdata.tables[tables_key].var` containing gene
+        identifiers matching `adata_ref.var[ref_gene_key]`. If `None`,
+        `tables_gene_key` is used.
     points_key : str, default="transcripts"
         Key identifying the transcript-level points element in `sdata.points`.
     points_cell_id_key : str, default="cell_id"
@@ -493,8 +577,8 @@ def run_label_transfer(
     cell_type_key : str, default="transferred_cell_type"
         Column name used to store transferred labels in the query table's `.obs`.
     ref_gene_key : str or None, default=None
-        Column in `adata_ref.var` containing gene identifiers.
-        If `None`, `adata_ref.var_names` are used.
+        Column in `adata_ref.var` containing gene identifiers matching the
+        query gene identifiers. If `None`, `adata_ref.var_names` are used.
     use_hvg : bool or None, default=None
         If `None`, restrict label transfer to 2,000 highly variable genes when
         more than 8,000 genes are shared between query and reference. If
@@ -516,8 +600,6 @@ def run_label_transfer(
         `tables_cell_id_key`, `cell_type_key`, and `"pearson_score"`.
         If `inplace=True`, modifies `sdata` in place and returns `None`.
     """
-    # copies gene identifiers into var_names and makes them unique (if needed)
-    adata_ref = _make_ref_genes_unique(adata_ref, ref_gene_key=ref_gene_key)
 
     if ref_cell_type not in adata_ref.obs.columns:
         raise KeyError(f"'{ref_cell_type}' not found in `adata_ref.obs`.")
@@ -566,6 +648,14 @@ def run_label_transfer(
 
     adata_q = tbl[mask].copy()
 
+    adata_q, adata_ref = _align_query_reference_genes(
+        adata_q=adata_q,
+        adata_ref=adata_ref,
+        tables_gene_key=tables_gene_key,
+        query_gene_key=query_gene_key,
+        ref_gene_key=ref_gene_key,
+    )
+
     # getting the normalized and log-transformed data into adata_ref and adata_q,
     # stored in a namespaced layer to avoid conflicts
     adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
@@ -580,32 +670,36 @@ def run_label_transfer(
     norm_log_counts_df["celltype"] = celltypes.values
     ref_mean_df = norm_log_counts_df.groupby("celltype", observed=True).mean()
 
-    query_genes = _get_genes(adata_q, query_gene_key)
-    common_genes = adata_ref.var_names.intersection(query_genes)
-
-    common_genes = _exclude_genes_by_prefix(
-        common_genes,
+    genes_to_use = _exclude_genes_by_prefix(
+        adata_ref.var_names,
         exclude_gene_prefixes,
     )
 
-    if len(common_genes) == 0:
-        raise ValueError("No common genes found between query and reference.")
+    if len(genes_to_use) == 0:
+        raise ValueError(
+            "No genes remain after applying `exclude_gene_prefixes`."
+        )
 
-    genes_to_use = set(common_genes)
-
-    resolved_use_hvg = _resolve_use_hvg(len(common_genes), use_hvg)
+    resolved_use_hvg = _resolve_use_hvg(
+        len(genes_to_use),
+        use_hvg,
+    )
 
     if resolved_use_hvg:
-        ref_common = adata_ref[:, adata_ref.var_names.isin(common_genes)].copy()
+        ref_common = adata_ref[
+            :, adata_ref.var_names.isin(genes_to_use)
+        ].copy()
+
         hvg_mask = _compute_hvg_mask(ref_common)
         genes_to_use = set(ref_common.var_names[hvg_mask])
+    else:
+        genes_to_use = set(genes_to_use)
 
     # using the normalized and log-transformed data for label transfer
     adata_q.X = adata_q.layers[NORM_LOG_LAYER]
     ct_corr = _assign_celltype_by_pearson(
         adata=adata_q,
         ref_mean_df=ref_mean_df,
-        tables_gene_key=query_gene_key,
         tables_cell_id_key=tables_cell_id_key,
         genes_to_use=genes_to_use,
     )
@@ -719,7 +813,6 @@ def merge_into_uns(
 
 def _pairwise_auc(
     adata: AnnData,
-    gene_key: str | None,
     ctypes: pd.Categorical,
     ref_cell_type: str,
     ct_a: str,
@@ -744,7 +837,7 @@ def _pairwise_auc(
     if mask.sum() < 2 * min_cells_per_celltype:
         return empty()
 
-    ad_pair = adata[mask]
+    ad_pair = adata[mask].copy()
 
     # if not enough cells in either type, skip this pair
     labels_a = (ad_pair.obs[ref_cell_type].values == ct_a).astype(int)
@@ -762,7 +855,7 @@ def _pairwise_auc(
     X_pair = ad_pair.X
     X_pair = X_pair.toarray() if hasattr(X_pair, "toarray") else np.asarray(X_pair)
 
-    genes = np.asarray(_get_genes(ad_pair, gene_key))
+    genes = ad_pair.var_names
 
     mask_a = labels_a == 1
     mask_b = ~mask_a
@@ -866,14 +959,52 @@ def _pairwise_de(
     return (ct_a, ct_b, pos_a["names"].tolist(), True), (ct_b, ct_a, pos_b["names"].tolist(), True)
 
 
+def _get_segtraq_markers(
+    adata,
+    markers: dict[str, dict[str, list[str]]] | None,
+    tables_gene_key: str | None = None,
+) -> dict[str, dict[str, list[str]]]:
+    """Return provided markers or load stored SegTraQ markers from ``adata.uns``."""
+    if markers is not None:
+        return markers
+
+    if "segtraq_markers" not in adata.uns:
+        raise ValueError(
+            "No markers were provided and no stored SegTraQ markers were found in "
+            "adata.uns['segtraq_markers']. Run markers_from_reference(..., inplace=True) "
+            "first or pass markers explicitly."
+        )
+
+    genes = _get_genes(
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
+
+    stored = adata.uns["segtraq_markers"]
+
+    return {
+        cell_type: {
+            "positive": genes[np.asarray(marker_sets["positive"], dtype=int)].tolist(),
+            "negative": genes[np.asarray(marker_sets["negative"], dtype=int)].tolist(),
+        }
+        for cell_type, marker_sets in stored.items()
+    }
+
+
 def _store_segtraq_markers(
-    adata: AnnData,
+    sdata,
     markers: dict[str, dict[str, list[str]]],
-    query_gene_key: str | None = None,
+    tables_key: str = "table",
+    tables_gene_key: str | None = None,
 ) -> None:
     """Store SegTraQ markers in `.uns` as gene indices."""
 
-    genes = _get_genes(adata=adata, gene_key=query_gene_key)
+    adata = sdata.tables[tables_key]
+
+    genes = _get_genes(
+        adata=adata,
+        gene_key=tables_gene_key,
+    )
 
     def _to_indices(marker_genes):
         idx = genes.get_indexer(marker_genes)
@@ -886,7 +1017,7 @@ def _store_segtraq_markers(
 
         return idx.astype(np.int32)
 
-    adata.uns["segtraq_markers"] = {
+    stored_markers = {
         cell_type: {
             "positive": _to_indices(marker_sets["positive"]),
             "negative": _to_indices(marker_sets["negative"]),
@@ -894,10 +1025,20 @@ def _store_segtraq_markers(
         for cell_type, marker_sets in markers.items()
     }
 
+    merge_into_uns(
+        sdata=sdata,
+        tables_key=tables_key,
+        updates={"segtraq_markers": stored_markers},
+    )
+
 
 def markers_from_reference(
-    adata: AnnData,
+    sdata,
+    adata_ref: AnnData,
     ref_cell_type: str,
+    tables_key: str = "table",
+    tables_gene_key: str | None = None,
+    query_gene_key: str | None = None,
     ref_gene_key: str | None = None,
     ref_raw_counts_layer: str | None = None,
     exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
@@ -942,13 +1083,25 @@ def markers_from_reference(
 
     Parameters
     ----------
-    adata : AnnData
+    sdata : SpatialData
+        SpatialData object containing the query dataset. Cell-level expression
+        data are expected in `sdata.tables[tables_key]`.
+    adata_ref : AnnData
         Reference single-cell dataset (cells x genes).
     ref_cell_type : str
         Column in `adata.obs` containing cell type labels.
+    tables_key : str, default="table"
+        Key identifying the cell-level AnnData table in `sdata.tables`.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing the canonical gene
+        identifiers used by SegTraQ. If `None`, `var_names` are used.
+    query_gene_key : str or None, default=None
+        Alternative column in `sdata.tables[tables_key].var` containing gene
+        identifiers matching `adata_ref.var[ref_gene_key]`. If `None`,
+        `tables_gene_key` is used.
     ref_gene_key : str or None, default=None
-        Column in `adata_ref.var` containing gene identifiers.
-        If `None`, `adata_ref.var_names` are used.
+        Column in `adata_ref.var` containing gene identifiers matching the
+        query gene identifiers. If `None`, `adata_ref.var_names` are used.
     ref_raw_counts_layer : str or None, default=None
         Layer containing raw counts. If `None`, raw counts are expected in
         `adata.X`.
@@ -1004,35 +1157,44 @@ def markers_from_reference(
     Returns
     -------
     dict
-        A dictionary mapping each cell type to its positive and negative markers:
+        A dictionary mapping each cell type to its positive and negative
+        markers using the gene identifiers specified by `tables_gene_key`:
         {cell_type: {"positive": [genes], "negative": [genes]}}
     """
     if n_jobs is None:
         n_jobs = settings.n_jobs
 
-    # copies gene identifiers into var_names and makes them unique (if needed)
-    adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
+    _, adata_ref = _align_query_reference_genes(
+        adata_q=sdata.tables[tables_key],
+        adata_ref=adata_ref,
+        tables_gene_key=tables_gene_key,
+        query_gene_key=query_gene_key,
+        ref_gene_key=ref_gene_key,
+    )
 
+    # From this point onward, reference var_names are in tables_gene_key space.
     genes_to_use = _exclude_genes_by_prefix(
-        pd.Index(adata.var_names),
+        adata_ref.var_names,
         exclude_gene_prefixes,
     )
 
-    adata = adata[:, adata.var_names.isin(genes_to_use)].copy()
+    adata_ref = adata_ref[
+        :, adata_ref.var_names.isin(genes_to_use)
+    ].copy()
 
     # getting gene names and mapping to indices for later use
-    var_names = adata.var_names
+    var_names = adata_ref.var_names
     gene_to_idx = {g: i for i, g in enumerate(var_names)}
 
     # raw counts for expression fraction computation (must be before normalization)
-    counts = _get_count_matrix(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
+    counts = _get_count_matrix(adata_ref, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
 
     # applying normalization and log1p to get data ready for DE/AUC
-    # stored in X directly, since adata was copied previously
-    adata = _get_norm_log(adata, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
-    adata.X = adata.layers[NORM_LOG_LAYER]
+    # stored in X directly, since adata_ref was copied previously
+    adata_ref = _get_norm_log(adata_ref, layer=ref_raw_counts_layer, layer_arg="ref_raw_counts_layer")
+    adata_ref.X = adata_ref.layers[NORM_LOG_LAYER]
 
-    ctypes = pd.Categorical(adata.obs[ref_cell_type])
+    ctypes = pd.Categorical(adata_ref.obs[ref_cell_type])
     types = list(ctypes.categories)
     if len(types) < 2:
         raise ValueError("Need at least two cell types to compute markers.")
@@ -1073,9 +1235,8 @@ def markers_from_reference(
 
         def worker(ct_a: str, ct_b: str):
             return _pairwise_auc(
-                adata=adata,
+                adata=adata_ref,
                 ctypes=ctypes,
-                gene_key=ref_gene_key,
                 ref_cell_type=ref_cell_type,
                 ct_a=ct_a,
                 ct_b=ct_b,
@@ -1088,7 +1249,7 @@ def markers_from_reference(
 
         def worker(ct_a: str, ct_b: str):
             return _pairwise_de(
-                adata=adata,
+                adata=adata_ref,
                 ctypes=ctypes,
                 ref_cell_type=ref_cell_type,
                 ct_a=ct_a,
@@ -1911,9 +2072,21 @@ def validate_spatialdata(
                 )
 
             # check that gene names in the table are compatible with those in the points
+            table_genes = _get_genes(table, tables_gene_key)
+
+            if not table_genes.is_unique:
+                duplicated_genes = table_genes[table_genes.duplicated()].unique()
+                raise ValueError(
+                    f"`tables_gene_key` must contain unique gene identifiers to allow "
+                    f"exact matching between table and points."
+                    f"Found {len(duplicated_genes)} duplicated gene identifiers, e.g. "
+                    f"{duplicated_genes[:5].tolist()}."
+                )
+
             genes_in_points = set(points_df[points_gene_key].unique())
-            genes_in_table = set(_get_genes(table, tables_gene_key))
+            genes_in_table = set(table_genes)
             common_genes = genes_in_points & genes_in_table
+
             if len(common_genes) == 0:
                 raise ValueError(
                     "No common genes found between points and tables. "
