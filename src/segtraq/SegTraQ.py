@@ -1212,7 +1212,7 @@ class SegTraQ:
                         )
                         cell_type_key = "transferred_cell_type"
                     except Exception as exc:
-                        # for some reason, warnings.warn() doesn't always show the warning in the notebook
+                        # when running with n_jobs>1, warnings.warn() doesn't always show the warning in the notebook
                         _warn_always(
                             f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed."
                         )
@@ -1222,7 +1222,7 @@ class SegTraQ:
                     try:
                         results[name] = runner()
                     except Exception as exc:
-                        # for some reason, warnings.warn() doesn't always show the warning in the notebook
+                        # when running with n_jobs>1, warnings.warn() doesn't always show the warning in the notebook
                         _warn_always(f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).")
                         skipped[name] = str(exc)
                         results[name] = None
