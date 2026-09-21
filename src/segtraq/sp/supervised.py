@@ -19,11 +19,18 @@ def mutually_exclusive_coexpression_rate(
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Assess co-expression of marker genes expected to be mutually exclusive.
+    Assess unexpected co-expression of marker genes expected to be mutually exclusive.
 
-    Candidate gene pairs are defined from positive and negative marker sets.
-    For each pair, a one-sided Fisher's exact test evaluates whether the genes
-    are detected together less frequently than expected under independence.
+    Candidate gene pairs are derived from reciprocal positive/negative marker
+    relationships between pairs of reference cell types. For two cell types A
+    and B, a pair (gene_A, gene_B) is considered mutually exclusive if:
+
+    - gene_A is a positive marker of A and a negative marker of B, and
+    - gene_B is a positive marker of B and a negative marker of A.
+
+    For each candidate pair, a one-sided Fisher's exact test evaluates whether
+    the two genes are detected together more frequently than expected under
+    independence in the spatial data.
 
     Parameters
     ----------
@@ -49,9 +56,11 @@ def mutually_exclusive_coexpression_rate(
         One row per candidate marker-gene pair with columns:
         `gene1`, `gene2`, `odds_ratio`, `pvalue`, `a`, `b`, `c`, and `d`.
 
-        Odds ratios below 1 indicate less co-expression than expected under
-        independence. The one-sided Fisher p-value quantifies evidence for
-        such mutual exclusivity.
+        Odds ratios above 1 indicate more co-expression than expected under
+        independence. The one-sided Fisher p-value quantifies evidence for 
+        mutual exclusivity of the marker pair (odds ratio < 1). Loss of 
+        significance indicates reduced evidence for mutual exclusivity, but 
+        does not imply significant positive association.
     """
     adata = sdata.tables[tables_key]
 
@@ -65,58 +74,64 @@ def mutually_exclusive_coexpression_rate(
 
     n_cells = X_dense.shape[0]
 
-    # --- build unique unordered candidate pairs ---
+    # --- build reciprocal mutually exclusive marker pairs ---
     candidate_pairs = set()
-    positive_sets = {}
+    celltypes = list(markers)
 
-    # go through all reference markers (positive and negative) for a given cell type
-    for ct, d in markers.items():
-        positive = set((d or {}).get("positive", []) or [])
-        negative = set((d or {}).get("negative", []) or [])
-        # record the positive markers for the given cell type
-        positive_sets[ct] = positive
+    for i, ct_a in enumerate(celltypes):
+        pos_a = set((markers[ct_a] or {}).get("positive", []) or [])
+        neg_a = set((markers[ct_a] or {}).get("negative", []) or [])
 
-        for pos in positive:
-            for neg in negative:
-                # only consider pairs of different genes
-                if pos != neg:
-                    # order the candidates genes alphabetically
-                    a, b = (pos, neg) if pos < neg else (neg, pos)
-                    candidate_pairs.add((a, b))
+        for ct_b in celltypes[i + 1:]:
+            pos_b = set((markers[ct_b] or {}).get("positive", []) or [])
+            neg_b = set((markers[ct_b] or {}).get("negative", []) or [])
 
-    # --- drop pairs co-positive in any cell type ---
-    kept_pairs = [
-        (pos, neg) for pos, neg in candidate_pairs if not any(pos in ps and neg in ps for ps in positive_sets.values())
-    ]
+            # Genes characteristic of A and absent from B.
+            genes_a = pos_a & neg_b
+
+            # Genes characteristic of B and absent from A.
+            genes_b = pos_b & neg_a
+
+            for g_a in genes_a:
+                for g_b in genes_b:
+                    if g_a != g_b:
+                        candidate_pairs.add(tuple(sorted((g_a, g_b))))
 
     # only consider positive expression values in the spatial data
     det = X_dense > 0
 
     rows = []
-    # go over all positive/negative gene pairs from the scRNAseq reference that were kept through the filtering
-    for g1, g2 in kept_pairs:
-        # avoid requiring markers to be pre-filtered to genes present in the spatial data
+
+    for g1, g2 in candidate_pairs:
+        # markers do not need to have been pre-filtered to the spatial panel
         if g1 not in var_index or g2 not in var_index:
             continue
+
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
-        # extract all cell types positive/negative for combination from the spatial data for the
-        # mutually exclusive gene pairs found in the scRNA seq data.
         e1, e2 = det[:, i1], det[:, i2]
-        # count all the occurences of the confusion table
+
+        #             gene2+
+        #             yes     no
+        # gene1+ yes   a       b
+        #        no    c       d
+
         a = int((e1 & e2).sum())
         b = int((e1 & ~e2).sum())
         c = int((~e1 & e2).sum())
         d = int((~e1 & ~e2).sum())
+
         assert d == n_cells - a - b - c, (
             "Contingency table counts do not sum to total number of cells. "
             "Please report this to the developers of SegTraQ."
         )
 
-        # Fisher's exact test for under-co-occurrence (mutual exclusivity)
+        # Test for mutual exclusivity (OR < 1). With increasing co-expression, the OR may
+        # approach 1 and mutual exclusivity loses significance without implying a positive
+        # association (OR > 1), which would instead be tested with alternative="greater".
         try:
             odds_ratio, pval = fisher_exact(
                 [[a, b], [c, d]],
-                alternative="less",
+                alternative="greater",
             )
         except Exception:
             odds_ratio = np.nan
@@ -135,7 +150,10 @@ def mutually_exclusive_coexpression_rate(
             }
         )
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(
+        rows,
+        columns=["gene1", "gene2", "odds_ratio", "pvalue", "a", "b", "c", "d"],
+    )
 
     if inplace:
         adata.uns["mutually_exclusive_coexpression_rate"] = df
