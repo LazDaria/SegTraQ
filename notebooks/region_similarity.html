@@ -355,7 +355,7 @@ document.write(`
   <section id="Module:-Region-Similarity">
 <h1>Module: Region Similarity<a class="headerlink" href="#Module:-Region-Similarity" title="Link to this heading">#</a></h1>
 <p>Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.</p>
-<center><p><img alt="2300a7a2ee8c48fc9c4b3bd720929a61" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
+<center><p><img alt="76ea06bae4e74340966f87be6b34496c" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module compares transcript composition between different subcellular regions to identify cells with unexpected spatial differences in expression.</p>
 <p>Because profiles with fewer transcripts are inherently more variable and therefore tend to appear less similar even when sampled from the same underlying expression profile, SegTraQ accounts for this finite-count effect using a permutation-based expectation. The reported scores measure similarity relative to this expectation: values around zero indicate the expected level of similarity, negative values indicate lower similarity than expected, and positive values indicate higher similarity than
 expected. The accompanying p-value identifies cells with unusually low similarity.</p>
@@ -527,11 +527,11 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -615,6 +615,7 @@ WARNING: adata.X seems to be already log-transformed.
       <th>nucleus_id</th>
       <th>iou</th>
       <th>nucleus_fraction</th>
+      <th>num_nuclei</th>
     </tr>
   </thead>
   <tbody>
@@ -624,12 +625,14 @@ WARNING: adata.X seems to be already log-transformed.
       <td>6327.0</td>
       <td>0.051420</td>
       <td>1.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>1</th>
       <td>6328</td>
       <td>6328.0</td>
       <td>0.064608</td>
+      <td>1.0</td>
       <td>1.0</td>
     </tr>
     <tr>
@@ -638,12 +641,14 @@ WARNING: adata.X seems to be already log-transformed.
       <td>6330.0</td>
       <td>0.047572</td>
       <td>1.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>3</th>
       <td>6331</td>
       <td>6331.0</td>
       <td>0.042835</td>
+      <td>1.0</td>
       <td>1.0</td>
     </tr>
     <tr>
@@ -652,13 +657,14 @@ WARNING: adata.X seems to be already log-transformed.
       <td>6332.0</td>
       <td>0.041484</td>
       <td>1.0</td>
+      <td>1.0</td>
     </tr>
   </tbody>
 </table>
 </div></div>
 </div>
-<p>For each <code class="docutils literal notranslate"><span class="pre">cell_id</span></code>, we obtain the ID (<code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>) of the nucleus mask with the highest <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code>. If a cell does not overlap with any nucleus, the function returns a missing value for <code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>. If the nucleus has an invalid geometry, <code class="docutils literal notranslate"><span class="pre">iou</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> are reported as <code class="docutils literal notranslate"><span class="pre">NA</span></code>.</p>
-<p>Let’s see what this looks like when we plot the <code class="docutils literal notranslate"><span class="pre">iou</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> spatially.</p>
+<p>For each <code class="docutils literal notranslate"><span class="pre">cell_id</span></code>, we count the number of nuclei and obtain the ID (<code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>) of the nucleus mask with the highest <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code>. If a cell does not overlap with any nucleus, the function returns a missing value for <code class="docutils literal notranslate"><span class="pre">nucleus_id</span></code>. If the nucleus has an invalid geometry, <code class="docutils literal notranslate"><span class="pre">iou</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> are reported as <code class="docutils literal notranslate"><span class="pre">NA</span></code>.</p>
+<p>Let’s see what this looks like when we plot <code class="docutils literal notranslate"><span class="pre">num_nuclei</span></code>, <code class="docutils literal notranslate"><span class="pre">iou</span></code> and <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> spatially.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
@@ -667,7 +673,7 @@ WARNING: adata.X seems to be already log-transformed.
 <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span>
 <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">)</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">22</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="c1"># IoU</span>
 <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
@@ -711,6 +717,27 @@ WARNING: adata.X seems to be already log-transformed.
     <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 
+<span class="c1"># Number of nuclei</span>
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">shapes_key</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;num_nuclei&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="n">element</span><span class="o">=</span><span class="n">st</span><span class="o">.</span><span class="n">nucleus_shapes_key</span><span class="p">,</span>
+    <span class="n">fill_alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">outline_alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Number of nuclei&quot;</span><span class="p">,</span>
+    <span class="n">colorbar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -722,6 +749,7 @@ WARNING: adata.X seems to be already log-transformed.
 <div class="highlight"><pre>
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">35</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1186,32 +1214,32 @@ contains the nuclear transcripts themselves.</p>
     <tr>
       <th>0</th>
       <td>6327</td>
-      <td>0.144494</td>
-      <td>0.084577</td>
+      <td>0.157764</td>
+      <td>0.044776</td>
     </tr>
     <tr>
       <th>1</th>
       <td>6328</td>
-      <td>0.248748</td>
-      <td>0.029851</td>
+      <td>0.254368</td>
+      <td>0.034826</td>
     </tr>
     <tr>
       <th>2</th>
       <td>6330</td>
-      <td>-0.121840</td>
-      <td>0.920398</td>
+      <td>-0.138623</td>
+      <td>0.950249</td>
     </tr>
     <tr>
       <th>3</th>
       <td>6331</td>
-      <td>0.397265</td>
+      <td>0.398344</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>4</th>
       <td>6332</td>
-      <td>0.027329</td>
-      <td>0.328358</td>
+      <td>0.021678</td>
+      <td>0.343284</td>
     </tr>
     <tr>
       <th>...</th>
@@ -1222,32 +1250,32 @@ contains the nuclear transcripts themselves.</p>
     <tr>
       <th>1557</th>
       <td>95953</td>
-      <td>0.439227</td>
+      <td>0.425392</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>1558</th>
       <td>95954</td>
-      <td>0.228213</td>
+      <td>0.228820</td>
       <td>0.004975</td>
     </tr>
     <tr>
       <th>1559</th>
       <td>95955</td>
-      <td>0.007347</td>
-      <td>0.273632</td>
+      <td>0.006287</td>
+      <td>0.293532</td>
     </tr>
     <tr>
       <th>1560</th>
       <td>95959</td>
-      <td>0.191630</td>
-      <td>0.004975</td>
+      <td>0.188381</td>
+      <td>0.019900</td>
     </tr>
     <tr>
       <th>1561</th>
       <td>95960</td>
-      <td>0.175061</td>
-      <td>0.064677</td>
+      <td>0.185627</td>
+      <td>0.024876</td>
     </tr>
   </tbody>
 </table>
@@ -1432,9 +1460,9 @@ contains the nuclear transcripts themselves.</p>
 <div class="highlight"><pre>
 Index([&#39;cell_id&#39;, &#39;transcript_counts&#39;, &#39;control_probe_counts&#39;,
        &#39;control_codeword_counts&#39;, &#39;total_counts&#39;, &#39;cell_area&#39;, &#39;nucleus_area&#39;,
-       &#39;region&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;similarity_nucleus_cell&#39;,
-       &#39;similarity_nucleus_cell_p_value&#39;, &#39;nucleus_id&#39;, &#39;iou&#39;,
-       &#39;nucleus_fraction&#39;, &#39;similarity_nucleus_cytoplasm&#39;,
+       &#39;region&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;num_nuclei&#39;,
+       &#39;similarity_nucleus_cell&#39;, &#39;similarity_nucleus_cell_p_value&#39;,
+       &#39;nucleus_id&#39;, &#39;iou&#39;, &#39;nucleus_fraction&#39;, &#39;similarity_nucleus_cytoplasm&#39;,
        &#39;similarity_nucleus_cytoplasm_p_value&#39;, &#39;border_admixture_score&#39;,
        &#39;border_admixture_p_value&#39;],
       dtype=&#39;object&#39;)

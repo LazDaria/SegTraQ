@@ -353,7 +353,7 @@ document.write(`
   <section id="Module:-Volume-(3D)">
 <h1>Module: Volume (3D)<a class="headerlink" href="#Module:-Volume-(3D)" title="Link to this heading">#</a></h1>
 <p>Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical thickness of ~4–10 µm. Even for a relatively thin 5 µm section, cells can partially overlap along the z-dimension, depending on tissue orientation and how the sample is cut. As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination, because transcripts from overlapping cells may be assigned to the same segmentation mask.</p>
-<center><p>f <img alt="d7d97f1d1bad45e8a301132c2576ad69" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
+<center><p>f <img alt="12d51852e4f34e5485a45ad0232c8aae" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
 </center><p>To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the <code class="docutils literal notranslate"><span class="pre">volume</span></code> (<code class="docutils literal notranslate"><span class="pre">vl</span></code>) accessor.</p>
 <p>In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap, and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg), or in other words, how well it can disentangle transcripts from overlapping cells.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
@@ -372,9 +372,7 @@ document.write(`
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -385,8 +383,6 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 
 <span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
-
-<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -411,7 +407,7 @@ document.write(`
 </div>
 </div>
 <p>Next, we initialize <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> objects.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
@@ -448,6 +444,39 @@ document.write(`
 <span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;BLANK_0006&#39;, &#39;BLANK_0013&#39;, &#39;BLANK_0037&#39;, &#39;BLANK_0069&#39;, &#39;BLANK_0072&#39;]).
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;SLC4A1&#39;, &#39;CRHBP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 32 cells occur only in points (e.g. [np.int64(155395), np.int64(116997), np.int64(92167), np.int64(155784), np.int64(48904)]), and 3 occur only in the table (e.g. [np.int64(80413), np.int64(145189), np.int64(24366)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;antisense_PROKR2&#39;, &#39;antisense_SCRIB&#39;, &#39;antisense_ULK3&#39;, &#39;antisense_BCL2L15&#39;, &#39;antisense_LGI3&#39;]).
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;ADIPOQ&#39;, &#39;LEP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 48 cells occur only in points (e.g. [np.float64(75522.0), np.float64(70276.0), np.float64(70277.0), np.float64(70026.0), np.float64(76427.0)]), and 0 occur only in the table (e.g. []). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 <p>For easier access, we store the <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> object into a dictionary.</p>
 <div class="nbinput nblast docutils container">
@@ -813,7 +842,7 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;segtraq.SegTraQ.SegTraQ at 0x7ffee31afe00&gt;
+&lt;segtraq.SegTraQ.SegTraQ at 0x7ffee8416ba0&gt;
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -951,6 +980,19 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_310725/2497986733.py:30: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(s):
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">16</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
@@ -960,7 +1002,7 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_volume_35_1.png" src="../_images/notebooks_volume_35_1.png" />
+<img alt="../_images/notebooks_volume_35_2.png" src="../_images/notebooks_volume_35_2.png" />
 </div>
 </div>
 </section>
@@ -998,7 +1040,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  4.12it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  5.33it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1015,7 +1057,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.87it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.80it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1035,7 +1077,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  6.92it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  6.64it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1052,7 +1094,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  3.01it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.90it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1072,7 +1114,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  9.39it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  8.95it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1089,7 +1131,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  3.03it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.84it/s]
 </pre></div></div>
 </div>
 <p>We compare <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> with vertical signal integrity. VSI is an independent spatial measure of vertical mixing, so their association can indicate whether expression-level depth inconsistency coincides with transcript-level vertical signal disruption.</p>
@@ -1223,6 +1265,23 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
 <span class="n">st_proseg2</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st_proseg2</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;BLANK_0006&#39;, &#39;BLANK_0013&#39;, &#39;BLANK_0037&#39;, &#39;BLANK_0069&#39;, &#39;BLANK_0072&#39;]).
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;SLC4A1&#39;, &#39;CRHBP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 32 cells occur only in points (e.g. [np.int64(155395), np.int64(116997), np.int64(92167), np.int64(155784), np.int64(48904)]), and 3 occur only in the table (e.g. [np.int64(80413), np.int64(145189), np.int64(24366)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">

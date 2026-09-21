@@ -496,8 +496,8 @@ wget<span class="w"> </span>-O<span class="w"> </span>Cell_Barcode_Type_Matrices
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d9dfd0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d51bd0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3dba270&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d95d10&gt;: None
 </pre></div></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> objects can be subset via <code class="docutils literal notranslate"><span class="pre">spatialdata.query.bounding_box()</span></code>.</p>
@@ -531,7 +531,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d51bd0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;matplotlib.patches.Rectangle at 0x7ffe6c541bd0&gt;
+&lt;matplotlib.patches.Rectangle at 0x7ffea8581d10&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -601,33 +601,33 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d51bd0&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1994: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;PDGFRL&#39;, &#39;CRHR2&#39;, &#39;CNR1&#39;, &#39;MSTN&#39;, &#39;KCNK13&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;SERPINB4&#39;, &#39;ACE2&#39;, &#39;LIN28B&#39;, &#39;ICAM5&#39;, &#39;ITGAD&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;oemhhohn-1&#39;, &#39;icealcci-1&#39;, &#39;aphffbmb-1&#39;, &#39;aphemnlm-1&#39;, &#39;iceeeemj-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;aphffbmb-1&#39;, &#39;icealcci-1&#39;, &#39;iceeeemj-1&#39;, &#39;aphemnlm-1&#39;, &#39;apnfcbpf-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:146: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 438 occur only in the table (e.g. [&#39;PDGFRL&#39;, &#39;CRHR2&#39;, &#39;CNR1&#39;, &#39;MSTN&#39;, &#39;KCNK13&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 438 occur only in the table (e.g. [&#39;SERPINB4&#39;, &#39;ACE2&#39;, &#39;LPAR3&#39;, &#39;LIN28B&#39;, &#39;ICAM5&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 18 occur only in the table (e.g. [np.int32(14112), np.int32(15585), np.int32(14626), np.int32(13762), np.int32(15971)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 18 occur only in the table (e.g. [np.int32(14112), np.int32(15585), np.int32(14626), np.int32(13762), np.int32(15971)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:146: UserWarning: points_background_id &#39;4294967295&#39; is not the most common cell ID among points (most common is &#39;2021&#39;). This may indicate that your background ID is not correctly set. If you are sure that &#39;points_background_id&#39; is correct, you can ignore this warning.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: UserWarning: points_background_id &#39;4294967295&#39; is not the most common cell ID among points (most common is &#39;2021&#39;). This may indicate that your background ID is not correctly set. If you are sure that &#39;points_background_id&#39; is correct, you can ignore this warning.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:146: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1994: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 447 occur only in the table (e.g. [&#39;PDGFRL&#39;, &#39;LDB3&#39;, &#39;CRHR2&#39;, &#39;CNR1&#39;, &#39;MSTN&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 447 occur only in the table (e.g. [&#39;ERICH3&#39;, &#39;SERPINB4&#39;, &#39;ACE2&#39;, &#39;LIN28B&#39;, &#39;ICAM5&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:174: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 14 cells occur only in points (e.g. [np.int64(12228), np.int64(1094), np.int64(7463), np.int64(426), np.int64(5402)]), and 47 occur only in the table (e.g. [np.int64(16007), np.int64(12296), np.int64(12948), np.int64(7957), np.int64(5272)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 14 cells occur only in points (e.g. [np.int64(12228), np.int64(1094), np.int64(7463), np.int64(426), np.int64(5402)]), and 47 occur only in the table (e.g. [np.int64(16007), np.int64(12296), np.int64(12948), np.int64(7957), np.int64(5272)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -717,11 +717,11 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_377315/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
-/tmp/ipykernel_2441514/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_377315/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
-/tmp/ipykernel_2441514/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_377315/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
 </pre></div></div>
 </div>
@@ -870,7 +870,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/990135166.py:24: UserWarning: Tight layout not applied. The left and right margins cannot be made large enough to accommodate all Axes decorations.
+/tmp/ipykernel_377315/990135166.py:24: UserWarning: Tight layout not applied. The left and right margins cannot be made large enough to accommodate all Axes decorations.
   fig.tight_layout()
 </pre></div></div>
 </div>
@@ -1112,9 +1112,9 @@ elongation in the results, highlighting the strong influence of the prior on the
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/3127299547.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+/tmp/ipykernel_377315/3127299547.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
   medians = df.groupby(&#34;transferred_cell_type&#34;).median()
-/tmp/ipykernel_2441514/3127299547.py:8: FutureWarning:
+/tmp/ipykernel_377315/3127299547.py:8: FutureWarning:
 
 Passing `palette` without assigning `hue` is deprecated and will be removed in v0.14.0. Assign the `x` variable to `hue` and set `legend=False` for the same effect.
 
@@ -1163,9 +1163,9 @@ correctly assign transcripts. Therefore, it is essential to evaluate not only th
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/2145051797.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+/tmp/ipykernel_377315/2145051797.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
   medians = df.groupby(&#34;transferred_cell_type&#34;).median()
-/tmp/ipykernel_2441514/2145051797.py:8: FutureWarning:
+/tmp/ipykernel_377315/2145051797.py:8: FutureWarning:
 
 Passing `palette` without assigning `hue` is deprecated and will be removed in v0.14.0. Assign the `x` variable to `hue` and set `legend=False` for the same effect.
 
@@ -1221,9 +1221,9 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/1436914766.py:8: UserWarning: Some cells have zero counts
+/tmp/ipykernel_377315/1436914766.py:8: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
-/tmp/ipykernel_2441514/1436914766.py:8: UserWarning: Some cells have zero counts
+/tmp/ipykernel_377315/1436914766.py:8: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
   self._set_arrayXarray(i, j, x)
@@ -1259,148 +1259,148 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:244: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:238: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
 </pre></div></div>
@@ -1534,7 +1534,7 @@ In the future, the default backend for leiden will be igraph instead of leidenal
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/3004694059.py:9: UserWarning: Some cells have zero counts
+/tmp/ipykernel_377315/3004694059.py:9: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 </pre></div></div>
 </div>
@@ -1551,7 +1551,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_2441514/3004694059.py:9: UserWarning: Some cells have zero counts
+/tmp/ipykernel_377315/3004694059.py:9: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
   self._set_arrayXarray(i, j, x)
@@ -1584,9 +1584,9 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;xenium&#39;: -0.04281304031610489,
- &#39;bidcell&#39;: -0.02685117907822132,
- &#39;proseg&#39;: 0.023606453090906143}
+{&#39;xenium&#39;: -0.049018654972314835,
+ &#39;bidcell&#39;: -0.029581522569060326,
+ &#39;proseg&#39;: -0.03228244557976723}
 </pre></div></div>
 </div>
 </section>
@@ -2246,7 +2246,7 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
     <span class="n">purity</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">marker_purity</span><span class="p">(</span>
         <span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
         <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -2437,10 +2437,8 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">per_cell_df</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cont_bin</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">neighbor_contamination</span><span class="p">(</span>
-        <span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span>
-    <span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">per_cell_df</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cont_bin</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">neighbor_contamination</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2499,26 +2497,26 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
     <tr>
       <th>T</th>
       <td>28</td>
-      <td>37</td>
+      <td>35</td>
       <td>10</td>
     </tr>
     <tr>
       <th>DCIS1</th>
-      <td>11</td>
-      <td>6</td>
+      <td>10</td>
       <td>7</td>
-    </tr>
-    <tr>
-      <th>DCIS2</th>
-      <td>9</td>
-      <td>4</td>
-      <td>6</td>
+      <td>7</td>
     </tr>
     <tr>
       <th>B</th>
       <td>8</td>
       <td>4</td>
       <td>2</td>
+    </tr>
+    <tr>
+      <th>DCIS2</th>
+      <td>8</td>
+      <td>4</td>
+      <td>6</td>
     </tr>
     <tr>
       <th>macro</th>
@@ -2547,7 +2545,7 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
     <tr>
       <th>mast</th>
       <td>1</td>
-      <td>2</td>
+      <td>1</td>
       <td>7</td>
     </tr>
     <tr>
@@ -2618,9 +2616,9 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">155</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">181</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
-<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">236</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">164</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">177</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">231</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -2730,7 +2728,7 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[59]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
     <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">markers_from_reference</span><span class="p">(</span>
         <span class="n">adata_ref</span><span class="p">,</span>
         <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
@@ -2789,7 +2787,7 @@ WARNING: adata.X seems to be already log-transformed.
 
 <span class="n">means</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">)[</span><span class="s2">&quot;Fisher_OR&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">mean_order</span><span class="p">)</span>
 
-<span class="n">xtick_labels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="se">\n</span><span class="s2">mean: </span><span class="si">{</span><span class="n">means</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">mean_order</span><span class="p">]</span>
+<span class="n">xtick_labels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="se">\n</span><span class="s2">mean: </span><span class="si">{</span><span class="n">means</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">mean_order</span><span class="p">]</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
 
@@ -2955,7 +2953,7 @@ transcripts from overlapping cells.</p>
 <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
 
 <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">border_distance_negative</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;distance_to_cell_membrane_438_genes&quot;</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;distance_to_cell_membrane_norm_438_genes&quot;</span><span class="p">]:</span>
         <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
         <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
 

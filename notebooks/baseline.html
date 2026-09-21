@@ -348,7 +348,7 @@ document.write(`
   <section id="Module:-Baseline-Metrics">
 <h1>Module: Baseline Metrics<a class="headerlink" href="#Module:-Baseline-Metrics" title="Link to this heading">#</a></h1>
 <p>When assessing the quality of a segmentation, the first thing one usually looks at are summary metrics such as the number of segmented cells, number of transcripts/genes per cell, the percentage of unassigned transcripts, the transcript density, and a variety of morphological features.</p>
-<center><p><img alt="b9debbc9dfd040e9b56daa4bcd22c61f" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
+<center><p><img alt="3d32ced0420e40ebb5bd435b4c3b19d5" class="no-scaled-link" src="../_images/baseline.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">baseline</span></code> (<code class="docutils literal notranslate"><span class="pre">bl</span></code>) module contains several metrics that can help you to assess the quality of your segmentation. The methods all return their corresponding values or dataframes, and also write them into the spatialdata object.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
@@ -399,13 +399,13 @@ document.write(`
 <div class="highlight"><pre>
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:162: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:1860: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: UserWarning: Filtering control and low-quality transcripts from the SpatialData object in-place. Set filter_kwargs={&#39;inplace&#39;: False} to avoid modifying the original object.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:190: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Please check that the transcript assignments and `filter_kwargs` are consistent with how the expression table was generated.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -457,7 +457,7 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1214: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1380: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
   return bl.num_genes(
 </pre></div></div>
 </div>
@@ -1026,8 +1026,8 @@ document.write(`
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># exclude &#39;cell_id&#39; from the features to plot</span>
-<span class="n">features</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">morphological_features</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">f</span> <span class="o">!=</span> <span class="s2">&quot;cell_id&quot;</span><span class="p">]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># exclude &#39;cell&#39; from the features to plot</span>
+<span class="n">features</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">morphological_features</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">f</span> <span class="o">!=</span> <span class="s2">&quot;cell&quot;</span><span class="p">]</span>
 
 <span class="c1"># define grid layout</span>
 <span class="n">num_features</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
@@ -1189,7 +1189,7 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1214: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1380: UserWarning: The number of genes differs between points (5095) and tables (5094). Example genes that are missed: [&#39;HPV16-E7&#39;]. If these are control probes, please make sure to include them in the SegTraQ constructor. For example: SegTraQ(filter_kwargs={&#39;control_prefixes&#39;: [...], &#39;control_genes&#39;: [...]}). Storing the number of genes from the points layer.
   return bl.num_genes(
 </pre></div></div>
 </div>
