@@ -1068,7 +1068,6 @@ overlap_df
 for method, st in st_dict.items():
     purity = st.sp.marker_purity(
         cell_type_key="transferred_cell_type",
-        markers=markers[method],
         inplace=True,
     )
 
@@ -1214,7 +1213,7 @@ plt.show()
 # %%
 for method, st in st_dict.items():
     per_cell_df, _, cont_bin, _ = st.sp.neighbor_contamination(
-        cell_type_key="transferred_cell_type", markers=markers[method]
+        cell_type_key="transferred_cell_type"
     )
 
 # %% [markdown]
@@ -1368,10 +1367,9 @@ plt.show()
 # methods with low overall transcript counts.
 
 # %%
-markers = {}
 
 for method, st in st_dict.items():
-    markers[method] = st.markers_from_reference(
+    _ = st.markers_from_reference(
         adata_ref,
         ref_cell_type="celltype_major",
         min_pos_frac=0.3,
@@ -1379,9 +1377,7 @@ for method, st in st_dict.items():
         n_jobs=16,
     )
 
-    mecr = st.sp.mutually_exclusive_coexpression_rate(
-        markers=markers[method],
-    )
+    mecr = st.sp.mutually_exclusive_coexpression_rate()
 
 # %% [markdown]
 # Across all methods, marker pairs with significant mutual exclusivity show substantially
@@ -1582,7 +1578,7 @@ keys = []
 values = []
 
 for key, df in border_distance_negative.items():
-    for val in df["distance_to_cell_membrane_norm_166_genes"]:
+    for val in df["distance_to_cell_membrane_438_genes"]:
         keys.append(key)
         values.append(val)
 
@@ -1592,7 +1588,7 @@ keys = []
 values = []
 
 for key, df in border_distance_positive.items():
-    for val in df["distance_to_cell_membrane_norm_78_genes"]:
+    for val in df["distance_to_cell_membrane_norm_111_genes"]:
         keys.append(key)
         values.append(val)
 
@@ -1646,7 +1642,7 @@ for i, (method, st) in enumerate(st_dict.items()):
     plot_metric(
         st,
         method,
-        "distance_to_cell_membrane_norm_166_genes",
+        "distance_to_cell_membrane_norm_438_genes",
         markers[method]["DCIS1"]["negative"][:20],
         axes[i],
     )

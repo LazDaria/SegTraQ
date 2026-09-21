@@ -810,20 +810,17 @@ class SegTraQ:
 
         purity_df = self.sp.marker_purity(
             cell_type_key=cell_type_key,
-            markers=markers,
             inplace=purity_inplace,
             **purity_kwargs,
         )
 
         per_cell_cont_df, cont_strength_mat, cont_mat, cont_n = self.sp.neighbor_contamination(
             cell_type_key=cell_type_key,
-            markers=markers,
             inplace=cont_inplace,
             **contamination_kwargs,
         )
 
         mecr_df = self.sp.mutually_exclusive_coexpression_rate(
-            markers=markers,
             inplace=mecr_inplace,
             **mecr_kwargs,
         )
@@ -1515,7 +1512,7 @@ class _SPFacade:
 
     def mutually_exclusive_coexpression_rate(
         self,
-        markers: dict[str, dict[str, list[str]]],
+        markers: dict[str, dict[str, list[str]]] | None = None,
         inplace: bool = True,
     ):
         return sp.mutually_exclusive_coexpression_rate(
@@ -1532,7 +1529,7 @@ class _SPFacade:
     def marker_purity(
         self,
         cell_type_key: str,
-        markers: dict[str, dict[str, list[str]]],
+        markers: dict[str, dict[str, list[str]]] | None = None,
         require_neighbor_expression: bool = True,
         neighbors_key: str = "spatial_connectivities",
         inplace: bool = True,
@@ -1557,7 +1554,7 @@ class _SPFacade:
     def neighbor_contamination(
         self,
         cell_type_key: str,
-        markers: dict[str, dict[str, list[str]]],
+        markers: dict[str, dict[str, list[str]]] | None = None,
         require_neighbor_expression: bool = True,
         neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
