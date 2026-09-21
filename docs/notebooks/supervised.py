@@ -209,6 +209,10 @@ st.sdata.pl.render_shapes(
 # (default = 1.0) and `pval_adj_thresh` (default = 0.05).
 #
 # All computations can be parallelized by specifying the number of jobs via `n_jobs`.
+# By default, `markers_from_reference()` stores the identified positive and negative markers in
+# `sdata.tables["table"].uns["segtraq_markers"]`. Markers are stored as gene indices to minimize
+# memory usage and are automatically used by the supervised metrics when `markers=None`.
+# Alternatively, markers can be passed explicitly to the individual metrics.
 
 # %%
 # get cell type-specific markers from the reference dataset
@@ -299,7 +303,6 @@ overlap_df
 # %%
 purity = st.sp.marker_purity(
     cell_type_key="transferred_cell_type",
-    markers=markers,
     require_neighbor_expression=True,
     neighbors_key="spatial_connectivities",
 )
@@ -491,7 +494,6 @@ boxplot_per_celltype(st.sdata, feature="marker_balanced_accuracy", palette=col_c
 # %%
 _, _, _, _ = st.sp.neighbor_contamination(
     cell_type_key="transferred_cell_type",
-    markers=markers,
     require_neighbor_expression=True,
     neighbors_key="spatial_connectivities",
     inplace=True,
@@ -689,15 +691,12 @@ plt.show()
 #
 # The `mutually_exclusive_coexpression_rate` function assesses mutual exclusivity between
 # marker genes using Fisher’s exact test on binary gene detection (expression `> 0`).
-# Candidate pairs are constructed as unique, unordered combinations of positive and negative
-# markers across cell types, excluding gene pairs that co-occur as positive markers in any cell type.
 # Fisher’s exact test with `alternative="less"` is used to test whether genes co-occur less often
 # than expected under independence. By conditioning on the marginal detection frequencies of each gene,
 # Fisher’s exact test does not favor methods with low overall transcript counts.
 
 # %%
 mecr = st.sp.mutually_exclusive_coexpression_rate(
-    markers=markers,
     inplace=True,
 )
 

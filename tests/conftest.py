@@ -134,9 +134,10 @@ def test_segtraq_obj(sdata_labeled):
 
 
 @pytest.fixture(scope="session", name="markers")
-def test_markers(adata_ref):
+def test_markers(sdata_labeled, adata_ref):
     return st.markers_from_reference(
-        adata_ref.copy(),
+        sdata=sdata_labeled,
+        adata_ref=adata_ref.copy(),
         ref_cell_type="celltype",
         ref_raw_counts_layer="raw",
     )

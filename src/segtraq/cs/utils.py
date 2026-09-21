@@ -9,27 +9,25 @@ from sklearn.metrics import adjusted_rand_score, confusion_matrix
 
 from ..constants import (
     CONNECTIVITIES_KEY,
+    DEFAULT_EXCLUDE_GENE_PREFIXES,
     DISTANCES_KEY,
     HVG_KEY,
     NEIGHBORS_KEY,
     NORM_LOG_LAYER,
     PCA_KEY,
 )
-from ..utils import (
-    _compute_hvg_mask,
-    _get_norm_log,
-    _resolve_use_hvg,
-)
+from ..utils import _compute_hvg_mask, _exclude_genes_by_prefix, _get_genes, _get_norm_log, _resolve_use_hvg
 
 
 def _get_pca_and_neighbors(
     adata: AnnData,
+    gene_key: str | None = None,
     raw_layer: str | None = None,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = 1e4,
     use_hvg: bool | None = None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
 ) -> AnnData:
     """
     Compute (or reuse) PCA and neighbors using the pipeline's norm_log layer.
@@ -47,6 +45,9 @@ def _get_pca_and_neighbors(
     adata : AnnData
     raw_layer : str or None
         Layer with raw counts. None → use `.X`.
+    gene_key : str or None, default=None
+        Column in `adata.var` containing gene identifiers.
+        If `None`, `adata.var_names` are used.
     n_neighbors: int
         Number of neighbors for `sc.pp.neighbors`.
     n_pcs: int
@@ -56,10 +57,12 @@ def _get_pca_and_neighbors(
         computing the norm_log layer. Ignored if the norm_log layer already exists.
     use_hvg : bool or None, default=None
         If `None`, use HVGs automatically when the panel contains more than
-        8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=None
-        Gene prefix(es) to exclude from the HVG set. If None, no genes are
-        excluded based on their prefix. Has no effect if HVGs are not used.
+        8,000 genes. If `True`, always use HVGs. If False, use all genes
+        remaining after `exclude_gene_prefixes` filtering.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded from PCA feature selection. By default,
+        mitochondrial and ribosomal genes are excluded. This filtering is
+        applied independently of HVG selection. Set to None to use all genes.
 
     Returns
     -------
@@ -72,20 +75,35 @@ def _get_pca_and_neighbors(
         target_sum=target_sum,
     )
 
+    genes = _get_genes(adata, gene_key)
+    genes_to_use = _exclude_genes_by_prefix(
+        genes,
+        exclude_gene_prefixes,
+    )
+    gene_mask = genes.isin(genes_to_use)
+
     resolved_use_hvg = _resolve_use_hvg(
-        adata.n_vars,
+        len(genes_to_use),
         use_hvg,
     )
 
-    if resolved_use_hvg and HVG_KEY not in adata.var:
-        adata.var[HVG_KEY] = _compute_hvg_mask(adata, exclude_gene_prefixes=exclude_gene_prefixes)
+    if resolved_use_hvg:
+        if HVG_KEY not in adata.var:
+            adata.var[HVG_KEY] = _compute_hvg_mask(
+                adata,
+                gene_key=gene_key,
+                exclude_gene_prefixes=exclude_gene_prefixes,
+            )
+        pca_mask = HVG_KEY
+    else:
+        pca_mask = gene_mask
 
     if PCA_KEY not in adata.obsm:
         sc.pp.pca(
             adata,
             n_comps=n_pcs,
             layer=NORM_LOG_LAYER,
-            mask_var=HVG_KEY if resolved_use_hvg else None,
+            mask_var=pca_mask,
             key_added=PCA_KEY,
         )
 
@@ -105,7 +123,8 @@ def _prepare_cs_adata(
     sdata: sd.SpatialData,
     tables_key: str,
     use_hvg: bool | None,
-    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = None,
+    tables_gene_key: str | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     n_neighbors: int = 15,
     n_pcs: int = 50,
     target_sum: float | None = None,
@@ -117,6 +136,7 @@ def _prepare_cs_adata(
 
     return _get_pca_and_neighbors(
         adata,
+        gene_key=tables_gene_key,
         n_neighbors=n_neighbors,
         n_pcs=n_pcs,
         target_sum=target_sum,

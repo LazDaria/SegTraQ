@@ -7,31 +7,39 @@ import squidpy as sq
 from scipy import sparse
 from scipy.stats import fisher_exact
 
-from ..utils import _get_count_matrix, _get_genes, merge_into_obs, merge_into_uns
+from ..utils import _get_count_matrix, _get_genes, _get_segtraq_markers, merge_into_obs, merge_into_uns
 
 
 def mutually_exclusive_coexpression_rate(
     sdata,
-    markers: dict[str, dict[str, list[str]]],
+    markers: dict[str, dict[str, list[str]]] | None = None,
     tables_key: str = "table",
     tables_gene_key: str | None = None,
     tables_raw_counts_layer: str | None = None,
     inplace: bool = True,
 ) -> pd.DataFrame:
     """
-    Assess co-expression of marker genes expected to be mutually exclusive.
+    Assess unexpected co-expression of marker genes expected to be mutually exclusive.
 
-    Candidate gene pairs are defined from positive and negative marker sets.
-    For each pair, a one-sided Fisher's exact test evaluates whether the genes
-    are detected together less frequently than expected under independence.
+    Candidate gene pairs are derived from reciprocal positive/negative marker
+    relationships between pairs of reference cell types. For two cell types A
+    and B, a pair (gene_A, gene_B) is considered mutually exclusive if:
+
+    - gene_A is a positive marker of A and a negative marker of B, and
+    - gene_B is a positive marker of B and a negative marker of A.
+
+    For each candidate pair, a one-sided Fisher's exact test evaluates whether
+    the two genes are detected together less frequently than expected under
+    independence.
 
     Parameters
     ----------
     sdata : SpatialData-like
         Must contain `tables[tables_key]` as an AnnData with expression data.
-    markers : dict
+    markers : dict or None, default=None
         Mapping of cell types to positive and negative markers:
         {cell_type: {"positive": list[str], "negative": list[str]}}.
+        If None, markers are loaded from `adata.uns["segtraq_markers"]`.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
     tables_gene_key : str or None, default=None
@@ -49,11 +57,19 @@ def mutually_exclusive_coexpression_rate(
         One row per candidate marker-gene pair with columns:
         `gene1`, `gene2`, `odds_ratio`, `pvalue`, `a`, `b`, `c`, and `d`.
 
-        Odds ratios below 1 indicate less co-expression than expected under
-        independence. The one-sided Fisher p-value quantifies evidence for
-        such mutual exclusivity.
+    Odds ratios below 1 indicate less co-expression than expected under
+    independence. The one-sided Fisher p-value quantifies evidence for
+    mutual exclusivity of the marker pair (odds ratio < 1). Loss of
+    significance indicates reduced evidence for mutual exclusivity, but
+    does not imply significant positive association.
     """
     adata = sdata.tables[tables_key]
+
+    markers = _get_segtraq_markers(
+        adata=adata,
+        markers=markers,
+        tables_gene_key=tables_gene_key,
+    )
 
     X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
     X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
@@ -65,54 +81,60 @@ def mutually_exclusive_coexpression_rate(
 
     n_cells = X_dense.shape[0]
 
-    # --- build unique unordered candidate pairs ---
+    # --- build reciprocal mutually exclusive marker pairs ---
     candidate_pairs = set()
-    positive_sets = {}
+    celltypes = list(markers)
 
-    # go through all reference markers (positive and negative) for a given cell type
-    for ct, d in markers.items():
-        positive = set((d or {}).get("positive", []) or [])
-        negative = set((d or {}).get("negative", []) or [])
-        # record the positive markers for the given cell type
-        positive_sets[ct] = positive
+    for i, ct_a in enumerate(celltypes):
+        pos_a = set((markers[ct_a] or {}).get("positive", []) or [])
+        neg_a = set((markers[ct_a] or {}).get("negative", []) or [])
 
-        for pos in positive:
-            for neg in negative:
-                # only consider pairs of different genes
-                if pos != neg:
-                    # order the candidates genes alphabetically
-                    a, b = (pos, neg) if pos < neg else (neg, pos)
-                    candidate_pairs.add((a, b))
+        for ct_b in celltypes[i + 1 :]:
+            pos_b = set((markers[ct_b] or {}).get("positive", []) or [])
+            neg_b = set((markers[ct_b] or {}).get("negative", []) or [])
 
-    # --- drop pairs co-positive in any cell type ---
-    kept_pairs = [
-        (pos, neg) for pos, neg in candidate_pairs if not any(pos in ps and neg in ps for ps in positive_sets.values())
-    ]
+            # Genes characteristic of A and absent from B.
+            genes_a = pos_a & neg_b
+
+            # Genes characteristic of B and absent from A.
+            genes_b = pos_b & neg_a
+
+            for g_a in genes_a:
+                for g_b in genes_b:
+                    if g_a != g_b:
+                        candidate_pairs.add(tuple(sorted((g_a, g_b))))
 
     # only consider positive expression values in the spatial data
     det = X_dense > 0
 
     rows = []
-    # go over all positive/negative gene pairs from the scRNAseq reference that were kept through the filtering
-    for g1, g2 in kept_pairs:
-        # avoid requiring markers to be pre-filtered to genes present in the spatial data
+
+    for g1, g2 in candidate_pairs:
+        # markers do not need to have been pre-filtered to the spatial panel
         if g1 not in var_index or g2 not in var_index:
             continue
+
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
-        # extract all cell types positive/negative for combination from the spatial data for the
-        # mutually exclusive gene pairs found in the scRNA seq data.
         e1, e2 = det[:, i1], det[:, i2]
-        # count all the occurences of the confusion table
+
+        #             gene2+
+        #             yes     no
+        # gene1+ yes   a       b
+        #        no    c       d
+
         a = int((e1 & e2).sum())
         b = int((e1 & ~e2).sum())
         c = int((~e1 & e2).sum())
         d = int((~e1 & ~e2).sum())
+
         assert d == n_cells - a - b - c, (
             "Contingency table counts do not sum to total number of cells. "
             "Please report this to the developers of SegTraQ."
         )
 
-        # Fisher's exact test for under-co-occurrence (mutual exclusivity)
+        # Test for mutual exclusivity (OR < 1). With increasing co-expression, the OR may
+        # approach 1 and mutual exclusivity loses significance without implying a positive
+        # association (OR > 1), which would instead be tested with alternative="greater".
         try:
             odds_ratio, pval = fisher_exact(
                 [[a, b], [c, d]],
@@ -135,7 +157,10 @@ def mutually_exclusive_coexpression_rate(
             }
         )
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(
+        rows,
+        columns=["gene1", "gene2", "odds_ratio", "pvalue", "a", "b", "c", "d"],
+    )
 
     if inplace:
         adata.uns["mutually_exclusive_coexpression_rate"] = df
@@ -146,7 +171,7 @@ def mutually_exclusive_coexpression_rate(
 def neighbor_contamination(
     sdata,
     cell_type_key: str,
-    markers: dict[str, dict[str, list[str]]],
+    markers: dict[str, dict[str, list[str]]] | None = None,
     tables_key: str = "table",
     tables_raw_counts_layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
@@ -191,6 +216,40 @@ def neighbor_contamination(
             of target cells for which contamination from source type c_src could
             be evaluated.
 
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
+    cell_type_key : str
+        Column in the AnnData `.obs` with cell-type labels.
+    markers : dict or None, default=None
+        Mapping of cell types to positive and negative markers:
+        {cell_type: {"positive": list[str], "negative": list[str]}}.
+        If None, markers are loaded from `adata.uns["segtraq_markers"]`.
+    tables_key : str, optional, default="table"
+        Key of the AnnData table in `sdata.tables`.
+    tables_raw_counts_layer : str | None, optional
+        Layer containing count data. If `None`, `adata.X` is used if it looks
+        like counts.
+        If a layer is specified, it must exist and contain count-like values.
+    tables_cell_id_key : str, optional, default="cell_id"
+        Column in the AnnData `.obs` with unique cell IDs.
+    tables_centroid_x_key : str or None, optional, default="x_centroid"
+        Column in the cell table with the x-coordinate of the cell centroid.
+    tables_centroid_y_key : str or None, optional, default="y_centroid"
+        Column in the cell table with the y-coordinate of the cell centroid.
+    tables_gene_key : str or None, default=None
+        Column in `sdata.tables[tables_key].var` containing gene identifiers.
+        If `None`, `sdata.tables[tables_key].var_names` are used.
+    require_neighbor_expression : bool, optional, default=True
+        If True, contamination is only counted when the relevant gene is
+        expressed in at least one neighboring cell of the source type.
+    neighbors_key : str, optional, default="spatial_connectivities"
+        Key in `adata.obsp` containing a cell x cell adjacency / connectivity
+        matrix that defines the spatial neighborhood.
+    inplace : bool, optional, default=True
+        If True, store marker purity results in `sdata.tables[tables_key].obs`.
+
     Returns
     -------
     per_cell_df : pandas.DataFrame
@@ -212,6 +271,12 @@ def neighbor_contamination(
 
     # load expression matrix and metadata
     adata = sdata.tables[tables_key]
+
+    markers = _get_segtraq_markers(
+        adata=adata,
+        markers=markers,
+        tables_gene_key=tables_gene_key,
+    )
 
     X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
     X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
@@ -416,7 +481,7 @@ def neighbor_contamination(
 def marker_purity(
     sdata,
     cell_type_key: str,
-    markers: dict[str, dict[str, list[str]]],
+    markers: dict[str, dict[str, list[str]]] | None = None,
     tables_key: str = "table",
     tables_raw_counts_layer: str | None = None,
     tables_cell_id_key: str = "cell_id",
@@ -448,9 +513,10 @@ def marker_purity(
         Must contain `tables[tables_key]` as an AnnData with expression and `.obs` metadata.
     cell_type_key : str
         Column in the AnnData `.obs` with cell-type labels.
-    markers : dict
-        A dictionary mapping cell types to their positive and negative markers, in the format
+    markers : dict or None, default=None
+        Mapping of cell types to positive and negative markers:
         {cell_type: {"positive": list[str], "negative": list[str]}}.
+        If None, markers are loaded from `adata.uns["segtraq_markers"]`.
     tables_key : str, optional, default="table"
         Key of the AnnData table in `sdata.tables`.
     tables_raw_counts_layer : str | None, optional
@@ -486,6 +552,12 @@ def marker_purity(
             - ``n_evaluated_negative_markers``
     """
     adata = sdata.tables[tables_key]
+
+    markers = _get_segtraq_markers(
+        adata=adata,
+        markers=markers,
+        tables_gene_key=tables_gene_key,
+    )
 
     X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
     X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)

@@ -20,3 +20,23 @@ DISTANCES_KEY = f"{NEIGHBORS_KEY}_distances"
 
 # ── Cell ID ───────────────────────────────────────────────────────────────────
 SEGTRAQ_CELL_ID_KEY = "segtraq_id"
+
+# ── Control probes and low quality transcripts ────────────────────────────────
+DEFAULT_FILTER_KWARGS = {
+    "min_qv": 20,
+    "control_prefixes": (
+        "NegControlProbe_",
+        "antisense_",
+        "NegControlCodeword",
+        "BLANK_",
+        "Blank-",
+        "NegPrb",
+        "DeprecatedCodeword_",
+        "UnassignedCodeword_",
+        "Intergenic_Region_",
+    ),
+    "inplace": True,
+}
+
+# ── Mitochondrial and ribosomal gene filtering ────────────────────────────────
+DEFAULT_EXCLUDE_GENE_PREFIXES = ("MT-", "RPL", "RPS")

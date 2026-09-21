@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
@@ -8,34 +7,18 @@ import spatialdata as sd
 from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
-from .constants import SEGTRAQ_CELL_ID_KEY
+from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
 from .utils import (
     _filter_control_and_low_quality_transcripts,
-    _get_genes,
-    _make_ref_genes_unique,
+    _get_segtraq_markers,
     _require_reference,
+    _store_segtraq_markers,
     _warn_always,
     validate_spatialdata,
 )
 from .utils import filter_cells as _filter_cells
 from .utils import markers_from_reference as _markers_from_reference
 from .utils import run_label_transfer as _run_label_transfer
-
-DEFAULT_FILTER_KWARGS = {
-    "min_qv": 20,
-    "control_prefixes": (
-        "NegControlProbe_",
-        "antisense_",
-        "NegControlCodeword",
-        "BLANK_",
-        "Blank-",
-        "NegPrb",
-        "DeprecatedCodeword_",
-        "UnassignedCodeword_",
-        "Intergenic_Region_",
-    ),
-    "inplace": True,
-}
 
 
 class SegTraQ:
@@ -100,7 +83,7 @@ class SegTraQ:
             Column in the cell table with the y-coordinate of the cell centroid.
 
         tables_gene_key : str or None, default=None
-            Column in `sdata.tables[tables_key].var` containing gene identifiers
+            Column in `sdata.tables[tables_key].var` containing unique gene identifiers
             matching those in `sdata.points[points_key][points_gene_key]`.
             If `None`, `sdata.tables[tables_key].var_names` are used.
 
@@ -445,7 +428,7 @@ class SegTraQ:
             If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
             Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+            `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key` is used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
@@ -629,7 +612,8 @@ class SegTraQ:
             methods (where applicable).
         use_hvg: bool or None, optional
             If `None`, use 2,000 HVGs for PCA when the panel contains more than
-            8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
+            8,000 genes. If `True`, always use HVGs. If `False`, use all genes
+            remaining after `exclude_gene_prefixes` filtering.
         inplace : bool, default=True
             If True, metrics are written to `sdata.tables["table"].uns` by the
             underlying methods and this function returns None. If False, the
@@ -744,19 +728,21 @@ class SegTraQ:
             Column in `adata_ref.obs` containing reference cell-type labels.
             Required if `cell_type_key=None` or `markers=None`.
         ref_gene_key : str or None, default=None
-            Column in `adata_ref.var` containing gene identifiers.
-            If `None`, `adata_ref.var_names` are used.
+            Column in `adata_ref.var` containing gene identifiers matching the
+            query gene identifiers. If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
-            Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+            Column in `sdata.tables[tables_key].var` containing gene identifiers
+            matching `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key`
+            is used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts. If `None`, raw counts are expected in
             `adata.X`.
         markers : dict or None, default=None
-            Dictionary of marker genes in the form
+            Marker genes forwarded to `run_supervised`, in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
-            If `None`, markers are computed from `adata_ref` using
-            `self.markers_from_reference()`.
+            If `None`, markers stored in
+            `sdata.tables[tables_key].uns["segtraq_markers"]` are used if available.
+            Otherwise, markers are derived from `adata_ref`.
         cell_type_key: str | None = None
             Column in the query AnnData `.obs` with cell-type labels.
             If `None`, label transfer is run first using `adata_ref` and
@@ -799,12 +785,16 @@ class SegTraQ:
 
         label_transfer_result = None
 
-        needs_reference = cell_type_key is None or markers is None
+        adata = self.sdata.tables[self.tables_key]
+        has_stored_markers = "segtraq_markers" in adata.uns
+
+        needs_reference = cell_type_key is None or (markers is None and not has_stored_markers)
+
         if needs_reference:
             _require_reference(
                 adata_ref,
                 ref_cell_type,
-                condition="`cell_type_key=None` or `markers=None`",
+                condition=("`cell_type_key=None` or no explicit/stored markers are available"),
             )
 
         if cell_type_key is None:
@@ -823,14 +813,21 @@ class SegTraQ:
             )
 
         if markers is None:
-            markers = self.markers_from_reference(
-                adata=adata_ref,
-                ref_cell_type=ref_cell_type,
-                ref_gene_key=ref_gene_key,
-                query_gene_key=query_gene_key,
-                ref_raw_counts_layer=ref_raw_counts_layer,
-                **markers_from_reference_kwargs,
-            )
+            if has_stored_markers:
+                markers = _get_segtraq_markers(
+                    adata,
+                    markers=markers,
+                    tables_gene_key=self.tables_gene_key,
+                )
+            else:
+                markers = self.markers_from_reference(
+                    adata_ref=adata_ref,
+                    ref_cell_type=ref_cell_type,
+                    ref_gene_key=ref_gene_key,
+                    query_gene_key=query_gene_key,
+                    ref_raw_counts_layer=ref_raw_counts_layer,
+                    **markers_from_reference_kwargs,
+                )
 
         purity_inplace = purity_kwargs.pop("inplace", inplace)
         cont_inplace = contamination_kwargs.pop("inplace", inplace)
@@ -1008,9 +1005,9 @@ class SegTraQ:
         accepts a `cell_type_key`, instead of each module running its own label transfer.
 
         A module whose prerequisites are not met (e.g. `run_volume` on 2D data, or
-        `run_supervised` without a reference or markers) is skipped with a warning instead of
-        aborting the whole call. Pass `inplace=False` to see exactly which modules ran and
-        why any others were skipped.
+        `run_supervised` without explicit markers, stored markers, or a reference) is skipped with
+        a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which
+        modules ran and why any others were skipped.
 
         Parameters
         ----------
@@ -1020,10 +1017,11 @@ class SegTraQ:
         ref_cell_type : str or None, default=None
             Column in `adata_ref.obs` containing reference cell-type labels.
         ref_gene_key : str or None, default=None
-            Column in `adata_ref.var` containing gene identifiers. If `None`, `adata_ref.var_names` are used.
+            Column in `adata_ref.var` containing gene identifiers matching the
+            query gene identifiers. If `None`, `adata_ref.var_names` are used.
         query_gene_key : str or None, default=None
             Column in `sdata.tables[tables_key].var` containing gene identifiers matching
-            `adata_ref.var[ref_gene_key]`. If `None`, `sdata.tables[tables_key].var_names` are used.
+            `adata_ref.var[ref_gene_key]`. If `None`, `tables_gene_key` is used.
         ref_raw_counts_layer : str or None, default=None
             Layer containing raw counts in `adata_ref`. If `None`, raw counts are expected in `adata_ref.X`.
         cell_type_key : str or None, default=None
@@ -1033,7 +1031,9 @@ class SegTraQ:
         markers : dict or None, default=None
             Marker genes forwarded to `run_supervised`, in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
-            If `None`, `run_supervised` derives them from `adata_ref`.
+            If `None`, markers stored in
+            `sdata.tables[tables_key].uns["segtraq_markers"]` are used if available.
+            Otherwise, markers are derived from `adata_ref`.
         inplace : bool, default=True
             If `True`, results of every successfully run module are merged into `sdata` and
             `None` is returned. If `False`, per-module results are returned in a dict.
@@ -1073,14 +1073,15 @@ class SegTraQ:
         # `cell_type_key` can reuse the same labels instead of each recomputing them independently.
         if cell_type_key is None and adata_ref is not None and ref_cell_type is not None:
             try:
+                label_transfer_kwargs["cell_type_key"] = "transferred_cell_type"
+                label_transfer_kwargs["inplace"] = True
+
                 self.run_label_transfer(
                     adata_ref=adata_ref,
                     ref_cell_type=ref_cell_type,
                     ref_gene_key=ref_gene_key,
                     query_gene_key=query_gene_key,
                     ref_raw_counts_layer=ref_raw_counts_layer,
-                    cell_type_key="transferred_cell_type",
-                    inplace=True,
                     **label_transfer_kwargs,
                 )
                 cell_type_key = "transferred_cell_type"
@@ -1143,11 +1144,12 @@ class SegTraQ:
 
     def markers_from_reference(
         self,
-        adata: AnnData,
+        adata_ref: AnnData,
         ref_cell_type: str,
         ref_gene_key: str | None = None,
         query_gene_key: str | None = None,
         ref_raw_counts_layer: str | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         mode: str = "de",
         max_fpr: float | None = None,
         auc_pos_thresh: float = 0.9,
@@ -1161,28 +1163,18 @@ class SegTraQ:
         t_neg: float = 1.0,
         min_cells_per_celltype: int = 10,
         n_jobs: int | None = None,
+        inplace: bool = True,
     ):
-        sp_genes = _get_genes(adata=self.sdata.tables[self.tables_key], gene_key=query_gene_key)
-
-        # copies gene identifiers into var_names and makes them unique (if needed)
-        adata = _make_ref_genes_unique(adata, ref_gene_key=ref_gene_key)
-        sc_genes = adata.var_names
-
-        mask = sc_genes.isin(sp_genes)
-        if mask.sum() == 0:
-            raise ValueError(
-                "No genes in the reference remain after subsetting to query (SpatialData). "
-                "Check that `tables_gene_key` during SegTraQ initialization and `ref_gene_key`"
-                "in `markers_from_reference` point to the same gene identifiers."
-            )
-
-        adata = adata[:, mask].copy()
-
         markers = _markers_from_reference(
-            adata=adata,
+            sdata=self.sdata,
+            adata_ref=adata_ref,
             ref_cell_type=ref_cell_type,
+            tables_key=self.tables_key,
+            tables_gene_key=self.tables_gene_key,
+            query_gene_key=query_gene_key,
             ref_gene_key=ref_gene_key,
             ref_raw_counts_layer=ref_raw_counts_layer,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             mode=mode,
             max_fpr=max_fpr,
             auc_pos_thresh=auc_pos_thresh,
@@ -1198,21 +1190,15 @@ class SegTraQ:
             n_jobs=n_jobs,
         )
 
+        if inplace:
+            _store_segtraq_markers(
+                sdata=self.sdata,
+                tables_key=self.tables_key,
+                tables_gene_key=self.tables_gene_key,
+                markers=markers,
+            )
+
         return markers
-
-    markers_from_reference.__doc__ = _markers_from_reference.__doc__ + dedent(
-        """
-
-            Notes
-            -----
-            query_gene_key : str | None
-                Additional parameter only used when ``markers_from_reference`` is called
-                as a method of a ``SegTraQ`` instance. Specifies the column in
-                ``self.sdata.tables[tables_key].var`` containing the query gene
-                identifiers. If ``None``, ``var_names`` are used. These identifiers are
-                used to subset the reference genes before marker selection.
-            """
-    )
 
     def run_label_transfer(
         self,
@@ -1227,7 +1213,7 @@ class SegTraQ:
         gn_max: float = np.inf,
         cell_type_key: str = "transferred_cell_type",
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         inplace: bool = True,
     ):
         """
@@ -1243,6 +1229,7 @@ class SegTraQ:
             ref_gene_key=ref_gene_key,
             query_gene_key=query_gene_key,
             tables_key=self.tables_key,
+            tables_gene_key=self.tables_gene_key,
             tables_cell_id_key=self.tables_cell_id_key,
             tables_raw_counts_layer=self.tables_raw_counts_layer,
             points_key=self.points_key,
@@ -1258,7 +1245,7 @@ class SegTraQ:
             inplace=inplace,
         )
 
-        return None if inplace else result
+        return result
 
     run_label_transfer.__doc__ = _run_label_transfer.__doc__
 
@@ -1550,6 +1537,7 @@ class _RSFacade:
 
     def similarity_nucleus_cell(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
@@ -1575,6 +1563,7 @@ class _RSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
@@ -1591,6 +1580,7 @@ class _RSFacade:
 
     def similarity_nucleus_cytoplasm(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         min_transcripts: int = 10,
         min_genes: int = 5,
         scale: float = 1e4,
@@ -1615,6 +1605,7 @@ class _RSFacade:
             points_gene_key=self._p.points_gene_key,
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             min_transcripts=min_transcripts,
             min_genes=min_genes,
             scale=scale,
@@ -1631,6 +1622,7 @@ class _RSFacade:
 
     def border_admixture_score(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         border_fraction_of_radius: float = 0.2,
         buffer_fraction_of_radius: float = 0.1,
         neighborhood_radius_factor: float = 1.0,
@@ -1655,6 +1647,7 @@ class _RSFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_gene_key=self._p.points_gene_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             border_fraction_of_radius=border_fraction_of_radius,
             buffer_fraction_of_radius=buffer_fraction_of_radius,
             neighborhood_radius_factor=neighborhood_radius_factor,
@@ -1683,7 +1676,7 @@ class _SPFacade:
 
     def mutually_exclusive_coexpression_rate(
         self,
-        markers: dict[str, dict[str, list[str]]],
+        markers: dict[str, dict[str, list[str]]] | None = None,
         inplace: bool = True,
     ):
         return sp.mutually_exclusive_coexpression_rate(
@@ -1700,7 +1693,7 @@ class _SPFacade:
     def marker_purity(
         self,
         cell_type_key: str,
-        markers: dict[str, dict[str, list[str]]],
+        markers: dict[str, dict[str, list[str]]] | None = None,
         require_neighbor_expression: bool = True,
         neighbors_key: str = "spatial_connectivities",
         inplace: bool = True,
@@ -1725,7 +1718,7 @@ class _SPFacade:
     def neighbor_contamination(
         self,
         cell_type_key: str,
-        markers: dict[str, dict[str, list[str]]],
+        markers: dict[str, dict[str, list[str]]] | None = None,
         require_neighbor_expression: bool = True,
         neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
@@ -1761,6 +1754,7 @@ class _PSFacade:
     def percentage_transcripts_in_compartments(
         self,
         genes: str | list[str] = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         select_by: Literal["iou", "nucleus_fraction"] = "nucleus_fraction",
@@ -1773,6 +1767,7 @@ class _PSFacade:
         return ps.percentage_transcripts_in_compartments(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1799,6 +1794,7 @@ class _PSFacade:
     def distance_to_centroid(
         self,
         genes: str | list[str] = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         centroid_region: Literal["cell", "nucleus"] = "cell",
@@ -1812,6 +1808,7 @@ class _PSFacade:
         return ps.distance_to_centroid(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1840,6 +1837,7 @@ class _PSFacade:
     def distance_to_membrane(
         self,
         genes: str | list[str] | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str | None = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         restrict_to_within_boundary: bool = False,
@@ -1854,6 +1852,7 @@ class _PSFacade:
         return ps.distance_to_membrane(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1883,6 +1882,7 @@ class _PSFacade:
     def membrane_distance_skewness(
         self,
         genes: str | list[str] | None = None,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         cell_type_key: str = "transferred_cell_type",
         cell_type_query: str | list[str] | None = None,
         min_transcripts: int = 5,
@@ -1891,6 +1891,7 @@ class _PSFacade:
         return ps.membrane_distance_skewness(
             sdata=self._p.sdata,
             genes=genes,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             cell_type_key=cell_type_key,
             cell_type_query=cell_type_query,
             tables_key=self._p.tables_key,
@@ -1928,7 +1929,7 @@ class _CSFacade:
         random_state: int = 42,
         cell_type_key: str | None = None,
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1936,10 +1937,11 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.silhouette_score(
-            self._p.sdata,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             metric=metric,
-            tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             random_state=random_state,
             cell_type_key=cell_type_key,
@@ -1960,7 +1962,7 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1968,10 +1970,11 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.purity(
-            self._p.sdata,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
-            tables_key=self._p.tables_key,
             key_prefix=key_prefix,
             use_hvg=use_hvg,
             exclude_gene_prefixes=exclude_gene_prefixes,
@@ -1990,7 +1993,7 @@ class _CSFacade:
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -1998,11 +2001,12 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
     ) -> float:
         return cs.adjusted_rand_index(
-            self._p.sdata,
+            sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             frac_cells_subset=frac_cells_subset,
             key_prefix=key_prefix,
-            tables_key=self._p.tables_key,
             use_hvg=use_hvg,
             exclude_gene_prefixes=exclude_gene_prefixes,
             n_neighbors=n_neighbors,
@@ -2022,7 +2026,7 @@ class _CSFacade:
         random_state: int = 42,
         cell_type_key: str | None = None,
         use_hvg: bool | None = None,
-        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = ("MT-", "RPL", "RPS"),
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         n_neighbors: int = 15,
         n_pcs: int = 50,
         target_sum: float | None = None,
@@ -2031,10 +2035,11 @@ class _CSFacade:
     ):
         return cs.cluster_connectedness(
             sdata=self._p.sdata,
+            tables_key=self._p.tables_key,
+            tables_gene_key=self._p.tables_gene_key,
             resolution=resolution,
             use_weights=use_weights,
             key_prefix=key_prefix,
-            tables_key=self._p.tables_key,
             random_state=random_state,
             cell_type_key=cell_type_key,
             use_hvg=use_hvg,
@@ -2061,6 +2066,7 @@ class _VLFacade:
 
     def similarity_top_bottom(
         self,
+        exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
         correct_z_drift: bool = True,
         max_points: int = 1_000_000,
         seed: int | None = 0,
@@ -2086,6 +2092,7 @@ class _VLFacade:
             points_x_key=self._p.points_x_key,
             points_y_key=self._p.points_y_key,
             points_z_key=self._p.points_z_key,
+            exclude_gene_prefixes=exclude_gene_prefixes,
             correct_z_drift=correct_z_drift,
             max_points=max_points,
             seed=seed,

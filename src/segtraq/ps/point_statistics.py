@@ -6,15 +6,17 @@ import pandas as pd
 import spatialdata as sd
 
 from .._settings import settings
+from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 from ..rs.region_similarity import match_nuclei_to_cells
 from ..rs.utils import _get_filtered_points_df, _join_points_regions
-from ..utils import merge_into_obs, xy_scale
+from ..utils import _exclude_genes_by_prefix, _get_genes, merge_into_obs, xy_scale
 from .utils import _fisher_pearson_sample_skew, _get_cell_geometry_lookup
 
 
 def percentage_transcripts_in_compartments(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
@@ -55,7 +57,12 @@ def percentage_transcripts_in_compartments(
         The SpatialData object containing spatial transcriptomics data.
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
-        If None, all genes are used.
+        If None, all genes except those matching `exclude_gene_prefixes`
+        are used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+        Gene prefixes excluded when `genes=None`. By default, mitochondrial
+        and ribosomal genes are excluded. Has no effect when `genes` is
+        explicitly specified. Set to None to use all genes.
     cell_type_key : str
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -114,6 +121,14 @@ def percentage_transcripts_in_compartments(
     assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
         "Cell shapes and transcripts are not aligned. Please ensure they share the same transformation."
     )
+
+    use_all_genes = genes is None
+
+    if genes is None:
+        genes = _exclude_genes_by_prefix(
+            _get_genes(sdata.tables[tables_key], tables_gene_key),
+            exclude_gene_prefixes,
+        ).tolist()
 
     tbl = sdata.tables[tables_key]
 
@@ -236,7 +251,7 @@ def percentage_transcripts_in_compartments(
     out["perc_cytoplasm"] = np.where(out["num_total"] > 0, 100.0 * out["num_in_cytoplasm"] / out["num_total"], np.nan)
 
     # generate column names
-    if genes is None:
+    if use_all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
@@ -284,6 +299,7 @@ def percentage_transcripts_in_compartments(
 def distance_to_centroid(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
@@ -321,7 +337,11 @@ def distance_to_centroid(
         The SpatialData object containing spatial transcriptomics data.
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
-        If None, all genes are used.
+        If None, all genes except those matching `exclude_gene_prefixes`
+        are used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+                Gene prefixes excluded. By default, mitochondrial
+                and ribosomal genes are excluded.
     cell_type_key : str
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -397,6 +417,14 @@ def distance_to_centroid(
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
         )
 
+    use_all_genes = genes is None
+
+    if genes is None:
+        genes = _exclude_genes_by_prefix(
+            _get_genes(sdata.tables[tables_key], tables_gene_key),
+            exclude_gene_prefixes,
+        ).tolist()
+
     tbl = sdata.tables[tables_key]
 
     transcript_df = _get_filtered_points_df(
@@ -466,7 +494,7 @@ def distance_to_centroid(
         how="inner",
     )
 
-    if genes is None:
+    if use_all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
@@ -506,6 +534,7 @@ def distance_to_centroid(
 def distance_to_membrane(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
@@ -549,7 +578,11 @@ def distance_to_membrane(
         The SpatialData object containing spatial transcriptomics data.
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
-        If None, all genes are used.
+        If None, all genes except those matching `exclude_gene_prefixes`
+        are used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+                Gene prefixes excluded. By default, mitochondrial
+                and ribosomal genes are excluded.
     cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -627,6 +660,14 @@ def distance_to_membrane(
         assert np.array_equal(xy_scale(T_transcripts), xy_scale(T_shapes)), (
             "Nucleus shapes and transcripts are not aligned. Please ensure they share the same transformation."
         )
+
+    use_all_genes = genes is None
+
+    if genes is None:
+        genes = _exclude_genes_by_prefix(
+            _get_genes(sdata.tables[tables_key], tables_gene_key),
+            exclude_gene_prefixes,
+        ).tolist()
 
     tbl = sdata.tables[tables_key]
 
@@ -723,7 +764,7 @@ def distance_to_membrane(
         dist = dist.where(is_within, -dist)
 
     # decide feature label
-    if genes is None:
+    if use_all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
@@ -769,6 +810,7 @@ def distance_to_membrane(
 def membrane_distance_skewness(
     sdata: sd.SpatialData,
     genes: str | list[str] | None = None,
+    exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     cell_type_key: str = "transferred_cell_type",
     cell_type_query: str | list[str] | None = None,
     tables_key: str = "table",
@@ -799,7 +841,11 @@ def membrane_distance_skewness(
         The SpatialData object containing spatial transcriptomics data.
     genes : str | list[str] | None, optional
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
-        If None, all genes are used.
+        If None, all genes except those matching `exclude_gene_prefixes`
+        are used.
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
+                Gene prefixes excluded. By default, mitochondrial
+                and ribosomal genes are excluded.
     cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
     cell_type_query : str | list[str] | None, optional
@@ -849,8 +895,16 @@ def membrane_distance_skewness(
     ValueError
         If no transcripts remain after filtering/joining/within-cell restriction.
     """
-    # decide feature label for column naming
+    use_all_genes = genes is None
+
     if genes is None:
+        genes = _exclude_genes_by_prefix(
+            _get_genes(sdata.tables[tables_key], tables_gene_key),
+            exclude_gene_prefixes,
+        ).tolist()
+
+    # decide feature label for column naming
+    if use_all_genes:
         feature = "all_genes"
     elif isinstance(genes, str):
         feature = genes
