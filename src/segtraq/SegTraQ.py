@@ -1086,7 +1086,7 @@ class SegTraQ:
                 cell_type_key = "transferred_cell_type"
             except Exception as exc:
                 # for some reason, warnings.warn() doesn't always show the warning in the notebook
-                _warn_always(f"Could not run label transfer ({exc}). Cell-type-aware metrics will be limited.")
+                _warn_always(f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed.")
 
         reference_kwargs = dict(
             adata_ref=adata_ref,
