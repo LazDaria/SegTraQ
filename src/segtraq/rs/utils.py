@@ -44,10 +44,12 @@ def _match_nucleus_one_cell(
     select_by: str = "nucleus_fraction",
     min_intersection_area: float = 0.0,
 ) -> dict:
-    """Find the best-matching nucleus for one cell polygon.
+    """
+    Find the best-matching nucleus for one cell polygon, and count overlapping nuclei.
 
     The primary score is either IoU or nucleus intersection fraction. Ties are
     resolved by larger nucleus area, then larger intersection area, then nucleus ID.
+    Also counts how many nuclei overlap the cell (num_nuclei).
     """
     if select_by not in ("iou", "nucleus_fraction"):
         raise ValueError(f"select_by must be 'iou' or 'nucleus_fraction', got {select_by!r}")
@@ -65,10 +67,10 @@ def _match_nucleus_one_cell(
             "nucleus_id": np.nan,
             "iou": np.nan,
             "nucleus_fraction": np.nan,
+            "num_nuclei": np.nan,
         }
 
     candidates = nucleus_shapes.iloc[candidate_idx]
-
     cell_area = cell_geom.area if cell_geom.is_valid else np.nan
 
     best = {
@@ -78,7 +80,9 @@ def _match_nucleus_one_cell(
         "nucleus_id": np.nan,
         "iou": np.nan,
         "nucleus_fraction": np.nan,
+        "num_nuclei": np.nan,
     }
+    num_nuclei = 0  # count of nuclei that pass the overlap threshold
 
     for nucleus_id, nucleus in candidates.iterrows():
         nucleus_geom = nucleus.geometry
@@ -92,6 +96,8 @@ def _match_nucleus_one_cell(
         intersection_area = _safe_intersection_area(cell_geom, nucleus_geom)
         if np.isnan(intersection_area) or intersection_area <= min_intersection_area:
             continue
+
+        num_nuclei += 1
 
         iou = _compute_iou_from_areas(intersection_area, cell_area, nucleus_area)
         nucleus_fraction = _compute_nucleus_fraction(intersection_area, nucleus_area)
@@ -125,13 +131,14 @@ def _match_nucleus_one_cell(
                 nucleus_fraction=nucleus_fraction,
             )
 
-    # No valid candidate survived the geometry/overlap filters.
+    # No valid candidate survived the geometry/overlap filters
     if best["score"] == -np.inf:
         return {
             id_name: cell_id,
             "nucleus_id": np.nan,
             "iou": np.nan,
             "nucleus_fraction": np.nan,
+            "num_nuclei": num_nuclei,
         }
 
     return {
@@ -139,6 +146,7 @@ def _match_nucleus_one_cell(
         "nucleus_id": best["nucleus_id"],
         "iou": best["iou"],
         "nucleus_fraction": best["nucleus_fraction"],
+        "num_nuclei": num_nuclei,
     }
 
 

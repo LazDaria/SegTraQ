@@ -231,8 +231,8 @@ morphological_features.head()
 # Let's plot all of the distributions in one plot using subplots.
 
 # %%
-# exclude 'cell_id' from the features to plot
-features = [f for f in morphological_features.columns if f != "cell_id"]
+# exclude 'cell' from the features to plot
+features = [f for f in morphological_features.columns if f != "cell"]
 
 # define grid layout
 num_features = len(features)
