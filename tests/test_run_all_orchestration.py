@@ -70,9 +70,10 @@ def test_run_all_forwards_inplace_and_module_kwargs():
     finally:
         _stop_all(patchers)
 
-    mocks["run_baseline"].assert_called_once_with(inplace=False, morphological_kwargs={"n_jobs": 2})
-    mocks["run_region_similarity"].assert_called_once_with(inplace=False, n_jobs=4)
-    mocks["run_clustering_stability"].assert_called_once_with(inplace=False, key_prefix="custom_prefix")
+    # `_leave=False` is added by `run_all` itself so nested progress bars are cleared on completion
+    mocks["run_baseline"].assert_called_once_with(inplace=False, _leave=False, morphological_kwargs={"n_jobs": 2})
+    mocks["run_region_similarity"].assert_called_once_with(inplace=False, _leave=False, n_jobs=4)
+    mocks["run_clustering_stability"].assert_called_once_with(inplace=False, _leave=False, key_prefix="custom_prefix")
 
 
 def test_run_all_continues_and_records_skips_when_a_module_raises():
