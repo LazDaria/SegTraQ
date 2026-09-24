@@ -8,8 +8,9 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from ._progress import _StepProgress
-from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
+from .constants import _REFERENCE_KWARGS, DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
 from .utils import (
+    _check_reserved_kwargs,
     _filter_control_and_low_quality_transcripts,
     _get_segtraq_markers,
     _require_reference,
@@ -506,6 +507,8 @@ class SegTraQ:
         heterotypic_overlap_kwargs = {} if heterotypic_overlap_kwargs is None else dict(heterotypic_overlap_kwargs)
         vsi_kwargs = {} if vsi_kwargs is None else dict(vsi_kwargs)
 
+        _check_reserved_kwargs("label_transfer_kwargs", label_transfer_kwargs, _REFERENCE_KWARGS)
+
         # Work out upfront which optional steps will run, so the progress bar total is correct.
         shapes_key_list = heterotypic_overlap_kwargs.pop("shapes_key_list", None)
         do_label_transfer = cell_type_key is None and adata_ref is not None
@@ -833,6 +836,9 @@ class SegTraQ:
         contamination_kwargs = {} if contamination_kwargs is None else dict(contamination_kwargs)
         mecr_kwargs = {} if mecr_kwargs is None else dict(mecr_kwargs)
 
+        _check_reserved_kwargs("label_transfer_kwargs", label_transfer_kwargs, _REFERENCE_KWARGS)
+        _check_reserved_kwargs("markers_from_reference_kwargs", markers_from_reference_kwargs, _REFERENCE_KWARGS)
+
         label_transfer_result = None
 
         adata = self.sdata.tables[self.tables_key]
@@ -1078,6 +1084,11 @@ class SegTraQ:
         a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which
         modules ran and why any others were skipped.
 
+        Arguments that `run_all` passes to the modules itself (`inplace`, `cell_type_key`,
+        `markers`, and the reference arguments `adata_ref`, `ref_cell_type`, `ref_gene_key`,
+        `query_gene_key`, `ref_raw_counts_layer`) must be passed directly to `run_all`, not via
+        the module `*_kwargs`; a `ValueError` is raised before any module runs otherwise.
+
         Progress is reported via tqdm unless disabled through `segtraq.settings.progress`.
         An overall bar tracks the modules, and each module shows its own bar for the
         duration of its run.
@@ -1141,6 +1152,18 @@ class SegTraQ:
         clustering_stability_kwargs = {} if clustering_stability_kwargs is None else dict(clustering_stability_kwargs)
         supervised_kwargs = {} if supervised_kwargs is None else dict(supervised_kwargs)
         point_statistics_kwargs = {} if point_statistics_kwargs is None else dict(point_statistics_kwargs)
+
+        # Reject keys that are also passed explicitly below. Without this check, such a collision
+        # raises a TypeError inside the runner, which is caught and turned into a skipped module.
+        _check_reserved_kwargs("label_transfer_kwargs", label_transfer_kwargs, _REFERENCE_KWARGS)
+        _check_reserved_kwargs("baseline_kwargs", baseline_kwargs, {"inplace"})
+        _check_reserved_kwargs("region_similarity_kwargs", region_similarity_kwargs, {"inplace"})
+        _check_reserved_kwargs("volume_kwargs", volume_kwargs, {"inplace", "cell_type_key"} | _REFERENCE_KWARGS)
+        _check_reserved_kwargs("clustering_stability_kwargs", clustering_stability_kwargs, {"inplace"})
+        _check_reserved_kwargs(
+            "supervised_kwargs", supervised_kwargs, {"inplace", "cell_type_key", "markers"} | _REFERENCE_KWARGS
+        )
+        _check_reserved_kwargs("point_statistics_kwargs", point_statistics_kwargs, {"inplace", "cell_type_key"})
 
         reference_kwargs = dict(
             adata_ref=adata_ref,
