@@ -6,13 +6,13 @@ import pandas as pd
 import polars as pl
 import shapely
 import spatialdata as sd
-from joblib import Parallel, delayed
+from joblib import delayed
 from ovrlpy import Ovrlp, cell_integrity_from_transcripts
 
 from .._settings import settings
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 from ..rs.utils import _two_profile_similarity_metrics
-from ..utils import _ensure_index, _exclude_genes_by_prefix, _get_genes, _is_background, merge_into_obs
+from ..utils import _ensure_index, _exclude_genes_by_prefix, _get_genes, _is_background, _Parallel, merge_into_obs
 from .utils import _correct_z_drift, _run_ovrlpy
 
 
@@ -321,7 +321,7 @@ def similarity_top_bottom(
             row["similarity_top_bottom_p_value"] = metrics["similarity_p_value"]
         return row
 
-    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+    rows = _Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_score_cell)(i, cid, cell_seed)
         for i, (cid, cell_seed) in enumerate(zip(all_cells, seeds, strict=False))
     )

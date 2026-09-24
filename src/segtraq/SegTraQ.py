@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -15,7 +16,6 @@ from .utils import (
     _get_segtraq_markers,
     _require_reference,
     _store_segtraq_markers,
-    _warn_always,
     validate_spatialdata,
 )
 from .utils import filter_cells as _filter_cells
@@ -1246,9 +1246,10 @@ class SegTraQ:
                         )
                         cell_type_key = "transferred_cell_type"
                     except Exception as exc:
-                        # when running with n_jobs>1, warnings.warn() doesn't always show the warning in the notebook
-                        _warn_always(
-                            f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed."
+                        warnings.warn(
+                            f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed.",
+                            UserWarning,
+                            stacklevel=2,
                         )
 
             for name, runner in runners.items():
@@ -1256,8 +1257,11 @@ class SegTraQ:
                     try:
                         results[name] = runner()
                     except Exception as exc:
-                        # when running with n_jobs>1, warnings.warn() doesn't always show the warning in the notebook
-                        _warn_always(f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).")
+                        warnings.warn(
+                            f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).",
+                            UserWarning,
+                            stacklevel=2,
+                        )
                         skipped[name] = str(exc)
                         results[name] = None
 

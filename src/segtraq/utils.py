@@ -1249,7 +1249,7 @@ def markers_from_reference(
             results.append(r_ab)
             results.append(r_ba)
     else:
-        pair_results = Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in unordered_pairs)
+        pair_results = _Parallel(n_jobs=n_jobs)(joblib_delayed(worker)(ct_a, ct_b) for ct_a, ct_b in unordered_pairs)
 
         results = [r for pair in pair_results for r in pair]
 
@@ -2764,10 +2764,18 @@ def pearson_residuals(x: np.ndarray, theta, clip: None):
     return residuals
 
 
-def _warn_always(message: str) -> None:
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
-        warnings.warn(message, stacklevel=3)
+class _Parallel(Parallel):
+    """
+    `joblib.Parallel` that restores the caller's warning filters once all jobs have finished.
+
+    Before Python 3.14, `warnings.catch_warnings()` is not thread-safe: when libraries use it
+    inside worker threads (e.g. with the "threading" backend), the interleaved save/restore of the
+    global filter list can leak an "ignore" filter, silencing all subsequent warnings in the session.
+    """
+
+    def __call__(self, iterable):
+        with warnings.catch_warnings():
+            return super().__call__(iterable)
 
 
 def _require_reference(

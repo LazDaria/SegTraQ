@@ -4,10 +4,10 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from joblib import Parallel, delayed
+from joblib import delayed
 
 from .._settings import settings
-from ..utils import _get_genes, _is_background, merge_into_obs, merge_into_uns, merge_into_var
+from ..utils import _get_genes, _is_background, _Parallel, merge_into_obs, merge_into_uns, merge_into_var
 from .utils import count_polygons
 
 
@@ -671,7 +671,7 @@ def morphological_features(
         return elongation, eccentricity
 
     if "elongation" in features_to_compute or "eccentricity" in features_to_compute:
-        results = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+        results = _Parallel(n_jobs=n_jobs, backend=parallel_backend)(
             delayed(compute_elong_ecc)(hull) for hull in convex_hull
         )
         elongations, eccentricities = zip(*results, strict=False)
