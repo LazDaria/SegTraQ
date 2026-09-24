@@ -695,14 +695,14 @@ class SegTraQ:
         """
         with _StepProgress(total=4, desc="Clustering stability", leave=_leave) as p:
             with p.step("cluster connectedness"):
-                        cc = self.cs.cluster_connectedness(
-                        key_prefix=key_prefix,
-                        use_hvg=use_hvg,
-                        inplace=inplace,
-                        **(connectedness_kwargs or {}),
-                        leiden_kwargs=leiden_kwargs,
-                        n_threads=n_threads,
-                    )
+                cc = self.cs.cluster_connectedness(
+                    key_prefix=key_prefix,
+                    use_hvg=use_hvg,
+                    inplace=inplace,
+                    **(connectedness_kwargs or {}),
+                    leiden_kwargs=leiden_kwargs,
+                    n_threads=n_threads,
+                )
 
             with p.step("silhouette score"):
                 sil = self.cs.silhouette_score(
