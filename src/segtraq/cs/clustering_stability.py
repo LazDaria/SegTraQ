@@ -5,6 +5,7 @@ import pandas as pd
 import spatialdata as sd
 from sklearn.metrics import silhouette_score as _silhouette_score
 
+from .._threads import with_pinned_threads
 from ..constants import CONNECTIVITIES_KEY, DEFAULT_EXCLUDE_GENE_PREFIXES, PCA_KEY
 from ..utils import merge_into_uns
 from .utils import (
@@ -19,6 +20,7 @@ from .utils import (
 )
 
 
+@with_pinned_threads
 def cluster_connectedness(
     sdata: sd.SpatialData,
     tables_gene_key: str | None = None,
@@ -35,6 +37,7 @@ def cluster_connectedness(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
+    n_threads: int | None = 1,
 ) -> float:
     """
     Compute cluster connectedness for different Leiden clustering resolutions
@@ -80,6 +83,13 @@ def cluster_connectedness(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
+    n_threads : int or None, optional
+        Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
+        graph construction and clustering. Results are only reproducible for
+        a fixed ``n_threads``; the default of 1 gives identical results
+        regardless of the node's CPU allocation. ``None`` keeps the
+        libraries' defaults (auto-detected from CPU affinity, not
+        reproducible across machines).
 
     Returns
     -------
@@ -151,6 +161,7 @@ def cluster_connectedness(
     return best_distance
 
 
+@with_pinned_threads
 def silhouette_score(
     sdata: sd.SpatialData,
     tables_gene_key: str | None = None,
@@ -167,6 +178,7 @@ def silhouette_score(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
+    n_threads: int | None = 1,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
@@ -210,6 +222,13 @@ def silhouette_score(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
+    n_threads : int or None, optional
+        Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
+        graph construction and clustering. Results are only reproducible for
+        a fixed ``n_threads``; the default of 1 gives identical results
+        regardless of the node's CPU allocation. ``None`` keeps the
+        libraries' defaults (auto-detected from CPU affinity, not
+        reproducible across machines).
 
     Returns
     -------
@@ -287,6 +306,7 @@ def silhouette_score(
     return best_silhouette_score
 
 
+@with_pinned_threads
 def purity(
     sdata: sd.SpatialData,
     tables_gene_key: str | None = None,
@@ -301,6 +321,7 @@ def purity(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
+    n_threads: int | None = 1,
 ) -> float:
     """
     Compute the clustering stability using pairwise purity on random subsets of cells.
@@ -339,6 +360,13 @@ def purity(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
+    n_threads : int or None, optional
+        Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
+        graph construction and clustering. Results are only reproducible for
+        a fixed ``n_threads``; the default of 1 gives identical results
+        regardless of the node's CPU allocation. ``None`` keeps the
+        libraries' defaults (auto-detected from CPU affinity, not
+        reproducible across machines).
 
     Returns
     -------
@@ -389,6 +417,7 @@ def purity(
     return mean_purity
 
 
+@with_pinned_threads
 def adjusted_rand_index(
     sdata: sd.SpatialData,
     tables_gene_key: str | None = None,
@@ -403,6 +432,7 @@ def adjusted_rand_index(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
+    n_threads: int | None = 1,
 ) -> float:
     """
     Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subset of cells.
@@ -441,6 +471,13 @@ def adjusted_rand_index(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
+    n_threads : int or None, optional
+        Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
+        graph construction and clustering. Results are only reproducible for
+        a fixed ``n_threads``; the default of 1 gives identical results
+        regardless of the node's CPU allocation. ``None`` keeps the
+        libraries' defaults (auto-detected from CPU affinity, not
+        reproducible across machines).
 
     Returns
     -------
