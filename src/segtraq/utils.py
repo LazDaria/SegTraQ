@@ -2781,3 +2781,18 @@ def _require_reference(
         raise ValueError(f"`adata_ref` is required when {condition}.")
     if ref_cell_type is None:
         raise ValueError(f"`ref_cell_type` is required when {condition}.")
+
+
+def _check_reserved_kwargs(name: str, kwargs: dict, reserved: set[str] | frozenset[str]) -> None:
+    """
+    Guard a `*_kwargs` dict against keys that the calling wrapper already passes explicitly.
+
+    `_leave` is internal and always controlled by the wrapper, so it is silently dropped.
+    Any other reserved key raises a `ValueError`, since forwarding it would otherwise fail with
+    `TypeError: got multiple values for keyword argument` (or be silently ignored).
+    Modifies `kwargs` in place.
+    """
+    kwargs.pop("_leave", None)
+    clash = set(reserved) & kwargs.keys()
+    if clash:
+        raise ValueError(f"`{name}` must not contain {sorted(clash)}; pass these arguments directly instead.")
