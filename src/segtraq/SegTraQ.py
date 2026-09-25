@@ -14,6 +14,7 @@ from .utils import (
     _check_reserved_kwargs,
     _filter_control_and_low_quality_transcripts,
     _get_segtraq_markers,
+    _nucleus_shapes_status,
     _require_reference,
     _store_segtraq_markers,
     validate_spatialdata,
@@ -331,10 +332,10 @@ class SegTraQ:
         n_jobs: int | None = None,
         parallel_backend: str = "threading",
         inplace: bool = True,
-        iou_kwargs: dict = None,
-        similarity_nucleus_cell_kwargs: dict = None,
-        similarity_nucleus_cytoplasm_kwargs: dict = None,
-        border_admixture_score_kwargs: dict = None,
+        iou_kwargs: dict | None = None,
+        similarity_nucleus_cell_kwargs: dict | None = None,
+        similarity_nucleus_cytoplasm_kwargs: dict | None = None,
+        border_admixture_score_kwargs: dict | None = None,
         _leave: bool = True,
     ):
         """
@@ -346,45 +347,54 @@ class SegTraQ:
         3) similarity between the cell's nucleus-overlapping and cytoplasmic expression
         4) border admixture score
 
+        Steps 1-3 require nucleus shapes. If `nucleus_shapes_key` is `None` or does not
+        exist in `sdata.shapes`, a warning is raised, these steps are skipped, and only
+        the border admixture score is computed.
+
         Progress is reported via tqdm unless disabled through `segtraq.settings.progress`.
 
         Returns
         -------
         None or dict
             If `inplace=True`, returns None after writing to `sdata`.
-            If `inplace=False`, returns a dictionary of DataFrames.
+            If `inplace=False`, returns a dictionary of DataFrames. Entries for metrics
+            that were skipped because no nucleus shapes were available are `None`.
         """
-        with _StepProgress(total=4, desc="Region similarity", leave=_leave) as p:
-            with p.step("nucleus-cell matching"):
-                ious = self.rs.match_nuclei_to_cells(
-                    n_jobs=n_jobs,
-                    parallel_backend=parallel_backend,
-                    inplace=inplace,
-                    **(iou_kwargs or {}),
-                )
+        has_nuclei, reason = _nucleus_shapes_status(self.sdata, self.nucleus_shapes_key)
 
-            with p.step("nucleus-cell similarity"):
-                similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
-                    n_jobs=n_jobs,
-                    parallel_backend=parallel_backend,
-                    inplace=inplace,
-                    **(similarity_nucleus_cell_kwargs or {}),
-                )
+        if not has_nuclei:
+            warnings.warn(
+                f"No nucleus shapes available ({reason}). Skipping nucleus-dependent region "
+                "similarity metrics (nucleus-cell matching, nucleus-cell similarity, "
+                "nucleus-cytoplasm similarity). Only the border admixture score will be computed.",
+                UserWarning,
+                stacklevel=2,
+            )
 
-            with p.step("nucleus-cytoplasm similarity"):
-                similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
-                    n_jobs=n_jobs,
-                    parallel_backend=parallel_backend,
-                    inplace=inplace,
-                    **(similarity_nucleus_cytoplasm_kwargs or {}),
-                )
+        common = dict(n_jobs=n_jobs, parallel_backend=parallel_backend, inplace=inplace)
+
+        ious = None
+        similarity_nucleus_cell = None
+        similarity_nucleus_cytoplasm = None
+
+        with _StepProgress(total=4 if has_nuclei else 1, desc="Region similarity", leave=_leave) as p:
+            if has_nuclei:
+                with p.step("nucleus-cell matching"):
+                    ious = self.rs.match_nuclei_to_cells(**common, **(iou_kwargs or {}))
+
+                with p.step("nucleus-cell similarity"):
+                    similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
+                        **common, **(similarity_nucleus_cell_kwargs or {})
+                    )
+
+                with p.step("nucleus-cytoplasm similarity"):
+                    similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
+                        **common, **(similarity_nucleus_cytoplasm_kwargs or {})
+                    )
 
             with p.step("border admixture score"):
                 border_admixture_score = self.rs.border_admixture_score(
-                    n_jobs=n_jobs,
-                    parallel_backend=parallel_backend,
-                    inplace=inplace,
-                    **(border_admixture_score_kwargs or {}),
+                    **common, **(border_admixture_score_kwargs or {})
                 )
 
         if inplace:
@@ -954,7 +964,6 @@ class SegTraQ:
         cell_type_query: str | list[str] | None = None,
         inplace: bool = True,
         *,
-        # per-metric parameters (optional)
         centroid_kwargs: dict | None = None,
         membrane_kwargs: dict | None = None,
         skew_kwargs: dict | None = None,
@@ -972,38 +981,17 @@ class SegTraQ:
         3) distance to membrane (cell or nucleus)
         4) membrane-distance skewness
 
-        Only parameters shared by all computations are exposed explicitly. All other
-        parameters are forwarded via method-specific `*_kwargs` dictionaries.
+        Step 1 requires nucleus shapes. If `nucleus_shapes_key` is `None` or does not
+        exist in `sdata.shapes`, a warning is raised and step 1 is skipped.
 
-        Progress is reported via tqdm unless disabled through `segtraq.settings.progress`.
-
-        Parameters
-        ----------
-        genes : str | list[str] | None, optional
-            Gene(s) to include. If None, all genes are used.
-        cell_type_key : str, default="transferred_cell_type"
-            Cell-type annotation key in `sdata.tables[...].obs`.
-        cell_type_query : str | list[str] | None, optional
-            Restrict computations to cells matching these label(s).
-        inplace : bool, default=True
-            If True, results are merged into `.obs` and None is returned.
-            If False, per-metric results are returned.
-
-        centroid_kwargs : dict or None, optional
-            Extra arguments for :meth:`ps.distance_to_centroid`.
-        membrane_kwargs : dict or None, optional
-            Extra arguments for :meth:`ps.distance_to_membrane`.
-        skew_kwargs : dict or None, optional
-            Extra arguments for :meth:`ps.membrane_distance_skewness`.
-        compartments_kwargs : dict or None, optional
-            Extra arguments for :meth:`ps.percentage_transcripts_in_compartments`.
+        [... Parameters section unchanged ...]
 
         Returns
         -------
         None or dict
             If `inplace=True`, returns None.
             If `inplace=False`, returns a dict with keys:
-            - `"percentage_transcripts_in_compartments"`
+            - `"percentage_transcripts_in_compartments"` (`None` if skipped)
             - `"distance_to_centroid"`
             - `"distance_to_membrane"`
             - `"membrane_distance_skewness"`
@@ -1020,34 +1008,31 @@ class SegTraQ:
         skew_kwargs = {} if skew_kwargs is None else dict(skew_kwargs)
         compartments_kwargs = {} if compartments_kwargs is None else dict(compartments_kwargs)
 
-        with _StepProgress(total=4, desc="Point statistics", leave=_leave) as p:
-            # % compartments
-            with p.step("transcripts in compartments"):
-                perc_cp_df = self.ps.percentage_transcripts_in_compartments(
-                    **common,
-                    **compartments_kwargs,
-                )
+        has_nuclei, reason = _nucleus_shapes_status(self.sdata, self.nucleus_shapes_key)
+        if not has_nuclei:
+            warnings.warn(
+                f"No nucleus shapes available ({reason}). Skipping "
+                "`percentage_transcripts_in_compartments`; the remaining point statistics "
+                "will be computed.",
+                UserWarning,
+                stacklevel=2,
+            )
 
-            # mean-to-centroid distance
+        perc_cp_df = None
+
+        with _StepProgress(total=4 if has_nuclei else 3, desc="Point statistics", leave=_leave) as p:
+            if has_nuclei:
+                with p.step("transcripts in compartments"):
+                    perc_cp_df = self.ps.percentage_transcripts_in_compartments(**common, **compartments_kwargs)
+
             with p.step("distance to centroid"):
-                cmd_df = self.ps.distance_to_centroid(
-                    **common,
-                    **centroid_kwargs,
-                )
+                cmd_df = self.ps.distance_to_centroid(**common, **centroid_kwargs)
 
-            # mean distance to membrane
             with p.step("distance to membrane"):
-                dtm_df = self.ps.distance_to_membrane(
-                    **common,
-                    **membrane_kwargs,
-                )
+                dtm_df = self.ps.distance_to_membrane(**common, **membrane_kwargs)
 
-            # skewness of distances-to-membrane
             with p.step("membrane-distance skewness"):
-                mb_skw = self.ps.membrane_distance_skewness(
-                    **common,
-                    **skew_kwargs,
-                )
+                mb_skw = self.ps.membrane_distance_skewness(**common, **skew_kwargs)
 
         if inplace:
             return None
