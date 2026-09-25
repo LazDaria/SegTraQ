@@ -25,13 +25,12 @@ The installation of the package should take less than a minute.
 
 ## Configuration
 
-The number of CPU cores used by SegTraQ can be set globally via `segtraq.settings.n_jobs` or individually for each metric using the `n_jobs` parameter. By default, SegTraQ uses one core (`n_jobs=1`). The same concept applies to `n_threads`.
+The number of CPU cores used by SegTraQ can be set globally via `segtraq.settings.n_jobs` or individually for each metric using the `n_jobs` parameter. By default, SegTraQ uses one core (`n_jobs=1`).
 
 ```python
 import segtraq as st
 
 st.settings.n_jobs = -1  # Use all available CPU cores
-st.settings.n_threads = 8  # Use 8 threads when computing cs metrics
 ```
 
 ## System Requirements

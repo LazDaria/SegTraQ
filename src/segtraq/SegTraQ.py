@@ -641,7 +641,7 @@ class SegTraQ:
         purity_kwargs: dict | None = None,
         ari_kwargs: dict | None = None,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = None,
+        n_jobs: int | None = None,
         _leave: bool = True,
     ):
         """
@@ -685,9 +685,9 @@ class SegTraQ:
             Additional keyword arguments forwarded to Leiden clustering in all
             underlying methods that perform clustering.
             For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-        n_threads : int or None, default=None
+        n_jobs : int or None, default=None
             Number of threads used by numba, BLAS and OpenMP in all four
-            computations. Results are only reproducible for a fixed ``n_threads``;
+            computations. Results are only reproducible for a fixed ``n_jobs``;
             the default of 1 gives identical results regardless of the node's
             CPU allocation. ``None`` keeps the libraries' defaults
             (auto-detected from CPU affinity, not reproducible across machines).
@@ -711,7 +711,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(connectedness_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
-                    n_threads=n_threads,
+                    n_jobs=n_jobs,
                 )
 
             with p.step("silhouette score"):
@@ -721,7 +721,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(silhouette_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
-                    n_threads=n_threads,
+                    n_jobs=n_jobs,
                 )
 
             with p.step("purity"):
@@ -731,7 +731,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(purity_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
-                    n_threads=n_threads,
+                    n_jobs=n_jobs,
                 )
 
             with p.step("adjusted Rand index"):
@@ -741,7 +741,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(ari_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
-                    n_threads=n_threads,
+                    n_jobs=n_jobs,
                 )
 
         if inplace:
@@ -2049,7 +2049,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = None,
+        n_jobs: int | None = None,
     ) -> float:
         return cs.silhouette_score(
             sdata=self._p.sdata,
@@ -2067,7 +2067,7 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
-            n_threads=n_threads,
+            n_jobs=n_jobs,
         )
 
     silhouette_score.__doc__ = cs.silhouette_score.__doc__
@@ -2084,7 +2084,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = None,
+        n_jobs: int | None = None,
     ) -> float:
         return cs.purity(
             sdata=self._p.sdata,
@@ -2100,7 +2100,7 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
-            n_threads=n_threads,
+            n_jobs=n_jobs,
         )
 
     purity.__doc__ = cs.purity.__doc__
@@ -2117,7 +2117,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = None,
+        n_jobs: int | None = None,
     ) -> float:
         return cs.adjusted_rand_index(
             sdata=self._p.sdata,
@@ -2133,7 +2133,7 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
-            n_threads=n_threads,
+            n_jobs=n_jobs,
         )
 
     adjusted_rand_index.__doc__ = cs.adjusted_rand_index.__doc__
@@ -2152,7 +2152,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = None,
+        n_jobs: int | None = None,
     ):
         return cs.cluster_connectedness(
             sdata=self._p.sdata,
@@ -2170,7 +2170,7 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
-            n_threads=n_threads,
+            n_jobs=n_jobs,
         )
 
     cluster_connectedness.__doc__ = cs.cluster_connectedness.__doc__

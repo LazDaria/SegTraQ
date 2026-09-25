@@ -37,7 +37,7 @@ def cluster_connectedness(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = None,
+    n_jobs: int | None = None,
 ) -> float:
     """
     Compute cluster connectedness for different Leiden clustering resolutions
@@ -83,10 +83,10 @@ def cluster_connectedness(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-    n_threads : int or None, optional
+    n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_threads``; the default of 1 gives identical results
+        a fixed ``n_jobs``; the default of 1 gives identical results
         regardless of the node's CPU allocation. ``None`` keeps the
         libraries' defaults (auto-detected from CPU affinity, not
         reproducible across machines).
@@ -178,7 +178,7 @@ def silhouette_score(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = None,
+    n_jobs: int | None = None,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
@@ -222,10 +222,10 @@ def silhouette_score(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-    n_threads : int or None, optional
+    n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_threads``; the default of 1 gives identical results
+        a fixed ``n_jobs``; the default of 1 gives identical results
         regardless of the node's CPU allocation. ``None`` keeps the
         libraries' defaults (auto-detected from CPU affinity, not
         reproducible across machines).
@@ -321,7 +321,7 @@ def purity(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = None,
+    n_jobs: int | None = None,
 ) -> float:
     """
     Compute the clustering stability using pairwise purity on random subsets of cells.
@@ -360,10 +360,10 @@ def purity(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-    n_threads : int or None, optional
+    n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_threads``; the default of 1 gives identical results
+        a fixed ``n_jobs``; the default of 1 gives identical results
         regardless of the node's CPU allocation. ``None`` keeps the
         libraries' defaults (auto-detected from CPU affinity, not
         reproducible across machines).
@@ -432,7 +432,7 @@ def adjusted_rand_index(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = None,
+    n_jobs: int | None = None,
 ) -> float:
     """
     Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subset of cells.
@@ -471,10 +471,10 @@ def adjusted_rand_index(
     leiden_kwargs : dict, optional
         Additional keyword arguments to pass to `scanpy.tl.leiden()`.
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-    n_threads : int or None, optional
+    n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_threads``; the default of 1 gives identical results
+        a fixed ``n_jobs``; the default of 1 gives identical results
         regardless of the node's CPU allocation. ``None`` keeps the
         libraries' defaults (auto-detected from CPU affinity, not
         reproducible across machines).

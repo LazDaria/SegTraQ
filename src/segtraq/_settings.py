@@ -5,6 +5,12 @@ class Settings:
 
     @property
     def n_jobs(self):
+        # note that for the clustering stability metrics,
+        # we use the n_jobs parameter to control the number of threads used by
+        # numba, BLAS and OpenMP for PCA, neighbor graph construction and clustering.
+        # Results are only reproducible for a fixed n_jobs;
+        # the default of 1 gives identical results regardless of the node's CPU allocation.
+        # None keeps the libraries' defaults (auto-detected from CPU affinity, not reproducible across machines).
         return self._n_jobs
 
     @n_jobs.setter
@@ -14,18 +20,6 @@ class Settings:
         if value == 0 or value < -1:
             raise ValueError("n_jobs must be -1 or a positive integer.")
         self._n_jobs = value
-
-    @property
-    def n_threads(self):
-        return self.n_threads
-
-    @n_threads.setter
-    def n_threads(self, value):
-        if not isinstance(value, int) or isinstance(value, bool):
-            raise TypeError("n_threads must be an integer.")
-        if value == 0 or value < -1:
-            raise ValueError("n_threads must be -1 or a positive integer.")
-        self.n_threads = value
 
     @property
     def progress(self):
