@@ -1,5 +1,6 @@
 import functools
 import inspect
+import os
 from contextlib import contextmanager
 
 import numba
@@ -18,8 +19,7 @@ def pinned_threads(n_jobs: int | None = None):
     if n_jobs is None:
         n_jobs = settings.n_jobs
     if n_jobs == -1:
-        yield
-        return
+        n_jobs = len(os.sched_getaffinity(0))
 
     old_numba = numba.get_num_threads()
     numba.set_num_threads(min(n_jobs, numba.config.NUMBA_NUM_THREADS))

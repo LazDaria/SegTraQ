@@ -86,10 +86,7 @@ def cluster_connectedness(
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``; the default of 1 gives identical results
-        regardless of the node's CPU allocation. ``None`` keeps the
-        libraries' defaults (auto-detected from CPU affinity, not
-        reproducible across machines).
+        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
 
     Returns
     -------
@@ -225,10 +222,7 @@ def silhouette_score(
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``; the default of 1 gives identical results
-        regardless of the node's CPU allocation. ``None`` keeps the
-        libraries' defaults (auto-detected from CPU affinity, not
-        reproducible across machines).
+        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
 
     Returns
     -------
@@ -363,10 +357,7 @@ def purity(
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``; the default of 1 gives identical results
-        regardless of the node's CPU allocation. ``None`` keeps the
-        libraries' defaults (auto-detected from CPU affinity, not
-        reproducible across machines).
+        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
 
     Returns
     -------
@@ -474,10 +465,7 @@ def adjusted_rand_index(
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
         graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``; the default of 1 gives identical results
-        regardless of the node's CPU allocation. ``None`` keeps the
-        libraries' defaults (auto-detected from CPU affinity, not
-        reproducible across machines).
+        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
 
     Returns
     -------
