@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import pytest
+
 import segtraq as st
 
 
@@ -200,3 +202,32 @@ def test_run_all_result_keys():
         "point_statistics",
         "skipped",
     }
+
+
+@pytest.mark.parametrize(
+    "runner, kwargs",
+    [
+        ("run_baseline", {"morphological_kwargs": {"inplace": False}}),
+        ("run_region_similarity", {"similarity_nucleus_cell_kwargs": {"n_jobs": 2}}),
+        ("run_region_similarity", {"border_admixture_score_kwargs": {"parallel_backend": "loky"}}),
+        ("run_volume", {"label_transfer_kwargs": {"cell_type_key": "x"}}),
+        ("run_volume", {"similarity_kwargs": {"inplace": False}}),
+        ("run_volume", {"heterotypic_overlap_kwargs": {"cell_type_key": "x"}}),
+        ("run_volume", {"vsi_kwargs": {"inplace": False}}),
+        ("run_clustering_stability", {"purity_kwargs": {"key_prefix": "x"}}),
+        ("run_clustering_stability", {"ari_kwargs": {"n_threads": 2}}),
+        ("run_supervised", {"label_transfer_kwargs": {"adata_ref": None}}),
+        ("run_supervised", {"markers_from_reference_kwargs": {"ref_gene_key": "x"}}),
+        ("run_supervised", {"contamination_kwargs": {"markers": {}}}),
+        ("run_supervised", {"mecr_kwargs": {"inplace": False}}),
+        ("run_point_statistics", {"skew_kwargs": {"genes": "x"}}),
+        ("run_all", {"supervised_kwargs": {"markers": {}}}),
+        ("run_all", {"label_transfer_kwargs": {"inplace": False}}),
+    ],
+)
+def test_runners_reject_reserved_kwargs(runner, kwargs):
+    # The check runs before any data is touched, so a bare instance is sufficient.
+    segtraq = _bare_segtraq()
+    segtraq.points_z_key = "z"  # `run_volume` asserts 3D data before validating kwargs
+    with pytest.raises(ValueError, match="must not contain"):
+        getattr(segtraq, runner)(**kwargs)

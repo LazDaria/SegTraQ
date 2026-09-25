@@ -40,6 +40,3 @@ DEFAULT_FILTER_KWARGS = {
 
 # ── Mitochondrial and ribosomal gene filtering ────────────────────────────────
 DEFAULT_EXCLUDE_GENE_PREFIXES = ("MT-", "RPL", "RPS")
-
-# Reference arguments that wrappers pass explicitly to `run_label_transfer` / module runners.
-_REFERENCE_KWARGS = frozenset({"adata_ref", "ref_cell_type", "ref_gene_key", "query_gene_key", "ref_raw_counts_layer"})

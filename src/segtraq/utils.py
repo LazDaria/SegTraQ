@@ -2,7 +2,7 @@ import collections
 import copy
 import math
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Set
 from importlib.metadata import version
 
 import dask.dataframe as dd
@@ -2791,7 +2791,7 @@ def _require_reference(
         raise ValueError(f"`ref_cell_type` is required when {condition}.")
 
 
-def _check_reserved_kwargs(name: str, kwargs: dict, reserved: set[str] | frozenset[str]) -> None:
+def _check_reserved_kwargs(name: str, kwargs: dict, reserved: Set[str]) -> None:
     """
     Guard a `*_kwargs` dict against keys that the calling wrapper already passes explicitly.
 

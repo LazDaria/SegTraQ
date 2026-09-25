@@ -9,7 +9,7 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from ._progress import _StepProgress
-from .constants import _REFERENCE_KWARGS, DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
+from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
 from .utils import (
     _check_reserved_kwargs,
     _filter_control_and_low_quality_transcripts,
@@ -286,6 +286,8 @@ class SegTraQ:
         """
         morphological_kwargs = {} if morphological_kwargs is None else dict(morphological_kwargs)
 
+        _check_reserved_kwargs("morphological_kwargs", morphological_kwargs, {"inplace"})
+
         with _StepProgress(total=10, desc="Baseline", leave=_leave) as p:
             with p.step("number of cells"):
                 nc = self.bl.num_cells(inplace=inplace)
@@ -309,7 +311,7 @@ class SegTraQ:
                 dens = self.bl.transcript_density(inplace=inplace)
 
             with p.step("morphological features"):
-                morph = self.bl.morphological_features(inplace=inplace, **(morphological_kwargs))
+                morph = self.bl.morphological_features(inplace=inplace, **morphological_kwargs)
 
         if inplace:
             return None
@@ -360,6 +362,26 @@ class SegTraQ:
             If `inplace=False`, returns a dictionary of DataFrames. Entries for metrics
             that were skipped because no nucleus shapes were available are `None`.
         """
+        iou_kwargs = {} if iou_kwargs is None else dict(iou_kwargs)
+        similarity_nucleus_cell_kwargs = (
+            {} if similarity_nucleus_cell_kwargs is None else dict(similarity_nucleus_cell_kwargs)
+        )
+        similarity_nucleus_cytoplasm_kwargs = (
+            {} if similarity_nucleus_cytoplasm_kwargs is None else dict(similarity_nucleus_cytoplasm_kwargs)
+        )
+        border_admixture_score_kwargs = (
+            {} if border_admixture_score_kwargs is None else dict(border_admixture_score_kwargs)
+        )
+
+        common = dict(n_jobs=n_jobs, parallel_backend=parallel_backend, inplace=inplace)
+
+        _check_reserved_kwargs("iou_kwargs", iou_kwargs, common.keys())
+        _check_reserved_kwargs("similarity_nucleus_cell_kwargs", similarity_nucleus_cell_kwargs, common.keys())
+        _check_reserved_kwargs(
+            "similarity_nucleus_cytoplasm_kwargs", similarity_nucleus_cytoplasm_kwargs, common.keys()
+        )
+        _check_reserved_kwargs("border_admixture_score_kwargs", border_admixture_score_kwargs, common.keys())
+
         has_nuclei, reason = _nucleus_shapes_status(self.sdata, self.nucleus_shapes_key)
 
         if not has_nuclei:
@@ -371,8 +393,6 @@ class SegTraQ:
                 stacklevel=2,
             )
 
-        common = dict(n_jobs=n_jobs, parallel_backend=parallel_backend, inplace=inplace)
-
         ious = None
         similarity_nucleus_cell = None
         similarity_nucleus_cytoplasm = None
@@ -380,22 +400,20 @@ class SegTraQ:
         with _StepProgress(total=4 if has_nuclei else 1, desc="Region similarity", leave=_leave) as p:
             if has_nuclei:
                 with p.step("nucleus-cell matching"):
-                    ious = self.rs.match_nuclei_to_cells(**common, **(iou_kwargs or {}))
+                    ious = self.rs.match_nuclei_to_cells(**common, **iou_kwargs)
 
                 with p.step("nucleus-cell similarity"):
                     similarity_nucleus_cell = self.rs.similarity_nucleus_cell(
-                        **common, **(similarity_nucleus_cell_kwargs or {})
+                        **common, **similarity_nucleus_cell_kwargs
                     )
 
                 with p.step("nucleus-cytoplasm similarity"):
                     similarity_nucleus_cytoplasm = self.rs.similarity_nucleus_cytoplasm(
-                        **common, **(similarity_nucleus_cytoplasm_kwargs or {})
+                        **common, **similarity_nucleus_cytoplasm_kwargs
                     )
 
             with p.step("border admixture score"):
-                border_admixture_score = self.rs.border_admixture_score(
-                    **common, **(border_admixture_score_kwargs or {})
-                )
+                border_admixture_score = self.rs.border_admixture_score(**common, **border_admixture_score_kwargs)
 
         if inplace:
             return None
@@ -517,7 +535,20 @@ class SegTraQ:
         heterotypic_overlap_kwargs = {} if heterotypic_overlap_kwargs is None else dict(heterotypic_overlap_kwargs)
         vsi_kwargs = {} if vsi_kwargs is None else dict(vsi_kwargs)
 
-        _check_reserved_kwargs("label_transfer_kwargs", label_transfer_kwargs, _REFERENCE_KWARGS)
+        reference_kwargs = dict(
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
+            ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+        )
+
+        _check_reserved_kwargs(
+            "label_transfer_kwargs", label_transfer_kwargs, reference_kwargs.keys() | {"cell_type_key", "inplace"}
+        )
+        _check_reserved_kwargs("similarity_kwargs", similarity_kwargs, {"inplace"})
+        _check_reserved_kwargs("heterotypic_overlap_kwargs", heterotypic_overlap_kwargs, {"cell_type_key", "inplace"})
+        _check_reserved_kwargs("vsi_kwargs", vsi_kwargs, {"inplace"})
 
         # Work out upfront which optional steps will run, so the progress bar total is correct.
         shapes_key_list = heterotypic_overlap_kwargs.pop("shapes_key_list", None)
@@ -546,15 +577,10 @@ class SegTraQ:
                 with p.step("label transfer"):
                     cell_type_key = "transferred_cell_type"
 
-                    label_transfer_kwargs["cell_type_key"] = cell_type_key
-                    label_transfer_kwargs["inplace"] = True
-
                     label_transfer_result = self.run_label_transfer(
-                        adata_ref=adata_ref,
-                        ref_cell_type=ref_cell_type,
-                        ref_gene_key=ref_gene_key,
-                        query_gene_key=query_gene_key,
-                        ref_raw_counts_layer=ref_raw_counts_layer,
+                        **reference_kwargs,
+                        cell_type_key=cell_type_key,
+                        inplace=True,
                         **label_transfer_kwargs,
                     )
 
@@ -703,13 +729,24 @@ class SegTraQ:
             - `"mean_purity"` : float
             - `"mean_ari"` : float
         """
+        connectedness_kwargs = {} if connectedness_kwargs is None else dict(connectedness_kwargs)
+        silhouette_kwargs = {} if silhouette_kwargs is None else dict(silhouette_kwargs)
+        purity_kwargs = {} if purity_kwargs is None else dict(purity_kwargs)
+        ari_kwargs = {} if ari_kwargs is None else dict(ari_kwargs)
+
+        reserved = {"key_prefix", "use_hvg", "inplace", "leiden_kwargs", "n_threads"}
+        _check_reserved_kwargs("connectedness_kwargs", connectedness_kwargs, reserved)
+        _check_reserved_kwargs("silhouette_kwargs", silhouette_kwargs, reserved)
+        _check_reserved_kwargs("purity_kwargs", purity_kwargs, reserved)
+        _check_reserved_kwargs("ari_kwargs", ari_kwargs, reserved)
+
         with _StepProgress(total=4, desc="Clustering stability", leave=_leave) as p:
             with p.step("cluster connectedness"):
                 cc = self.cs.cluster_connectedness(
                     key_prefix=key_prefix,
                     use_hvg=use_hvg,
                     inplace=inplace,
-                    **(connectedness_kwargs or {}),
+                    **connectedness_kwargs,
                     leiden_kwargs=leiden_kwargs,
                     n_threads=n_threads,
                 )
@@ -719,7 +756,7 @@ class SegTraQ:
                     key_prefix=key_prefix,
                     use_hvg=use_hvg,
                     inplace=inplace,
-                    **(silhouette_kwargs or {}),
+                    **silhouette_kwargs,
                     leiden_kwargs=leiden_kwargs,
                     n_threads=n_threads,
                 )
@@ -729,7 +766,7 @@ class SegTraQ:
                     key_prefix=key_prefix,
                     use_hvg=use_hvg,
                     inplace=inplace,
-                    **(purity_kwargs or {}),
+                    **purity_kwargs,
                     leiden_kwargs=leiden_kwargs,
                     n_threads=n_threads,
                 )
@@ -739,7 +776,7 @@ class SegTraQ:
                     key_prefix=key_prefix,
                     use_hvg=use_hvg,
                     inplace=inplace,
-                    **(ari_kwargs or {}),
+                    **ari_kwargs,
                     leiden_kwargs=leiden_kwargs,
                     n_threads=n_threads,
                 )
@@ -828,12 +865,14 @@ class SegTraQ:
             all results as a dictionary.
         label_transfer_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `self.run_label_transfer()`.
-            Do not include `adata_ref` or `ref_cell_type` here; pass them
-            directly to `run_supervised`.
+            Must not contain arguments that `run_supervised` passes explicitly
+            (the reference arguments, `cell_type_key`, `inplace`); pass the
+            reference arguments directly to `run_supervised` instead.
         markers_from_reference_kwargs : dict or None, optional
             Extra keyword arguments forwarded to `self.markers_from_reference()`.
-            Do not include `adata` or `ref_cell_type` here; pass them directly
-            to `run_supervised`.
+            Must not contain the reference arguments (`adata_ref`, `ref_cell_type`,
+            `ref_gene_key`, `query_gene_key`, `ref_raw_counts_layer`); pass them
+            directly to `run_supervised`.
         purity_kwargs : dict or None, optional
             Extra arguments for `sp.marker_purity`.
         contamination_kwargs : dict or None, optional
@@ -857,8 +896,21 @@ class SegTraQ:
         contamination_kwargs = {} if contamination_kwargs is None else dict(contamination_kwargs)
         mecr_kwargs = {} if mecr_kwargs is None else dict(mecr_kwargs)
 
-        _check_reserved_kwargs("label_transfer_kwargs", label_transfer_kwargs, _REFERENCE_KWARGS)
-        _check_reserved_kwargs("markers_from_reference_kwargs", markers_from_reference_kwargs, _REFERENCE_KWARGS)
+        reference_kwargs = dict(
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
+            ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+        )
+
+        _check_reserved_kwargs(
+            "label_transfer_kwargs", label_transfer_kwargs, reference_kwargs.keys() | {"cell_type_key", "inplace"}
+        )
+        _check_reserved_kwargs("markers_from_reference_kwargs", markers_from_reference_kwargs, reference_kwargs.keys())
+        _check_reserved_kwargs("purity_kwargs", purity_kwargs, {"cell_type_key", "markers", "inplace"})
+        _check_reserved_kwargs("contamination_kwargs", contamination_kwargs, {"cell_type_key", "markers", "inplace"})
+        _check_reserved_kwargs("mecr_kwargs", mecr_kwargs, {"markers", "inplace"})
 
         label_transfer_result = None
 
@@ -884,15 +936,10 @@ class SegTraQ:
                 with p.step("label transfer"):
                     cell_type_key = "transferred_cell_type"
 
-                    label_transfer_kwargs["cell_type_key"] = cell_type_key
-                    label_transfer_kwargs["inplace"] = True
-
                     label_transfer_result = self.run_label_transfer(
-                        adata_ref=adata_ref,
-                        ref_cell_type=ref_cell_type,
-                        ref_gene_key=ref_gene_key,
-                        query_gene_key=query_gene_key,
-                        ref_raw_counts_layer=ref_raw_counts_layer,
+                        **reference_kwargs,
+                        cell_type_key=cell_type_key,
+                        inplace=True,
                         **label_transfer_kwargs,
                     )
 
@@ -906,23 +953,15 @@ class SegTraQ:
                         )
                     else:
                         markers = self.markers_from_reference(
-                            adata_ref=adata_ref,
-                            ref_cell_type=ref_cell_type,
-                            ref_gene_key=ref_gene_key,
-                            query_gene_key=query_gene_key,
-                            ref_raw_counts_layer=ref_raw_counts_layer,
+                            **reference_kwargs,
                             **markers_from_reference_kwargs,
                         )
-
-            purity_inplace = purity_kwargs.pop("inplace", inplace)
-            cont_inplace = contamination_kwargs.pop("inplace", inplace)
-            mecr_inplace = mecr_kwargs.pop("inplace", inplace)
 
             with p.step("marker purity"):
                 purity_df = self.sp.marker_purity(
                     cell_type_key=cell_type_key,
                     markers=markers,
-                    inplace=purity_inplace,
+                    inplace=inplace,
                     **purity_kwargs,
                 )
 
@@ -930,14 +969,14 @@ class SegTraQ:
                 per_cell_cont_df, cont_strength_mat, cont_mat, cont_n = self.sp.neighbor_contamination(
                     cell_type_key=cell_type_key,
                     markers=markers,
-                    inplace=cont_inplace,
+                    inplace=inplace,
                     **contamination_kwargs,
                 )
 
             with p.step("mutually exclusive co-expression rate"):
                 mecr_df = self.sp.mutually_exclusive_coexpression_rate(
                     markers=markers,
-                    inplace=mecr_inplace,
+                    inplace=inplace,
                     **mecr_kwargs,
                 )
 
@@ -1007,6 +1046,11 @@ class SegTraQ:
         membrane_kwargs = {} if membrane_kwargs is None else dict(membrane_kwargs)
         skew_kwargs = {} if skew_kwargs is None else dict(skew_kwargs)
         compartments_kwargs = {} if compartments_kwargs is None else dict(compartments_kwargs)
+
+        _check_reserved_kwargs("centroid_kwargs", centroid_kwargs, common.keys())
+        _check_reserved_kwargs("membrane_kwargs", membrane_kwargs, common.keys())
+        _check_reserved_kwargs("skew_kwargs", skew_kwargs, common.keys())
+        _check_reserved_kwargs("compartments_kwargs", compartments_kwargs, common.keys())
 
         has_nuclei, reason = _nucleus_shapes_status(self.sdata, self.nucleus_shapes_key)
         if not has_nuclei:
@@ -1149,18 +1193,6 @@ class SegTraQ:
         supervised_kwargs = {} if supervised_kwargs is None else dict(supervised_kwargs)
         point_statistics_kwargs = {} if point_statistics_kwargs is None else dict(point_statistics_kwargs)
 
-        # Reject keys that are also passed explicitly below. Without this check, such a collision
-        # raises a TypeError inside the runner, which is caught and turned into a skipped module.
-        _check_reserved_kwargs("label_transfer_kwargs", label_transfer_kwargs, _REFERENCE_KWARGS)
-        _check_reserved_kwargs("baseline_kwargs", baseline_kwargs, {"inplace"})
-        _check_reserved_kwargs("region_similarity_kwargs", region_similarity_kwargs, {"inplace"})
-        _check_reserved_kwargs("volume_kwargs", volume_kwargs, {"inplace", "cell_type_key"} | _REFERENCE_KWARGS)
-        _check_reserved_kwargs("clustering_stability_kwargs", clustering_stability_kwargs, {"inplace"})
-        _check_reserved_kwargs(
-            "supervised_kwargs", supervised_kwargs, {"inplace", "cell_type_key", "markers"} | _REFERENCE_KWARGS
-        )
-        _check_reserved_kwargs("point_statistics_kwargs", point_statistics_kwargs, {"inplace", "cell_type_key"})
-
         reference_kwargs = dict(
             adata_ref=adata_ref,
             ref_cell_type=ref_cell_type,
@@ -1168,6 +1200,20 @@ class SegTraQ:
             query_gene_key=query_gene_key,
             ref_raw_counts_layer=ref_raw_counts_layer,
         )
+
+        # Reject keys that are also passed explicitly below. Without this check, such a collision
+        # raises a TypeError inside the runner, which is caught and turned into a skipped module.
+        _check_reserved_kwargs(
+            "label_transfer_kwargs", label_transfer_kwargs, reference_kwargs.keys() | {"cell_type_key", "inplace"}
+        )
+        _check_reserved_kwargs("baseline_kwargs", baseline_kwargs, {"inplace"})
+        _check_reserved_kwargs("region_similarity_kwargs", region_similarity_kwargs, {"inplace"})
+        _check_reserved_kwargs("volume_kwargs", volume_kwargs, reference_kwargs.keys() | {"cell_type_key", "inplace"})
+        _check_reserved_kwargs("clustering_stability_kwargs", clustering_stability_kwargs, {"inplace"})
+        _check_reserved_kwargs(
+            "supervised_kwargs", supervised_kwargs, reference_kwargs.keys() | {"cell_type_key", "markers", "inplace"}
+        )
+        _check_reserved_kwargs("point_statistics_kwargs", point_statistics_kwargs, {"cell_type_key", "inplace"})
 
         # The runners are defined before label transfer so that the progress bar total can be
         # derived from `len(runners)`. The lambdas read `cell_type_key` when they are called (not
@@ -1218,15 +1264,10 @@ class SegTraQ:
             if do_label_transfer:
                 with p.step("label transfer"):
                     try:
-                        label_transfer_kwargs["cell_type_key"] = "transferred_cell_type"
-                        label_transfer_kwargs["inplace"] = True
-
                         self.run_label_transfer(
-                            adata_ref=adata_ref,
-                            ref_cell_type=ref_cell_type,
-                            ref_gene_key=ref_gene_key,
-                            query_gene_key=query_gene_key,
-                            ref_raw_counts_layer=ref_raw_counts_layer,
+                            **reference_kwargs,
+                            cell_type_key="transferred_cell_type",
+                            inplace=True,
                             **label_transfer_kwargs,
                         )
                         cell_type_key = "transferred_cell_type"
