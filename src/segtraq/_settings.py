@@ -17,7 +17,7 @@ class Settings:
 
     @property
     def n_threads(self):
-        return self._n_threads
+        return self.n_threads
 
     @n_threads.setter
     def n_threads(self, value):
@@ -25,7 +25,7 @@ class Settings:
             raise TypeError("n_threads must be an integer.")
         if value == 0 or value < -1:
             raise ValueError("n_threads must be -1 or a positive integer.")
-        self._n_threads = value
+        self.n_threads = value
 
     @property
     def progress(self):
