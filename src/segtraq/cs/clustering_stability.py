@@ -37,7 +37,7 @@ def cluster_connectedness(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = 1,
+    n_threads: int | None = None,
 ) -> float:
     """
     Compute cluster connectedness for different Leiden clustering resolutions
@@ -178,7 +178,7 @@ def silhouette_score(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = 1,
+    n_threads: int | None = None,
 ) -> float:
     """
     Compute the silhouette score for different resolutions and report the best one.
@@ -321,7 +321,7 @@ def purity(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = 1,
+    n_threads: int | None = None,
 ) -> float:
     """
     Compute the clustering stability using pairwise purity on random subsets of cells.
@@ -432,7 +432,7 @@ def adjusted_rand_index(
     target_sum: float | None = None,
     inplace: bool = True,
     leiden_kwargs: dict | None = None,
-    n_threads: int | None = 1,
+    n_threads: int | None = None,
 ) -> float:
     """
     Compute the clustering stability using pairwise adjusted Rand index (ARI) on random subset of cells.

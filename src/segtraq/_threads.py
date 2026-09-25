@@ -5,18 +5,21 @@ from contextlib import contextmanager
 import numba
 from threadpoolctl import threadpool_limits
 
+from ._settings import settings
+
 
 @contextmanager
-def pinned_threads(n_threads: int | None = 1):
+def pinned_threads(n_threads: int | None = None):
     """Temporarily fix the numba, BLAS and OpenMP thread counts.
 
-    If ``n_threads`` is None, nothing is changed (libraries auto-detect from CPU affinity).
+    If ``n_threads`` is None, it will be taken from ``settings.n_threads``.
+    If ``n_threads`` is -1, the context manager does nothing.
     """
     if n_threads is None:
+        n_threads = settings.n_threads
+    if n_threads == -1:
         yield
         return
-    if n_threads < 1:
-        raise ValueError(f"n_threads must be >= 1 or None, got {n_threads}.")
 
     old_numba = numba.get_num_threads()
     numba.set_num_threads(min(n_threads, numba.config.NUMBA_NUM_THREADS))

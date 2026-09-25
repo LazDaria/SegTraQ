@@ -641,7 +641,7 @@ class SegTraQ:
         purity_kwargs: dict | None = None,
         ari_kwargs: dict | None = None,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = 1,
+        n_threads: int | None = None,
         _leave: bool = True,
     ):
         """
@@ -685,7 +685,7 @@ class SegTraQ:
             Additional keyword arguments forwarded to Leiden clustering in all
             underlying methods that perform clustering.
             For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-        n_threads : int or None, default=1
+        n_threads : int or None, default=None
             Number of threads used by numba, BLAS and OpenMP in all four
             computations. Results are only reproducible for a fixed ``n_threads``;
             the default of 1 gives identical results regardless of the node's
@@ -2049,7 +2049,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = 1,
+        n_threads: int | None = None,
     ) -> float:
         return cs.silhouette_score(
             sdata=self._p.sdata,
@@ -2084,7 +2084,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = 1,
+        n_threads: int | None = None,
     ) -> float:
         return cs.purity(
             sdata=self._p.sdata,
@@ -2117,7 +2117,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = 1,
+        n_threads: int | None = None,
     ) -> float:
         return cs.adjusted_rand_index(
             sdata=self._p.sdata,
@@ -2152,7 +2152,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
-        n_threads: int | None = 1,
+        n_threads: int | None = None,
     ):
         return cs.cluster_connectedness(
             sdata=self._p.sdata,
