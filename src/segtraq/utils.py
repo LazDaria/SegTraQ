@@ -2804,3 +2804,27 @@ def _check_reserved_kwargs(name: str, kwargs: dict, reserved: set[str] | frozens
     clash = set(reserved) & kwargs.keys()
     if clash:
         raise ValueError(f"`{name}` must not contain {sorted(clash)}; pass these arguments directly instead.")
+
+
+def _nucleus_shapes_status(sdata: sd.SpatialData, nucleus_shapes_key: str | None) -> tuple[bool, str | None]:
+    """
+    Check whether a usable nucleus shapes layer is available.
+
+    Parameters
+    ----------
+    sdata : SpatialData
+        SpatialData object to check.
+    nucleus_shapes_key : str or None
+        Key of the nucleus shapes layer in `sdata.shapes`.
+
+    Returns
+    -------
+    tuple[bool, str | None]
+        `(True, None)` if the layer exists. Otherwise `(False, reason)`, where
+        `reason` describes why the layer is unavailable.
+    """
+    if nucleus_shapes_key is None:
+        return False, "`nucleus_shapes_key` is None"
+    if nucleus_shapes_key not in sdata.shapes:
+        return False, f"nucleus shapes '{nucleus_shapes_key}' not found in `sdata.shapes`"
+    return True, None
