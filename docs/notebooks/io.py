@@ -24,8 +24,6 @@
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
-
-# %%
 import spatialdata_io  # noqa
 import spatialdata_plot  # noqa
 import segtraq

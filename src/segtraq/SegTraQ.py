@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -15,7 +16,6 @@ from .utils import (
     _get_segtraq_markers,
     _require_reference,
     _store_segtraq_markers,
-    _warn_always,
     validate_spatialdata,
 )
 from .utils import filter_cells as _filter_cells
@@ -631,6 +631,7 @@ class SegTraQ:
         purity_kwargs: dict | None = None,
         ari_kwargs: dict | None = None,
         leiden_kwargs: dict | None = None,
+        n_threads: int | None = 1,
         _leave: bool = True,
     ):
         """
@@ -674,6 +675,12 @@ class SegTraQ:
             Additional keyword arguments forwarded to Leiden clustering in all
             underlying methods that perform clustering.
             For example, `flavor='igraph'` can be used to specify the Leiden implementation.
+        n_threads : int or None, default=1
+            Number of threads used by numba, BLAS and OpenMP in all four
+            computations. Results are only reproducible for a fixed ``n_threads``;
+            the default of 1 gives identical results regardless of the node's
+            CPU allocation. ``None`` keeps the libraries' defaults
+            (auto-detected from CPU affinity, not reproducible across machines).
 
         Returns
         -------
@@ -694,6 +701,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(connectedness_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
+                    n_threads=n_threads,
                 )
 
             with p.step("silhouette score"):
@@ -703,6 +711,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(silhouette_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
+                    n_threads=n_threads,
                 )
 
             with p.step("purity"):
@@ -712,6 +721,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(purity_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
+                    n_threads=n_threads,
                 )
 
             with p.step("adjusted Rand index"):
@@ -721,6 +731,7 @@ class SegTraQ:
                     inplace=inplace,
                     **(ari_kwargs or {}),
                     leiden_kwargs=leiden_kwargs,
+                    n_threads=n_threads,
                 )
 
         if inplace:
@@ -1235,9 +1246,10 @@ class SegTraQ:
                         )
                         cell_type_key = "transferred_cell_type"
                     except Exception as exc:
-                        # when running with n_jobs>1, warnings.warn() doesn't always show the warning in the notebook
-                        _warn_always(
-                            f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed."
+                        warnings.warn(
+                            f"Could not run label transfer ({exc}). Cell-type-aware metrics will not be computed.",
+                            UserWarning,
+                            stacklevel=2,
                         )
 
             for name, runner in runners.items():
@@ -1245,8 +1257,11 @@ class SegTraQ:
                     try:
                         results[name] = runner()
                     except Exception as exc:
-                        # when running with n_jobs>1, warnings.warn() doesn't always show the warning in the notebook
-                        _warn_always(f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).")
+                        warnings.warn(
+                            f"Skipping `run_{name}`: metric(s) could not be computed ({exc}).",
+                            UserWarning,
+                            stacklevel=2,
+                        )
                         skipped[name] = str(exc)
                         results[name] = None
 
@@ -2037,7 +2052,7 @@ class _CSFacade:
 
     def silhouette_score(
         self,
-        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        resolution: float | list[float] = 0.2,
         metric: str = "euclidean",
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
@@ -2049,6 +2064,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
+        n_threads: int | None = 1,
     ) -> float:
         return cs.silhouette_score(
             sdata=self._p.sdata,
@@ -2066,13 +2082,14 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
+            n_threads=n_threads,
         )
 
     silhouette_score.__doc__ = cs.silhouette_score.__doc__
 
     def purity(
         self,
-        resolution: float = 1.0,
+        resolution: float = 0.2,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool | None = None,
@@ -2082,6 +2099,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
+        n_threads: int | None = 1,
     ) -> float:
         return cs.purity(
             sdata=self._p.sdata,
@@ -2097,13 +2115,14 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
+            n_threads=n_threads,
         )
 
     purity.__doc__ = cs.purity.__doc__
 
     def adjusted_rand_index(
         self,
-        resolution: float = 1.0,
+        resolution: float = 0.2,
         frac_cells_subset: float = 0.63,
         key_prefix: str = "leiden_subset",
         use_hvg: bool | None = None,
@@ -2113,6 +2132,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
+        n_threads: int | None = 1,
     ) -> float:
         return cs.adjusted_rand_index(
             sdata=self._p.sdata,
@@ -2128,13 +2148,14 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
+            n_threads=n_threads,
         )
 
     adjusted_rand_index.__doc__ = cs.adjusted_rand_index.__doc__
 
     def cluster_connectedness(
         self,
-        resolution: float | list[float] = (0.6, 0.8, 1.0),
+        resolution: float | list[float] = 0.2,
         use_weights: bool = False,
         key_prefix: str = "leiden_subset",
         random_state: int = 42,
@@ -2146,6 +2167,7 @@ class _CSFacade:
         target_sum: float | None = None,
         inplace: bool = True,
         leiden_kwargs: dict | None = None,
+        n_threads: int | None = 1,
     ):
         return cs.cluster_connectedness(
             sdata=self._p.sdata,
@@ -2163,6 +2185,7 @@ class _CSFacade:
             target_sum=target_sum,
             inplace=inplace,
             leiden_kwargs=leiden_kwargs,
+            n_threads=n_threads,
         )
 
     cluster_connectedness.__doc__ = cs.cluster_connectedness.__doc__

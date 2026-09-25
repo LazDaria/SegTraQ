@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 import spatialdata as sd
-from joblib import Parallel, delayed
+from joblib import delayed
 from pandas import DataFrame
 
 from .._settings import settings
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
-from ..utils import _exclude_genes_by_prefix, _get_count_matrix, _get_genes, merge_into_obs
+from ..utils import _exclude_genes_by_prefix, _get_count_matrix, _get_genes, _Parallel, merge_into_obs
 from .utils import (
     _border_admixture_permutation_metrics,
     _get_center_border_counts,
@@ -93,7 +93,7 @@ def match_nuclei_to_cells(
 
     # Each cell can be matched independently. Threading avoids repeatedly copying
     # the GeoDataFrames and spatial index to worker processes.
-    results = Parallel(n_jobs=n_jobs, verbose=0, backend=parallel_backend)(
+    results = _Parallel(n_jobs=n_jobs, verbose=0, backend=parallel_backend)(
         delayed(_match_nucleus_one_cell)(
             cell_row=cell_row,
             nucleus_shapes=nuc_boundaries,
@@ -388,7 +388,7 @@ def similarity_nucleus_cell(
         }
 
     # Permutations are independent across cells, so parallelize at the cell level.
-    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+    rows = _Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_compute_one)(row, seed) for (_, row), seed in zip(match_df.iterrows(), seeds, strict=False)
     )
 
@@ -636,7 +636,7 @@ def similarity_nucleus_cytoplasm(
             **_rename_similarity_metrics(base_metrics, "similarity_nucleus_cytoplasm"),
         }
 
-    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+    rows = _Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_compute_one)(i, cid, seed) for i, (cid, seed) in enumerate(zip(all_cells, seeds, strict=False))
     )
 
@@ -818,7 +818,7 @@ def border_admixture_score(
         )
         return {id_key: cid, **result}
 
-    rows = Parallel(n_jobs=n_jobs, backend=parallel_backend)(
+    rows = _Parallel(n_jobs=n_jobs, backend=parallel_backend)(
         delayed(_one_cell)(i, cid, seed) for i, (cid, seed) in enumerate(zip(common_cells, seeds, strict=False))
     )
     out = pd.DataFrame(rows)
