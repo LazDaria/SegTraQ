@@ -85,8 +85,9 @@ def cluster_connectedness(
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
-        graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
+        graph construction and clustering. If None, uses `segtraq.settings.n_jobs` (default: 1).
+        Set to -1 to use all CPUs available to the current process.
+        Results are only reproducible for a fixed number of threads.
 
     Returns
     -------
@@ -221,8 +222,9 @@ def silhouette_score(
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
-        graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
+        graph construction and clustering. If None, uses `segtraq.settings.n_jobs` (default: 1).
+        Set to -1 to use all CPUs available to the current process.
+        Results are only reproducible for a fixed number of threads.
 
     Returns
     -------
@@ -356,8 +358,9 @@ def purity(
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
-        graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
+        graph construction and clustering. If None, uses `segtraq.settings.n_jobs` (default: 1).
+        Set to -1 to use all CPUs available to the current process.
+        Results are only reproducible for a fixed number of threads.
 
     Returns
     -------
@@ -464,8 +467,9 @@ def adjusted_rand_index(
         For example, `flavor='igraph'` can be used to specify the Leiden implementation.
     n_jobs : int or None, optional
         Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
-        graph construction and clustering. Results are only reproducible for
-        a fixed ``n_jobs``. Should be set via `segtraq._settings.settings.n_jobs`.
+        graph construction and clustering. If None, uses `segtraq.settings.n_jobs` (default: 1).
+        Set to -1 to use all CPUs available to the current process.
+        Results are only reproducible for a fixed number of threads.
 
     Returns
     -------

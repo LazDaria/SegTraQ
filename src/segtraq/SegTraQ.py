@@ -685,12 +685,11 @@ class SegTraQ:
             Additional keyword arguments forwarded to Leiden clustering in all
             underlying methods that perform clustering.
             For example, `flavor='igraph'` can be used to specify the Leiden implementation.
-        n_jobs : int or None, default=None
-            Number of threads used by numba, BLAS and OpenMP in all four
-            computations. Results are only reproducible for a fixed ``n_jobs``;
-            the default of 1 gives identical results regardless of the node's
-            CPU allocation. ``None`` keeps the libraries' defaults
-            (auto-detected from CPU affinity, not reproducible across machines).
+        n_jobs : int or None, optional
+            Number of threads used by numba, BLAS and OpenMP for PCA, neighbor
+            graph construction and clustering. If None, uses `segtraq.settings.n_jobs` (default: 1).
+            Set to -1 to use all CPUs available to the current process.
+            Results are only reproducible for a fixed number of threads.
 
         Returns
         -------

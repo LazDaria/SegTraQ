@@ -14,12 +14,16 @@ def pinned_threads(n_jobs: int | None = None):
     """Temporarily fix the numba, BLAS and OpenMP thread counts.
 
     If ``n_jobs`` is None, it will be taken from ``settings.n_jobs``.
-    If ``n_jobs`` is -1, the context manager does nothing.
+    If ``n_jobs`` is -1, maximum parallelism is used.
     """
     if n_jobs is None:
         n_jobs = settings.n_jobs
     if n_jobs == -1:
         n_jobs = len(os.sched_getaffinity(0))
+    if n_jobs < 1:
+        raise ValueError(
+            "n_jobs must be -1 or a positive integer. Set to None to use the default from segtraq.settings.n_jobs."
+        )
 
     old_numba = numba.get_num_threads()
     numba.set_num_threads(min(n_jobs, numba.config.NUMBA_NUM_THREADS))

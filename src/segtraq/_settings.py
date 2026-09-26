@@ -8,9 +8,7 @@ class Settings:
         # note that for the clustering stability metrics,
         # we use the n_jobs parameter to control the number of threads used by
         # numba, BLAS and OpenMP for PCA, neighbor graph construction and clustering.
-        # Results are only reproducible for a fixed n_jobs;
-        # the default of 1 gives identical results regardless of the node's CPU allocation.
-        # None keeps the libraries' defaults (auto-detected from CPU affinity, not reproducible across machines).
+        # Results are only reproducible for a fixed n_jobs.
         return self._n_jobs
 
     @n_jobs.setter
