@@ -5,6 +5,10 @@ class Settings:
 
     @property
     def n_jobs(self):
+        # note that for the clustering stability metrics,
+        # we use the n_jobs parameter to control the number of threads used by
+        # numba, BLAS and OpenMP for PCA, neighbor graph construction and clustering.
+        # Results are only reproducible for a fixed n_jobs.
         return self._n_jobs
 
     @n_jobs.setter

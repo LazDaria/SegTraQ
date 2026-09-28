@@ -30,7 +30,7 @@ The number of CPU cores used by SegTraQ can be set globally via `segtraq.setting
 ```python
 import segtraq as st
 
-st.settings.n_jobs = -1  # Use all available CPU cores
+st.settings.n_jobs = 8  # Use 8 CPU cores (-1 for all available cores)
 ```
 
 ## System Requirements

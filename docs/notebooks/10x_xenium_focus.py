@@ -107,7 +107,7 @@ import spatialdata_plot  # noqa
 
 import segtraq
 
-segtraq.settings.n_jobs = -1  # Use all available CPU cores
+segtraq.settings.n_jobs = 8  # Use 8 CPU cores (-1 for all available cores)
 
 # warnings.filterwarnings(action="ignore")
 

@@ -40,7 +40,7 @@ import spatialdata as sd
 
 import segtraq
 
-segtraq.settings.n_jobs = -1  # Use all available CPU cores
+segtraq.settings.n_jobs = 8  # Use 8 CPU cores (-1 for all available cores)
 
 sdata = sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr")
 
