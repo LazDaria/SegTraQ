@@ -17,6 +17,11 @@ st.settings.n_jobs = -1
 RTOL = 1e-5
 ATOL = 1e-8
 
+# `.uns` DataFrames whose row order is not deterministic, mapped to the columns that identify a row.
+# the gene pairs of the mutually exclusive co-expression rate are collected in a set, so their order
+# depends on Python's (randomized) string hashing
+UNORDERED_UNS_FRAMES = {"mutually_exclusive_coexpression_rate": ["gene1", "gene2"]}
+
 
 def _load_generator():
     # tests are imported with `--import-mode=importlib`, so the script cannot be imported by name
@@ -84,8 +89,15 @@ def _assert_table_equal(actual, expected, where):
     _assert_frame_equal(actual.obs, expected.obs, f"{where}.obs")
     _assert_frame_equal(actual.var, expected.var, f"{where}.var")
     _assert_array_equal(actual.X, expected.X, f"{where}.X")
-    for attr in ("layers", "obsm", "varm", "obsp", "varp", "uns"):
+    for attr in ("layers", "obsm", "varm", "obsp", "varp"):
         _assert_equal(dict(getattr(actual, attr)), dict(getattr(expected, attr)), f"{where}.{attr}")
+
+    actual_uns, expected_uns = dict(actual.uns), dict(expected.uns)
+    for key, sort_cols in UNORDERED_UNS_FRAMES.items():
+        for uns in (actual_uns, expected_uns):
+            if isinstance(uns.get(key), pd.DataFrame):
+                uns[key] = uns[key].sort_values(sort_cols).reset_index(drop=True)
+    _assert_equal(actual_uns, expected_uns, f"{where}.uns")
 
 
 def assert_sdata_equal(actual: SpatialData, expected: SpatialData):
