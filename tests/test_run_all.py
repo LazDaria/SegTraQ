@@ -11,7 +11,8 @@ from spatialdata import SpatialData
 
 import segtraq as st
 
-st.settings.n_jobs = -1
+# forcing to 2 for reproducibility
+st.settings.n_jobs = 2
 
 # tolerances for comparing floating point outputs against the saved reference
 RTOL = 1e-5

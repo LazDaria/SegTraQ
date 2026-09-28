@@ -93,7 +93,8 @@ def main():
     parser.add_argument("--overwrite", action="store_true", help="Overwrite the output if it already exists.")
     args = parser.parse_args()
 
-    st.settings.n_jobs = -1
+    # forcing to 2 for reproducibility
+    st.settings.n_jobs = 2
 
     sdata = run_all_on_proseg(args.proseg, args.adata_ref)
     sdata.write(args.output, overwrite=args.overwrite)
