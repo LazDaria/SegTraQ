@@ -45,13 +45,14 @@ jobs:
 
         curl -L --fail --retry 3 \
           -o test_data.tar.gz \
-          "https://zenodo.org/records/23017148/files/segtraq_test_data_v5.tar.gz?download=1"
+          "https://zenodo.org/records/23018220/files/segtraq_test_data_v6.tar.gz?download=1"
 
         tar -xzf test_data.tar.gz -C tests/data
     - name: Verify test data
       run: |
         test -d tests/data/xenium.zarr
         test -d tests/data/proseg2.zarr
+        test -d tests/data/proseg2_run_all.zarr
         test -f tests/data/scRNAseq_ref_subset.h5ad
     - name: Lint with ruff
       run: |
