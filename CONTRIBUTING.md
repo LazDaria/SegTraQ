@@ -60,7 +60,7 @@ Ready to contribute? Here's how to set up `segtraq` for local development.
    curl -L --fail --retry 3 \
           -o test_data.tar.gz \
           "https://zenodo.org/records/23018220/files/segtraq_test_data_v6.tar.gz?download=1"
-   tar -xzf test_data.tar.gz -C tests/data
+   tar -xzf test_data.tar.gz -C tests
 ```
    Test data is not bundled with the repository. This step is required before running the test suite locally.
 

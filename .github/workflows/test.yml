@@ -47,7 +47,7 @@ jobs:
           -o test_data.tar.gz \
           "https://zenodo.org/records/23018220/files/segtraq_test_data_v6.tar.gz?download=1"
 
-        tar -xzf test_data.tar.gz -C tests/data
+        tar -xzf test_data.tar.gz -C tests
     - name: Verify test data
       run: |
         test -d tests/data/xenium.zarr
