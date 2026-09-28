@@ -1,6 +1,6 @@
 import segtraq as st
 
-st.settings.n_jobs = -1
+st.settings.n_jobs = 2
 
 
 # this simply tests if run_region_similarity works without errors
