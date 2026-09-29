@@ -445,8 +445,12 @@ def _join_points_regions(
         predicate=predicate,
     ).drop(columns=["index_right"])
 
-    # if a point intersects multiple polygons, keep the first match
-    pts_joined = pts_joined.sort_values("point_id").drop_duplicates(subset="point_id", keep="first")
+    # if a point intersects multiple polygons, keep the match with the smallest region id.
+    # ties on point_id must be broken explicitly: the default quicksort is not stable, and the order
+    # of equal keys (and of the sjoin output) can differ between CPUs and package versions
+    pts_joined = pts_joined.sort_values(["point_id", "region_id"], kind="stable").drop_duplicates(
+        subset="point_id", keep="first"
+    )
 
     # optionally restrict to points whose region id matches another point column
     if require_points_region_ID_match:

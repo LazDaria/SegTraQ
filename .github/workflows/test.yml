@@ -45,7 +45,7 @@ jobs:
 
         curl -L --fail --retry 3 \
           -o test_data.tar.gz \
-          "https://zenodo.org/records/23018220/files/segtraq_test_data_v6.tar.gz?download=1"
+          "https://zenodo.org/records/23032420/files/segtraq_test_data_v7.tar.gz?download=1"
 
         tar -xzf test_data.tar.gz -C tests
     - name: Verify test data
