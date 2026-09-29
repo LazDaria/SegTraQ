@@ -28,9 +28,13 @@ def mutually_exclusive_coexpression_rate(
     - gene_A is a positive marker of A and a negative marker of B, and
     - gene_B is a positive marker of B and a negative marker of A.
 
-    For each candidate pair, a one-sided Fisher's exact test evaluates whether
-    the two genes are detected together less frequently than expected under
-    independence.
+    To ensure that candidate pairs represent globally mutually exclusive marker
+    relationships, pairs are excluded if both genes are positive markers of the
+    same cell type in any reference cell type.
+
+    For each remaining candidate pair, a one-sided Fisher's exact test across
+    all cells evaluates whether the two genes are detected together less
+    frequently than expected under independence.
 
     Parameters
     ----------
@@ -72,14 +76,13 @@ def mutually_exclusive_coexpression_rate(
     )
 
     X = _get_count_matrix(adata, layer=tables_raw_counts_layer)
-    X_dense = X.toarray() if hasattr(X, "toarray") else np.asarray(X)
 
     var_index = _get_genes(
         adata=adata,
         gene_key=tables_gene_key,
     )
 
-    n_cells = X_dense.shape[0]
+    n_cells = X.shape[0]
 
     # --- build reciprocal mutually exclusive marker pairs ---
     candidate_pairs = set()
@@ -104,28 +107,41 @@ def mutually_exclusive_coexpression_rate(
                     if g_a != g_b:
                         candidate_pairs.add(tuple(sorted((g_a, g_b))))
 
-    # only consider positive expression values in the spatial data
-    det = X_dense > 0
+    # Exclude pairs that are jointly positive markers of any cell type.
+    positive_sets = [set((markers[ct] or {}).get("positive", []) or []) for ct in celltypes]
+
+    candidate_pairs = {
+        (g1, g2) for g1, g2 in candidate_pairs if not any(g1 in pos and g2 in pos for pos in positive_sets)
+    }
 
     rows = []
 
-    for g1, g2 in candidate_pairs:
-        # markers do not need to have been pre-filtered to the spatial panel
+    for g1, g2 in sorted(candidate_pairs):
         if g1 not in var_index or g2 not in var_index:
             continue
 
         i1, i2 = var_index.get_loc(g1), var_index.get_loc(g2)
-        e1, e2 = det[:, i1], det[:, i2]
 
-        #             gene2+
-        #             yes     no
-        # gene1+ yes   a       b
-        #        no    c       d
+        # a gene is considered detected if its expression value is > 0.
+        if sparse.issparse(X):
+            e1 = X[:, i1] > 0
+            e2 = X[:, i2] > 0
 
-        a = int((e1 & e2).sum())
-        b = int((e1 & ~e2).sum())
-        c = int((~e1 & e2).sum())
-        d = int((~e1 & ~e2).sum())
+            n1 = e1.nnz
+            n2 = e2.nnz
+            a = e1.multiply(e2).nnz
+
+            b = n1 - a
+            c = n2 - a
+            d = n_cells - a - b - c
+        else:
+            e1 = np.asarray(X[:, i1]).ravel() > 0
+            e2 = np.asarray(X[:, i2]).ravel() > 0
+
+            a = int((e1 & e2).sum())
+            b = int((e1 & ~e2).sum())
+            c = int((~e1 & e2).sum())
+            d = int((~e1 & ~e2).sum())
 
         assert d == n_cells - a - b - c, (
             "Contingency table counts do not sum to total number of cells. "
