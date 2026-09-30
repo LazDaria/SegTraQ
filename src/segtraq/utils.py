@@ -2828,3 +2828,21 @@ def _nucleus_shapes_status(sdata: sd.SpatialData, nucleus_shapes_key: str | None
     if nucleus_shapes_key not in sdata.shapes:
         return False, f"nucleus shapes '{nucleus_shapes_key}' not found in `sdata.shapes`"
     return True, None
+
+
+def _same_xy_transformations(a: dict, b: dict) -> bool:
+    """
+    Check whether two `{coordinate_system: transformation}` dicts agree in the x/y plane.
+
+    Comparing spatialdata transformations with `==` raises instead of returning False when one
+    is defined over (x, y) and the other over (x, y, z), so the 2D affine matrices are compared.
+    """
+    if a.keys() != b.keys():
+        return False
+    return all(
+        np.allclose(
+            a[cs].to_affine_matrix(input_axes=("x", "y"), output_axes=("x", "y")),
+            b[cs].to_affine_matrix(input_axes=("x", "y"), output_axes=("x", "y")),
+        )
+        for cs in a
+    )

@@ -11,7 +11,7 @@ from rtree.index import Index
 from scipy.sparse import coo_matrix
 from shapely.geometry.base import BaseGeometry
 
-from ..utils import _get_genes, _is_background, filter_cells
+from ..utils import _get_genes, _is_background, _same_xy_transformations, filter_cells
 
 
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
@@ -339,8 +339,8 @@ def _join_points_regions(
       - performs a spatial join against `sdata.shapes[region_key]`
       - optionally keeps only matches whose region id equals points_cell_id_key
         (useful when region ids are cell ids, e.g. centers/borders; ensures compatibility
-        with 3D-aware segmentation, where transcripts may share x/y coordinates but
-        belong to different z-resolved cells). This happens before deduplicating, so that a
+        with transcript assignment methods, where transcripts may be located
+        outside of their cell polygon). This happens before deduplicating, so that a
         point in overlapping regions is kept for the region of its own cell.
       - deduplicates points that intersect multiple polygons by keeping one of the matches at
         random (seeded by `random_state`, independent of the order of the join output)
@@ -397,6 +397,14 @@ def _join_points_regions(
     counts : pandas.DataFrame
         Region x gene count matrix (rows = all regions from shapes index, columns = all genes).
     """
+    # the join compares raw point and polygon coordinates, so both must live in the same x/y space
+    T_points = sdata.points[points_key].attrs.get("transform", {})
+    T_regions = sdata.shapes[region_key].attrs.get("transform", {})
+    if not _same_xy_transformations(T_points, T_regions):
+        raise ValueError(
+            f"Transcripts ({points_key!r}) and regions ({region_key!r}) are not aligned: their transformations "
+            f"differ in the x/y plane ({T_points} vs {T_regions}). Please ensure they share the same transformation."
+        )
 
     transcripts = _get_filtered_points_df(
         sdata=sdata,
@@ -443,9 +451,8 @@ def _join_points_regions(
     region_gdf.reset_index(inplace=True)
     region_gdf = region_gdf[["region_id", "geometry"]]
 
-    # drop the spatialdata metadata (e.g. transformations) carried over from the points and shapes:
-    # sjoin concatenates both frames, and pandas then compares their attrs, which raises when the
-    # transformations are defined over different axes (3D points vs 2D shapes)
+    # drop the spatialdata metadata (e.g. transformations) carried over from the points and shapes
+    # these cause problems with geopandas 1.2.0+
     pts_gdf.attrs = {}
     region_gdf.attrs = {}
 
