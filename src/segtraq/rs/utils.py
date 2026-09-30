@@ -439,6 +439,12 @@ def _join_points_regions(
     region_gdf.reset_index(inplace=True)
     region_gdf = region_gdf[["region_id", "geometry"]]
 
+    # drop the spatialdata metadata (e.g. transformations) carried over from the points and shapes:
+    # sjoin concatenates both frames, and pandas then compares their attrs, which raises when the
+    # transformations are defined over different axes (3D points vs 2D shapes)
+    pts_gdf.attrs = {}
+    region_gdf.attrs = {}
+
     pts_joined = gpd.sjoin(
         pts_gdf,
         region_gdf,
