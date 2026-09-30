@@ -3,7 +3,7 @@ import pytest
 
 import segtraq as st
 
-st.settings.n_jobs = 2
+st.settings.n_jobs = -1
 
 
 def test_match_nuclei_to_cells(sdata_new):

@@ -336,7 +336,8 @@ def _join_points_regions(
       - filters background points and genes not present in `sdata.tables[tables_key]`
       - converts points to a GeoDataFrame
       - performs a spatial join against `sdata.shapes[region_key]`
-      - deduplicates points that intersect multiple polygons by keeping the first match
+      - deduplicates points that intersect multiple polygons by keeping the match with the
+        smallest region id, so that the result does not depend on the order of the join output
       - optionally keeps only points whose assigned region id equals points_cell_id_key
         (useful when region ids are cell ids, e.g. centers/borders; ensures compatibility
         with 3D-aware segmentation, where transcripts may share x/y coordinates but

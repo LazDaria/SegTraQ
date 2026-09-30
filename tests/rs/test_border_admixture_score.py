@@ -3,7 +3,7 @@ import pytest
 
 import segtraq as st
 
-st.settings.n_jobs = 2
+st.settings.n_jobs = -1
 
 
 def test_border_admixture_score_type(sdata_new):

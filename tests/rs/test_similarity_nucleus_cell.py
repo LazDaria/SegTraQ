@@ -3,7 +3,7 @@ import pandas as pd
 import segtraq as st
 from segtraq.utils import _filter_control_and_low_quality_transcripts
 
-st.settings.n_jobs = 2
+st.settings.n_jobs = -1
 
 
 def test_similarity_nucleus_cell(sdata_new):
