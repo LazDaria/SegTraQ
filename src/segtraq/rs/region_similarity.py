@@ -263,9 +263,13 @@ def similarity_nucleus_cell(
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+    T_transcripts = sdata.points[points_key].attrs["transform"]
 
     assert _same_xy_transformations(T_cells, T_nuclei), (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
+    assert _same_xy_transformations(T_cells, T_transcripts), (
+        "Cell shapes and transcript points are not aligned. Please ensure they share the same transformation."
     )
 
     adata = sdata.tables[tables_key]
@@ -523,9 +527,13 @@ def similarity_nucleus_cytoplasm(
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+    T_transcripts = sdata.points[points_key].attrs["transform"]
 
     assert _same_xy_transformations(T_cells, T_nuclei), (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
+    assert _same_xy_transformations(T_cells, T_transcripts), (
+        "Cell shapes and transcript points are not aligned. Please ensure they share the same transformation."
     )
 
     cells_gdf = sdata.shapes[shapes_key]

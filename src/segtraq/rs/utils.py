@@ -397,15 +397,6 @@ def _join_points_regions(
     counts : pandas.DataFrame
         Region x gene count matrix (rows = all regions from shapes index, columns = all genes).
     """
-    # the join compares raw point and polygon coordinates, so both must live in the same x/y space
-    T_points = sdata.points[points_key].attrs.get("transform", {})
-    T_regions = sdata.shapes[region_key].attrs.get("transform", {})
-    if not _same_xy_transformations(T_points, T_regions):
-        raise ValueError(
-            f"Transcripts ({points_key!r}) and regions ({region_key!r}) are not aligned: their transformations "
-            f"differ in the x/y plane ({T_points} vs {T_regions}). Please ensure they share the same transformation."
-        )
-
     transcripts = _get_filtered_points_df(
         sdata=sdata,
         tables_gene_key=tables_gene_key,
