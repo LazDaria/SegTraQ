@@ -11,7 +11,6 @@ from ..utils import (
     _get_count_matrix,
     _get_genes,
     _Parallel,
-    _same_xy_transformations,
     merge_into_obs,
 )
 from .utils import (
@@ -89,7 +88,7 @@ def match_nuclei_to_cells(
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
 
-    assert _same_xy_transformations(T_cells, T_nuclei), (
+    assert T_cells == T_nuclei, (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
@@ -264,7 +263,7 @@ def similarity_nucleus_cell(
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
 
-    assert _same_xy_transformations(T_cells, T_nuclei), (
+    assert T_cells == T_nuclei, (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
@@ -524,7 +523,7 @@ def similarity_nucleus_cytoplasm(
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
 
-    assert _same_xy_transformations(T_cells, T_nuclei), (
+    assert T_cells == T_nuclei, (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 

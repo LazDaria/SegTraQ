@@ -61,6 +61,16 @@ jobs:
     - name: List all files for debugging
       run: |
         find . -type f | sort
+    # temporary debug
+    - name: Debug region similarity
+      run: |
+        python -c "
+        import importlib.util, segtraq as st
+        from spatialdata import SpatialData
+        spec = importlib.util.spec_from_file_location('g', 'tests/generate_run_all_reference.py')
+        g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)
+        st.SegTraQ(SpatialData.read(g.PROSEG_PATH), **g.SEGTRAQ_KWARGS).run_region_similarity(inplace=True)
+        "
     - name: Run tests with coverage
       run: |
         pytest  --import-mode=importlib --cov=segtraq --cov-report=term-missing --cov-report=xml
