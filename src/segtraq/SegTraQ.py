@@ -909,21 +909,17 @@ class SegTraQ:
         _check_reserved_kwargs("markers_from_reference_kwargs", markers_from_reference_kwargs, reference_kwargs.keys())
         _check_reserved_kwargs("purity_kwargs", purity_kwargs, {"cell_type_key", "markers", "inplace"})
         _check_reserved_kwargs("contamination_kwargs", contamination_kwargs, {"cell_type_key", "markers", "inplace"})
-        _check_reserved_kwargs("mecr_kwargs", mecr_kwargs, {"markers", "inplace"})
-
+        _check_reserved_kwargs("mecr_kwargs", mecr_kwargs, reference_kwargs.keys() | {"markers", "inplace"})
         label_transfer_result = None
 
         adata = self.sdata.tables[self.tables_key]
         has_stored_markers = "segtraq_markers" in adata.uns
 
-        needs_reference = cell_type_key is None or (markers is None and not has_stored_markers)
-
-        if needs_reference:
-            _require_reference(
-                adata_ref,
-                ref_cell_type,
-                condition=("`cell_type_key=None` or no explicit/stored markers are available"),
-            )
+        _require_reference(
+            adata_ref,
+            ref_cell_type,
+            condition="running supervised module",
+        )
 
         # Work out upfront which optional steps will run, so the progress bar total is correct.
         do_label_transfer = cell_type_key is None
@@ -974,6 +970,11 @@ class SegTraQ:
 
             with p.step("mutually exclusive co-expression rate"):
                 mecr_df = self.sp.mutually_exclusive_coexpression_rate(
+                    adata_ref=adata_ref,
+                    ref_cell_type=ref_cell_type,
+                    ref_gene_key=ref_gene_key,
+                    query_gene_key=query_gene_key,
+                    ref_raw_counts_layer=ref_raw_counts_layer,
                     markers=markers,
                     inplace=inplace,
                     **mecr_kwargs,
@@ -1835,6 +1836,7 @@ class _SPFacade:
         markers: dict[str, dict[str, list[str]]] | None = None,
         ref_raw_counts_layer: str | None = None,
         ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
         min_pos_frac: float = 0.25,
         max_ref_coexpression_ratio: float = 0.75,
         inplace: bool = True,
@@ -1849,6 +1851,7 @@ class _SPFacade:
             tables_raw_counts_layer=self._p.tables_raw_counts_layer,
             ref_raw_counts_layer=ref_raw_counts_layer,
             ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
             min_pos_frac=min_pos_frac,
             max_ref_coexpression_ratio=max_ref_coexpression_ratio,
             inplace=inplace,
