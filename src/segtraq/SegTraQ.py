@@ -1830,15 +1830,27 @@ class _SPFacade:
 
     def mutually_exclusive_coexpression_rate(
         self,
+        adata_ref: AnnData,
+        ref_cell_type: str,
         markers: dict[str, dict[str, list[str]]] | None = None,
+        ref_raw_counts_layer: str | None = None,
+        ref_gene_key: str | None = None,
+        min_pos_frac: float = 0.25,
+        max_ref_coexpression_ratio: float = 0.75,
         inplace: bool = True,
     ):
         return sp.mutually_exclusive_coexpression_rate(
             sdata=self._p.sdata,
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
             markers=markers,
             tables_key=self._p.tables_key,
             tables_gene_key=self._p.tables_gene_key,
             tables_raw_counts_layer=self._p.tables_raw_counts_layer,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+            ref_gene_key=ref_gene_key,
+            min_pos_frac=min_pos_frac,
+            max_ref_coexpression_ratio=max_ref_coexpression_ratio,
             inplace=inplace,
         )
 
