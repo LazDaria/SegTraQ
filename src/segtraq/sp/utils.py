@@ -1,5 +1,6 @@
-from scipy import sparse
 import numpy as np
+from scipy import sparse
+
 
 def _binary_detection_matrix(X, idx):
     """Return a binary cell-by-gene detection matrix."""

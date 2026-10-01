@@ -9,8 +9,16 @@ from scipy import sparse
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 
-from ..utils import _get_count_matrix, _get_genes, _get_segtraq_markers, merge_into_obs, merge_into_uns, _align_query_reference_genes
+from ..utils import (
+    _align_query_reference_genes,
+    _get_count_matrix,
+    _get_genes,
+    _get_segtraq_markers,
+    merge_into_obs,
+    merge_into_uns,
+)
 from .utils import _binary_detection_matrix
+
 
 def mutually_exclusive_coexpression_rate(
     sdata,
@@ -140,11 +148,7 @@ def mutually_exclusive_coexpression_rate(
     for marker_set in markers.values():
         positive = sorted(set(marker_set.get("positive", [])) & shared_genes)
 
-        co_positive_pairs.update(
-            (g1, g2)
-            for i, g1 in enumerate(positive)
-            for g2 in positive[i + 1:]
-        )
+        co_positive_pairs.update((g1, g2) for i, g1 in enumerate(positive) for g2 in positive[i + 1 :])
 
     # Restrict all markers to genes shared between query and reference.
     marker_sets = {
@@ -172,9 +176,7 @@ def mutually_exclusive_coexpression_rate(
         detection_fraction = np.asarray(det.mean(axis=0)).ravel()
 
         marker_set["positive"] = {
-            gene
-            for gene, frac in zip(genes, detection_fraction)
-            if frac >= min_pos_frac
+            gene for gene, frac in zip(genes, detection_fraction, strict=False) if frac >= min_pos_frac
         }
 
     # Build reciprocal positive/negative candidate pairs.
@@ -185,15 +187,12 @@ def mutually_exclusive_coexpression_rate(
         pos_a = marker_sets[ct_a]["positive"]
         neg_a = marker_sets[ct_a]["negative"]
 
-        for ct_b in celltypes[i + 1:]:
+        for ct_b in celltypes[i + 1 :]:
             pos_b = marker_sets[ct_b]["positive"]
             neg_b = marker_sets[ct_b]["negative"]
 
             candidate_pairs.update(
-                tuple(sorted((g_a, g_b)))
-                for g_a in pos_a & neg_b
-                for g_b in pos_b & neg_a
-                if g_a != g_b
+                tuple(sorted((g_a, g_b))) for g_a in pos_a & neg_b for g_b in pos_b & neg_a if g_a != g_b
             )
 
     candidate_pairs -= co_positive_pairs
@@ -202,13 +201,8 @@ def mutually_exclusive_coexpression_rate(
     mutually_exclusive_pairs = set()
 
     if candidate_pairs:
-        candidate_genes = sorted(
-            {gene for pair in candidate_pairs for gene in pair}
-        )
-        gene_to_idx = {
-            gene: i
-            for i, gene in enumerate(candidate_genes)
-        }
+        candidate_genes = sorted({gene for pair in candidate_pairs for gene in pair})
+        gene_to_idx = {gene: i for i, gene in enumerate(candidate_genes)}
 
         idx = gene_index.get_indexer(candidate_genes)
         det_ref = _binary_detection_matrix(X_ref, idx)
@@ -240,13 +234,8 @@ def mutually_exclusive_coexpression_rate(
     rows = []
 
     if mutually_exclusive_pairs:
-        genes = sorted(
-            {gene for pair in mutually_exclusive_pairs for gene in pair}
-        )
-        gene_to_idx = {
-            gene: i
-            for i, gene in enumerate(genes)
-        }
+        genes = sorted({gene for pair in mutually_exclusive_pairs for gene in pair})
+        gene_to_idx = {gene: i for i, gene in enumerate(genes)}
 
         idx = gene_index.get_indexer(genes)
         det = _binary_detection_matrix(X, idx)

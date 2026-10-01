@@ -811,8 +811,8 @@ class SegTraQ:
         """
         Run supervised (sp) metrics.
 
-        If `markers` is `None`, marker genes are generated from `adata_ref`
-        using `self.markers_from_reference()` with `ref_cell_type`.
+        If `markers` is `None`, stored SegTraQ markers are used if available;
+        otherwise they are generated from `adata_ref`.
 
         If `cell_type_key` is `None`, label transfer is run first via
         `self.run_label_transfer()` using `adata_ref` and `ref_cell_type`.
@@ -831,12 +831,11 @@ class SegTraQ:
 
         Parameters
         ----------
-        adata_ref : AnnData or None, default=None
-            Reference AnnData object used for label transfer and/or marker
-            extraction. Required if `cell_type_key=None` or `markers=None`.
-        ref_cell_type : str or None, default=None
+        adata_ref : AnnData
+            Reference AnnData object used for mutually_exclusive_coexpression_rate
+            and, when needed, label transfer and marker generation.
+        ref_cell_type : str
             Column in `adata_ref.obs` containing reference cell-type labels.
-            Required if `cell_type_key=None` or `markers=None`.
         ref_gene_key : str or None, default=None
             Column in `adata_ref.var` containing gene identifiers matching the
             query gene identifiers. If `None`, `adata_ref.var_names` are used.
@@ -970,11 +969,7 @@ class SegTraQ:
 
             with p.step("mutually exclusive co-expression rate"):
                 mecr_df = self.sp.mutually_exclusive_coexpression_rate(
-                    adata_ref=adata_ref,
-                    ref_cell_type=ref_cell_type,
-                    ref_gene_key=ref_gene_key,
-                    query_gene_key=query_gene_key,
-                    ref_raw_counts_layer=ref_raw_counts_layer,
+                    **reference_kwargs,
                     markers=markers,
                     inplace=inplace,
                     **mecr_kwargs,
@@ -1120,7 +1115,7 @@ class SegTraQ:
         accepts a `cell_type_key`, instead of each module running its own label transfer.
 
         A module whose prerequisites are not met (e.g. `run_volume` on 2D data, or
-        `run_supervised` without explicit markers, stored markers, or a reference) is skipped with
+        `run_supervised` without a reference dataset) is skipped with
         a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which
         modules ran and why any others were skipped.
 
@@ -1136,7 +1131,8 @@ class SegTraQ:
         Parameters
         ----------
         adata_ref : AnnData or None, default=None
-            Reference AnnData object used for label transfer and/or marker extraction.
+            Reference AnnData object used for `mutually_exclusive_coexpression_rate`,
+            and when needed, label transfer and/or marker extraction.
             Forwarded to `run_volume` and `run_supervised`.
         ref_cell_type : str or None, default=None
             Column in `adata_ref.obs` containing reference cell-type labels.

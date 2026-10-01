@@ -11,8 +11,8 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
     with pytest.warns(UserWarning, match="run_supervised"):
         result = segtraq_obj.run_all(inplace=False)
 
-    # supervised metrics require either `cell_type_key`+`markers` or a reference dataset;
-    # none of these are provided here, so this module should be skipped automatically
+    # supervised metrics require a reference dataset;
+    # none is provided here, so this module should be skipped automatically
     assert "supervised" in result["skipped"]
     assert result["supervised"] is None
 
@@ -37,9 +37,16 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
 
 
 # TODO: this should be replaced with a test that compares ALL outputs to a previously saved result
-# given a cell type key and markers, every module (including supervised) should run
-def test_run_all_runs_every_module_when_prerequisites_are_met(segtraq_obj, markers):
+# given a reference, cell type key, and markers, every module should run
+def test_run_all_runs_every_module_when_prerequisites_are_met(
+    segtraq_obj,
+    markers,
+    adata_ref,
+):
     result = segtraq_obj.run_all(
+        adata_ref=adata_ref,
+        ref_cell_type="celltype",
+        ref_raw_counts_layer="raw",
         cell_type_key="transferred_cell_type",
         markers=markers,
         inplace=False,

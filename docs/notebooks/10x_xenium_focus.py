@@ -1357,31 +1357,23 @@ plt.show()
 # *Mutually exclusive co-expression rate (MECR)*
 
 # %% [markdown]
-# The mutually exclusive co-expression rate (MECR) is a measure for whether
-# combinations of positive and negative markers (computed with a more stringent setting
-# to increase mutual exclusivity, `vote_frac_pos=0.3`) co-occur less often than
-# expected under independence (using Fisher's exact test). By conditioning on the
-# marginal detection frequencies of each gene, Fisher’s exact test does not favor
-# methods with low overall transcript counts.
+# MECR identifies marker-gene pairs that are expected to be mutually exclusive
+# based on the reference, and tests whether they show unexpected positive
+# co-expression in the spatial data using a one-sided Fisher's exact test.
+# Significant pairs with odds ratio > 1 indicate excess co-expression.
 
 # %%
-
-for _, st in st_dict.items():
-    _ = st.markers_from_reference(
-        adata_ref,
+for st in st_dict.values():
+    st.sp.mutually_exclusive_coexpression_rate(
+        adata_ref=adata_ref,
         ref_cell_type="celltype_major",
-        min_pos_frac=0.3,
         ref_raw_counts_layer="raw",
-        n_jobs=16,
+        inplace=True,
     )
 
-    mecr = st.sp.mutually_exclusive_coexpression_rate()
-
 # %% [markdown]
-# Across all methods, marker pairs with significant mutual exclusivity show substantially
-# lower co-expression than expected under independence.
-# Although the differences are minor, ProSeg shows the strongest depletion of co-expression
-# among these marker pairs.
+# Across methods, we compare the fraction of cells co-expressing marker pairs
+# that are significantly positively associated in the spatial data.
 
 # %%
 rows = []
@@ -1390,30 +1382,27 @@ for method, st in st_dict.items():
     tbl = st.sdata.tables["table"]
     mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
 
-    # Keep marker pairs with significant mutual exclusivity
-    df_sig = mecr_df.loc[
-        mecr_df["odds_ratio"].notna()
-        & np.isfinite(mecr_df["odds_ratio"])
-        & mecr_df["pvalue"].notna()
-        & np.isfinite(mecr_df["pvalue"])
-        & (mecr_df["odds_ratio"] < 1)
-        & (mecr_df["pvalue"] < 0.05)
-    ].copy()
+    # Keep reference-defined mutually exclusive pairs with significant
+    # positive association in the spatial data.
+    df_sig = mecr_df.loc[(mecr_df["odds_ratio"] > 1) & (mecr_df["pvalue_adj"] < 0.1)].copy()
+
+    n_cells = df_sig[["a", "b", "c", "d"]].sum(axis=1)
+    df_sig["coexpression_fraction"] = df_sig["a"] / n_cells
 
     rows.extend(
         {
             "method": str(method),
-            "Fisher_OR": row["odds_ratio"],
+            "coexpression_fraction": row["coexpression_fraction"],
         }
         for _, row in df_sig.iterrows()
     )
 
 df = pd.DataFrame(rows)
 
-# Order methods by mean OR
-mean_order = df.groupby("method")["Fisher_OR"].mean().sort_values().index.tolist()
+# Order methods by mean co-expression fraction
+mean_order = df.groupby("method")["coexpression_fraction"].mean().sort_values().index.tolist()
 
-means = df.groupby("method")["Fisher_OR"].mean().reindex(mean_order)
+means = df.groupby("method")["coexpression_fraction"].mean().reindex(mean_order)
 
 xtick_labels = [f"{m}\nmean: {means[m]:.3f}" for m in mean_order]
 
@@ -1422,7 +1411,7 @@ plt.figure(figsize=(6, 4))
 ax = sns.violinplot(
     data=df,
     x="method",
-    y="Fisher_OR",
+    y="coexpression_fraction",
     order=mean_order,
     palette="Set2",
     linewidth=2,
@@ -1431,7 +1420,7 @@ ax = sns.violinplot(
 sns.stripplot(
     data=df,
     x="method",
-    y="Fisher_OR",
+    y="coexpression_fraction",
     order=mean_order,
     color="black",
     size=2.5,
@@ -1440,20 +1429,11 @@ sns.stripplot(
     ax=ax,
 )
 
-# OR = 1 corresponds to independence
-ax.axhline(
-    1,
-    ls="--",
-    lw=1,
-    color="gray",
-    alpha=0.6,
-)
-
 ax.set_xticklabels(xtick_labels)
 
-ax.set_ylabel("Mutually exclusive marker co-expression (odds ratio)")
+ax.set_ylabel("Fraction of cells co-expressing marker pair")
 ax.set_xlabel("")
-ax.set_title("Significantly mutually exclusive marker pairs")
+ax.set_title("Unexpected co-expression of mutually exclusive marker pairs")
 
 plt.grid(axis="y", alpha=0.3)
 plt.tight_layout()
