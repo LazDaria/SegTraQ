@@ -6,7 +6,14 @@ from pandas import DataFrame
 
 from .._settings import settings
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
-from ..utils import _exclude_genes_by_prefix, _get_count_matrix, _get_genes, _Parallel, merge_into_obs
+from ..utils import (
+    _exclude_genes_by_prefix,
+    _get_count_matrix,
+    _get_genes,
+    _Parallel,
+    _same_xy_transformations,
+    merge_into_obs,
+)
 from .utils import (
     _border_admixture_permutation_metrics,
     _get_center_border_counts,
@@ -82,7 +89,7 @@ def match_nuclei_to_cells(
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
 
-    assert T_cells == T_nuclei, (
+    assert _same_xy_transformations(T_cells, T_nuclei), (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
     )
 
@@ -256,9 +263,13 @@ def similarity_nucleus_cell(
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+    T_transcripts = sdata.points[points_key].attrs["transform"]
 
-    assert T_cells == T_nuclei, (
+    assert _same_xy_transformations(T_cells, T_nuclei), (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
+    assert _same_xy_transformations(T_cells, T_transcripts), (
+        "Cell shapes and transcript points are not aligned. Please ensure they share the same transformation."
     )
 
     adata = sdata.tables[tables_key]
@@ -516,9 +527,13 @@ def similarity_nucleus_cytoplasm(
 
     T_cells = sdata.shapes[shapes_key].attrs["transform"]
     T_nuclei = sdata.shapes[nucleus_shapes_key].attrs["transform"]
+    T_transcripts = sdata.points[points_key].attrs["transform"]
 
-    assert T_cells == T_nuclei, (
+    assert _same_xy_transformations(T_cells, T_nuclei), (
         "Cell and nucleus shapes are not aligned. Please ensure they share the same transformation."
+    )
+    assert _same_xy_transformations(T_cells, T_transcripts), (
+        "Cell shapes and transcript points are not aligned. Please ensure they share the same transformation."
     )
 
     cells_gdf = sdata.shapes[shapes_key]
