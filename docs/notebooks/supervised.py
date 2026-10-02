@@ -709,79 +709,105 @@ mecr = st.sp.mutually_exclusive_coexpression_rate(
     inplace=True,
 )
 
-# %%
-rows = []
-
-tbl = st.sdata.tables["table"]
-mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"].copy()
-
-# Keep reference-defined mutually exclusive pairs that show significant
-# positive association in the spatial data.
-df_sig = mecr_df.loc[(mecr_df["odds_ratio"] > 1) & (mecr_df["pvalue_adj"] < 0.05)].copy()
-
-# Fraction of all spatial cells detecting both genes.
-n_cells = df_sig[["a", "b", "c", "d"]].sum(axis=1)
-df_sig["coexpression_fraction"] = df_sig["a"] / n_cells
-
-df_sig["method"] = "Xenium"
-
-df = df_sig[["method", "gene1", "gene2", "coexpression_fraction"]].copy()
-
-df = pd.DataFrame(rows)
-
+# %% [markdown]
+# This tutorial subset contains only 751 cells, while 2,248 marker pairs are
+# tested. Consequently, many pairs are very sparse and individual Fisher tests
+# have limited power after multiple-testing correction.
+#
+# We therefore summarize MECR in two complementary ways:
+#
+# - the fraction of marker pairs with significant excess co-expression
+#   (odds ratio > 1 and FDR < 0.05), and
+# - the overall ratio of observed to expected co-expression across all pairs.
+#
+# In the plot, each point represents one marker pair. The diagonal corresponds
+# to the co-expression expected under independence. Points above the diagonal
+# show excess co-expression, whereas points below it show depletion.
 
 # %%
-# Order by mean odds ratio
-mean_order = df.groupby("method")["coexpression_fraction"].mean().sort_values().index.tolist()
+mecr_plot = mecr.copy()
 
-means = df.groupby("method")["coexpression_fraction"].mean().reindex(mean_order)
+N = mecr_plot[["a", "b", "c", "d"]].sum(axis=1)
 
-xtick_labels = [f"{m}\nmean: {means[m]:.3f}" for m in mean_order]
+n1 = mecr_plot["a"] + mecr_plot["b"]
+n2 = mecr_plot["a"] + mecr_plot["c"]
 
-plt.figure(figsize=(3, 4))
+mecr_plot["expected"] = n1 * n2 / N
 
-ax = sns.violinplot(
-    data=df,
-    x="method",
-    y="coexpression_fraction",
-    order=mean_order,
-    palette="Set2",
-    linewidth=2,
+sig = (
+    (mecr_plot["odds_ratio"] > 1)
+    & (mecr_plot["pvalue_adj"] < 0.05)
 )
 
-sns.stripplot(
-    data=df,
-    x="method",
-    y="coexpression_fraction",
-    order=mean_order,
-    color="black",
-    size=2.5,
-    alpha=0.35,
-    jitter=0.25,
-    ax=ax,
+global_ratio = (
+    mecr_plot["a"].sum()
+    / mecr_plot["expected"].sum()
 )
 
-ax.set_xticklabels(xtick_labels)
-
-ax.set_ylabel("Fraction of cells co-expressing marker pair")
-ax.set_xlabel("")
-ax.set_title("Co-expression of reference-defined\nmutually exclusive marker pairs")
-
-plt.grid(axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
-
-plt.figure(figsize=(3, 4))
+print(f"Mutually exclusive marker pairs tested: {len(mecr_plot):,}")
+print(
+    f"Significant excess co-expression: "
+    f"{sig.sum():,} ({sig.mean():.2%})"
+)
+print(
+    f"Overall observed / expected co-expression: "
+    f"{global_ratio:.2f}"
+)
 
 # %% [markdown]
-# Run all metrics.
+# A global observed/expected ratio below 1 indicates that, overall, the
+# reference-defined mutually exclusive markers remain depleted from one another
+# in the spatial data. A ratio above 1 would indicate excess co-expression.
+#
+# The number of FDR-significant pairs should be interpreted together with the
+# sample size, since sparse gene detection limits the power of individual
+# pairwise tests.
 
 # %%
-st.run_supervised(
-    adata_ref=adata_ref,
-    ref_cell_type="celltype_major",
-    ref_raw_counts_layer="raw",
+fig, ax = plt.subplots(figsize=(5, 5))
+
+# all pairs
+ax.scatter(
+    mecr_plot["expected"],
+    mecr_plot["a"],
+    alpha=0.35,
+    s=15,
+    label="All pairs",
 )
+
+# highlight significant excess co-expression
+ax.scatter(
+    mecr_plot.loc[sig, "expected"],
+    mecr_plot.loc[sig, "a"],
+    facecolors="none",
+    edgecolors="red",
+    linewidths=1.0,
+    s=35,
+    label="Significant excess co-expression",
+)
+
+limit = max(
+    mecr_plot["expected"].max(),
+    mecr_plot["a"].max(),
+)
+
+ax.plot(
+    [0, limit],
+    [0, limit],
+    linestyle="--",
+)
+
+ax.set_xlim(0, limit * 1.05)
+ax.set_ylim(0, limit * 1.05)
+ax.set_aspect("equal")
+
+ax.set_xlabel("Expected co-expressing cells\nunder independence")
+ax.set_ylabel("Observed co-expressing cells")
+ax.set_title("Co-expression of mutually exclusive marker pairs")
+ax.legend(frameon=False)
+
+plt.tight_layout()
+plt.show()
 
 # %% [markdown]
 # ## Session Info

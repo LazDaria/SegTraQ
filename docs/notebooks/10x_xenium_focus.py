@@ -1358,86 +1358,121 @@ plt.show()
 
 # %% [markdown]
 # MECR identifies marker-gene pairs that are expected to be mutually exclusive
-# based on the reference, and tests whether they show unexpected positive
-# co-expression in the spatial data using a one-sided Fisher's exact test.
-# Significant pairs with odds ratio > 1 indicate excess co-expression.
+# based on the reference and tests whether they show unexpected positive
+# co-expression in the spatial data.
+#
+# For each segmentation method, we report:
+#
+# - the number of reference-defined mutually exclusive marker pairs tested,
+# - the number and fraction showing significant excess co-expression
+#   (odds ratio > 1 and FDR < 0.05), and
+# - the overall observed/expected co-expression ratio across all tested pairs.
+#
+# The global ratio summarizes the total observed co-expression relative to that
+# expected from the marginal detection frequencies of the two genes:
+#
+# - < 1: overall depletion of mutually exclusive markers
+# - = 1: co-expression matches independence
+# - > 1: overall excess co-expression
+#
+# Because this tutorial uses a relatively small spatial subset, many marker
+# pairs are sparse and individual Fisher tests have limited power after
+# multiple-testing correction. The global ratio therefore provides a
+# complementary descriptive summary across all tested pairs.
 
 # %%
-for st in st_dict.values():
-    st.sp.mutually_exclusive_coexpression_rate(
+mecr_results = []
+summary_rows = []
+
+for method, st in st_dict.items():
+    mecr = st.sp.mutually_exclusive_coexpression_rate(
         adata_ref=adata_ref,
         ref_cell_type="celltype_major",
         ref_raw_counts_layer="raw",
         inplace=True,
+    ).copy()
+
+    n_cells = st.sdata.tables["table"].n_obs
+
+    # Expected co-expression under independence
+    N = mecr[["a", "b", "c", "d"]].sum(axis=1)
+    n1 = mecr["a"] + mecr["b"]
+    n2 = mecr["a"] + mecr["c"]
+    mecr["expected"] = n1 * n2 / N
+
+    # Significant excess co-expression
+    mecr["significant"] = (
+        (mecr["odds_ratio"] > 1)
+        & (mecr["pvalue_adj"] < 0.05)
     )
 
-# %% [markdown]
-# Across methods, we compare the fraction of cells co-expressing marker pairs
-# that are significantly positively associated in the spatial data.
+    observed = mecr["a"].sum()
+    expected = mecr["expected"].sum()
+
+    summary_rows.append(
+        {
+            "method": method,
+            "n_cells": n_cells,
+            "n_pairs": len(mecr),
+            "observed": observed,
+            "expected": expected,
+            "global_ratio": observed / expected if expected > 0 else np.nan,
+            "n_significant": mecr["significant"].sum(),
+        }
+    )
+
+    mecr_results.append((method, mecr))
+
+mecr_results = dict(mecr_results)
+mecr_summary = pd.DataFrame(summary_rows)
+
+mecr_summary
 
 # %%
-rows = []
-
-for method, st in st_dict.items():
-    tbl = st.sdata.tables["table"]
-    mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
-
-    # Keep reference-defined mutually exclusive pairs with significant
-    # positive association in the spatial data.
-    df_sig = mecr_df.loc[(mecr_df["odds_ratio"] > 1) & (mecr_df["pvalue_adj"] < 0.1)].copy()
-
-    n_cells = df_sig[["a", "b", "c", "d"]].sum(axis=1)
-    df_sig["coexpression_fraction"] = df_sig["a"] / n_cells
-
-    rows.extend(
-        {
-            "method": str(method),
-            "coexpression_fraction": row["coexpression_fraction"],
-        }
-        for _, row in df_sig.iterrows()
-    )
-
-df = pd.DataFrame(rows)
-
-# Order methods by mean co-expression fraction
-mean_order = df.groupby("method")["coexpression_fraction"].mean().sort_values().index.tolist()
-
-means = df.groupby("method")["coexpression_fraction"].mean().reindex(mean_order)
-
-xtick_labels = [f"{m}\nmean: {means[m]:.3f}" for m in mean_order]
-
-plt.figure(figsize=(6, 4))
-
-ax = sns.violinplot(
-    data=df,
-    x="method",
-    y="coexpression_fraction",
-    order=mean_order,
-    palette="Set2",
-    linewidth=2,
+comparison = mecr_results["xenium"].merge(
+    mecr_results["proseg"],
+    on=["gene1", "gene2"],
+    suffixes=("_xenium", "_proseg"),
 )
 
-sns.stripplot(
-    data=df,
-    x="method",
-    y="coexpression_fraction",
-    order=mean_order,
-    color="black",
-    size=2.5,
-    alpha=0.35,
-    jitter=0.25,
-    ax=ax,
+comparison["delta_a"] = (
+    comparison["a_proseg"]
+    - comparison["a_xenium"]
 )
 
-ax.set_xticklabels(xtick_labels)
+n_same = (comparison["delta_a"] == 0).sum()
+n_proseg = (comparison["delta_a"] > 0).sum()
+n_xenium = (comparison["delta_a"] < 0).sum()
 
-ax.set_ylabel("Fraction of cells co-expressing marker pair")
-ax.set_xlabel("")
-ax.set_title("Unexpected co-expression of mutually exclusive marker pairs")
+print(
+    f"Xenium vs ProSeg: "
+    f"{n_same}/{len(comparison)} pairs identical "
+    f"({n_same / len(comparison):.1%}); "
+    f"ProSeg higher in {n_proseg}, "
+    f"Xenium higher in {n_xenium}; "
+    f"net Δa = {comparison['delta_a'].sum():+d}"
+)
 
-plt.grid(axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
+# %%[markdown]
+# MECR identifies reference-defined mutually exclusive marker pairs that are unexpectedly 
+# co-expressed in spatial cells. Rather than providing a single measure of segmentation quality, 
+# it can highlight specific gene-pair co-expression patterns that may indicate transcript mixing 
+# or biologically unexpected expression.
+
+# %%
+mecr.sort_values(
+    ["a", "expected"],
+    ascending=[False, True],
+)[
+    [
+        "gene1",
+        "gene2",
+        "a",
+        "expected",
+        "odds_ratio",
+        "pvalue_adj",
+    ]
+].head(20)
 
 # %% [markdown]
 # ### 3D Volume Module
