@@ -2506,6 +2506,7 @@ def _filter_control_and_low_quality_transcripts(
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_cell_id_key: str = "cell_id",
+    points_qv_key: str = "qv",
     points_background_id: str | int | None = "UNASSIGNED",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -2540,6 +2541,8 @@ def _filter_control_and_low_quality_transcripts(
         Column containing gene names.
     points_cell_id_key : str, default="cell_id"
         Column containing transcript-to-cell assignments.
+    points_qv_key : str, default="qv"
+        Column containing quality values for transcripts.
     points_background_id : str | int | None, default="UNASSIGNED"
         Value indicating unassigned/background transcripts.
     tables_key : str, default="table"
@@ -2590,14 +2593,14 @@ def _filter_control_and_low_quality_transcripts(
     )
 
     # Quality filtering.
-    if min_qv is not None:
-        if "qv" not in pts_pd.columns:
+    if min_qv is not None and points_qv_key is not None:
+        if points_qv_key not in pts_pd.columns:
             raise KeyError(
-                "Quality value column 'qv' not found in points DataFrame. "
+                f"Quality value column '{points_qv_key}' not found in points DataFrame. "
                 f"Available columns: {pts_pd.columns.tolist()}. "
-                "If you do not want to filter by quality, set min_qv=None."
+                "If you do not want to filter by quality, set points_qv_key=None."
             )
-        quality_mask = pts_pd["qv"] < min_qv
+        quality_mask = pts_pd[points_qv_key] < min_qv
     else:
         quality_mask = pd.Series(False, index=pts_pd.index)
 

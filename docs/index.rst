@@ -10,7 +10,7 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
 
 ⚠️ Note: SegTraQ is under active development. Features, interfaces, and functionality may change in upcoming releases.
 
-.. image:: _static/img/figure_1.png
+.. image:: _static/img/segtraq.png
    :width: 100%
    :align: center
    :alt: SegTraQ provides quality control metrics for segmentation of spatial transcriptomics data.
@@ -33,6 +33,7 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
    :maxdepth: 1
    :caption: Tutorials:
    
+   notebooks/quickstart
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
