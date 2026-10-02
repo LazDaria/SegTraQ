@@ -1357,107 +1357,122 @@ plt.show()
 # *Mutually exclusive co-expression rate (MECR)*
 
 # %% [markdown]
-# The mutually exclusive co-expression rate (MECR) is a measure for whether
-# combinations of positive and negative markers (computed with a more stringent setting
-# to increase mutual exclusivity, `vote_frac_pos=0.3`) co-occur less often than
-# expected under independence (using Fisher's exact test). By conditioning on the
-# marginal detection frequencies of each gene, Fisher’s exact test does not favor
-# methods with low overall transcript counts.
+# MECR identifies marker-gene pairs that are expected to be mutually exclusive
+# based on the reference and tests whether they show unexpected positive
+# co-expression in the spatial data.
+#
+# For each segmentation method, we report:
+#
+# - the number of reference-defined mutually exclusive marker pairs tested,
+# - the number and fraction showing significant excess co-expression
+#   (odds ratio > 1 and FDR < 0.05), and
+# - the overall observed/expected co-expression ratio across all tested pairs.
+#
+# The global ratio summarizes the total observed co-expression relative to that
+# expected from the marginal detection frequencies of the two genes:
+#
+# - < 1: overall depletion of mutually exclusive markers
+# - = 1: co-expression matches independence
+# - > 1: overall excess co-expression
+#
+# Because this tutorial uses a relatively small spatial subset, many marker
+# pairs are sparse and individual Fisher tests have limited power after
+# multiple-testing correction. The global ratio therefore provides a
+# complementary descriptive summary across all tested pairs.
 
 # %%
-
-for _, st in st_dict.items():
-    _ = st.markers_from_reference(
-        adata_ref,
-        ref_cell_type="celltype_major",
-        min_pos_frac=0.3,
-        ref_raw_counts_layer="raw",
-        n_jobs=16,
-    )
-
-    mecr = st.sp.mutually_exclusive_coexpression_rate()
-
-# %% [markdown]
-# Across all methods, marker pairs with significant mutual exclusivity show substantially
-# lower co-expression than expected under independence.
-# Although the differences are minor, ProSeg shows the strongest depletion of co-expression
-# among these marker pairs.
-
-# %%
-rows = []
+mecr_results = []
+summary_rows = []
 
 for method, st in st_dict.items():
-    tbl = st.sdata.tables["table"]
-    mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
+    mecr = st.sp.mutually_exclusive_coexpression_rate(
+        adata_ref=adata_ref,
+        ref_cell_type="celltype_major",
+        ref_raw_counts_layer="raw",
+        inplace=True,
+    ).copy()
 
-    # Keep marker pairs with significant mutual exclusivity
-    df_sig = mecr_df.loc[
-        mecr_df["odds_ratio"].notna()
-        & np.isfinite(mecr_df["odds_ratio"])
-        & mecr_df["pvalue"].notna()
-        & np.isfinite(mecr_df["pvalue"])
-        & (mecr_df["odds_ratio"] < 1)
-        & (mecr_df["pvalue"] < 0.05)
-    ].copy()
+    n_cells = st.sdata.tables["table"].n_obs
 
-    rows.extend(
-        {
-            "method": str(method),
-            "Fisher_OR": row["odds_ratio"],
-        }
-        for _, row in df_sig.iterrows()
+    # Expected co-expression under independence
+    N = mecr[["a", "b", "c", "d"]].sum(axis=1)
+    n1 = mecr["a"] + mecr["b"]
+    n2 = mecr["a"] + mecr["c"]
+    mecr["expected"] = n1 * n2 / N
+
+    # Significant excess co-expression
+    mecr["significant"] = (
+        (mecr["odds_ratio"] > 1)
+        & (mecr["pvalue_adj"] < 0.05)
     )
 
-df = pd.DataFrame(rows)
+    observed = mecr["a"].sum()
+    expected = mecr["expected"].sum()
 
-# Order methods by mean OR
-mean_order = df.groupby("method")["Fisher_OR"].mean().sort_values().index.tolist()
+    summary_rows.append(
+        {
+            "method": method,
+            "n_cells": n_cells,
+            "n_pairs": len(mecr),
+            "observed": observed,
+            "expected": expected,
+            "global_ratio": observed / expected if expected > 0 else np.nan,
+            "n_significant": mecr["significant"].sum(),
+        }
+    )
 
-means = df.groupby("method")["Fisher_OR"].mean().reindex(mean_order)
+    mecr_results.append((method, mecr))
 
-xtick_labels = [f"{m}\nmean: {means[m]:.3f}" for m in mean_order]
+mecr_results = dict(mecr_results)
+mecr_summary = pd.DataFrame(summary_rows)
 
-plt.figure(figsize=(6, 4))
+mecr_summary
 
-ax = sns.violinplot(
-    data=df,
-    x="method",
-    y="Fisher_OR",
-    order=mean_order,
-    palette="Set2",
-    linewidth=2,
+# %%
+comparison = mecr_results["xenium"].merge(
+    mecr_results["proseg"],
+    on=["gene1", "gene2"],
+    suffixes=("_xenium", "_proseg"),
 )
 
-sns.stripplot(
-    data=df,
-    x="method",
-    y="Fisher_OR",
-    order=mean_order,
-    color="black",
-    size=2.5,
-    alpha=0.35,
-    jitter=0.25,
-    ax=ax,
+comparison["delta_a"] = (
+    comparison["a_proseg"]
+    - comparison["a_xenium"]
 )
 
-# OR = 1 corresponds to independence
-ax.axhline(
-    1,
-    ls="--",
-    lw=1,
-    color="gray",
-    alpha=0.6,
+n_same = (comparison["delta_a"] == 0).sum()
+n_proseg = (comparison["delta_a"] > 0).sum()
+n_xenium = (comparison["delta_a"] < 0).sum()
+
+print(
+    f"Xenium vs ProSeg: "
+    f"{n_same}/{len(comparison)} pairs identical "
+    f"({n_same / len(comparison):.1%}); "
+    f"ProSeg higher in {n_proseg}, "
+    f"Xenium higher in {n_xenium}; "
+    f"net Δa = {comparison['delta_a'].sum():+d}"
 )
 
-ax.set_xticklabels(xtick_labels)
+# %%[markdown]
+# MECR identifies reference-defined mutually exclusive marker pairs that are unexpectedly 
+# co-expressed in spatial cells. Rather than providing a single measure of segmentation quality, 
+# it can highlight specific gene-pair co-expression patterns that may indicate transcript mixing 
+# or biologically unexpected expression.
 
-ax.set_ylabel("Mutually exclusive marker co-expression (odds ratio)")
-ax.set_xlabel("")
-ax.set_title("Significantly mutually exclusive marker pairs")
-
-plt.grid(axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
+# %%
+mecr.sort_values(
+    ["a", "expected"],
+    ascending=[False, True],
+)[
+    [
+        "gene1",
+        "gene2",
+        "a",
+        "expected",
+        "odds_ratio",
+        "pvalue_adj",
+    ]
+].head(20)
 
 # %% [markdown]
 # ### 3D Volume Module

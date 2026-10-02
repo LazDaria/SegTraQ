@@ -162,8 +162,8 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
     with pytest.warns(UserWarning, match="run_supervised"):
         result = segtraq_obj.run_all(inplace=False)
 
-    # supervised metrics require either `cell_type_key`+`markers` or a reference dataset;
-    # none of these are provided here, so this module should be skipped automatically
+    # supervised metrics require a reference dataset;
+    # none is provided here, so this module should be skipped automatically
     assert "supervised" in result["skipped"]
     assert result["supervised"] is None
 
@@ -187,9 +187,36 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
         assert name not in result["skipped"]
 
 
-# runs every module (including the volume metrics) on the 3D ProSeg dataset and compares ALL outputs
-# to a previously saved result, generated with `tests/generate_run_all_reference.py`.
-# If a metric was changed on purpose, re-generate the reference with that script and upload it.
+# TODO: this should be replaced with a test that compares ALL outputs to a previously saved result
+# given a reference, cell type key, and markers, every module should run
+def test_run_all_runs_every_module_when_prerequisites_are_met(
+    segtraq_obj,
+    markers,
+    adata_ref,
+):
+    result = segtraq_obj.run_all(
+        adata_ref=adata_ref,
+        ref_cell_type="celltype",
+        ref_raw_counts_layer="raw",
+        cell_type_key="transferred_cell_type",
+        markers=markers,
+        inplace=False,
+    )
+
+    assert result["skipped"] == {}
+
+    for name in (
+        "baseline",
+        "region_similarity",
+        "volume",
+        "clustering_stability",
+        "supervised",
+        "point_statistics",
+    ):
+        assert result[name] is not None
+
+    assert "marker_balanced_accuracy" in result["supervised"]["marker_purity"].columns
+    
 def test_run_all_matches_reference(tmp_path):
     assert REFERENCE_PATH.exists(), (
         f"Reference output {REFERENCE_PATH} not found. Download the latest test data "

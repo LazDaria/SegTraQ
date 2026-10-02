@@ -51,7 +51,6 @@ from pathlib import Path
 
 import anndata as ad
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import spatialdata as sd
@@ -689,102 +688,126 @@ plt.show()
 # %% [markdown]
 # #### Compute mutually exclusive co-expression rate (MECR)
 #
-# The `mutually_exclusive_coexpression_rate` function assesses mutual exclusivity between
-# marker genes using Fisher’s exact test on binary gene detection (expression `> 0`).
-# Fisher’s exact test with `alternative="less"` is used to test whether genes co-occur less often
-# than expected under independence. By conditioning on the marginal detection frequencies of each gene,
-# Fisher’s exact test does not favor methods with low overall transcript counts.
-
+# The `mutually_exclusive_coexpression_rate` function identifies marker-gene
+# pairs that are expected to be mutually exclusive based on a reference dataset.
+# Candidate pairs are derived from reciprocal positive/negative marker
+# relationships and are retained only if their observed co-expression in the
+# reference is sufficiently below that expected under independence.
+#
+# For these reference-defined mutually exclusive pairs, co-expression in the
+# spatial data is evaluated using Fisher's exact test on binary gene detection
+# (expression > 0). A one-sided test with `alternative="greater"` asks whether
+# the two genes are positively associated in the spatial data.
+#
+# Thus, an odds ratio > 1 indicates increased co-expression of a marker pair
+# that is expected to be mutually exclusive based on the reference.
 # %%
 mecr = st.sp.mutually_exclusive_coexpression_rate(
-    inplace=True,
-)
-
-# %%
-rows = []
-
-tbl = st.sdata.tables["table"]
-mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
-
-# Keep marker pairs with significant mutual exclusivity
-df_sig = mecr_df.loc[
-    mecr_df["odds_ratio"].notna()
-    & np.isfinite(mecr_df["odds_ratio"])
-    & mecr_df["pvalue"].notna()
-    & np.isfinite(mecr_df["pvalue"])
-    & (mecr_df["odds_ratio"] < 1)
-    & (mecr_df["pvalue"] < 0.05)
-].copy()
-
-# Build plotting dataframe
-rows.extend(
-    {
-        "method": "Xenium",
-        "coexpression_odds_ratio": row["odds_ratio"],
-    }
-    for _, row in df_sig.iterrows()
-)
-
-df = pd.DataFrame(rows)
-
-# Order by mean odds ratio
-mean_order = df.groupby("method")["coexpression_odds_ratio"].mean().sort_values().index.tolist()
-
-means = df.groupby("method")["coexpression_odds_ratio"].mean().reindex(mean_order)
-
-xtick_labels = [f"{m}\nmean: {means[m]:.2f}" for m in mean_order]
-
-plt.figure(figsize=(3, 4))
-
-ax = sns.violinplot(
-    data=df,
-    x="method",
-    y="coexpression_odds_ratio",
-    order=mean_order,
-    palette="Set2",
-    linewidth=2,
-)
-
-sns.stripplot(
-    data=df,
-    x="method",
-    y="coexpression_odds_ratio",
-    order=mean_order,
-    color="black",
-    size=2.5,
-    alpha=0.35,
-    jitter=0.25,
-    ax=ax,
-)
-
-# OR = 1 corresponds to independence
-ax.axhline(
-    1,
-    ls="--",
-    lw=1,
-    color="gray",
-    alpha=0.6,
-)
-
-ax.set_xticklabels(xtick_labels)
-
-ax.set_ylabel("Marker co-expression odds ratio")
-ax.set_xlabel("")
-ax.set_title("Significantly mutually exclusive marker pairs")
-
-plt.grid(axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
-
-# %% [markdown]
-# Run all metrics.
-
-# %%
-st.run_supervised(
     adata_ref=adata_ref,
     ref_cell_type="celltype_major",
     ref_raw_counts_layer="raw",
+    inplace=True,
 )
+
+# %% [markdown]
+# This tutorial subset contains only 751 cells, while 2,248 marker pairs are
+# tested. Consequently, many pairs are very sparse and individual Fisher tests
+# have limited power after multiple-testing correction.
+#
+# We therefore summarize MECR in two complementary ways:
+#
+# - the fraction of marker pairs with significant excess co-expression
+#   (odds ratio > 1 and FDR < 0.05), and
+# - the overall ratio of observed to expected co-expression across all pairs.
+#
+# In the plot, each point represents one marker pair. The diagonal corresponds
+# to the co-expression expected under independence. Points above the diagonal
+# show excess co-expression, whereas points below it show depletion.
+
+# %%
+mecr_plot = mecr.copy()
+
+N = mecr_plot[["a", "b", "c", "d"]].sum(axis=1)
+
+n1 = mecr_plot["a"] + mecr_plot["b"]
+n2 = mecr_plot["a"] + mecr_plot["c"]
+
+mecr_plot["expected"] = n1 * n2 / N
+
+sig = (
+    (mecr_plot["odds_ratio"] > 1)
+    & (mecr_plot["pvalue_adj"] < 0.05)
+)
+
+global_ratio = (
+    mecr_plot["a"].sum()
+    / mecr_plot["expected"].sum()
+)
+
+print(f"Mutually exclusive marker pairs tested: {len(mecr_plot):,}")
+print(
+    f"Significant excess co-expression: "
+    f"{sig.sum():,} ({sig.mean():.2%})"
+)
+print(
+    f"Overall observed / expected co-expression: "
+    f"{global_ratio:.2f}"
+)
+
+# %% [markdown]
+# A global observed/expected ratio below 1 indicates that, overall, the
+# reference-defined mutually exclusive markers remain depleted from one another
+# in the spatial data. A ratio above 1 would indicate excess co-expression.
+#
+# The number of FDR-significant pairs should be interpreted together with the
+# sample size, since sparse gene detection limits the power of individual
+# pairwise tests.
+
+# %%
+fig, ax = plt.subplots(figsize=(5, 5))
+
+# all pairs
+ax.scatter(
+    mecr_plot["expected"],
+    mecr_plot["a"],
+    alpha=0.35,
+    s=15,
+    label="All pairs",
+)
+
+# highlight significant excess co-expression
+ax.scatter(
+    mecr_plot.loc[sig, "expected"],
+    mecr_plot.loc[sig, "a"],
+    facecolors="none",
+    edgecolors="red",
+    linewidths=1.0,
+    s=35,
+    label="Significant excess co-expression",
+)
+
+limit = max(
+    mecr_plot["expected"].max(),
+    mecr_plot["a"].max(),
+)
+
+ax.plot(
+    [0, limit],
+    [0, limit],
+    linestyle="--",
+)
+
+ax.set_xlim(0, limit * 1.05)
+ax.set_ylim(0, limit * 1.05)
+ax.set_aspect("equal")
+
+ax.set_xlabel("Expected co-expressing cells\nunder independence")
+ax.set_ylabel("Observed co-expressing cells")
+ax.set_title("Co-expression of mutually exclusive marker pairs")
+ax.legend(frameon=False)
+
+plt.tight_layout()
+plt.show()
 
 # %% [markdown]
 # ## Session Info

@@ -408,22 +408,15 @@ plt.show()
 # #### Mutually exclusive co-expression rate (MECR)
 
 # %% [markdown]
-# The mutually exclusive co-expression rate (MECR) is a measure for whether
-# combinations of positive and negative markers (computed with a more stringent setting to
-# increase mutual exclusivity, `vote_frac_pos=0.3`) co-occur less often than expected under independence.
+# MECR identifies marker-gene pairs that are expected to be mutually exclusive
+# in the reference and tests for unexpected positive co-expression in the spatial data.
 
 # %%
-
-markers = st.markers_from_reference(
-    adata_ref,
+st.sp.mutually_exclusive_coexpression_rate(
+    adata_ref=adata_ref,
     ref_cell_type="celltype_major",
     ref_raw_counts_layer="raw",
-    mode="de",
-    min_pos_frac=0.3,
-    n_jobs=16,
-)
-
-st.sp.mutually_exclusive_coexpression_rate(markers=markers).head()
+).head()
 
 # %% [markdown]
 # ## 3D Volume Module

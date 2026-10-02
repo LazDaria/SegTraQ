@@ -811,8 +811,8 @@ class SegTraQ:
         """
         Run supervised (sp) metrics.
 
-        If `markers` is `None`, marker genes are generated from `adata_ref`
-        using `self.markers_from_reference()` with `ref_cell_type`.
+        If `markers` is `None`, stored SegTraQ markers are used if available;
+        otherwise they are generated from `adata_ref`.
 
         If `cell_type_key` is `None`, label transfer is run first via
         `self.run_label_transfer()` using `adata_ref` and `ref_cell_type`.
@@ -831,12 +831,11 @@ class SegTraQ:
 
         Parameters
         ----------
-        adata_ref : AnnData or None, default=None
-            Reference AnnData object used for label transfer and/or marker
-            extraction. Required if `cell_type_key=None` or `markers=None`.
-        ref_cell_type : str or None, default=None
+        adata_ref : AnnData
+            Reference AnnData object used for mutually_exclusive_coexpression_rate
+            and, when needed, label transfer and marker generation.
+        ref_cell_type : str
             Column in `adata_ref.obs` containing reference cell-type labels.
-            Required if `cell_type_key=None` or `markers=None`.
         ref_gene_key : str or None, default=None
             Column in `adata_ref.var` containing gene identifiers matching the
             query gene identifiers. If `None`, `adata_ref.var_names` are used.
@@ -909,21 +908,17 @@ class SegTraQ:
         _check_reserved_kwargs("markers_from_reference_kwargs", markers_from_reference_kwargs, reference_kwargs.keys())
         _check_reserved_kwargs("purity_kwargs", purity_kwargs, {"cell_type_key", "markers", "inplace"})
         _check_reserved_kwargs("contamination_kwargs", contamination_kwargs, {"cell_type_key", "markers", "inplace"})
-        _check_reserved_kwargs("mecr_kwargs", mecr_kwargs, {"markers", "inplace"})
-
+        _check_reserved_kwargs("mecr_kwargs", mecr_kwargs, reference_kwargs.keys() | {"markers", "inplace"})
         label_transfer_result = None
 
         adata = self.sdata.tables[self.tables_key]
         has_stored_markers = "segtraq_markers" in adata.uns
 
-        needs_reference = cell_type_key is None or (markers is None and not has_stored_markers)
-
-        if needs_reference:
-            _require_reference(
-                adata_ref,
-                ref_cell_type,
-                condition=("`cell_type_key=None` or no explicit/stored markers are available"),
-            )
+        _require_reference(
+            adata_ref,
+            ref_cell_type,
+            condition="running supervised module",
+        )
 
         # Work out upfront which optional steps will run, so the progress bar total is correct.
         do_label_transfer = cell_type_key is None
@@ -974,6 +969,7 @@ class SegTraQ:
 
             with p.step("mutually exclusive co-expression rate"):
                 mecr_df = self.sp.mutually_exclusive_coexpression_rate(
+                    **reference_kwargs,
                     markers=markers,
                     inplace=inplace,
                     **mecr_kwargs,
@@ -1119,7 +1115,7 @@ class SegTraQ:
         accepts a `cell_type_key`, instead of each module running its own label transfer.
 
         A module whose prerequisites are not met (e.g. `run_volume` on 2D data, or
-        `run_supervised` without explicit markers, stored markers, or a reference) is skipped with
+        `run_supervised` without a reference dataset) is skipped with
         a warning instead of aborting the whole call. Pass `inplace=False` to see exactly which
         modules ran and why any others were skipped.
 
@@ -1135,7 +1131,8 @@ class SegTraQ:
         Parameters
         ----------
         adata_ref : AnnData or None, default=None
-            Reference AnnData object used for label transfer and/or marker extraction.
+            Reference AnnData object used for `mutually_exclusive_coexpression_rate`,
+            and when needed, label transfer and/or marker extraction.
             Forwarded to `run_volume` and `run_supervised`.
         ref_cell_type : str or None, default=None
             Column in `adata_ref.obs` containing reference cell-type labels.
@@ -1830,15 +1827,29 @@ class _SPFacade:
 
     def mutually_exclusive_coexpression_rate(
         self,
+        adata_ref: AnnData,
+        ref_cell_type: str,
         markers: dict[str, dict[str, list[str]]] | None = None,
+        ref_raw_counts_layer: str | None = None,
+        ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
+        min_pos_frac: float = 0.25,
+        max_ref_coexpression_ratio: float = 0.75,
         inplace: bool = True,
     ):
         return sp.mutually_exclusive_coexpression_rate(
             sdata=self._p.sdata,
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
             markers=markers,
             tables_key=self._p.tables_key,
             tables_gene_key=self._p.tables_gene_key,
             tables_raw_counts_layer=self._p.tables_raw_counts_layer,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+            ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
+            min_pos_frac=min_pos_frac,
+            max_ref_coexpression_ratio=max_ref_coexpression_ratio,
             inplace=inplace,
         )
 
