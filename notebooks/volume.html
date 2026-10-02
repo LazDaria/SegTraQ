@@ -42,6 +42,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/volume';</script>
@@ -353,7 +354,7 @@ document.write(`
   <section id="Module:-Volume-(3D)">
 <h1>Module: Volume (3D)<a class="headerlink" href="#Module:-Volume-(3D)" title="Link to this heading">#</a></h1>
 <p>Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical thickness of ~4–10 µm. Even for a relatively thin 5 µm section, cells can partially overlap along the z-dimension, depending on tissue orientation and how the sample is cut. As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination, because transcripts from overlapping cells may be assigned to the same segmentation mask.</p>
-<center><p>f <img alt="12d51852e4f34e5485a45ad0232c8aae" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
+<center><p>f <img alt="f5baae6bcd4e4b30b753947a95cde147" class="no-scaled-link" src="../_images/volume.png" style="width: 90%;" /></p>
 </center><p>To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the <code class="docutils literal notranslate"><span class="pre">volume</span></code> (<code class="docutils literal notranslate"><span class="pre">vl</span></code>) accessor.</p>
 <p>In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap, and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg), or in other words, how well it can disentangle transcripts from overlapping cells.</p>
 <p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
@@ -368,7 +369,7 @@ document.write(`
 </div>
 <section id="Load-data-into-SegTraQ-and-run-label-transfer">
 <h2>Load data into SegTraQ and run label transfer<a class="headerlink" href="#Load-data-into-SegTraQ-and-run-label-transfer" title="Link to this heading">#</a></h2>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -382,18 +383,9 @@ document.write(`
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 
-<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">8</span>  <span class="c1"># Use 8 CPU cores (-1 for all available cores)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-</pre></div></div>
 </div>
 <p>We load <a class="reference internal" href="io.html"><span class="doc">previously built</span></a> <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> objects from 10x Genomics Xenium data segmented with Xenium’s multimodal cell segmentation (<code class="docutils literal notranslate"><span class="pre">sdata_xenium</span></code>), with Proseg v2.0.5 (<code class="docutils literal notranslate"><span class="pre">sdata_proseg2</span></code>) and Proseg v3.1.0 (<code class="docutils literal notranslate"><span class="pre">sdata_proseg3</span></code>).</p>
 <div class="nbinput nblast docutils container">
@@ -450,31 +442,31 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;BLANK_0006&#39;, &#39;BLANK_0013&#39;, &#39;BLANK_0037&#39;, &#39;BLANK_0069&#39;, &#39;BLANK_0072&#39;]).
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;BLANK_0006&#39;, &#39;BLANK_0013&#39;, &#39;BLANK_0037&#39;, &#39;BLANK_0069&#39;, &#39;BLANK_0072&#39;]).
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;SLC4A1&#39;, &#39;CRHBP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;SLC4A1&#39;, &#39;CRHBP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 32 cells occur only in points (e.g. [np.int64(155395), np.int64(116997), np.int64(92167), np.int64(155784), np.int64(48904)]), and 3 occur only in the table (e.g. [np.int64(80413), np.int64(145189), np.int64(24366)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 32 cells occur only in points (e.g. [np.int64(155395), np.int64(116997), np.int64(92167), np.int64(155784), np.int64(48904)]), and 3 occur only in the table (e.g. [np.int64(80413), np.int64(145189), np.int64(24366)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;antisense_PROKR2&#39;, &#39;antisense_SCRIB&#39;, &#39;antisense_ULK3&#39;, &#39;antisense_BCL2L15&#39;, &#39;antisense_LGI3&#39;]).
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;antisense_PROKR2&#39;, &#39;antisense_SCRIB&#39;, &#39;antisense_ULK3&#39;, &#39;antisense_BCL2L15&#39;, &#39;antisense_LGI3&#39;]).
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;ADIPOQ&#39;, &#39;LEP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;LEP&#39;, &#39;ADIPOQ&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 48 cells occur only in points (e.g. [np.float64(75522.0), np.float64(70276.0), np.float64(70277.0), np.float64(70026.0), np.float64(76427.0)]), and 0 occur only in the table (e.g. []). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 48 cells occur only in points (e.g. [np.float64(75522.0), np.float64(70276.0), np.float64(70277.0), np.float64(70026.0), np.float64(76427.0)]), and 0 occur only in the table (e.g. []). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -842,7 +834,7 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;segtraq.SegTraQ.SegTraQ at 0x7ffee8416ba0&gt;
+&lt;segtraq.SegTraQ.SegTraQ at 0x7fff338cd6a0&gt;
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -982,7 +974,7 @@ separate category (default: <code class="docutils literal notranslate"><span cla
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_310725/2497986733.py:30: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_2872119/2497986733.py:30: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
@@ -1040,7 +1032,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  5.33it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  4.02it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1057,7 +1049,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.80it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.92it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1077,7 +1069,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  6.64it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  5.12it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1094,7 +1086,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.90it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  3.08it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1114,7 +1106,7 @@ sampling expression:
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  8.95it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00&lt;00:00,  7.61it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1123,6 +1115,21 @@ sampling expression:
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Modeling 10 pseudo-celltype clusters;
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
 Creating signal integrity map
 </pre></div></div>
 </div>
@@ -1131,7 +1138,7 @@ Creating signal integrity map
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  2.84it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:01&lt;00:00,  3.11it/s]
 </pre></div></div>
 </div>
 <p>We compare <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> with vertical signal integrity. VSI is an independent spatial measure of vertical mixing, so their association can indicate whether expression-level depth inconsistency coincides with transcript-level vertical signal disruption.</p>
@@ -1271,17 +1278,23 @@ captured by ovrlpy (low VSI) corresponds to biologically and geometrically meani
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;BLANK_0006&#39;, &#39;BLANK_0013&#39;, &#39;BLANK_0037&#39;, &#39;BLANK_0069&#39;, &#39;BLANK_0072&#39;]).
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: 167 control genes matching `control_prefixes` were present in the expression table and were removed (e.g. [&#39;BLANK_0006&#39;, &#39;BLANK_0013&#39;, &#39;BLANK_0037&#39;, &#39;BLANK_0069&#39;, &#39;BLANK_0072&#39;]).
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;SLC4A1&#39;, &#39;CRHBP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 2 occur only in the table (e.g. [&#39;SLC4A1&#39;, &#39;CRHBP&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 32 cells occur only in points (e.g. [np.int64(155395), np.int64(116997), np.int64(92167), np.int64(155784), np.int64(48904)]), and 3 occur only in the table (e.g. [np.int64(80413), np.int64(145189), np.int64(24366)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 32 cells occur only in points (e.g. [np.int64(155395), np.int64(116997), np.int64(92167), np.int64(155784), np.int64(48904)]), and 3 occur only in the table (e.g. [np.int64(80413), np.int64(145189), np.int64(24366)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "51e0f4b09e3746b88d01f83657586960", "version_major": 2, "version_minor": 0}</script></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1327,7 +1340,9 @@ Index([&#39;cell&#39;, &#39;original_cell_id&#39;, &#39;centroid_x&#39;, &#39;ce
 0.4.0
 </pre></div></div>
 </div>
-</section>
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {"0476348e8f8f4b92aaeef6f3c66992b6": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "51e0f4b09e3746b88d01f83657586960": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HBoxModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_e0b9c62a46ef4d00a58deec18d467a3b", "IPY_MODEL_85b73daececf4e2ba232ef47ba265d49", "IPY_MODEL_fd6f14c263fe4bc49eb175731cbbd891"], "layout": "IPY_MODEL_ab5f66a865cb466781a18b5add773a16", "tabbable": null, "tooltip": null}}, "72f7758de76a422ebe479beec205811d": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "85b73daececf4e2ba232ef47ba265d49": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "FloatProgressModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_c5821e08e5a444568c42269f6723b73a", "max": 3.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_f31631fb11d741868beb52191900cb46", "tabbable": null, "tooltip": null, "value": 3.0}}, "ab5f66a865cb466781a18b5add773a16": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": "inline-flex", "flex": null, "flex_flow": "row wrap", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": "100%"}}, "c5821e08e5a444568c42269f6723b73a": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": "2", "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "d848373bff0745c796d28888b8f27b99": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "e0b9c62a46ef4d00a58deec18d467a3b": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_e6fb6f115d534cc28b9991fdd4edcfa9", "placeholder": "\u200b", "style": "IPY_MODEL_d848373bff0745c796d28888b8f27b99", "tabbable": null, "tooltip": null, "value": "Volume:\u2007100%"}}, "e6fb6f115d534cc28b9991fdd4edcfa9": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "f31631fb11d741868beb52191900cb46": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "ProgressStyleModel", "state": {"_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "fd6f14c263fe4bc49eb175731cbbd891": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_0476348e8f8f4b92aaeef6f3c66992b6", "placeholder": "\u200b", "style": "IPY_MODEL_72f7758de76a422ebe479beec205811d", "tabbable": null, "tooltip": null, "value": "\u20073/3\u2007[00:03&lt;00:00,\u2007\u20071.03s/step,\u2007done]"}}}, "version_major": 2, "version_minor": 0}
+</script></section>
 </section>
 
 

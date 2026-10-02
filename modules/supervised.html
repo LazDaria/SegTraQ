@@ -41,6 +41,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'modules/supervised';</script>
     <link rel="icon" href="../_static/icon.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -412,44 +413,62 @@ matrix that defines the spatial neighborhood.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="segtraq.sp.supervised.mutually_exclusive_coexpression_rate">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">mutually_exclusive_coexpression_rate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate" title="Link to this definition">#</a></dt>
-<dd><p>Assess unexpected co-expression of marker genes expected to be mutually exclusive.</p>
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">mutually_exclusive_coexpression_rate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">AnnData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_gene_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_raw_counts_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pos_frac</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_ref_coexpression_ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.75</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate" title="Link to this definition">#</a></dt>
+<dd><p>Assess unexpected co-expression of reference-defined mutually exclusive markers.</p>
 <p>Candidate gene pairs are derived from reciprocal positive/negative marker
-relationships between pairs of reference cell types. For two cell types A
-and B, a pair (gene_A, gene_B) is considered mutually exclusive if:</p>
-<ul class="simple">
-<li><p>gene_A is a positive marker of A and a negative marker of B, and</p></li>
-<li><p>gene_B is a positive marker of B and a negative marker of A.</p></li>
-</ul>
-<p>For each candidate pair, a one-sided Fisher’s exact test evaluates whether
-the two genes are detected together less frequently than expected under
-independence.</p>
+relationships between pairs of reference cell types. Positive markers must
+be detected in at least <cite>min_pos_frac</cite> of cells of their corresponding
+reference cell type. Pairs that are positive markers of the same cell type
+are excluded.</p>
+<p>Candidate pairs are retained as mutually exclusive if their observed
+co-expression in the reference is at most <cite>max_ref_coexpression_ratio</cite>
+times the co-expression expected under independence.</p>
+<p>For each retained pair, co-expression in the spatial data is summarized
+using a 2x2 detection table. A one-sided Fisher’s exact test evaluates
+whether the genes are positively associated in the spatial data
+(odds ratio &gt; 1). P-values are corrected across all tested pairs using
+the Benjamini-Hochberg procedure.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression data.</p></li>
+<li><p><strong>adata_ref</strong> (<em>AnnData</em>) – Reference AnnData object containing annotated cells.</p></li>
+<li><p><strong>ref_cell_type</strong> (<em>str</em>) – Column in <cite>adata_ref.obs</cite> containing reference cell-type labels.</p></li>
 <li><p><strong>markers</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Mapping of cell types to positive and negative markers:
-{cell_type: {“positive”: list[str], “negative”: list[str]}}.
-If None, markers are loaded from <cite>adata.uns[“segtraq_markers”]</cite>.</p></li>
-<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em><em>, </em><em>default=&quot;table&quot;</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers.
-If None, <cite>var_names</cite> are used.</p></li>
-<li><p><strong>tables_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Layer containing raw counts. If None, <cite>adata.X</cite> is used.</p></li>
-<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=True</em>) – If True, store the resulting DataFrame in
+<cite>{cell_type: {“positive”: list[str], “negative”: list[str]}}</cite>.
+If None, markers are loaded from
+<cite>sdata.tables[tables_key].uns[“segtraq_markers”]</cite>.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>default=&quot;table&quot;</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>tables_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>sdata.tables[tables_key].var</cite> containing the canonical gene
+identifiers used by SegTraQ. If None, <cite>var_names</cite> are used.</p></li>
+<li><p><strong>query_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Alternative column in <cite>sdata.tables[tables_key].var</cite> containing gene
+identifiers matching <cite>adata_ref.var[ref_gene_key]</cite>. If None,
+<cite>tables_gene_key</cite> is used.</p></li>
+<li><p><strong>tables_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer containing raw spatial counts. If None, <cite>.X</cite> is used.</p></li>
+<li><p><strong>ref_gene_key</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Column in <cite>adata_ref.var</cite> containing gene identifiers matching the
+query gene identifiers. If None, <cite>adata_ref.var_names</cite> are used.</p></li>
+<li><p><strong>ref_raw_counts_layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer containing raw reference counts. If None, <cite>.X</cite> is used.</p></li>
+<li><p><strong>min_pos_frac</strong> (<em>float</em><em>, </em><em>default=0.25</em>) – Minimum fraction of cells of the corresponding reference cell type
+in which a positive marker must be detected.</p></li>
+<li><p><strong>max_ref_coexpression_ratio</strong> (<em>float</em><em>, </em><em>default=0.75</em>) – Maximum ratio of observed to expected co-expression in the reference
+for a candidate pair to be considered mutually exclusive.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>default=True</em>) – If True, store the result in
 <cite>sdata.tables[tables_key].uns[“mutually_exclusive_coexpression_rate”]</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>pd.DataFrame</em> – One row per candidate marker-gene pair with columns:
-<cite>gene1</cite>, <cite>gene2</cite>, <cite>odds_ratio</cite>, <cite>pvalue</cite>, <cite>a</cite>, <cite>b</cite>, <cite>c</cite>, and <cite>d</cite>.</p></li>
-<li><p><em>Odds ratios below 1 indicate less co-expression than expected under</em></p></li>
-<li><p><em>independence. The one-sided Fisher p-value quantifies evidence for</em></p></li>
-<li><p><em>mutual exclusivity of the marker pair (odds ratio &lt; 1). Loss of</em></p></li>
-<li><p><em>significance indicates reduced evidence for mutual exclusivity, but</em></p></li>
-<li><p><em>does not imply significant positive association.</em></p></li>
-</ul>
+<dd class="field-even"><p><p>One row per reference-defined mutually exclusive marker pair with
+columns <cite>gene1</cite>, <cite>gene2</cite>, <cite>odds_ratio</cite>, <cite>pvalue</cite>, <cite>pvalue_adj</cite>,
+<cite>a</cite>, <cite>b</cite>, <cite>c</cite>, and <cite>d</cite>.</p>
+<p><cite>a</cite> is the number of cells detecting both genes, <cite>b</cite> gene1 only,
+<cite>c</cite> gene2 only, and <cite>d</cite> neither. Odds ratios greater than 1 indicate
+positive association in the spatial data. <cite>pvalue</cite> is the one-sided
+Fisher exact p-value and <cite>pvalue_adj</cite> its Benjamini-Hochberg-adjusted
+value.</p>
 </p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
 </dd>
 </dl>
 </dd></dl>

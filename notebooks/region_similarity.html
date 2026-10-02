@@ -42,6 +42,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/region_similarity';</script>
@@ -355,7 +356,7 @@ document.write(`
   <section id="Module:-Region-Similarity">
 <h1>Module: Region Similarity<a class="headerlink" href="#Module:-Region-Similarity" title="Link to this heading">#</a></h1>
 <p>Assuming that transcripts are homogeneously distributed throughout the cell, we expect there to be similar expression of genes in the nucleus and in the rest of the cell. If this is not the case, it can be indicative of transcript spillover from adjacent cells.</p>
-<center><p><img alt="76ea06bae4e74340966f87be6b34496c" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
+<center><p><img alt="9e098a92f31d4b4e96fc07964955fdc4" class="no-scaled-link" src="../_images/region_similarity.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">region</span> <span class="pre">similarity</span></code> (<code class="docutils literal notranslate"><span class="pre">rs</span></code>) module compares transcript composition between different subcellular regions to identify cells with unexpected spatial differences in expression.</p>
 <p>Because profiles with fewer transcripts are inherently more variable and therefore tend to appear less similar even when sampled from the same underlying expression profile, SegTraQ accounts for this finite-count effect using a permutation-based expectation. The reported scores measure similarity relative to this expectation: values around zero indicate the expected level of similarity, negative values indicate lower similarity than expected, and positive values indicate higher similarity than
 expected. The accompanying p-value identifies cells with unusually low similarity.</p>
@@ -369,7 +370,7 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -383,18 +384,9 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 
-<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">8</span>  <span class="c1"># Use 8 CPU cores (-1 for all available cores)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-</pre></div></div>
 </div>
 <section id="Helpers">
 <h2>Helpers<a class="headerlink" href="#Helpers" title="Link to this heading">#</a></h2>
@@ -527,11 +519,11 @@ expected. The accompanying p-value identifies cells with unusually low similarit
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:152: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -748,6 +740,22 @@ WARNING: adata.X seems to be already log-transformed.
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">64</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">35</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
@@ -756,7 +764,7 @@ WARNING: adata.X seems to be already log-transformed.
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_15_1.png" src="../_images/notebooks_region_similarity_15_1.png" />
+<img alt="../_images/notebooks_region_similarity_15_3.png" src="../_images/notebooks_region_similarity_15_3.png" />
 </div>
 </div>
 <p>Since the legacy Xenium segmentation algorithm generates cell masks by expanding nuclear boundaries, most cells have a <code class="docutils literal notranslate"><span class="pre">nucleus_fraction</span></code> close to 1.</p>
@@ -1423,6 +1431,22 @@ contains the nuclear transcripts themselves.</p>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">127</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
 <span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">132</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
 </div>
@@ -1430,7 +1454,7 @@ contains the nuclear transcripts themselves.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_region_similarity_38_1.png" src="../_images/notebooks_region_similarity_38_1.png" />
+<img alt="../_images/notebooks_region_similarity_38_3.png" src="../_images/notebooks_region_similarity_38_3.png" />
 </div>
 </div>
 <p>For convenience, <code class="docutils literal notranslate"><span class="pre">SegTraQ</span></code> also provides a wrapper to run all <code class="docutils literal notranslate"><span class="pre">region_similarity</span></code> metrics.</p>
@@ -1451,6 +1475,25 @@ contains the nuclear transcripts themselves.</p>
 <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No centroids specified for tables. Centroids will be automatically computed from shapes.
+  validate_spatialdata(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 14 occur only in the table (e.g. [np.int32(94563), np.int32(77508), np.int32(95363), np.int32(77512), np.int32(76683)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+  sdata_new = _filter_control_and_low_quality_transcripts(
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "efeb8260559d45e9a91c3e2c7db3cd3e", "version_major": 2, "version_minor": 0}</script></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
@@ -1497,7 +1540,9 @@ Index([&#39;cell_id&#39;, &#39;transcript_counts&#39;, &#39;control_probe_counts
 </pre></div>
 </div>
 </div>
-</section>
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {"114907e81f2a4c90bd60f4a350440571": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": "inline-flex", "flex": null, "flex_flow": "row wrap", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": "100%"}}, "44b7183663734011b6a71ae261ad3818": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "4bb0d6f1a2534e649f34f57f7fbae176": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "ProgressStyleModel", "state": {"_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "ProgressStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "bar_color": null, "description_width": ""}}, "72b6522c5ba84f8583d166a86b392582": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "FloatProgressModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "FloatProgressModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "ProgressView", "bar_style": "success", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_8787ea9744504dd2b0295fdf8e5fc0f8", "max": 4.0, "min": 0.0, "orientation": "horizontal", "style": "IPY_MODEL_4bb0d6f1a2534e649f34f57f7fbae176", "tabbable": null, "tooltip": null, "value": 4.0}}, "7d751fda149546e1a1c428d638eff363": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "8787ea9744504dd2b0295fdf8e5fc0f8": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": "2", "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "8f4027be31ca4c67a61ef7477c2d8ab0": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_a55ce3818fb24ca0884b3af298746277", "placeholder": "\u200b", "style": "IPY_MODEL_efba694df38d4b54a724d843a56bcecf", "tabbable": null, "tooltip": null, "value": "\u20074/4\u2007[00:08&lt;00:00,\u2007\u20072.16s/step,\u2007done]"}}, "a55ce3818fb24ca0884b3af298746277": {"model_module": "@jupyter-widgets/base", "model_module_version": "2.0.0", "model_name": "LayoutModel", "state": {"_model_module": "@jupyter-widgets/base", "_model_module_version": "2.0.0", "_model_name": "LayoutModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "LayoutView", "align_content": null, "align_items": null, "align_self": null, "border_bottom": null, "border_left": null, "border_right": null, "border_top": null, "bottom": null, "display": null, "flex": null, "flex_flow": null, "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "height": null, "justify_content": null, "justify_items": null, "left": null, "margin": null, "max_height": null, "max_width": null, "min_height": null, "min_width": null, "object_fit": null, "object_position": null, "order": null, "overflow": null, "padding": null, "right": null, "top": null, "visibility": null, "width": null}}, "c5bf1e75d8e34e79b1eaa462f79a8529": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "HTMLView", "description": "", "description_allow_html": false, "layout": "IPY_MODEL_44b7183663734011b6a71ae261ad3818", "placeholder": "\u200b", "style": "IPY_MODEL_7d751fda149546e1a1c428d638eff363", "tabbable": null, "tooltip": null, "value": "Region\u2007similarity:\u2007100%"}}, "efba694df38d4b54a724d843a56bcecf": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HTMLStyleModel", "state": {"_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HTMLStyleModel", "_view_count": null, "_view_module": "@jupyter-widgets/base", "_view_module_version": "2.0.0", "_view_name": "StyleView", "background": null, "description_width": "", "font_size": null, "text_color": null}}, "efeb8260559d45e9a91c3e2c7db3cd3e": {"model_module": "@jupyter-widgets/controls", "model_module_version": "2.0.0", "model_name": "HBoxModel", "state": {"_dom_classes": [], "_model_module": "@jupyter-widgets/controls", "_model_module_version": "2.0.0", "_model_name": "HBoxModel", "_view_count": null, "_view_module": "@jupyter-widgets/controls", "_view_module_version": "2.0.0", "_view_name": "HBoxView", "box_style": "", "children": ["IPY_MODEL_c5bf1e75d8e34e79b1eaa462f79a8529", "IPY_MODEL_72b6522c5ba84f8583d166a86b392582", "IPY_MODEL_8f4027be31ca4c67a61ef7477c2d8ab0"], "layout": "IPY_MODEL_114907e81f2a4c90bd60f4a350440571", "tabbable": null, "tooltip": null}}}, "version_major": 2, "version_minor": 0}
+</script></section>
 </section>
 </section>
 

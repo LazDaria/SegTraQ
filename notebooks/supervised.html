@@ -42,6 +42,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/supervised';</script>
@@ -364,7 +365,7 @@ document.write(`
   <section id="Module:-Supervised-Metrics">
 <h1>Module: Supervised Metrics<a class="headerlink" href="#Module:-Supervised-Metrics" title="Link to this heading">#</a></h1>
 <p>Unlike scRNA-seq, spatial transcriptomics measurements are affected by the local tissue context. Transcripts can be captured outside their cell of origin due to transcript diffusion, 3D overlap, or segmentation inaccuracies, leading to mixed or contaminated expression profiles. As a result, spatial cells may partially resemble their neighbors.</p>
-<center><p><img alt="e4f92af0f73e458bb2aad7aa4feae4cb" class="no-scaled-link" src="../_images/supervised.png" style="width: 90%;" /></p>
+<center><p><img alt="0488928ccf6d44d1b3dc0c45ddae60a9" class="no-scaled-link" src="../_images/supervised.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">supervised</span></code> (<code class="docutils literal notranslate"><span class="pre">sp</span></code>) module provides metrics to evaluate how well cell profiles in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset with cell type annotations.</p>
 <p>By comparing spatial expression profiles to a high-quality scRNA-seq reference, the supervised module aims to quantify this mismatch. Specifically, we use the scRNA-seq dataset as a clean reference, transfer cell type labels to the spatial data, and then compute metrics that measure:</p>
 <ul class="simple">
@@ -386,7 +387,7 @@ document.write(`
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -394,7 +395,6 @@ document.write(`
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">spatialdata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sd</span>
@@ -402,18 +402,9 @@ document.write(`
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 
-<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">8</span>  <span class="c1"># Use 8 CPU cores (-1 for all available cores)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-  from .autonotebook import tqdm as notebook_tqdm
-</pre></div></div>
 </div>
 <section id="Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">
 <h2>Transfer labels from scRNA-seq to spatial transcriptomics<a class="headerlink" href="#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics" title="Link to this heading">#</a></h2>
@@ -474,15 +465,15 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3c42ba0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3c520d0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff33836cf0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff33850050&gt;: None
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;TMPRSS11E&#39;, &#39;SLC6A3&#39;, &#39;CCR3&#39;, &#39;TRPA1&#39;, &#39;SPAG6&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;FOXJ1&#39;, &#39;NAT2&#39;, &#39;CD177&#39;, &#39;GP6&#39;, &#39;ENOX1&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;oemhhohn-1&#39;, &#39;apnfcbpf-1&#39;, &#39;aphffbmb-1&#39;, &#39;aphemnlm-1&#39;, &#39;iceeeemj-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;aphemnlm-1&#39;, &#39;iceeeemj-1&#39;, &#39;oemhhohn-1&#39;, &#39;icealcci-1&#39;, &#39;aphffbmb-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -531,7 +522,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_339584/964490482.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_1148863/964490482.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
 </pre></div></div>
 </div>
@@ -949,7 +940,7 @@ metric <code class="docutils literal notranslate"><span class="pre">negative_mar
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1701: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1866: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
   return sp.marker_purity(
 </pre></div></div>
 </div>
@@ -1409,134 +1400,133 @@ this example; see <code class="docutils literal notranslate"><span class="pre">o
 </section>
 <section id="Compute-mutually-exclusive-co-expression-rate-(MECR)">
 <h2>Compute mutually exclusive co-expression rate (MECR)<a class="headerlink" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)" title="Link to this heading">#</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate</span></code> function assesses mutual exclusivity between marker genes using Fisher’s exact test on binary gene detection (expression <code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code>). Fisher’s exact test with <code class="docutils literal notranslate"><span class="pre">alternative=&quot;less&quot;</span></code> is used to test whether genes co-occur less often than expected under independence. By conditioning on the marginal detection frequencies of each gene, Fisher’s exact test does not favor methods with low overall transcript counts.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate</span></code> function identifies marker-gene pairs that are expected to be mutually exclusive based on a reference dataset. Candidate pairs are derived from reciprocal positive/negative marker relationships and are retained only if their observed co-expression in the reference is sufficiently below that expected under independence.</p>
+<p>For these reference-defined mutually exclusive pairs, co-expression in the spatial data is evaluated using Fisher’s exact test on binary gene detection (expression &gt; 0). A one-sided test with <code class="docutils literal notranslate"><span class="pre">alternative=&quot;greater&quot;</span></code> asks whether the two genes are positively associated in the spatial data.</p>
+<p>Thus, an odds ratio &gt; 1 indicates increased co-expression of a marker pair that is expected to be mutually exclusive based on the reference.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mecr</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">mutually_exclusive_coexpression_rate</span><span class="p">(</span>
+    <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
+    <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
+    <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
     <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
 </div>
+<p>This tutorial subset contains only 751 cells, while 2,248 marker pairs are tested. Consequently, many pairs are very sparse and individual Fisher tests have limited power after multiple-testing correction.</p>
+<p>We therefore summarize MECR in two complementary ways:</p>
+<ul class="simple">
+<li><p>the fraction of marker pairs with significant excess co-expression (odds ratio &gt; 1 and FDR &lt; 0.05), and</p></li>
+<li><p>the overall ratio of observed to expected co-expression across all pairs.</p></li>
+</ul>
+<p>In the plot, each point represents one marker pair. The diagonal corresponds to the co-expression expected under independence. Points above the diagonal show excess co-expression, whereas points below it show depletion.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mecr_plot</span> <span class="o">=</span> <span class="n">mecr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-<span class="n">tbl</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span>
-<span class="n">mecr_df</span> <span class="o">=</span> <span class="n">tbl</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;mutually_exclusive_coexpression_rate&quot;</span><span class="p">]</span>
+<span class="n">N</span> <span class="o">=</span> <span class="n">mecr_plot</span><span class="p">[[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-<span class="c1"># Keep marker pairs with significant mutual exclusivity</span>
-<span class="n">df_sig</span> <span class="o">=</span> <span class="n">mecr_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
-    <span class="n">mecr_df</span><span class="p">[</span><span class="s2">&quot;odds_ratio&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span>
-    <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">mecr_df</span><span class="p">[</span><span class="s2">&quot;odds_ratio&quot;</span><span class="p">])</span>
-    <span class="o">&amp;</span> <span class="n">mecr_df</span><span class="p">[</span><span class="s2">&quot;pvalue&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span>
-    <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">mecr_df</span><span class="p">[</span><span class="s2">&quot;pvalue&quot;</span><span class="p">])</span>
-    <span class="o">&amp;</span> <span class="p">(</span><span class="n">mecr_df</span><span class="p">[</span><span class="s2">&quot;odds_ratio&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="o">&amp;</span> <span class="p">(</span><span class="n">mecr_df</span><span class="p">[</span><span class="s2">&quot;pvalue&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">)</span>
-<span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">n1</span> <span class="o">=</span> <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">]</span>
+<span class="n">n2</span> <span class="o">=</span> <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">]</span>
 
-<span class="c1"># Build plotting dataframe</span>
-<span class="n">rows</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-    <span class="p">{</span>
-        <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;Xenium&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;coexpression_odds_ratio&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;odds_ratio&quot;</span><span class="p">],</span>
-    <span class="p">}</span>
-    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df_sig</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()</span>
+<span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;expected&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">n1</span> <span class="o">*</span> <span class="n">n2</span> <span class="o">/</span> <span class="n">N</span>
+
+<span class="n">sig</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;odds_ratio&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;pvalue_adj&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">)</span>
 <span class="p">)</span>
 
-<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
-
-<span class="c1"># Order by mean odds ratio</span>
-<span class="n">mean_order</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">)[</span><span class="s2">&quot;coexpression_odds_ratio&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-
-<span class="n">means</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">)[</span><span class="s2">&quot;coexpression_odds_ratio&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">mean_order</span><span class="p">)</span>
-
-<span class="n">xtick_labels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="se">\n</span><span class="s2">mean: </span><span class="si">{</span><span class="n">means</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">mean_order</span><span class="p">]</span>
-
-<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-
-<span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">violinplot</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
-    <span class="n">y</span><span class="o">=</span><span class="s2">&quot;coexpression_odds_ratio&quot;</span><span class="p">,</span>
-    <span class="n">order</span><span class="o">=</span><span class="n">mean_order</span><span class="p">,</span>
-    <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span>
-    <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="n">global_ratio</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="o">/</span> <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;expected&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 <span class="p">)</span>
 
-<span class="n">sns</span><span class="o">.</span><span class="n">stripplot</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
-    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
-    <span class="n">y</span><span class="o">=</span><span class="s2">&quot;coexpression_odds_ratio&quot;</span><span class="p">,</span>
-    <span class="n">order</span><span class="o">=</span><span class="n">mean_order</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-    <span class="n">size</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mutually exclusive marker pairs tested: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">mecr_plot</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;Significant excess co-expression: &quot;</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sig</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">sig</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">)&quot;</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">&quot;Overall observed / expected co-expression: &quot;</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">global_ratio</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Mutually exclusive marker pairs tested: 2,248
+Significant excess co-expression: 0 (0.00%)
+Overall observed / expected co-expression: 0.40
+</pre></div></div>
+</div>
+<p>A global observed/expected ratio below 1 indicates that, overall, the reference-defined mutually exclusive markers remain depleted from one another in the spatial data. A ratio above 1 would indicate excess co-expression.</p>
+<p>The number of FDR-significant pairs should be interpreted together with the sample size, since sparse gene detection limits the power of individual pairwise tests.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+<span class="c1"># all pairs</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+    <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;expected&quot;</span><span class="p">],</span>
+    <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">],</span>
     <span class="n">alpha</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span>
-    <span class="n">jitter</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
-    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+    <span class="n">s</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">&quot;All pairs&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="c1"># OR = 1 corresponds to independence</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span>
-    <span class="mi">1</span><span class="p">,</span>
-    <span class="n">ls</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
-    <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span>
-    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+<span class="c1"># highlight significant excess co-expression</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+    <span class="n">mecr_plot</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sig</span><span class="p">,</span> <span class="s2">&quot;expected&quot;</span><span class="p">],</span>
+    <span class="n">mecr_plot</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sig</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">],</span>
+    <span class="n">facecolors</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+    <span class="n">edgecolors</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+    <span class="n">linewidths</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">s</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Significant excess co-expression&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">xtick_labels</span><span class="p">)</span>
+<span class="n">limit</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+    <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;expected&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+    <span class="n">mecr_plot</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+<span class="p">)</span>
 
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Marker co-expression odds ratio&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Significantly mutually exclusive marker pairs&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit</span><span class="p">],</span>
+    <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s2">&quot;equal&quot;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Expected co-expressing cells</span><span class="se">\n</span><span class="s2">under independence&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Observed co-expressing cells&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Co-expression of mutually exclusive marker pairs&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/tmp/ipykernel_339584/1642314466.py:66: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
-  ax.set_xticklabels(xtick_labels)
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_supervised_52_1.png" src="../_images/notebooks_supervised_52_1.png" />
+<img alt="../_images/notebooks_supervised_55_0.png" src="../_images/notebooks_supervised_55_0.png" />
 </div>
-</div>
-<p>Run all metrics.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">run_supervised</span><span class="p">(</span>
-    <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
-    <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
-    <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-WARNING: adata.X seems to be already log-transformed.
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:

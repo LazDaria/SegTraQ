@@ -42,6 +42,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/10x_xenium_focus_simplified';</script>
@@ -406,7 +407,7 @@ document.write(`
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">segtraq</span>
 
-<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Use all available CPU cores</span>
+<span class="n">segtraq</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="mi">8</span>  <span class="c1"># Use 8 CPU cores (-1 for all available cores)</span>
 
 <span class="c1"># filtering import and deprecation warnings from spatialdata</span>
 <span class="c1"># this is in general not recommended</span>
@@ -433,7 +434,7 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+/home/lazic/.venvs/allen/lib/python3.13/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm
 </pre></div></div>
 </div>
@@ -443,7 +444,7 @@ document.write(`
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;dask.config.set at 0x7ffee84bf890&gt;
+&lt;dask.config.set at 0x7ffef4a12210&gt;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -459,8 +460,8 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d2bb60&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffef44896a0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffef44cb4d0&gt;: None
 </pre></div></div>
 </div>
 <p>Let’s have a quick look at the data.</p>
@@ -502,9 +503,9 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;F2&#39;, &#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;CYP2A6&#39;, &#39;Human_PTEN_G129E_WT:A&#39;, &#39;HPV18-E6&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;HPV18-E6&#39;, &#39;CYP2A6&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;F2&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:180: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;obnialdl-1&#39;, &#39;oenebphn-1&#39;, &#39;obnkiokn-1&#39;, &#39;ocobfnak-1&#39;, &#39;hmccembj-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;hlgldogf-1&#39;, &#39;ocobfnak-1&#39;, &#39;odmakjnf-1&#39;, &#39;oemmoifk-1&#39;, &#39;icdfihnh-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -906,7 +907,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.8239702315263898
+0.931782943864801
 </pre></div></div>
 </div>
 <p>We can do the same with the silhouette score.</p>
@@ -924,7 +925,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
--0.03618372976779938
+-0.09009101986885071
 </pre></div></div>
 </div>
 <p>Next, we can check how stable the clustering is when we only take a subset (63%) of our genes and run clustering on this. We do this five times, and then assess the quality with the adjusted Rand index (ARI) and the purity. For more details on these metrics, refer to the section on this module.</p>
@@ -942,7 +943,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.6565478448198554
+0.6851076300399932
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -959,7 +960,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-0.7943849170206645
+0.8876898197698162
 </pre></div></div>
 </div>
 </section>
@@ -1337,7 +1338,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3d360d0&gt;: None
 <section id="Computing-cell-type-specific-markers">
 <h3>Computing cell-type specific markers<a class="headerlink" href="#Computing-cell-type-specific-markers" title="Link to this heading">#</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[76]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># hiding all warnings</span>
@@ -1364,7 +1365,7 @@ WARNING: adata.X seems to be already log-transformed.
 <p>Below, we show the number of negative markers that overlap with the positive markers of each cell type. To reliably estimate contamination, each cell type should share <strong>at least ~5 negative markers</strong> with the positive marker set of every other cell type. If these overlaps are too small, contamination estimates become unstable.</p>
 <p>In such cases, the marker definition can be relaxed by adjusting the thresholds used in <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code> above.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[77]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ctypes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">markers</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
@@ -1381,7 +1382,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[77]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1623,7 +1624,7 @@ WARNING: adata.X seems to be already log-transformed.
 </pre></div></div>
 </div>
 <p>Let’s quickly verify that this worked by plotting the data.</p>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
@@ -1639,6 +1640,15 @@ WARNING: adata.X seems to be already log-transformed.
 <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/tmp/ipykernel_3836842/3630248555.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(s):
+</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
@@ -1674,6 +1684,15 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 <span class="ansi-blue-fg">INFO    </span> Creating graph using `<span class="ansi-magenta-fg">None</span>` transform and `<span class="ansi-cyan-intense-fg ansi-bold">1</span>` libraries.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1866: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+  return sp.marker_purity(
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1898,34 +1917,23 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <section id="Mutually-exclusive-co-expression-rate-(MECR)">
 <h4>Mutually exclusive co-expression rate (MECR)<a class="headerlink" href="#Mutually-exclusive-co-expression-rate-(MECR)" title="Link to this heading">#</a></h4>
-<p>The mutually exclusive co-expression rate (MECR) is a measure for whether combinations of positive and negative markers (computed with a more stringent setting to increase mutual exclusivity, <code class="docutils literal notranslate"><span class="pre">vote_frac_pos=0.3</span></code>) co-occur less often than expected under independence.</p>
+<p>MECR identifies marker-gene pairs that are expected to be mutually exclusive in the reference and tests for unexpected positive co-expression in the spatial data.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[98]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span><span class="n">markers</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">markers_from_reference</span><span class="p">(</span>
-    <span class="n">adata_ref</span><span class="p">,</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">mutually_exclusive_coexpression_rate</span><span class="p">(</span>
+    <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
     <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
     <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
-    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;de&quot;</span><span class="p">,</span>
-    <span class="n">min_pos_frac</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
-    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">mutually_exclusive_coexpression_rate</span><span class="p">(</span><span class="n">markers</span><span class="o">=</span><span class="n">markers</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+    <span class="n">min_pos_frac</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>
+    <span class="n">max_ref_coexpression_ratio</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-WARNING: adata.X seems to be already log-transformed.
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[98]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1951,6 +1959,7 @@ WARNING: adata.X seems to be already log-transformed.
       <th>gene2</th>
       <th>odds_ratio</th>
       <th>pvalue</th>
+      <th>pvalue_adj</th>
       <th>a</th>
       <th>b</th>
       <th>c</th>
@@ -1960,58 +1969,63 @@ WARNING: adata.X seems to be already log-transformed.
   <tbody>
     <tr>
       <th>0</th>
-      <td>CTSG</td>
-      <td>MEIS1</td>
-      <td>2.284077</td>
-      <td>0.927255</td>
-      <td>1</td>
-      <td>98</td>
-      <td>81</td>
-      <td>18131</td>
+      <td>ABCA1</td>
+      <td>AOAH</td>
+      <td>1.798162</td>
+      <td>0.015148</td>
+      <td>0.762302</td>
+      <td>19</td>
+      <td>655</td>
+      <td>280</td>
+      <td>17357</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>SCGB1D2</td>
-      <td>TEK</td>
-      <td>0.000000</td>
-      <td>0.887235</td>
-      <td>0</td>
-      <td>24</td>
-      <td>91</td>
-      <td>18196</td>
+      <td>ABCA1</td>
+      <td>BCL11B</td>
+      <td>0.246981</td>
+      <td>0.996907</td>
+      <td>1.000000</td>
+      <td>2</td>
+      <td>672</td>
+      <td>210</td>
+      <td>17427</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>BARX2</td>
-      <td>CTSG</td>
-      <td>0.000000</td>
-      <td>0.336149</td>
-      <td>0</td>
-      <td>200</td>
-      <td>99</td>
-      <td>18012</td>
+      <td>ABCA1</td>
+      <td>CD2</td>
+      <td>0.446382</td>
+      <td>0.997669</td>
+      <td>1.000000</td>
+      <td>9</td>
+      <td>665</td>
+      <td>519</td>
+      <td>17118</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>ABI3BP</td>
-      <td>LAMA3</td>
-      <td>0.351119</td>
-      <td>0.013156</td>
-      <td>4</td>
-      <td>361</td>
-      <td>549</td>
-      <td>17397</td>
+      <td>ABCA1</td>
+      <td>CD247</td>
+      <td>0.663986</td>
+      <td>0.954295</td>
+      <td>1.000000</td>
+      <td>14</td>
+      <td>660</td>
+      <td>546</td>
+      <td>17091</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>CLGN</td>
-      <td>SP140</td>
-      <td>0.578689</td>
-      <td>0.488707</td>
-      <td>1</td>
-      <td>50</td>
-      <td>610</td>
-      <td>17650</td>
+      <td>ABCA1</td>
+      <td>CD28</td>
+      <td>0.473896</td>
+      <td>0.993207</td>
+      <td>1.000000</td>
+      <td>8</td>
+      <td>666</td>
+      <td>436</td>
+      <td>17201</td>
     </tr>
   </tbody>
 </table>
@@ -2160,46 +2174,46 @@ transcripts from overlapping cells.</p>
     <tr style="text-align: right;">
       <th></th>
       <th>cell_id</th>
-      <th>distance_to_cell_membrane_199_genes</th>
+      <th>distance_to_cell_membrane_468_genes</th>
       <th>cell_area</th>
-      <th>distance_to_cell_membrane_norm_199_genes</th>
+      <th>distance_to_cell_membrane_norm_468_genes</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
       <td>aeldpbbo-1</td>
-      <td>2.507427</td>
+      <td>3.375261</td>
       <td>176.880632</td>
-      <td>0.188533</td>
+      <td>0.253786</td>
     </tr>
     <tr>
       <th>1</th>
       <td>hjbdpmpc-1</td>
-      <td>1.811994</td>
+      <td>2.944742</td>
       <td>262.673512</td>
-      <td>0.111802</td>
+      <td>0.181693</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>hjbcgooh-1</td>
-      <td>1.801255</td>
-      <td>102.683823</td>
-      <td>0.177756</td>
+      <td>hjbeaond-1</td>
+      <td>0.611860</td>
+      <td>46.964886</td>
+      <td>0.089282</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>aeldbffd-1</td>
-      <td>1.841093</td>
-      <td>135.493824</td>
-      <td>0.158167</td>
+      <td>hjbddmmj-1</td>
+      <td>2.864609</td>
+      <td>215.983075</td>
+      <td>0.194920</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>hjbddfam-1</td>
-      <td>3.342148</td>
-      <td>303.922122</td>
-      <td>0.191710</td>
+      <td>hjbcgooh-1</td>
+      <td>1.425170</td>
+      <td>102.683823</td>
+      <td>0.140642</td>
     </tr>
   </tbody>
 </table>
@@ -2237,46 +2251,46 @@ transcripts from overlapping cells.</p>
     <tr style="text-align: right;">
       <th></th>
       <th>cell_id</th>
-      <th>distance_to_cell_membrane_70_genes</th>
+      <th>distance_to_cell_membrane_108_genes</th>
       <th>cell_area</th>
-      <th>distance_to_cell_membrane_norm_70_genes</th>
+      <th>distance_to_cell_membrane_norm_108_genes</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
       <td>hjbbcfmf-1</td>
-      <td>1.899841</td>
+      <td>1.969041</td>
       <td>173.102552</td>
-      <td>0.144399</td>
+      <td>0.149659</td>
     </tr>
     <tr>
       <th>1</th>
       <td>hjappign-1</td>
-      <td>1.342379</td>
+      <td>1.402572</td>
       <td>66.878803</td>
-      <td>0.164146</td>
+      <td>0.171507</td>
     </tr>
     <tr>
       <th>2</th>
       <td>aelekoij-1</td>
-      <td>2.000107</td>
+      <td>2.289215</td>
       <td>227.247765</td>
-      <td>0.132679</td>
+      <td>0.151858</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>aelggapo-1</td>
-      <td>2.306222</td>
-      <td>253.712191</td>
-      <td>0.144787</td>
+      <td>hjbalkhh-1</td>
+      <td>1.864973</td>
+      <td>182.727946</td>
+      <td>0.137965</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>hjbancln-1</td>
-      <td>2.751999</td>
-      <td>154.525538</td>
-      <td>0.221385</td>
+      <td>aelddaib-1</td>
+      <td>1.663014</td>
+      <td>59.538630</td>
+      <td>0.215524</td>
     </tr>
   </tbody>
 </table>
