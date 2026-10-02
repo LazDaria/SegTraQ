@@ -548,7 +548,7 @@ def run_label_transfer(
         Column in the transcript points table containing gene names.
     tx_min : float, default=10.0
         Minimum number of detected transcripts required for a cell to be retained.
-    tx_max : float, default=float("inf")
+    tx_max : float, default=inf
         Maximum number of detected transcripts allowed for a cell to be retained.
     gn_min : float, default=5.0
         Minimum number of detected genes required for a cell to be retained.
@@ -563,8 +563,8 @@ def run_label_transfer(
         If `None`, restrict label transfer to 2,000 highly variable genes when
         more than 8,000 genes are shared between query and reference. If
         `True`, always use HVGs. If `False`, always use all shared genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from label transfer. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from label transfer. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. This filtering is applied independently
         of HVG selection. Set to None to use all shared genes.
     inplace : bool, default=True
@@ -1079,8 +1079,8 @@ def markers_from_reference(
     ref_raw_counts_layer : str or None, default=None
         Layer containing raw counts. If `None`, raw counts are expected in
         `adata.X`.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-            Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+            Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
             and ribosomal genes are excluded.
     mode : {"auc", "de"}, optional (default: "de")
         - "auc": compute markers using pairwise AUC/pAUC.
