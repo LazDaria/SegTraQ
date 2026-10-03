@@ -59,8 +59,8 @@ def percentage_transcripts_in_compartments(
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
         If None, all genes except those matching `exclude_gene_prefixes`
         are used.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded when `genes=None`. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded when `genes=None`. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. Has no effect when `genes` is
         explicitly specified. Set to None to use all genes.
     cell_type_key : str
@@ -339,8 +339,8 @@ def distance_to_centroid(
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript coordiantes on.
         If None, all genes except those matching `exclude_gene_prefixes`
         are used.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-                Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+                Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
                 and ribosomal genes are excluded.
     cell_type_key : str
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
@@ -580,8 +580,8 @@ def distance_to_membrane(
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
         If None, all genes except those matching `exclude_gene_prefixes`
         are used.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-                Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+                Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
                 and ribosomal genes are excluded.
     cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.
@@ -843,8 +843,8 @@ def membrane_distance_skewness(
         String or list of strings indicating the feature/gene(s) to calculate the mean transcript distances on.
         If None, all genes except those matching `exclude_gene_prefixes`
         are used.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-                Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+                Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
                 and ribosomal genes are excluded.
     cell_type_key : str, default="transferred_cell_type"
         Column in `sdata.tables[tables_key].obs` with cell-type labels.

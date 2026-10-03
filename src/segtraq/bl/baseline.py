@@ -260,7 +260,7 @@ def transcripts_per_cell(
         The key in `sdata.points` corresponding to transcript data. Default is "transcripts".
     points_cell_id_key : str, optional
         The column name in the transcript data that contains cell assignment information. Default is "cell_id".
-    points_background_id: int = -1,
+    points_background_id: int = -1
         The value indicating an unassigned transcript. Default is -1.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
@@ -312,7 +312,7 @@ def genes_per_cell(
         The column name in the transcript data representing cell identifiers (default is "cell_id").
     points_gene_key : str, optional
         The column name in the transcript data representing gene names (default is "feature_name").
-    points_background_id: int = -1,
+    points_background_id: int = -1
         The value indicating an unassigned transcript. Default is -1.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
@@ -374,7 +374,7 @@ def mean_transcripts_per_gene_per_cell(
         The column name in the transcript data representing cell identifiers (default is "cell_id").
     points_gene_key : str, optional
         The column name in the transcript data representing gene names (default is "feature_name").
-    points_background_id: int = -1,
+    points_background_id: int = -1
         The value indicating an unassigned transcript. Default is -1.
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
@@ -444,7 +444,7 @@ def transcript_density(
         The key to access the transcript data within `sdata.points` (default is "transcripts").
     points_cell_id_key : str, optional
         The column name in the transcript data representing cell identifiers (default is "cell_id").
-    points_background_id: int = -1,
+    points_background_id: int = -1
         The value indicating an unassigned transcript. Default is -1.
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.

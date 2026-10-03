@@ -1,7 +1,7 @@
 [project]
 name = "segtraq"
 version = "0.0.6"
-description = "SegTraQ - A Python toolkit for quantitative and visual quality control of segmentation and transcript assignment in spatial omics data."
+description = "SegTraQ - A Python toolkit for quantitative and visual quality assessment of segmentation and transcript assignment in spatial omics data."
 readme = "README.md"
 authors = [
   {name = "Daria Lazic", email = "daria.lazic@embl.de"},
