@@ -104,6 +104,7 @@ class SegTraQ:
 
         points_qv_key : str or None, optional, default="qv"
             Column in the points table containing quality values (qv) for each transcript.
+            Ignored if `filter_low_quality_transcripts` is False or `min_qv` is None.
 
         points_background_id : str or int or None, default="UNASSIGNED"
             Identifier for transcripts not assigned to any cell (background).
