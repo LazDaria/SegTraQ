@@ -119,3 +119,4 @@ data
 docs/_build/
 docs/notebooks/*.ipynb
 .ipynb_checkpoints/
+/*.tar.gz
