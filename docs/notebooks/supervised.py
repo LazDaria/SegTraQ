@@ -51,7 +51,6 @@ from pathlib import Path
 
 import anndata as ad
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import spatialdata as sd
@@ -689,102 +688,39 @@ plt.show()
 # %% [markdown]
 # #### Compute mutually exclusive co-expression rate (MECR)
 #
-# The `mutually_exclusive_coexpression_rate` function assesses mutual exclusivity between
-# marker genes using Fisher’s exact test on binary gene detection (expression `> 0`).
-# Fisher’s exact test with `alternative="less"` is used to test whether genes co-occur less often
-# than expected under independence. By conditioning on the marginal detection frequencies of each gene,
-# Fisher’s exact test does not favor methods with low overall transcript counts.
-
+# The `mutually_exclusive_coexpression_rate` function identifies marker-gene
+# pairs that are expected to be mutually exclusive based on a reference dataset.
+# Candidate pairs are derived from reciprocal positive/negative marker
+# relationships and are retained only if their observed co-expression in the
+# reference is sufficiently below that expected under independence.
+#
+# For these reference-defined mutually exclusive pairs, co-expression in the
+# spatial data is evaluated using Fisher's exact test on binary gene detection
+# (expression > 0). A one-sided test with `alternative="greater"` asks whether
+# the two genes are positively associated in the spatial data.
+#
+# Thus, an odds ratio > 1 indicates increased co-expression of a marker pair
+# that is expected to be mutually exclusive based on the reference.
 # %%
 mecr = st.sp.mutually_exclusive_coexpression_rate(
-    inplace=True,
-)
-
-# %%
-rows = []
-
-tbl = st.sdata.tables["table"]
-mecr_df = tbl.uns["mutually_exclusive_coexpression_rate"]
-
-# Keep marker pairs with significant mutual exclusivity
-df_sig = mecr_df.loc[
-    mecr_df["odds_ratio"].notna()
-    & np.isfinite(mecr_df["odds_ratio"])
-    & mecr_df["pvalue"].notna()
-    & np.isfinite(mecr_df["pvalue"])
-    & (mecr_df["odds_ratio"] < 1)
-    & (mecr_df["pvalue"] < 0.05)
-].copy()
-
-# Build plotting dataframe
-rows.extend(
-    {
-        "method": "Xenium",
-        "coexpression_odds_ratio": row["odds_ratio"],
-    }
-    for _, row in df_sig.iterrows()
-)
-
-df = pd.DataFrame(rows)
-
-# Order by mean odds ratio
-mean_order = df.groupby("method")["coexpression_odds_ratio"].mean().sort_values().index.tolist()
-
-means = df.groupby("method")["coexpression_odds_ratio"].mean().reindex(mean_order)
-
-xtick_labels = [f"{m}\nmean: {means[m]:.2f}" for m in mean_order]
-
-plt.figure(figsize=(3, 4))
-
-ax = sns.violinplot(
-    data=df,
-    x="method",
-    y="coexpression_odds_ratio",
-    order=mean_order,
-    palette="Set2",
-    linewidth=2,
-)
-
-sns.stripplot(
-    data=df,
-    x="method",
-    y="coexpression_odds_ratio",
-    order=mean_order,
-    color="black",
-    size=2.5,
-    alpha=0.35,
-    jitter=0.25,
-    ax=ax,
-)
-
-# OR = 1 corresponds to independence
-ax.axhline(
-    1,
-    ls="--",
-    lw=1,
-    color="gray",
-    alpha=0.6,
-)
-
-ax.set_xticklabels(xtick_labels)
-
-ax.set_ylabel("Marker co-expression odds ratio")
-ax.set_xlabel("")
-ax.set_title("Significantly mutually exclusive marker pairs")
-
-plt.grid(axis="y", alpha=0.3)
-plt.tight_layout()
-plt.show()
-
-# %% [markdown]
-# Run all metrics.
-
-# %%
-st.run_supervised(
     adata_ref=adata_ref,
     ref_cell_type="celltype_major",
     ref_raw_counts_layer="raw",
+    inplace=True,
 )
+
+# %% [markdown]
+# This tutorial subset contains only 751 cells, while 2,248 marker pairs are
+# tested. Consequently, many pairs are very sparse and individual Fisher tests
+# have limited power after multiple-testing correction. After correction for
+# testing many gene pairs, no pair remains significant at the selected FDR threshold.
+
+# %%
+mecr_plot = mecr.copy()
+
+mecr_plot = mecr_plot.loc[(mecr_plot["odds_ratio"] > 1) & (mecr_plot["pvalue_adj"] < 0.05)]
+
+mecr_plot
 
 # %% [markdown]
 # ## Session Info
