@@ -98,16 +98,16 @@ def mutually_exclusive_coexpression_rate(
     pd.DataFrame
         One row per reference-defined mutually exclusive marker pair with
         columns `gene1`, `gene2`, `odds_ratio`, `pvalue`, `pvalue_adj`,
-        `a`, `b`, `c`, and `d`.
+        `a`, `b`, `c`, `d` and `coexpression_fraction`.
 
         `a` is the number of cells detecting both genes, `b` gene1 only,
         `c` gene2 only, and `d` neither. Odds ratios greater than 1 indicate
         positive association in the spatial data. `pvalue` is the one-sided
         Fisher exact p-value and `pvalue_adj` its Benjamini-Hochberg-adjusted
-        value.
+        value. `coexpression_fraction` is the fraction of cells expressing both genes.
     """
     adata = sdata.tables[tables_key]
-    columns = ["gene1", "gene2", "odds_ratio", "pvalue", "pvalue_adj", "a", "b", "c", "d"]
+    columns = ["gene1", "gene2", "odds_ratio", "pvalue", "pvalue_adj", "a", "b", "c", "d", "coexpression_fraction"]
 
     # Stored marker indices refer to the original table gene axis.
     markers = _get_segtraq_markers(
@@ -272,6 +272,7 @@ def mutually_exclusive_coexpression_rate(
                     "b": b,
                     "c": c,
                     "d": d,
+                    "coexpression_fraction": a / n_cells if n_cells > 0 else np.nan,
                 }
             )
 

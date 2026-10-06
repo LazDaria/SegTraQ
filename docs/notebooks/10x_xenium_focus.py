@@ -1377,11 +1377,10 @@ plt.show()
 #
 # Because this tutorial uses a relatively small spatial subset, many marker
 # pairs are sparse and individual Fisher tests have limited power after
-# multiple-testing correction. The global ratio therefore provides a
-# complementary descriptive summary across all tested pairs.
+# multiple-testing correction. After correction for testing many gene pairs,
+# no pair remains significant at the selected FDR threshold.
 
 # %%
-mecr_results = []
 summary_rows = []
 
 for method, st in st_dict.items():
@@ -1392,87 +1391,20 @@ for method, st in st_dict.items():
         inplace=True,
     ).copy()
 
-    n_cells = st.sdata.tables["table"].n_obs
-
-    # Expected co-expression under independence
-    N = mecr[["a", "b", "c", "d"]].sum(axis=1)
-    n1 = mecr["a"] + mecr["b"]
-    n2 = mecr["a"] + mecr["c"]
-    mecr["expected"] = n1 * n2 / N
-
     # Significant excess co-expression
-    mecr["significant"] = (
-        (mecr["odds_ratio"] > 1)
-        & (mecr["pvalue_adj"] < 0.05)
-    )
-
-    observed = mecr["a"].sum()
-    expected = mecr["expected"].sum()
+    mecr = mecr.loc[(mecr["odds_ratio"] > 1) & (mecr["pvalue_adj"] < 0.05)]
 
     summary_rows.append(
         {
             "method": method,
-            "n_cells": n_cells,
             "n_pairs": len(mecr),
-            "observed": observed,
-            "expected": expected,
-            "global_ratio": observed / expected if expected > 0 else np.nan,
-            "n_significant": mecr["significant"].sum(),
+            "coexpression_fraction_mean": mecr["coexpression_fraction"].mean(),
         }
     )
 
-    mecr_results.append((method, mecr))
-
-mecr_results = dict(mecr_results)
 mecr_summary = pd.DataFrame(summary_rows)
 
 mecr_summary
-
-# %%
-comparison = mecr_results["xenium"].merge(
-    mecr_results["proseg"],
-    on=["gene1", "gene2"],
-    suffixes=("_xenium", "_proseg"),
-)
-
-comparison["delta_a"] = (
-    comparison["a_proseg"]
-    - comparison["a_xenium"]
-)
-
-n_same = (comparison["delta_a"] == 0).sum()
-n_proseg = (comparison["delta_a"] > 0).sum()
-n_xenium = (comparison["delta_a"] < 0).sum()
-
-print(
-    f"Xenium vs ProSeg: "
-    f"{n_same}/{len(comparison)} pairs identical "
-    f"({n_same / len(comparison):.1%}); "
-    f"ProSeg higher in {n_proseg}, "
-    f"Xenium higher in {n_xenium}; "
-    f"net Δa = {comparison['delta_a'].sum():+d}"
-)
-
-# %%[markdown]
-# MECR identifies reference-defined mutually exclusive marker pairs that are unexpectedly 
-# co-expressed in spatial cells. Rather than providing a single measure of segmentation quality, 
-# it can highlight specific gene-pair co-expression patterns that may indicate transcript mixing 
-# or biologically unexpected expression.
-
-# %%
-mecr.sort_values(
-    ["a", "expected"],
-    ascending=[False, True],
-)[
-    [
-        "gene1",
-        "gene2",
-        "a",
-        "expected",
-        "odds_ratio",
-        "pvalue_adj",
-    ]
-].head(20)
 
 # %% [markdown]
 # ### 3D Volume Module

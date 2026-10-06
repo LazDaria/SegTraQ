@@ -30,6 +30,7 @@ def test_mecr_realdata_runs_and_stores_in_uns(
         "b",
         "c",
         "d",
+        "coexpression_fraction",
     }
     assert expected_columns.issubset(df.columns), (
         f"Expected columns not found in the result DataFrame. Found columns: {df.columns}"

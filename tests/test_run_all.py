@@ -216,7 +216,8 @@ def test_run_all_runs_every_module_when_prerequisites_are_met(
         assert result[name] is not None
 
     assert "marker_balanced_accuracy" in result["supervised"]["marker_purity"].columns
-    
+
+
 def test_run_all_matches_reference(tmp_path):
     assert REFERENCE_PATH.exists(), (
         f"Reference output {REFERENCE_PATH} not found. Download the latest test data "
