@@ -11,7 +11,7 @@ from rtree.index import Index
 from scipy.sparse import coo_matrix
 from shapely.geometry.base import BaseGeometry
 
-from ..utils import _get_genes, _is_background, _same_xy_transformations, filter_cells
+from ..utils import _get_genes, _is_background, filter_cells
 
 
 def _safe_intersection_area(poly1: BaseGeometry, poly2: BaseGeometry) -> float:
