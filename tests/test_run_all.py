@@ -187,37 +187,6 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
         assert name not in result["skipped"]
 
 
-# TODO: this should be replaced with a test that compares ALL outputs to a previously saved result
-# given a reference, cell type key, and markers, every module should run
-def test_run_all_runs_every_module_when_prerequisites_are_met(
-    segtraq_obj,
-    markers,
-    adata_ref,
-):
-    result = segtraq_obj.run_all(
-        adata_ref=adata_ref,
-        ref_cell_type="celltype",
-        ref_raw_counts_layer="raw",
-        cell_type_key="transferred_cell_type",
-        markers=markers,
-        inplace=False,
-    )
-
-    assert result["skipped"] == {}
-
-    for name in (
-        "baseline",
-        "region_similarity",
-        "volume",
-        "clustering_stability",
-        "supervised",
-        "point_statistics",
-    ):
-        assert result[name] is not None
-
-    assert "marker_balanced_accuracy" in result["supervised"]["marker_purity"].columns
-
-
 def test_run_all_matches_reference(tmp_path):
     assert REFERENCE_PATH.exists(), (
         f"Reference output {REFERENCE_PATH} not found. Download the latest test data "
