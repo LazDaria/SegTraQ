@@ -459,12 +459,12 @@ for a candidate pair to be considered mutually exclusive.</p></li>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><p>One row per reference-defined mutually exclusive marker pair with
 columns <cite>gene1</cite>, <cite>gene2</cite>, <cite>odds_ratio</cite>, <cite>pvalue</cite>, <cite>pvalue_adj</cite>,
-<cite>a</cite>, <cite>b</cite>, <cite>c</cite>, and <cite>d</cite>.</p>
+<cite>a</cite>, <cite>b</cite>, <cite>c</cite>, <cite>d</cite> and <cite>coexpression_fraction</cite>.</p>
 <p><cite>a</cite> is the number of cells detecting both genes, <cite>b</cite> gene1 only,
 <cite>c</cite> gene2 only, and <cite>d</cite> neither. Odds ratios greater than 1 indicate
 positive association in the spatial data. <cite>pvalue</cite> is the one-sided
 Fisher exact p-value and <cite>pvalue_adj</cite> its Benjamini-Hochberg-adjusted
-value.</p>
+value. <cite>coexpression_fraction</cite> is the fraction of cells expressing both genes.</p>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
