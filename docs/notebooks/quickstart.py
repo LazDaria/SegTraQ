@@ -112,7 +112,7 @@ volume_kwargs = {
 }
 
 # run_all() with additional arguments
-st.run_all(adata_ref=adata_ref, ref_cell_type="celltype_major", volume_kwargs=volume_kwargs)
+st.run_all(adata_ref=adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw", volume_kwargs=volume_kwargs)
 
 # %% [markdown]
 # All metrics are written to the `spatialdata` object.

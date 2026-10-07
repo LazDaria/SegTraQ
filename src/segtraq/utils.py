@@ -1791,7 +1791,7 @@ def validate_spatialdata(
         assert images_key in sdata.images.keys(), (
             f"{images_key} not found in the image layer. "
             f"Available keys: {sdata.images.keys()}. "
-            "You can set this with the images_key parameter (set to None if you do not have this)."
+            "You can set this with the 'images_key' parameter (set to None if you do not have this)."
         )
 
     contains_points = len(sdata.points) > 0
@@ -1868,7 +1868,7 @@ def validate_spatialdata(
             sdata.shapes[shapes_key] = shapes
             shapes_cell_ids = set(shapes.index.tolist())
         else:
-            raise ValueError("shapes_key must be a string or a list of strings")
+            raise ValueError("'shapes_key' must be a string or a list of strings")
 
         # ensuring that all cell IDs have the same dtype (either str or numeric)
         # taking a random ID from each set and comparing dtypes
@@ -1894,14 +1894,15 @@ def validate_spatialdata(
 
         # if the user provided a background ID, we want to ensure that it actually occurs
         if points_background_id is not None:
+            most_common_points_id = points_df[points_cell_id_key].mode().iloc[0]
             assert points_background_id in transcript_ids, (
                 f"points_background_id '{points_background_id}' not found among point cell IDs. "
                 f"You can set this with the 'points_background_id' argument. "
+                f"The most common cell ID among points is '{most_common_points_id}'. "
                 f"If you do not have a background ID, set this parameter to None."
             )
 
             # as a more stringent check, we also raise a warning if the background ID is not the most common one
-            most_common_points_id = points_df[points_cell_id_key].mode().iloc[0]
             if most_common_points_id != points_background_id:
                 warnings.warn(
                     f"points_background_id '{points_background_id}' is not the most common cell ID "
