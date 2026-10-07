@@ -59,8 +59,8 @@ def _get_pca_and_neighbors(
         If `None`, use HVGs automatically when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If False, use all genes
         remaining after `exclude_gene_prefixes` filtering.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from PCA feature selection. By default,
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from PCA feature selection. By default (``("MT-", "RPL", "RPS")``),
         mitochondrial and ribosomal genes are excluded. This filtering is
         applied independently of HVG selection. Set to None to use all genes.
 

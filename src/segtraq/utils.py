@@ -548,7 +548,7 @@ def run_label_transfer(
         Column in the transcript points table containing gene names.
     tx_min : float, default=10.0
         Minimum number of detected transcripts required for a cell to be retained.
-    tx_max : float, default=float("inf")
+    tx_max : float, default=inf
         Maximum number of detected transcripts allowed for a cell to be retained.
     gn_min : float, default=5.0
         Minimum number of detected genes required for a cell to be retained.
@@ -563,8 +563,8 @@ def run_label_transfer(
         If `None`, restrict label transfer to 2,000 highly variable genes when
         more than 8,000 genes are shared between query and reference. If
         `True`, always use HVGs. If `False`, always use all shared genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from label transfer. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from label transfer. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. This filtering is applied independently
         of HVG selection. Set to None to use all shared genes.
     inplace : bool, default=True
@@ -1079,8 +1079,8 @@ def markers_from_reference(
     ref_raw_counts_layer : str or None, default=None
         Layer containing raw counts. If `None`, raw counts are expected in
         `adata.X`.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-            Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+            Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
             and ribosomal genes are excluded.
     mode : {"auc", "de"}, optional (default: "de")
         - "auc": compute markers using pairwise AUC/pAUC.
@@ -1791,7 +1791,7 @@ def validate_spatialdata(
         assert images_key in sdata.images.keys(), (
             f"{images_key} not found in the image layer. "
             f"Available keys: {sdata.images.keys()}. "
-            "You can set this with the images_key parameter (set to None if you do not have this)."
+            "You can set this with the 'images_key' parameter (set to None if you do not have this)."
         )
 
     contains_points = len(sdata.points) > 0
@@ -1868,7 +1868,7 @@ def validate_spatialdata(
             sdata.shapes[shapes_key] = shapes
             shapes_cell_ids = set(shapes.index.tolist())
         else:
-            raise ValueError("shapes_key must be a string or a list of strings")
+            raise ValueError("'shapes_key' must be a string or a list of strings")
 
         # ensuring that all cell IDs have the same dtype (either str or numeric)
         # taking a random ID from each set and comparing dtypes
@@ -1894,14 +1894,15 @@ def validate_spatialdata(
 
         # if the user provided a background ID, we want to ensure that it actually occurs
         if points_background_id is not None:
+            most_common_points_id = points_df[points_cell_id_key].mode().iloc[0]
             assert points_background_id in transcript_ids, (
                 f"points_background_id '{points_background_id}' not found among point cell IDs. "
                 f"You can set this with the 'points_background_id' argument. "
+                f"The most common cell ID among points is '{most_common_points_id}'. "
                 f"If you do not have a background ID, set this parameter to None."
             )
 
             # as a more stringent check, we also raise a warning if the background ID is not the most common one
-            most_common_points_id = points_df[points_cell_id_key].mode().iloc[0]
             if most_common_points_id != points_background_id:
                 warnings.warn(
                     f"points_background_id '{points_background_id}' is not the most common cell ID "
@@ -2506,6 +2507,7 @@ def _filter_control_and_low_quality_transcripts(
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_cell_id_key: str = "cell_id",
+    points_qv_key: str = "qv",
     points_background_id: str | int | None = "UNASSIGNED",
     tables_key: str = "table",
     tables_cell_id_key: str = "cell_id",
@@ -2540,6 +2542,8 @@ def _filter_control_and_low_quality_transcripts(
         Column containing gene names.
     points_cell_id_key : str, default="cell_id"
         Column containing transcript-to-cell assignments.
+    points_qv_key : str, default="qv"
+        Column containing quality values for transcripts.
     points_background_id : str | int | None, default="UNASSIGNED"
         Value indicating unassigned/background transcripts.
     tables_key : str, default="table"
@@ -2590,14 +2594,14 @@ def _filter_control_and_low_quality_transcripts(
     )
 
     # Quality filtering.
-    if min_qv is not None:
-        if "qv" not in pts_pd.columns:
+    if min_qv is not None and points_qv_key is not None:
+        if points_qv_key not in pts_pd.columns:
             raise KeyError(
-                "Quality value column 'qv' not found in points DataFrame. "
+                f"Quality value column '{points_qv_key}' not found in points DataFrame. "
                 f"Available columns: {pts_pd.columns.tolist()}. "
-                "If you do not want to filter by quality, set min_qv=None."
+                "If you do not want to filter by quality, set points_qv_key=None."
             )
-        quality_mask = pts_pd["qv"] < min_qv
+        quality_mask = pts_pd[points_qv_key] < min_qv
     else:
         quality_mask = pd.Series(False, index=pts_pd.index)
 

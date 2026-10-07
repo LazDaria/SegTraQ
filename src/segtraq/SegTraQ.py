@@ -38,6 +38,7 @@ class SegTraQ:
         tables_raw_counts_layer: str | None = None,
         points_key: str = "transcripts",
         points_cell_id_key: str = "cell_id",
+        points_qv_key: str | None = "qv",
         points_background_id: str | int | None = "UNASSIGNED",
         points_x_key: str = "x",
         points_y_key: str = "y",
@@ -100,6 +101,10 @@ class SegTraQ:
 
         points_cell_id_key : str, default="cell_id"
             Column in the points table linking each transcript/spot to a cell.
+
+        points_qv_key : str or None, optional, default="qv"
+            Column in the points table containing quality values (qv) for each transcript.
+            Ignored if `filter_low_quality_transcripts` is False or `min_qv` is None.
 
         points_background_id : str or int or None, default="UNASSIGNED"
             Identifier for transcripts not assigned to any cell (background).
@@ -186,6 +191,7 @@ class SegTraQ:
                 control_prefixes=resolved_kwargs["control_prefixes"],
                 points_key=points_key,
                 points_gene_key=points_gene_key,
+                points_qv_key=points_qv_key,
                 points_cell_id_key=points_cell_id_key,
                 points_background_id=points_background_id,
                 tables_key=tables_key,

@@ -719,5 +719,3 @@ st.sdata.tables[st.tables_key].obs.columns
 # %%
 print(sd.__version__)  # spatialdata
 print(spatialdata_plot.__version__)
-
-# %%

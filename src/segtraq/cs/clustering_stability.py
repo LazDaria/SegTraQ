@@ -67,8 +67,8 @@ def cluster_connectedness(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from PCA feature selection. By default,
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from PCA feature selection. By default (``("MT-", "RPL", "RPS")``),
         mitochondrial and ribosomal genes are excluded. This filtering is
         applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
@@ -204,8 +204,8 @@ def silhouette_score(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from PCA feature selection. By default,
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from PCA feature selection. By default (``("MT-", "RPL", "RPS")``),
         mitochondrial and ribosomal genes are excluded. This filtering is
         applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
@@ -340,8 +340,8 @@ def purity(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from PCA feature selection. By default,
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from PCA feature selection. By default (``("MT-", "RPL", "RPS")``),
         mitochondrial and ribosomal genes are excluded. This filtering is
         applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional
@@ -449,8 +449,8 @@ def adjusted_rand_index(
     use_hvg: bool or None, optional
         If `None`, use 2,000 HVGs for PCA when the panel contains more than
         8,000 genes. If `True`, always use HVGs. If `False`, use all genes.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded from PCA feature selection. By default,
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded from PCA feature selection. By default (``("MT-", "RPL", "RPS")``),
         mitochondrial and ribosomal genes are excluded. This filtering is
         applied independently of HVG selection. Set to None to use all genes.
     n_neighbors: int, optional

@@ -216,8 +216,8 @@ def similarity_nucleus_cell(
         Layer containing count data. If `None`, `adata.X` is used if it looks
         like counts. If a layer is specified, it must exist and contain
         count-like values.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. Set to None to use all genes.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both cell and nucleus.
@@ -478,8 +478,8 @@ def similarity_nucleus_cytoplasm(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. Set to None to use all genes.
     min_transcripts : int, default=10
         Minimum number of transcripts required in both nuclear and
@@ -727,8 +727,8 @@ def border_admixture_score(
         Y-coordinate column in the transcript table.
     points_gene_key : str, default="feature_name"
         Column containing gene names.
-    exclude_gene_prefixes : str, list of str, tuple of str, or None, default=("MT-", "RPL", "RPS")
-        Gene prefixes excluded. By default, mitochondrial
+    exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
+        Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. Set to None to use all genes.
     border_fraction_of_radius : float, default=0.2
         Fraction of the equivalent radius used to define the thickness of the
