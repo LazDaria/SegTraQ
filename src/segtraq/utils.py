@@ -1986,15 +1986,17 @@ def validate_spatialdata(
             # checking that the dtype of the table cell IDs matches that of the shapes
             table_dtype = table.obs[tables_cell_id_key].dtype
             shapes_sample = next(iter(shapes_cell_ids))
+            if isinstance(table_dtype, pd.CategoricalDtype):
+                table_dtype = table_dtype.categories.dtype
             if is_numeric(shapes_sample):
-                if not np.issubdtype(table_dtype, np.number):
+                if not pd.api.types.is_numeric_dtype(table_dtype):
                     raise TypeError(
                         f"Cell ID types between shapes and tables are incompatible: "
                         f"{type(shapes_sample)} (shapes) vs {table_dtype} (tables). "
                         f"Please ensure that cell IDs are all strings or all numeric."
                     )
             elif is_string(shapes_sample):
-                if not np.issubdtype(table_dtype, np.object_) and not np.issubdtype(table_dtype, np.str_):
+                if not pd.api.types.is_object_dtype(table_dtype) and not pd.api.types.is_string_dtype(table_dtype):
                     raise TypeError(
                         f"Cell ID types between shapes and tables are incompatible: "
                         f"{type(shapes_sample)} (shapes) vs {table_dtype} (tables). "
