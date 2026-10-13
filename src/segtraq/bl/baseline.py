@@ -222,7 +222,7 @@ def perc_unassigned_transcripts_per_gene(
     result = (
         df.groupby(points_gene_key, observed=True)[points_cell_id_key]
         .agg(
-            total="count",
+            total="size",
             unassigned=lambda x: _is_background(x, points_background_id).sum(),
         )
         .astype(int)
