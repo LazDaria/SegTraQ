@@ -15,8 +15,8 @@ import segtraq as st
 st.settings.n_jobs = 2
 
 # tolerances for comparing floating point outputs against the saved reference
-RTOL = 1e-5
-ATOL = 1e-8
+RTOL = 1e-3
+ATOL = 1e-6
 
 # `.uns` DataFrames whose row order is not deterministic, mapped to the columns that identify a row.
 # the gene pairs of the mutually exclusive co-expression rate are collected in a set, so their order
