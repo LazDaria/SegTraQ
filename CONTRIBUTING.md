@@ -123,14 +123,15 @@ To run a subset of tests:
 make test tests/test_file.py
 ```
 
-## Updating test data
+## Updating Test Data
 
 A reminder for the devs on how to update test data.
 To recompute the data for the snapshot tests,
 run `python tests/generate_run_all_reference.py --output tests/data/proseg2_run_all.zarr`. 
 Turn the data folder into a `.tar.gz` archive (`tar -czvf segtraq_test_data_vX.tar.gz data`),
 and upload it to [Zenodo](https://zenodo.org/records/23558385).
-Finally, update the download path in the contributing guide and in the GitHub action workflows.
+Finally, update the download path in the contributing guide, in the GitHub workflows, 
+and in test_data_version.txt.
 
 ## Code of Conduct
 

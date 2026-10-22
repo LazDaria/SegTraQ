@@ -148,6 +148,9 @@ def test_run_all_runs_label_transfer_once_and_reuses_it():
     _, ps_kwargs = mocks["run_point_statistics"].call_args
     assert ps_kwargs["cell_type_key"] == "transferred_cell_type"
 
+    _, cs_kwargs = mocks["run_clustering_stability"].call_args
+    assert cs_kwargs["cell_type_key"] == "transferred_cell_type"
+
 
 def test_run_all_skips_label_transfer_when_cell_type_key_given():
     mocks, patchers = _patch_runners()
@@ -167,6 +170,9 @@ def test_run_all_skips_label_transfer_when_cell_type_key_given():
     _, kwargs = mocks["run_volume"].call_args
     assert kwargs["cell_type_key"] == "already_known_cell_type"
 
+    _, cs_kwargs = mocks["run_clustering_stability"].call_args
+    assert cs_kwargs["cell_type_key"] == "already_known_cell_type"
+
 
 def test_run_all_falls_back_gracefully_when_label_transfer_fails():
     mocks, patchers = _patch_runners(run_label_transfer=ValueError("no matching genes"))
@@ -185,6 +191,9 @@ def test_run_all_falls_back_gracefully_when_label_transfer_fails():
     assert "label_transfer" not in result["skipped"]
     _, kwargs = mocks["run_volume"].call_args
     assert kwargs["cell_type_key"] is None
+
+    _, cs_kwargs = mocks["run_clustering_stability"].call_args
+    assert cs_kwargs["cell_type_key"] is None
 
 
 def test_run_all_result_keys():
@@ -218,6 +227,8 @@ def test_run_all_result_keys():
         ("run_volume", {"vsi_kwargs": {"inplace": False}}),
         ("run_clustering_stability", {"purity_kwargs": {"key_prefix": "x"}}),
         ("run_clustering_stability", {"ari_kwargs": {"n_jobs": 2}}),
+        ("run_clustering_stability", {"connectedness_kwargs": {"cell_type_key": "x"}}),
+        ("run_all", {"clustering_stability_kwargs": {"cell_type_key": "x"}}),
         ("run_supervised", {"label_transfer_kwargs": {"adata_ref": None}}),
         ("run_supervised", {"markers_from_reference_kwargs": {"ref_gene_key": "x"}}),
         ("run_supervised", {"contamination_kwargs": {"markers": {}}}),
