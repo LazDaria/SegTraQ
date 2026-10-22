@@ -59,7 +59,7 @@ Ready to contribute? Here's how to set up `segtraq` for local development.
    mkdir -p tests/data
    curl -L --fail --retry 3 \
           -o test_data.tar.gz \
-          "https://zenodo.org/records/23032420/files/segtraq_test_data_v7.tar.gz?download=1"
+          "https://zenodo.org/records/23558385/files/segtraq_test_data_v10.tar.gz?download=1"
    tar -xzf test_data.tar.gz -C tests
 ```
    Test data is not bundled with the repository. This step is required before running the test suite locally.
@@ -120,20 +120,17 @@ make deploy-docs
 To run a subset of tests:
 
 ```sh
-pytest tests.test_segtraq
+make test tests/test_file.py
 ```
 
-## Deploying
+## Updating test data
 
-A reminder for the maintainers on how to deploy. Make sure all your changes are committed (including an entry in HISTORY.md). Then run:
-
-```sh
-bump2version patch # possible: major / minor / patch
-git push
-git push --tags
-```
-
-You can set up a [GitHub Actions workflow](https://docs.github.com/en/actions/use-cases-and-examples/building-and-testing/building-and-testing-python#publishing-to-pypi) to automatically deploy your package to PyPI when you push a new tag.
+A reminder for the devs on how to update test data.
+To recompute the data for the snapshot tests,
+run `python tests/generate_run_all_reference.py --output tests/data/proseg2_run_all.zarr`. 
+Turn the data folder into a `.tar.gz` archive (`tar -czvf segtraq_test_data_vX.tar.gz data`),
+and upload it to [Zenodo](https://zenodo.org/records/23558385).
+Finally, update the download path in the contributing guide and in the GitHub action workflows.
 
 ## Code of Conduct
 

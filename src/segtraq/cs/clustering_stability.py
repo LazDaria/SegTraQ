@@ -9,7 +9,7 @@ from .._threads import with_pinned_threads
 from ..constants import CONNECTIVITIES_KEY, DEFAULT_EXCLUDE_GENE_PREFIXES, PCA_KEY
 from ..utils import merge_into_uns
 from .utils import (
-    _cluster_connectedness,
+    _connectedness,
     _prepare_cs_adata,
     _validate_resolution,
     ari_mean,
@@ -21,7 +21,7 @@ from .utils import (
 
 
 @with_pinned_threads
-def cluster_connectedness(
+def connectedness(
     sdata: sd.SpatialData,
     tables_gene_key: str | None = None,
     resolution: float | list[float] = 0.2,
@@ -116,12 +116,20 @@ def cluster_connectedness(
         labels = adata.obs[cell_type_key].values
         valid_labels = labels[~pd.isna(labels)]
         if len(pd.unique(valid_labels)) > 1:
-            distance_val = _cluster_connectedness(
-                adata.obsp[CONNECTIVITIES_KEY],
-                labels,
-                use_weights=use_weights,
+            distance_val = float(
+                _connectedness(
+                    adata.obsp[CONNECTIVITIES_KEY],
+                    labels,
+                    use_weights=use_weights,
+                )
             )
-            return float(distance_val)
+            if inplace:
+                merge_into_uns(
+                    sdata,
+                    tables_key=tables_key,
+                    updates={f"connectedness_{cell_type_key}": distance_val},
+                )
+            return distance_val
         else:
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
@@ -140,7 +148,7 @@ def cluster_connectedness(
         valid_labels = labels[~pd.isna(labels)]
 
         if len(pd.unique(valid_labels)) > 1:
-            distance_val = _cluster_connectedness(
+            distance_val = _connectedness(
                 adata.obsp[CONNECTIVITIES_KEY],
                 labels,
                 use_weights=use_weights,
@@ -154,7 +162,7 @@ def cluster_connectedness(
             )
 
     if inplace:
-        merge_into_uns(sdata, tables_key=tables_key, updates={"cluster_connectedness": best_distance})
+        merge_into_uns(sdata, tables_key=tables_key, updates={"connectedness_leiden": best_distance})
 
     return best_distance
 
@@ -241,8 +249,6 @@ def silhouette_score(
         n_pcs=n_pcs,
         target_sum=target_sum,
     )
-    key = None
-
     best_silhouette_score = np.nan
     # transforming the resolutions into a list if it is not already one
     resolution = _validate_resolution(resolution)
@@ -260,7 +266,7 @@ def silhouette_score(
             labels = adata_subset.obs[cell_type_key].values
             silhouette_avg = _silhouette_score(adata_subset.obsm[PCA_KEY], labels, metric=metric)
             best_silhouette_score = float(silhouette_avg)
-            key = "silhouette_score_labels"
+            key = f"silhouette_score_{cell_type_key}"
 
             # handle inplace within the branch and return early, avoiding fall-through
             if inplace:
@@ -270,7 +276,7 @@ def silhouette_score(
             raise ValueError(f"cell_type_key '{cell_type_key}' must contain more than one cluster")
 
     else:
-        key = "silhouette_score"
+        key = "silhouette_score_leiden"
         for res in resolution:
             _, labels = run_leiden_clustering_on_random_subset(
                 sdata=sdata,
@@ -296,7 +302,7 @@ def silhouette_score(
                     stacklevel=2,
                 )
 
-    if inplace and key is not None:
+    if inplace:
         merge_into_uns(sdata, tables_key=tables_key, updates={key: best_silhouette_score})
 
     return best_silhouette_score
@@ -406,7 +412,7 @@ def purity(
         mean_purity = float(purity_mean(purity_matrix))
 
     if inplace:
-        merge_into_uns(sdata, tables_key=tables_key, updates={"mean_purity": mean_purity})
+        merge_into_uns(sdata, tables_key=tables_key, updates={"mean_purity_leiden": mean_purity})
 
     return mean_purity
 
@@ -516,6 +522,6 @@ def adjusted_rand_index(
         mean_ari = float(ari_mean(pairwise_aris))
 
     if inplace:
-        merge_into_uns(sdata, tables_key=tables_key, updates={"mean_ari": mean_ari})
+        merge_into_uns(sdata, tables_key=tables_key, updates={"mean_ari_leiden": mean_ari})
 
     return mean_ari

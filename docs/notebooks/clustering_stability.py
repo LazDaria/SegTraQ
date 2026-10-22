@@ -168,7 +168,7 @@ plt.show()
 # %%
 ccs = {}
 for method, st in st_dict.items():
-    ccs[method] = st.cs.cluster_connectedness(leiden_kwargs={"flavor": "igraph"})
+    ccs[method] = st.cs.connectedness(leiden_kwargs={"flavor": "igraph"})
 ccs
 
 # %% [markdown]
@@ -304,7 +304,7 @@ sc.pp.pca(st.sdata.tables["table"])
 sc.pp.neighbors(st.sdata.tables["table"])
 
 # %%
-st.cs.cluster_connectedness(cell_type_key="transferred_cell_type")
+st.cs.connectedness(cell_type_key="transferred_cell_type")
 
 # %%
 st.cs.silhouette_score(cell_type_key="transferred_cell_type")

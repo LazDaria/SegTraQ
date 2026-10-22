@@ -27,7 +27,7 @@ UNORDERED_UNS_FRAMES = {"mutually_exclusive_coexpression_rate": ["gene1", "gene2
 # between scipy versions and CPUs, which can move a few borderline cells into another Leiden cluster.
 # exact cluster assignments are therefore not compared, only that the clusterings agree and that the
 # derived stability scores are reproducible within a tolerance.
-CLUSTERING_SCORES = ("cluster_connectedness", "silhouette_score", "mean_purity", "mean_ari")
+CLUSTERING_SCORES = ("connectedness", "silhouette_score", "mean_purity", "mean_ari")
 CLUSTERING_SCORE_ATOL = 0.02
 
 
@@ -178,7 +178,7 @@ def test_run_all_skips_modules_missing_prerequisites(segtraq_obj):
     assert "similarity_top_bottom" in result["volume"]
 
     assert result["clustering_stability"] is not None
-    assert "cluster_connectedness" in result["clustering_stability"]
+    assert "connectedness_leiden" in result["clustering_stability"]
 
     assert result["point_statistics"] is not None
     assert "distance_to_centroid" in result["point_statistics"]

@@ -442,7 +442,7 @@ def purity_mean(purity_matrix: np.ndarray) -> float:
     return np.nanmean(purity_matrix[np.triu_indices(n, k=1)])
 
 
-def _cluster_connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
+def _connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
     """
     Compute how well connected a clustering is in a kNN graph.
 

@@ -75,7 +75,9 @@ def test_run_all_forwards_inplace_and_module_kwargs():
     # `_leave=False` is added by `run_all` itself so nested progress bars are cleared on completion
     mocks["run_baseline"].assert_called_once_with(inplace=False, _leave=False, morphological_kwargs={"n_jobs": 2})
     mocks["run_region_similarity"].assert_called_once_with(inplace=False, _leave=False, n_jobs=4)
-    mocks["run_clustering_stability"].assert_called_once_with(inplace=False, _leave=False, key_prefix="custom_prefix")
+    mocks["run_clustering_stability"].assert_called_once_with(
+        inplace=False, _leave=False, cell_type_key=None, key_prefix="custom_prefix"
+    )
 
 
 def test_run_all_continues_and_records_skips_when_a_module_raises():
@@ -215,7 +217,7 @@ def test_run_all_result_keys():
         ("run_volume", {"heterotypic_overlap_kwargs": {"cell_type_key": "x"}}),
         ("run_volume", {"vsi_kwargs": {"inplace": False}}),
         ("run_clustering_stability", {"purity_kwargs": {"key_prefix": "x"}}),
-        ("run_clustering_stability", {"ari_kwargs": {"n_threads": 2}}),
+        ("run_clustering_stability", {"ari_kwargs": {"n_jobs": 2}}),
         ("run_supervised", {"label_transfer_kwargs": {"adata_ref": None}}),
         ("run_supervised", {"markers_from_reference_kwargs": {"ref_gene_key": "x"}}),
         ("run_supervised", {"contamination_kwargs": {"markers": {}}}),

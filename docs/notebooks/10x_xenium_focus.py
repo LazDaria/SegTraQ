@@ -583,7 +583,7 @@ purities = {}
 aris = {}
 
 for method, st in st_dict.items():
-    ccds[method] = st.cs.cluster_connectedness()
+    ccds[method] = st.cs.connectedness()
     silhouette_scores[method] = st.cs.silhouette_score()
     purities[method] = st.cs.purity()
     aris[method] = st.cs.adjusted_rand_index()

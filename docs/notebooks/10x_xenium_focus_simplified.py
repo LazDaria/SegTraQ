@@ -167,7 +167,7 @@ sc.pl.umap(adata, color="leiden")
 # this is done at a resolution of 0.2, but you can adjust this with the `resolution` parameter.
 
 # %%
-st.cs.cluster_connectedness()
+st.cs.connectedness()
 
 # %% [markdown]
 # We can do the same with the silhouette score.
