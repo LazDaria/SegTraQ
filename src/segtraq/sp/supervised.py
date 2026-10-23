@@ -11,6 +11,7 @@ from statsmodels.stats.multitest import multipletests
 
 from ..utils import (
     _align_query_reference_genes,
+    _make_ref_genes_unique,
     _get_count_matrix,
     _get_genes,
     _get_segtraq_markers,
@@ -879,10 +880,12 @@ def rctd_contamination(
         adata=adata,
         gene_key=matching_gene_key,
     )
-    ref_genes = _get_genes(
-        adata=adata_ref,
-        gene_key=ref_gene_key,
+
+    adata_ref = _make_ref_genes_unique(
+        adata_ref,
+        ref_gene_key=ref_gene_key,
     )
+    ref_genes = adata_ref.var_names
 
     if not query_genes.isin(ref_genes).any():
         raise ValueError(
