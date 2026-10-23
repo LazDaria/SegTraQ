@@ -838,7 +838,9 @@ def rctd_contamination(
         Nested dictionary of optional arguments for RCTD, with sections
         "reference", "config", and "run", e.g.
         {"config": {"device": "cuda"}, "run": {"batch_size": 5000}}.
-        Omitted arguments use RCTD defaults.
+        Defaults use the Xenium query thresholds from Bilous et al. (2026):
+        UMI_min=10 and UMI_min_sigma=100. User-provided settings override
+        these values. All other arguments use RCTD defaults.
     inplace : bool, default=True
         If True, store `rctd_contamination` in
         `sdata.tables[tables_key].obs`.
@@ -855,7 +857,15 @@ def rctd_contamination(
     -----
     Requires the optional package `rctd-py`.
     """
-    from rctd import RCTDConfig, Reference, run_rctd
+    try:
+        from rctd import RCTDConfig, Reference, run_rctd
+    except ModuleNotFoundError as exc:
+        if exc.name != "rctd":
+            raise
+        raise ImportError(
+            'RCTD contamination requires the optional dependency '
+            '\'rctd-py\'. Install it with: pip install "segtraq[rctd]"'
+        ) from exc
 
     # Prepare the spatial table and annotated reference cells.
     adata = sdata.tables[tables_key]
@@ -914,7 +924,13 @@ def rctd_contamination(
     }
     reference = Reference(**reference_kwargs)
 
-    config = RCTDConfig(**rctd_kwargs.get("config", {}))
+    # Xenium thresholds used by Bilous et al.; user settings take precedence.
+    config_kwargs = {
+        "UMI_min": 10,
+        "UMI_min_sigma": 100,
+        **rctd_kwargs.get("config", {}),
+    }
+    config = RCTDConfig(**config_kwargs)
 
     # Run full-mode deconvolution.
     run_kwargs = {

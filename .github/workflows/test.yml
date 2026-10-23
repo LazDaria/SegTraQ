@@ -30,7 +30,7 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-        uv pip install -e ".[test]" --system
+        uv pip install -e ".[test,rctd]" --system
     - name: Cache test data
       id: cache-test-data
       uses: actions/cache@v4
@@ -45,7 +45,7 @@ jobs:
 
         curl -L --fail --retry 3 \
           -o test_data.tar.gz \
-          "https://zenodo.org/records/23186769/files/segtraq_test_data_v8.tar.gz?download=1"
+          "https://zenodo.org/records/23594002/files/segtraq_test_data_v11.tar.gz?download=1"
 
         tar -xzf test_data.tar.gz -C tests
     - name: Verify test data

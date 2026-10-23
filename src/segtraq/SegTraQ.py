@@ -812,6 +812,7 @@ class SegTraQ:
         mba_kwargs: dict | None = None,
         contamination_kwargs: dict | None = None,
         mecr_kwargs: dict | None = None,
+        run_rctd: bool = False,
         rctd_kwargs: dict | None = None,
         _leave: bool = True,
     ):
@@ -885,6 +886,10 @@ class SegTraQ:
             Extra arguments for `sp.contamination_strength`.
         mecr_kwargs : dict or None, optional
             Extra arguments for `sp.mutually_exclusive_coexpression_rate`.
+        run_rctd : bool, default=False
+            If True, compute RCTD contamination. Requires the optional RCTD
+            dependency installed with ``pip install "segtraq[rctd]"``.
+            If False, this step is skipped and `rctd_kwargs` are ignored.
         rctd_kwargs : dict or None, default=None
             Nested RCTD arguments with sections "reference", "config", and
             "run", e.g. {"config": {"device": "cuda"}}.
@@ -935,7 +940,8 @@ class SegTraQ:
         # Work out upfront which optional steps will run, so the progress bar total is correct.
         do_label_transfer = cell_type_key is None
         do_markers = markers is None
-        n_steps = 4 + int(do_label_transfer) + int(do_markers)
+        n_steps = 3 + int(do_label_transfer) + int(do_markers) + int(run_rctd)
+        rctd_df = None
 
         with _StepProgress(total=n_steps, desc="Supervised", leave=_leave) as p:
             if do_label_transfer:
@@ -987,12 +993,13 @@ class SegTraQ:
                     **mecr_kwargs,
                 )
 
-            with p.step("RCTD mixture fraction"):
-                rctd_df = self.sp.rctd_contamination(
-                    **reference_kwargs,
-                    rctd_kwargs=rctd_kwargs,
-                    inplace=inplace,
-                )
+            if run_rctd:
+                with p.step("RCTD contamination"):
+                    rctd_df = self.sp.rctd_contamination(
+                        **reference_kwargs,
+                        rctd_kwargs=rctd_kwargs,
+                        inplace=inplace,
+                    )
 
         if inplace:
             return None
