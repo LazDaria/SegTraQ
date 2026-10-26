@@ -120,3 +120,4 @@ docs/_build/
 docs/notebooks/*.ipynb
 .ipynb_checkpoints/
 /*.tar.gz
+/tests/segtraq_test_data_*.tar.gz

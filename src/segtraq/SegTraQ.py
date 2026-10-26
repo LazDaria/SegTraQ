@@ -902,9 +902,11 @@ class SegTraQ:
         inplace: bool = True,
         label_transfer_kwargs: dict | None = None,
         markers_from_reference_kwargs: dict | None = None,
-        purity_kwargs: dict | None = None,
+        mba_kwargs: dict | None = None,
         contamination_kwargs: dict | None = None,
         mecr_kwargs: dict | None = None,
+        run_rctd: bool = False,
+        rctd_kwargs: dict | None = None,
         _leave: bool = True,
     ):
         """
@@ -921,9 +923,10 @@ class SegTraQ:
 
         1) label transfer
         2) marker generation from reference
-        3) marker_purity
-        4) neighbor_contamination
+        3) marker_balanced_accuracy
+        4) contamination_strength
         5) mutually_exclusive_coexpression_rate
+        6) rctd_contamination
 
         Progress is reported via tqdm unless disabled through `segtraq.settings.progress`.
         Only the steps that will actually run are counted.
@@ -932,7 +935,7 @@ class SegTraQ:
         ----------
         adata_ref : AnnData
             Reference AnnData object used for mutually_exclusive_coexpression_rate
-            and, when needed, label transfer and marker generation.
+            and rctd_contamination, and when needed, label transfer and marker generation.
         ref_cell_type : str
             Column in `adata_ref.obs` containing reference cell-type labels.
         ref_gene_key : str or None, default=None
@@ -970,28 +973,36 @@ class SegTraQ:
             Must not contain the reference arguments (`adata_ref`, `ref_cell_type`,
             `ref_gene_key`, `query_gene_key`, `ref_raw_counts_layer`); pass them
             directly to `run_supervised`.
-        purity_kwargs : dict or None, optional
-            Extra arguments for `sp.marker_purity`.
+        mba_kwargs : dict or None, optional
+            Extra arguments for `sp.marker_balanced_accuracy`.
         contamination_kwargs : dict or None, optional
-            Extra arguments for `sp.neighbor_contamination`.
+            Extra arguments for `sp.contamination_strength`.
         mecr_kwargs : dict or None, optional
             Extra arguments for `sp.mutually_exclusive_coexpression_rate`.
+        run_rctd : bool, default=False
+            If True, compute RCTD contamination. Requires the optional RCTD
+            dependency installed with ``pip install "segtraq[rctd]"``.
+            If False, this step is skipped and `rctd_kwargs` are ignored.
+        rctd_kwargs : dict or None, default=None
+            Nested RCTD arguments with sections "reference", "config", and
+            "run", e.g. {"config": {"device": "cuda"}}.
 
         Returns
         -------
         None or dict
             If `inplace=True`, returns `None`. If `inplace=False`, returns a
             dictionary with keys `"label_transfer"`, `"markers"`,
-            `"marker_purity"`, `"neighbor_contamination"`, and
-            `"mutually_exclusive_coexpression_rate"`.
+            `"marker_balanced_accuracy"`, `"contamination_strength"`, and
+            `"mutually_exclusive_coexpression_rate"`, "rctd_contamination".
         """
         label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
         markers_from_reference_kwargs = (
             {} if markers_from_reference_kwargs is None else dict(markers_from_reference_kwargs)
         )
-        purity_kwargs = {} if purity_kwargs is None else dict(purity_kwargs)
+        mba_kwargs = {} if mba_kwargs is None else dict(mba_kwargs)
         contamination_kwargs = {} if contamination_kwargs is None else dict(contamination_kwargs)
         mecr_kwargs = {} if mecr_kwargs is None else dict(mecr_kwargs)
+        rctd_kwargs = {} if rctd_kwargs is None else dict(rctd_kwargs)
 
         reference_kwargs = dict(
             adata_ref=adata_ref,
@@ -1005,7 +1016,7 @@ class SegTraQ:
             "label_transfer_kwargs", label_transfer_kwargs, reference_kwargs.keys() | {"cell_type_key", "inplace"}
         )
         _check_reserved_kwargs("markers_from_reference_kwargs", markers_from_reference_kwargs, reference_kwargs.keys())
-        _check_reserved_kwargs("purity_kwargs", purity_kwargs, {"cell_type_key", "markers", "inplace"})
+        _check_reserved_kwargs("mba_kwargs", mba_kwargs, {"cell_type_key", "markers", "inplace"})
         _check_reserved_kwargs("contamination_kwargs", contamination_kwargs, {"cell_type_key", "markers", "inplace"})
         _check_reserved_kwargs("mecr_kwargs", mecr_kwargs, reference_kwargs.keys() | {"markers", "inplace"})
         label_transfer_result = None
@@ -1022,7 +1033,8 @@ class SegTraQ:
         # Work out upfront which optional steps will run, so the progress bar total is correct.
         do_label_transfer = cell_type_key is None
         do_markers = markers is None
-        n_steps = 3 + int(do_label_transfer) + int(do_markers)
+        n_steps = 3 + int(do_label_transfer) + int(do_markers) + int(run_rctd)
+        rctd_df = None
 
         with _StepProgress(total=n_steps, desc="Supervised", leave=_leave) as p:
             if do_label_transfer:
@@ -1050,16 +1062,16 @@ class SegTraQ:
                             **markers_from_reference_kwargs,
                         )
 
-            with p.step("marker purity"):
-                purity_df = self.sp.marker_purity(
+            with p.step("marker balanced accuracy"):
+                mba_df = self.sp.marker_balanced_accuracy(
                     cell_type_key=cell_type_key,
                     markers=markers,
                     inplace=inplace,
-                    **purity_kwargs,
+                    **mba_kwargs,
                 )
 
-            with p.step("neighbor contamination"):
-                per_cell_cont_df, cont_strength_mat, cont_mat, cont_n = self.sp.neighbor_contamination(
+            with p.step("contamination strength"):
+                per_cell_cont_df, cont_strength_mat, cont_n = self.sp.contamination_strength(
                     cell_type_key=cell_type_key,
                     markers=markers,
                     inplace=inplace,
@@ -1074,20 +1086,28 @@ class SegTraQ:
                     **mecr_kwargs,
                 )
 
+            if run_rctd:
+                with p.step("RCTD contamination"):
+                    rctd_df = self.sp.rctd_contamination(
+                        **reference_kwargs,
+                        rctd_kwargs=rctd_kwargs,
+                        inplace=inplace,
+                    )
+
         if inplace:
             return None
 
         return {
             "label_transfer": label_transfer_result,
             "markers": markers,
-            "marker_purity": purity_df,
-            "neighbor_contamination": {
+            "marker_balanced_accuracy": mba_df,
+            "contamination_strength": {
                 "per_cell": per_cell_cont_df,
                 "contamination_strength_matrix": cont_strength_mat,
-                "contamination_matrix": cont_mat,
                 "contamination_evaluable_cells_matrix": cont_n,
             },
             "mutually_exclusive_coexpression_rate": mecr_df,
+            "rctd_contamination": rctd_df,
         }
 
     def run_point_statistics(
@@ -1956,7 +1976,7 @@ class _SPFacade:
 
     mutually_exclusive_coexpression_rate.__doc__ = sp.mutually_exclusive_coexpression_rate.__doc__
 
-    def marker_purity(
+    def marker_balanced_accuracy(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]] | None = None,
@@ -1964,7 +1984,7 @@ class _SPFacade:
         neighbors_key: str = "spatial_connectivities",
         inplace: bool = True,
     ):
-        return sp.marker_purity(
+        return sp.marker_balanced_accuracy(
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
@@ -1979,9 +1999,9 @@ class _SPFacade:
             inplace=inplace,
         )
 
-    marker_purity.__doc__ = sp.marker_purity.__doc__
+    marker_balanced_accuracy.__doc__ = sp.marker_balanced_accuracy.__doc__
 
-    def neighbor_contamination(
+    def contamination_strength(
         self,
         cell_type_key: str,
         markers: dict[str, dict[str, list[str]]] | None = None,
@@ -1989,7 +2009,7 @@ class _SPFacade:
         neighbors_key: str | None = "spatial_connectivities",
         inplace: bool = True,
     ):
-        return sp.neighbor_contamination(
+        return sp.contamination_strength(
             sdata=self._p.sdata,
             cell_type_key=cell_type_key,
             markers=markers,
@@ -2004,7 +2024,34 @@ class _SPFacade:
             inplace=inplace,
         )
 
-    neighbor_contamination.__doc__ = sp.neighbor_contamination.__doc__
+    contamination_strength.__doc__ = sp.contamination_strength.__doc__
+
+    def rctd_contamination(
+        self,
+        adata_ref: AnnData,
+        ref_cell_type: str,
+        ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
+        rctd_kwargs: dict | None = None,
+        inplace: bool = True,
+    ):
+        return sp.rctd_contamination(
+            sdata=self._p.sdata,
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
+            tables_key=self._p.tables_key,
+            tables_cell_id_key=self._p.tables_cell_id_key,
+            tables_gene_key=self._p.tables_gene_key,
+            query_gene_key=query_gene_key,
+            tables_raw_counts_layer=self._p.tables_raw_counts_layer,
+            ref_gene_key=ref_gene_key,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+            rctd_kwargs=rctd_kwargs,
+            inplace=inplace,
+        )
+
+    rctd_contamination.__doc__ = sp.rctd_contamination.__doc__
 
 
 class _PSFacade:

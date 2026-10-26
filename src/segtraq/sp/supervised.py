@@ -11,6 +11,7 @@ from statsmodels.stats.multitest import multipletests
 
 from ..utils import (
     _align_query_reference_genes,
+    _make_ref_genes_unique,
     _get_count_matrix,
     _get_genes,
     _get_segtraq_markers,
@@ -297,7 +298,7 @@ def mutually_exclusive_coexpression_rate(
     return df
 
 
-def neighbor_contamination(
+def contamination_strength(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]] | None = None,
@@ -310,7 +311,7 @@ def neighbor_contamination(
     require_neighbor_expression: bool = True,
     neighbors_key: str = "spatial_connectivities",
     inplace: bool = True,
-):
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Compute local negative-marker contamination per cell and per source-target
     cell-type pair.
@@ -324,18 +325,12 @@ def neighbor_contamination(
     in at least one neighboring cell of the corresponding source cell type.
 
     Per-cell outputs (written to `adata.obs`):
-        - contamination_counts:
-            Total counts of locally relevant negative-marker genes in the focal cell.
         - contamination_strength:
             contamination_counts divided by the total transcript counts of the focal cell.
             This estimates the fraction of assigned transcripts that correspond to
             plausible local contamination.
 
     Source-target summaries (written to `adata.uns`):
-        - contamination_matrix:
-            Directed source-to-target matrix. Entry (c_src, c_tgt) is the fraction
-            of evaluable target cells of type c_tgt that contain at least one locally
-            relevant negative marker associated with source type c_src.
         - contamination_strength_matrix:
             Directed source-to-target matrix. Entry (c_src, c_tgt) is the mean
             source-specific contamination strength across evaluable target cells
@@ -344,6 +339,7 @@ def neighbor_contamination(
             Directed source-to-target matrix. Entry (c_src, c_tgt) is the number
             of target cells for which contamination from source type c_src could
             be evaluated.
+
 
     Parameters
     ----------
@@ -377,24 +373,18 @@ def neighbor_contamination(
         Key in `adata.obsp` containing a cell x cell adjacency / connectivity
         matrix that defines the spatial neighborhood.
     inplace : bool, optional, default=True
-        If True, store marker purity results in `sdata.tables[tables_key].obs`.
+        If True, store `contamination_strength` in `.obs` and the strength and
+        evaluable-cell matrices in `.uns` of the selected table.
 
     Returns
     -------
     per_cell_df : pandas.DataFrame
-        Per-cell contamination counts and contamination strength.
-
-    contamination_matrix_df : pandas.DataFrame
-        Source-target matrix with the fraction of evaluable target cells contaminated
-        by each source cell type.
-
+        Per-cell contamination strength.
     contamination_strength_matrix_df : pandas.DataFrame
         Source-target matrix with mean source-specific contamination strength.
-
     contamination_evaluable_cells_matrix_df : pandas.DataFrame
         Source-target matrix with the number of evaluable target cells per pair.
     """
-    contamination_matrix_key = "contamination_matrix"
     contamination_strength_matrix_key = "contamination_strength_matrix"
     contamination_evaluable_cells_matrix_key = "contamination_evaluable_cells_matrix"
 
@@ -463,7 +453,6 @@ def neighbor_contamination(
     contamination_strength = np.full(n_cells, np.nan, dtype=float)
 
     # source-target accumulators
-    pair_hit_cells = defaultdict(int)
     pair_evaluable_cells = defaultdict(int)
     pair_strength_sum = defaultdict(float)
 
@@ -531,16 +520,12 @@ def neighbor_contamination(
         for pair, counts in pair_counts_this_cell.items():
             pair_evaluable_cells[pair] += 1
 
-            if counts > 0:
-                pair_hit_cells[pair] += 1
-
             source_strength = counts / total_counts[i]
             pair_strength_sum[pair] += source_strength
 
     per_cell_df = pd.DataFrame(
         {
             tables_cell_id_key: adata.obs[tables_cell_id_key],
-            "contamination_counts": contamination_counts,
             "contamination_strength": contamination_strength,
         }
     )
@@ -548,7 +533,6 @@ def neighbor_contamination(
     # build source-target matrices
     idxmap = {ct: i for i, ct in enumerate(all_cts)}
 
-    contamination_mat = np.full((len(all_cts), len(all_cts)), np.nan, dtype=float)
     strength_mat = np.full((len(all_cts), len(all_cts)), np.nan, dtype=float)
     evaluable_mat = np.full((len(all_cts), len(all_cts)), np.nan, dtype=float)
 
@@ -557,17 +541,10 @@ def neighbor_contamination(
         col = idxmap[c_tgt]
 
         evaluable_mat[row, col] = n_eval
-        contamination_mat[row, col] = pair_hit_cells[(c_src, c_tgt)] / n_eval
 
     for (c_src, c_tgt), total_strength in pair_strength_sum.items():
         n = pair_evaluable_cells[(c_src, c_tgt)]
         strength_mat[idxmap[c_src], idxmap[c_tgt]] = total_strength / n
-
-    contamination_matrix_df = pd.DataFrame(
-        contamination_mat,
-        index=all_cts,
-        columns=all_cts,
-    )
 
     contamination_strength_matrix_df = pd.DataFrame(
         strength_mat,
@@ -593,7 +570,6 @@ def neighbor_contamination(
             sdata,
             tables_key=tables_key,
             updates={
-                contamination_matrix_key: contamination_matrix_df,
                 contamination_strength_matrix_key: contamination_strength_matrix_df,
                 contamination_evaluable_cells_matrix_key: contamination_evaluable_cells_matrix_df,
             },
@@ -601,13 +577,12 @@ def neighbor_contamination(
 
     return (
         per_cell_df,
-        contamination_matrix_df,
         contamination_strength_matrix_df,
         contamination_evaluable_cells_matrix_df,
     )
 
 
-def marker_purity(
+def marker_balanced_accuracy(
     sdata,
     cell_type_key: str,
     markers: dict[str, dict[str, list[str]]] | None = None,
@@ -673,9 +648,7 @@ def marker_purity(
     Returns
     -------
     pandas.DataFrame
-        Columns:
-            - ``positive_marker_recall``
-            - ``negative_marker_avoidance``
+        Cell identifier (`tables_cell_id_key`) and:
             - ``marker_balanced_accuracy``
             - ``n_evaluated_positive_markers``
             - ``n_evaluated_negative_markers``
@@ -792,11 +765,214 @@ def marker_purity(
     result = pd.DataFrame(
         {
             tables_cell_id_key: adata.obs[tables_cell_id_key],
-            "positive_marker_recall": positive_recall,
-            "negative_marker_avoidance": negative_avoidance,
             "marker_balanced_accuracy": balanced_accuracy,
             "n_evaluated_positive_markers": n_pos_markers,
             "n_evaluated_negative_markers": n_neg_markers,
+        },
+    )
+
+    if inplace:
+        merge_into_obs(
+            sdata=sdata,
+            tables_key=tables_key,
+            df_to_merge=result,
+            tables_cell_id_key=tables_cell_id_key,
+            df_cell_id_key=tables_cell_id_key,
+        )
+
+    return result
+
+
+def rctd_contamination(
+    sdata,
+    adata_ref: AnnData,
+    ref_cell_type: str,
+    tables_key: str = "table",
+    tables_cell_id_key: str = "cell_id",
+    tables_gene_key: str | None = None,
+    query_gene_key: str | None = None,
+    tables_raw_counts_layer: str | None = None,
+    ref_gene_key: str | None = None,
+    ref_raw_counts_layer: str | None = None,
+    rctd_kwargs: dict | None = None,
+    inplace: bool = True,
+) -> pd.DataFrame:
+    """
+    Estimate expression mixture using RCTD weights outside the dominant type.
+
+    RCTD is run in full mode to estimate contributions from all reference
+    cell types. For each cell, weights are normalized to sum to one and
+    rctd_contamination is computed as one minus the largest normalized weight.
+
+    Higher values indicate a larger estimated contribution outside the
+    dominant reference type. The score measures reference-dependent expression
+    mixture.
+
+    Parameters
+    ----------
+    sdata : SpatialData-like
+        Must contain `tables[tables_key]` as an AnnData with expression data.
+    adata_ref : AnnData
+        Reference AnnData containing raw counts and cell-type annotations.
+        Cells with missing annotations are excluded.
+    ref_cell_type : str
+        Column in `adata_ref.obs` containing reference cell-type labels.
+    tables_key : str, default="table"
+        Key of the AnnData table in `sdata.tables`.
+    tables_cell_id_key : str, default="cell_id"
+        Column in the spatial table's `.obs` containing unique cell IDs.
+    tables_gene_key : str or None, default=None
+        Column in the spatial table's `.var` containing gene identifiers.
+        If None, `var_names` are used.
+    query_gene_key : str or None, default=None
+        Alternative column in the spatial table's `.var` containing gene
+        identifiers matching the reference. If None, `tables_gene_key` is used.
+    tables_raw_counts_layer : str or None, default=None
+        Layer containing raw spatial counts. If None, `.X` is used.
+    ref_gene_key : str or None, default=None
+        Column in `adata_ref.var` containing matching gene identifiers.
+        If None, `adata_ref.var_names` are used. Selected gene identifiers
+        must be unique, non-missing strings.
+    ref_raw_counts_layer : str or None, default=None
+        Layer containing raw reference counts. If None, `.X` is used.
+    rctd_kwargs : dict or None, default=None
+        Nested dictionary of optional arguments for RCTD, with sections
+        "reference", "config", and "run", e.g.
+        {"config": {"device": "cuda"}, "run": {"batch_size": 5000}}.
+        Defaults use the Xenium query thresholds from Bilous et al. (2026):
+        UMI_min=10 and UMI_min_sigma=100. User-provided settings override
+        these values. All other arguments use RCTD defaults.
+    inplace : bool, default=True
+        If True, store `rctd_contamination` in
+        `sdata.tables[tables_key].obs`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per cell with columns `tables_cell_id_key`
+        and `rctd_contamination`.
+        Cells excluded by RCTD, non-converged fits, and fits with invalid or
+        zero-total weights receive NaN.
+
+    Notes
+    -----
+    Requires the optional package `rctd-py`.
+    """
+    try:
+        from rctd import RCTDConfig, Reference, run_rctd
+    except ModuleNotFoundError as exc:
+        if exc.name != "rctd":
+            raise
+        raise ImportError(
+            'RCTD contamination requires the optional dependency '
+            '\'rctd-py\'. Install it with: pip install "segtraq[rctd]"'
+        ) from exc
+
+    # Prepare the spatial table and annotated reference cells.
+    adata = sdata.tables[tables_key]
+
+    annotated = adata_ref.obs[ref_cell_type].notna()
+    adata_ref = adata_ref[annotated].copy()
+
+    matching_gene_key = query_gene_key if query_gene_key is not None else tables_gene_key
+
+    query_genes = _get_genes(
+        adata=adata,
+        gene_key=matching_gene_key,
+    )
+
+    adata_ref = _make_ref_genes_unique(
+        adata_ref,
+        ref_gene_key=ref_gene_key,
+    )
+    ref_genes = adata_ref.var_names
+
+    if not query_genes.isin(ref_genes).any():
+        raise ValueError(
+            "No common genes found between query and reference. "
+            "Check `query_gene_key`, `tables_gene_key`, and `ref_gene_key`."
+        )
+
+    # Select raw counts using the existing count-validation helper.
+    X = _get_count_matrix(
+        adata,
+        layer=tables_raw_counts_layer,
+        layer_arg="tables_raw_counts_layer",
+    )
+    X_ref = _get_count_matrix(
+        adata_ref,
+        layer=ref_raw_counts_layer,
+        layer_arg="ref_raw_counts_layer",
+    )
+
+    # Construct minimal RCTD inputs, retaining all genes for total-count offsets.
+    query = AnnData(
+        X=X.copy(),
+        obs=pd.DataFrame(index=adata.obs_names.copy()),
+        var=pd.DataFrame(index=query_genes),
+    )
+    reference_data = AnnData(
+        X=X_ref.copy(),
+        obs=adata_ref.obs[[ref_cell_type]].copy(),
+        var=pd.DataFrame(index=ref_genes),
+    )
+
+    # Configure RCTD and prepare the reference.
+    rctd_kwargs = rctd_kwargs or {}
+
+    reference_kwargs = {
+        **rctd_kwargs.get("reference", {}),
+        "adata": reference_data,
+        "cell_type_col": ref_cell_type,
+    }
+    reference = Reference(**reference_kwargs)
+
+    # Xenium thresholds used by Bilous et al.; user settings take precedence.
+    config_kwargs = {
+        "UMI_min": 10,
+        "UMI_min_sigma": 100,
+        **rctd_kwargs.get("config", {}),
+    }
+    config = RCTDConfig(**config_kwargs)
+
+    # Run full-mode deconvolution.
+    run_kwargs = {
+        **rctd_kwargs.get("run", {}),
+        "spatial": query,
+        "reference": reference,
+        "mode": "full",
+        "config": config,
+    }
+    fitted = run_rctd(**run_kwargs)
+
+    # Calculate the non-dominant contribution.
+    weights = np.asarray(fitted.weights)
+    totals = weights.sum(axis=1)
+    maximum = weights.max(axis=1)
+
+    valid = (
+        np.asarray(fitted.converged, dtype=bool)
+        & np.isfinite(weights).all(axis=1)
+        & (weights >= 0).all(axis=1)
+        & np.isfinite(totals)
+        & (totals > 0)
+    )
+
+    offtype = np.full(len(weights), np.nan, dtype=float)
+    offtype[valid] = 1.0 - maximum[valid] / totals[valid]
+
+    # Map retained cells back to the original table.
+    mask = fitted.pixel_mask
+    if mask is None:
+        mask = np.ones(adata.n_obs, dtype=bool)
+
+    values = np.full(adata.n_obs, np.nan, dtype=float)
+    values[mask] = offtype
+
+    result = pd.DataFrame(
+        {
+            tables_cell_id_key: adata.obs[tables_cell_id_key],
+            "rctd_contamination": values,
         },
     )
 

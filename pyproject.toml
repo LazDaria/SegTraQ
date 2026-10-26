@@ -52,6 +52,9 @@ test = [
     "black[jupyter]",
     "pytest-cov",
 ]
+rctd = [
+    "rctd-py",
+]
 
 docs = [
     "sphinx",
