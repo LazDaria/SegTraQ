@@ -338,21 +338,20 @@ document.write(`
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">Transfer labels from scRNA-seq to spatial transcriptomics</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Computing-cell-type-specific-markers">Computing cell type-specific markers</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-marker-balanced-accuracy">Compute marker balanced accuracy</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-marker-purity">Compute marker purity</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#negative_marker_avoidance"><code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#positive_marker_recall"><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#marker_balanced_accuracy"><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Contamination-strength">Contamination strength</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Neighborhood-contamination">Neighborhood contamination</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_counts"><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_strength"><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_matrix"]</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_strength_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_strength_matrix"]</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#!-Important"><strong>! Important</strong></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-RCTD-contamination">Compute RCTD contamination</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rctd_contamination"><code class="docutils literal notranslate"><span class="pre">rctd_contamination</span></code></a></li>
-</ul>
-</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)">Compute mutually exclusive co-expression rate (MECR)</a></li>
 </ul>
             </nav>
@@ -368,7 +367,7 @@ document.write(`
   <section id="Module:-Supervised-Metrics">
 <h1>Module: Supervised Metrics<a class="headerlink" href="#Module:-Supervised-Metrics" title="Link to this heading">#</a></h1>
 <p>Unlike scRNA-seq, spatial transcriptomics measurements are affected by the local tissue context. Transcripts can be captured outside their cell of origin due to transcript diffusion, 3D overlap, or segmentation inaccuracies, leading to mixed or contaminated expression profiles. As a result, spatial cells may partially resemble their neighbors.</p>
-<center><p><img alt="d3414a0f1bfc4235ac79da48d7d6fa0a" class="no-scaled-link" src="../_images/supervised.png" style="width: 90%;" /></p>
+<center><p><img alt="889667f409fd42589161ea189bf4883f" class="no-scaled-link" src="../_images/supervised.png" style="width: 90%;" /></p>
 </center><p>The <code class="docutils literal notranslate"><span class="pre">supervised</span></code> (<code class="docutils literal notranslate"><span class="pre">sp</span></code>) module provides metrics to evaluate how well cell profiles in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset with cell type annotations.</p>
 <p>By comparing spatial expression profiles to a high-quality scRNA-seq reference, the supervised module aims to quantify this mismatch. Specifically, we use the scRNA-seq dataset as a clean reference, transfer cell type labels to the spatial data, and then compute metrics that measure:</p>
 <ul class="simple">
@@ -468,15 +467,15 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee24eb380&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee248c050&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff384fb380&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff38394190&gt;: None
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2139: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;CARD9&#39;, &#39;CHIT1&#39;, &#39;NOS1&#39;, &#39;SERPINB4&#39;, &#39;POPDC3&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;MOG&#39;, &#39;SLC6A1&#39;, &#39;EIF1AY&#39;, &#39;SULT2A1&#39;, &#39;FOLH1&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;oemhhohn-1&#39;, &#39;aphemnlm-1&#39;, &#39;apnfcbpf-1&#39;, &#39;aphffbmb-1&#39;, &#39;iceeeemj-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;aphemnlm-1&#39;, &#39;aphffbmb-1&#39;, &#39;iceeeemj-1&#39;, &#39;oemhhohn-1&#39;, &#39;apnfcbpf-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -525,7 +524,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_466308/964490482.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_191419/964490482.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
 </pre></div></div>
 </div>
@@ -904,25 +903,25 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 </div></div>
 </div>
 </section>
-<section id="Compute-marker-balanced-accuracy">
-<h2>Compute marker balanced accuracy<a class="headerlink" href="#Compute-marker-balanced-accuracy" title="Link to this heading">#</a></h2>
-<p>We quantify how well each spatial cell’s expression profile matches its assigned cell type using <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy()</span></code>, which combines positive-marker detection with the absence of neighborhood-relevant negative markers.</p>
-<p>Local contamination by neighboring cells (e.g. diffusion or segmentation spillover) can contribute to differences between reference and spatial expression profiles. This motivates evaluating negative markers in a neighborhood-aware manner.</p>
-<p><strong>Positive-marker detection</strong></p>
-<p>For each cell of type <code class="docutils literal notranslate"><span class="pre">c</span></code>, we compute the fraction of positive marker genes (<code class="docutils literal notranslate"><span class="pre">markers[c][&quot;positive&quot;]</span></code>) that are expressed in the cell (<code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code>). This measures how consistently the cell expresses markers expected for its assigned type and is computed independently of the neighborhood.</p>
-<p><strong>Negative-marker avoidance (neighborhood-aware)</strong></p>
-<p>For a focal cell, we identify the cell types present in its spatial neighborhood and intersect the focal cell type’s negative markers with the positive markers of neighboring types. Optionally, these markers can be further restricted to genes expressed in at least one neighboring cell of the corresponding source type (<code class="docutils literal notranslate"><span class="pre">require_neighbor_expression=True</span></code>). We then compute the fraction of these relevant negative markers that are not expressed in the focal cell.</p>
+<section id="Compute-marker-purity">
+<h2>Compute marker purity<a class="headerlink" href="#Compute-marker-purity" title="Link to this heading">#</a></h2>
+<p>We quantify how pure each spatial cell’s expression profile is with respect to its assigned cell type using positive and negative marker genes.</p>
+<p>We assume that differences between scRNA-seq and spatial transcriptomics profiles arise primarily from local contamination by neighboring cells (e.g. diffusion or segmentation spillover). This motivates evaluating negative markers in a neighborhood-aware manner.</p>
+<p><strong>Identity evaluation</strong></p>
+<p>For each cell of type <code class="docutils literal notranslate"><span class="pre">c</span></code>, we compute the fraction of positive marker genes (<code class="docutils literal notranslate"><span class="pre">markers[c][&quot;positive&quot;]</span></code>) that are expressed in the cell (<code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">0</span></code>). This quantity, <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>, measures how consistently the cell expresses markers expected for its assigned type and is computed independently of the neighborhood.</p>
+<p><strong>Contamination (neighborhood-aware)</strong></p>
+<p>For a focal cell, we identify the cell types present in its spatial neighborhood and intersect the focal cell type’s negative markers with the positive markers of neighboring cell types. Optionally, these markers can be further restricted to genes that are expressed in at least one neighboring cell of the corresponding source type (<code class="docutils literal notranslate"><span class="pre">require_neighbor_expression=True</span></code>). These relevant negative markers represent genes that should be absent from the focal cell but present in nearby cells. The
+metric <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> is defined as the fraction of these markers that are not expressed in the focal cell.</p>
 <p>If no neighborhood graph is present (<code class="docutils literal notranslate"><span class="pre">neighbors_key</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">sdata.tables[tables_key].obsp</span></code>), it is automatically computed from cell centroids using a Delaunay graph.</p>
-<p><strong>Marker balanced accuracy</strong></p>
-<p>The two fractions are averaged:</p>
-<p><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span> <span class="pre">=</span> <span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">(positive-marker</span> <span class="pre">detection</span> <span class="pre">+</span> <span class="pre">negative-marker</span> <span class="pre">avoidance)</span></code></p>
-<p>This corresponds to the mean of sensitivity and specificity. High values indicate consistent detection of expected markers together with little expression of neighborhood-relevant negative markers.</p>
-<p>The two components are calculated internally but are not returned separately. The output contains <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code>, <code class="docutils literal notranslate"><span class="pre">n_evaluated_positive_markers</span></code>, and <code class="docutils literal notranslate"><span class="pre">n_evaluated_negative_markers</span></code>, together with the cell identifiers.</p>
+<p><strong>Overall purity</strong></p>
+<p>Identity and contamination are combined using:</p>
+<p><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span> <span class="pre">=</span> <span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">(positive_marker_recall</span> <span class="pre">+</span> <span class="pre">negative_marker_avoidance)</span></code></p>
+<p>This corresponds to balanced accuracy, i.e. the mean of sensitivity (positive marker recall) and specificity (negative marker avoidance). High values indicate strong expression of expected markers together with minimal expression of markers attributable to neighboring cell types.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">purity</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">marker_balanced_accuracy</span><span class="p">(</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">purity</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">marker_purity</span><span class="p">(</span>
     <span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
     <span class="n">require_neighbor_expression</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">neighbors_key</span><span class="o">=</span><span class="s2">&quot;spatial_connectivities&quot;</span><span class="p">,</span>
@@ -943,8 +942,8 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1892: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
-  return sp.marker_balanced_accuracy(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1966: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+  return sp.marker_purity(
 </pre></div></div>
 </div>
 <section id="negative_marker_avoidance">
@@ -1014,12 +1013,128 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 </pre></div>
 </div>
 </div>
+<p>The <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score indicates that cells of type DCIS1 are the most contaminated.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;negative_marker_avoidance&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">col_celltype</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_supervised_23_0.png" src="../_images/notebooks_supervised_23_0.png" />
+</div>
+</div>
+<p>This can also be visualized spatially. The <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score is only computed for cells which have a neigbhor of a different type. This clearly shows the DCIS1 cells with low <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score, i.e. contamination.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type_plot&quot;</span><span class="p">,</span>
+    <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell boundaries colored by cell type&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;negative_marker_avoidance&quot;</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell boundaries colored by negative_marker_avoidance&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">164</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_supervised_25_1.png" src="../_images/notebooks_supervised_25_1.png" />
+</div>
+</div>
+</section>
+<section id="positive_marker_recall">
+<h3><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code><a class="headerlink" href="#positive_marker_recall" title="Link to this heading">#</a></h3>
+<p>Cells annotated as mast and DCIS2 show the highest <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> scores, suggesting that their cell identity is captured most consistently by positive markers.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;positive_marker_recall&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">col_celltype</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_supervised_28_0.png" src="../_images/notebooks_supervised_28_0.png" />
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>score is computed globally, i.e. irrespective of the cell neighborhood, so there are fewer missing values than for <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>. The spatial plot below is in line with the boxplot above, showing that cells of type DCIS2 and mast show the highest <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type_plot&quot;</span><span class="p">,</span>
+    <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell boundaries colored by cell type&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;positive_marker_recall&quot;</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell boundaries colored by positive_marker_recall&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">47</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_supervised_30_1.png" src="../_images/notebooks_supervised_30_1.png" />
+</div>
+</div>
 </section>
 <section id="marker_balanced_accuracy">
 <h3><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code><a class="headerlink" href="#marker_balanced_accuracy" title="Link to this heading">#</a></h3>
-<p><strong>DCIS1</strong> ranks among the cell types with the lowest marker balanced accuracy, while <strong>DCIS2</strong> and <strong>mast</strong> cells show the highest marker balanced accuracy.</p>
+<p>Cells of type <strong>DCIS1</strong> (which have high transcript counts) show the highest <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> and the third-highest <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>. This is expected: cells with higher transcript counts tend to capture more positive markers, but also have a higher risk of capturing negative markers. As a result, the combined metric <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code>, which balances <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> and <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>, provides a more representative measure of purity.
+Accordingly, <strong>DCIS1</strong> ranks among the cell types with the lowest purity, while <strong>DCIS2</strong> and <strong>mast</strong> cells show the highest purity.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;marker_balanced_accuracy&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">col_celltype</span><span class="p">)</span>
@@ -1030,38 +1145,42 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_supervised_24_0.png" src="../_images/notebooks_supervised_24_0.png" />
+<img alt="../_images/notebooks_supervised_33_0.png" src="../_images/notebooks_supervised_33_0.png" />
 </div>
 </div>
 </section>
 </section>
-<section id="Contamination-strength">
-<h2>Contamination strength<a class="headerlink" href="#Contamination-strength" title="Link to this heading">#</a></h2>
-<p>Marker balanced accuracy summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify</p>
+<section id="Neighborhood-contamination">
+<h2>Neighborhood contamination<a class="headerlink" href="#Neighborhood-contamination" title="Link to this heading">#</a></h2>
+<p>Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify</p>
 <ol class="lowerroman simple">
-<li><p><strong>what fraction of a cell’s transcripts can be attributed to contamination</strong> and</p></li>
-<li><p><strong>which neighboring cell types</strong> contribute to this signal. We use <code class="docutils literal notranslate"><span class="pre">contamination_strength()</span></code> to quantify potential local contamination.</p></li>
+<li><p><strong>how many contaminating transcripts</strong> are present per cell and</p></li>
+<li><p><strong>which neighboring cell types</strong> contribute to this signal. We therefore compute neighborhood contamination.</p></li>
 </ol>
-<p>A gene is contamination-relevant for a target cell of type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> if it is:</p>
+<p>We treat a gene as contamination-relevant for a target cell type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> if it is</p>
 <ol class="lowerroman simple">
 <li><p>a <strong>negative marker of ``c_tgt``</strong>,</p></li>
-<li><p>a <strong>positive marker of a neighboring source type ``c_src``</strong>, and</p></li>
-<li><p><strong>expressed (&gt;0) in at least one neighboring cell of that source type</strong> when <code class="docutils literal notranslate"><span class="pre">require_neighbor_expression=True</span></code> (the default).</p></li>
+<li><p>simultaneously a <strong>positive marker of a neighboring source type ``c_src``</strong>, and</p></li>
+<li><p>actually <strong>expressed (&gt;0) in at least one of the neighboring cells of the source type</strong> (<code class="docutils literal notranslate"><span class="pre">require_neighbor_expression</span></code> , default=True).</p></li>
 </ol>
-<p>The function returns three outputs:</p>
-<p><strong>Per-cell contamination strength</strong> <code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code> is the fraction of transcripts assigned to a cell that correspond to contamination-relevant genes. With <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code>, the score is stored in <code class="docutils literal notranslate"><span class="pre">.obs</span></code>.</p>
-<p><strong>Directed cell-type contamination matrices</strong> Rows represent source cell types and columns represent target cell types:</p>
+<p>This yields two levels of output:</p>
+<p><strong>Per-cell metrics.</strong> For each cell, we compute</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">contamination_strength_matrix</span></code>: the mean source-specific contamination strength across evaluable target cells with nonzero total counts, including cells with zero contamination-relevant transcripts.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">contamination_evaluable_cells_matrix</span></code>: the number of target cells for which contamination from each source type could be evaluated.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code>: the total number of transcripts for contamination-relevant genes, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code>: the fraction of transcripts assigned to the cell that correspond to contamination-relevant genes, computed as <code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code> / <code class="docutils literal notranslate"><span class="pre">total_transcript_counts</span></code>.</p></li>
 </ul>
-<p>With <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code>, both matrices are stored in <code class="docutils literal notranslate"><span class="pre">.uns</span></code>.</p>
+<p><strong>Directed cell-type contamination (stored in ``.uns``):</strong> Across all cells, we additionally summarize contamination between source and target cell types:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_matrix</span></code>: the fraction of target cells of type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> that contain at least one contamination-relevant transcript originating from source cell type <code class="docutils literal notranslate"><span class="pre">c_src</span></code>, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_strength_matrix</span></code>: the mean contamination strength of target cells of type <code class="docutils literal notranslate"><span class="pre">c_tgt</span></code> attributable to source cell type <code class="docutils literal notranslate"><span class="pre">c_src</span></code>, computed by averaging the source-specific contamination strength across all evaluable target cells.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contamination_evaluable_cells_matrix</span></code> : Directed source-to-target matrix. Entry (c_src, c_tgt) is the number of target cells for which contamination from source type c_src could be evaluated.</p></li>
+</ul>
 <p>If no neighborhood graph is present (<code class="docutils literal notranslate"><span class="pre">neighbors_key</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">sdata.tables[tables_key].obsp</span></code>), it is automatically computed from cell centroids using a Delaunay graph.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">contamination_strength</span><span class="p">(</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">neighbor_contamination</span><span class="p">(</span>
     <span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
     <span class="n">require_neighbor_expression</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">neighbors_key</span><span class="o">=</span><span class="s2">&quot;spatial_connectivities&quot;</span><span class="p">,</span>
@@ -1070,11 +1189,54 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 </pre></div>
 </div>
 </div>
+<section id="contamination_counts">
+<h3><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code><a class="headerlink" href="#contamination_counts" title="Link to this heading">#</a></h3>
+<p>The spatial plot below shows, for each target cell, the number of contaminating transcripts. If desired, this quantity can be normalized by the total number of transcripts per cell. As expected, the plot correlates with the <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>score from above.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type_plot&quot;</span><span class="p">,</span>
+    <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span>
+    <span class="n">groups</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell boundaries colored by cell type&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+
+<span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+    <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+    <span class="n">color</span><span class="o">=</span><span class="s2">&quot;contamination_counts&quot;</span><span class="p">,</span>
+    <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Cell boundaries colored by #contamination transcripts&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">164</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_supervised_39_1.png" src="../_images/notebooks_supervised_39_1.png" />
+</div>
+</div>
+</section>
 <section id="contamination_strength">
 <h3><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code><a class="headerlink" href="#contamination_strength" title="Link to this heading">#</a></h3>
-<p>We can visualize <code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code>, the fraction of transcripts assigned to a cell that correspond to locally relevant contamination marker genes. A value of contamination_strength = 0 indicates that no contamination-relevant transcripts were detected, whereas larger values indicate that a greater proportion of the cell’s assigned transcripts are consistent with potential contamination from neighboring cells.</p>
+<p>In addition, we can visualize <code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code>, the fraction of transcripts assigned to a cell that correspond to locally relevant contamination marker genes. A value of contamination_strength = 0 indicates that no contamination-relevant transcripts were detected, whereas larger values indicate that a greater proportion of the cell’s assigned transcripts are consistent with potential contamination from neighboring cells.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
@@ -1109,7 +1271,65 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_supervised_30_1.png" src="../_images/notebooks_supervised_30_1.png" />
+<img alt="../_images/notebooks_supervised_42_1.png" src="../_images/notebooks_supervised_42_1.png" />
+</div>
+</div>
+</section>
+<section id=".uns[%22contamination_matrix%22]">
+<h3><code class="docutils literal notranslate"><span class="pre">.uns[&quot;contamination_matrix&quot;]</span></code><a class="headerlink" href="#.uns[%22contamination_matrix%22]" title="Link to this heading">#</a></h3>
+<p>The heatmap below shows, for each source–target cell-type pair, the <strong>fraction of all target cells</strong> contaminated by transcripts from a neighboring source cell type.</p>
+<p>Percentages within a column may sum to more than 100% because a single target cell can be contaminated by <strong>multiple</strong> neighboring source cell types and is therefore counted for each of them.</p>
+<p>The bubble plot illustrates why both the contamination frequency (bubble color) and the number of evaluable target cells (bubble size) should be considered when interpreting directed contamination. For example, approximately 20% of evaluable T cells are contaminated by stromal cells, providing evidence for a common contamination pattern across many cells. In contrast, although 100% of evaluable T cells are contaminated by DCIS2 cells, this result is based on only a small number of evaluable T
+cells because few T cells have neighboring DCIS2 cells with relevant marker genes. Consequently, high contamination frequencies based on very few evaluable cells should be interpreted with caution.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cont_mat</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;contamination_matrix&quot;</span><span class="p">]</span>
+<span class="n">cont_n</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;contamination_evaluable_cells_matrix&quot;</span><span class="p">]</span>
+
+<span class="n">plot_df</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">cont_mat</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">dropna</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">&quot;contamination&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;level_0&quot;</span><span class="p">:</span> <span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;level_1&quot;</span><span class="p">:</span> <span class="s2">&quot;target&quot;</span><span class="p">})</span>
+<span class="p">)</span>
+
+<span class="n">plot_df</span><span class="p">[</span><span class="s2">&quot;n_evaluable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cont_n</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">dropna</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+
+<span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">scatterplot</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">plot_df</span><span class="p">,</span>
+    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;target&quot;</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="s2">&quot;source&quot;</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="s2">&quot;n_evaluable&quot;</span><span class="p">,</span>
+    <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;contamination&quot;</span><span class="p">,</span>
+    <span class="n">sizes</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">600</span><span class="p">),</span>
+    <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Reds&quot;</span><span class="p">,</span>
+    <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+    <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.02</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>
+    <span class="n">borderaxespad</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Directed Cell-Type Contamination&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Target Cell Type&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Source Cell Type&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_supervised_45_0.png" src="../_images/notebooks_supervised_45_0.png" />
 </div>
 </div>
 </section>
@@ -1120,11 +1340,10 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 this example; see <code class="docutils literal notranslate"><span class="pre">overlap_df</span></code>), and these markers may not be expressed in the neighboring DCIS2 cells in every local neighborhood.</p>
 <p>This can have both technical and biological causes. For example, when two cell types have similar expression profiles, contamination between them is less consequential because the contaminating transcripts largely match the expected expression of the target cell.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cont_strength_mat</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;contamination_strength_matrix&quot;</span><span class="p">]</span>
-<span class="n">cont_n</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="n">st</span><span class="o">.</span><span class="n">tables_key</span><span class="p">]</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;contamination_evaluable_cells_matrix&quot;</span><span class="p">]</span>
 
 <span class="n">plot_df</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">cont_strength_mat</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">dropna</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1167,7 +1386,7 @@ this example; see <code class="docutils literal notranslate"><span class="pre">o
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_supervised_33_0.png" src="../_images/notebooks_supervised_33_0.png" />
+<img alt="../_images/notebooks_supervised_48_0.png" src="../_images/notebooks_supervised_48_0.png" />
 </div>
 </div>
 </section>
@@ -1181,74 +1400,13 @@ this example; see <code class="docutils literal notranslate"><span class="pre">o
 <li><p><strong>Expression similarity</strong>, .ie. contamination between transcriptionally similar cell types is both less consequential and more difficult to detect. Because the two cell types share fewer mutually exclusive marker genes, transferred transcripts have less impact on the measured expression profile, and fewer informative genes are available for quantifying contamination.</p></li>
 </ol>
 </section>
-<section id="Compute-RCTD-contamination">
-<h2>Compute RCTD contamination<a class="headerlink" href="#Compute-RCTD-contamination" title="Link to this heading">#</a></h2>
-<p>We estimate expression mixture within each spatial cell using <code class="docutils literal notranslate"><span class="pre">rctd_contamination()</span></code> and an annotated scRNA-seq reference. Unlike the marker-based metrics, this approach does not require assigned spatial cell-type labels, predefined marker sets, or neighborhood information.</p>
-<p><strong>Reference-based expression decomposition</strong></p>
-<p>RCTD is run in full mode to estimate contributions from all retained reference cell types to each spatial cell’s expression profile. Query and reference expression matrices must contain raw counts.</p>
-<p><strong>RCTD contamination</strong></p>
-<p>For each spatial cell, the fitted cell-type weights are normalized to sum to one. The score is then calculated as:</p>
-<p><code class="docutils literal notranslate"><span class="pre">rctd_contamination</span> <span class="pre">=</span> <span class="pre">1</span> <span class="pre">-</span> <span class="pre">max(normalized_weights)</span></code></p>
-<p>This represents the estimated expression contribution outside the dominant reference cell type. For example, normalized weights of 0.8 and 0.2 yield a score of 0.2, regardless of the spatial cell’s assigned label.</p>
-<p>Lower values indicate that a single reference type dominates the fitted expression profile; higher values indicate a greater mixture. With K retained reference types, the maximum possible score is <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">1</span> <span class="pre">/</span> <span class="pre">K</span></code>.</p>
-<p>The score measures reference-dependent expression mixture rather than directly identifying incorrectly assigned transcripts.</p>
-<p>The output contains cell identifiers and <code class="docutils literal notranslate"><span class="pre">rctd_contamination</span></code>. Cells excluded by RCTD’s filters, non-converged fits, and invalid fits receive NaN. With <code class="docutils literal notranslate"><span class="pre">inplace=True</span></code> (the default), the score is also stored in <code class="docutils literal notranslate"><span class="pre">.obs</span></code>.</p>
-<p>RCTD was developed by <a class="reference external" href="https://doi.org/10.1038/s41587-021-00830-w">Cable et al. (2022)</a>. SegTraQ uses <a class="reference external" href="https://github.com/p-gueguen/rctd-py">rctd-py</a>, the Python implementation.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rctd_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">rctd_contamination</span><span class="p">(</span>
-    <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
-    <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
-    <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
-    <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-UMI filter: kept 286/751 pixels (UMI range [100, 20000000])
-Gene lists: bulk=1322, reg=734 (from 5086 common)
-Fitting bulk platform effects...
-Using 734 DE genes for pixel-level fitting
-Estimating sigma...
-Chosen sigma: 0.6 (23.0s)
-Auto batch size: 200000
-Running in full mode...
-</pre></div></div>
-</div>
-<section id="rctd_contamination">
-<h3><code class="docutils literal notranslate"><span class="pre">rctd_contamination</span></code><a class="headerlink" href="#rctd_contamination" title="Link to this heading">#</a></h3>
-<p>Comparing score distributions across cell types highlights differences in estimated expression mixture. Interpret these alongside marker balanced accuracy and contamination strength to assess whether mixture is accompanied by marker mismatch and evidence of local contamination.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;rctd_contamination&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">col_celltype</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_supervised_39_0.png" src="../_images/notebooks_supervised_39_0.png" />
-</div>
-</div>
-</section>
-</section>
 <section id="Compute-mutually-exclusive-co-expression-rate-(MECR)">
 <h2>Compute mutually exclusive co-expression rate (MECR)<a class="headerlink" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)" title="Link to this heading">#</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate</span></code> function identifies marker-gene pairs that are expected to be mutually exclusive based on a reference dataset. Candidate pairs are derived from reciprocal positive/negative marker relationships and are retained only if their observed co-expression in the reference is sufficiently below that expected under independence.</p>
 <p>For these reference-defined mutually exclusive pairs, co-expression in the spatial data is evaluated using Fisher’s exact test on binary gene detection (expression &gt; 0). A one-sided test with <code class="docutils literal notranslate"><span class="pre">alternative=&quot;greater&quot;</span></code> asks whether the two genes are positively associated in the spatial data.</p>
 <p>Thus, an odds ratio &gt; 1 indicates increased co-expression of a marker pair that is expected to be mutually exclusive based on the reference.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mecr</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">mutually_exclusive_coexpression_rate</span><span class="p">(</span>
@@ -1262,7 +1420,7 @@ Running in full mode...
 </div>
 <p>This tutorial subset contains only 751 cells, while 2,248 marker pairs are tested. Consequently, many pairs are very sparse and individual Fisher tests have limited power after multiple-testing correction. After correction for testing many gene pairs, no pair remains significant at the selected FDR threshold.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mecr_plot</span> <span class="o">=</span> <span class="n">mecr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -1274,7 +1432,7 @@ Running in full mode...
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1314,7 +1472,7 @@ Running in full mode...
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
@@ -1381,21 +1539,20 @@ Running in full mode...
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Transfer-labels-from-scRNA-seq-to-spatial-transcriptomics">Transfer labels from scRNA-seq to spatial transcriptomics</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Computing-cell-type-specific-markers">Computing cell type-specific markers</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-marker-balanced-accuracy">Compute marker balanced accuracy</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-marker-purity">Compute marker purity</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#negative_marker_avoidance"><code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#positive_marker_recall"><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#marker_balanced_accuracy"><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Contamination-strength">Contamination strength</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Neighborhood-contamination">Neighborhood contamination</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_counts"><code class="docutils literal notranslate"><span class="pre">contamination_counts</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contamination_strength"><code class="docutils literal notranslate"><span class="pre">contamination_strength</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_matrix"]</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#.uns[%22contamination_strength_matrix%22]"><code class="docutils literal notranslate"><span class="pre">.uns["contamination_strength_matrix"]</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#!-Important"><strong>! Important</strong></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-RCTD-contamination">Compute RCTD contamination</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rctd_contamination"><code class="docutils literal notranslate"><span class="pre">rctd_contamination</span></code></a></li>
-</ul>
-</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Compute-mutually-exclusive-co-expression-rate-(MECR)">Compute mutually exclusive co-expression rate (MECR)</a></li>
 </ul>
   </nav></div>

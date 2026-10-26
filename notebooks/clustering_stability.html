@@ -342,7 +342,7 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Visualization">Visualization</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Supervised-cluster-stability">Supervised cluster stability</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Clustering-quality-using-transferred-cell-type-labels">Clustering quality using transferred cell-type labels</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
 </ul>
             </nav>
@@ -358,7 +358,7 @@ document.write(`
   <section id="Module:-Clustering-Stability">
 <h1>Module: Clustering Stability<a class="headerlink" href="#Module:-Clustering-Stability" title="Link to this heading">#</a></h1>
 <p>When analyzing (spatial) transcriptomics data, cells are typically clustered into cell types based on their RNA expression. If the segmentation of a spatial transcriptomics dataset went well, we would assume that this clustering is somewhat stable, even if we only cluster on parts of the data. The <code class="docutils literal notranslate"><span class="pre">clustering</span> <span class="pre">stability</span></code> (<code class="docutils literal notranslate"><span class="pre">cs</span></code>) module includes some functions to apply clustering and assess its robustness. The figure below shows a bad clustering (lots of overlap) vs. a good clustering.</p>
-<center><p><img alt="9273154e8d0445a1931396820fb4ea5f" class="no-scaled-link" src="../_images/clustering_stability.png" style="width: 90%;" /></p>
+<center><p><img alt="bf7d0ed2f9ff479d8f68bcaa4403e4ad" class="no-scaled-link" src="../_images/clustering_stability.png" style="width: 90%;" /></p>
 </center><p>To follow along with this tutorial, you can download the data from <a class="reference external" href="https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a">here</a>.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
@@ -465,39 +465,39 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:160: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 84 occur only in the table (e.g. [np.int32(1539), np.int32(15875), np.int32(17923), np.int32(17924), np.int32(17927)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 84 occur only in the table (e.g. [np.int32(1539), np.int32(15875), np.int32(17923), np.int32(17924), np.int32(17927)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-no parent found for &lt;ome_zarr.reader.Label object at 0x7fff33c12120&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7fff302b07d0&gt;: None
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: UserWarning: Missing 23 cell IDs in shapes: [&#39;jbdjkbco-1&#39;, &#39;ipkoiika-1&#39;, &#39;icagecbj-1&#39;, &#39;ipnffmib-1&#39;, &#39;aphdhpcn-1&#39;]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff3018ba10&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff12706ad0&gt;: None
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:160: UserWarning: Missing 23 cell IDs in shapes: [&#39;idcbpiel-1&#39;, &#39;ipnaeici-1&#39;, &#39;afnajpkp-1&#39;, &#39;ibnnajcn-1&#39;, &#39;ipnffmib-1&#39;]... These cells are present in tables, but not in shapes. This might lead to inconsistencies in the spatialdata object.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2139: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 23 occur only in the table (e.g. [&#39;jbdjkbco-1&#39;, &#39;ipnffmib-1&#39;, &#39;aphdhpcn-1&#39;, &#39;ocnlagnn-1&#39;, &#39;ibhbpipc-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 23 occur only in the table (e.g. [&#39;idcbpiel-1&#39;, &#39;ipnaeici-1&#39;, &#39;ibnnajcn-1&#39;, &#39;ipleocce-1&#39;, &#39;japjollp-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-no parent found for &lt;ome_zarr.reader.Label object at 0x7fff302b1a90&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff12707110&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff127ec9d0&gt;: None
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2139: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;HPV18-E6&#39;, &#39;F2&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;CYP2A6&#39;, &#39;Human_FGFR3_R248H_ALT:A&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;HPV18-E6&#39;, &#39;F2&#39;, &#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;CYP2A6&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;ocnokblm-1&#39;, &#39;ipkonddj-1&#39;, &#39;obnpmdml-1&#39;, &#39;ipkibnin-1&#39;, &#39;obnnbpck-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;hlgldogf-1&#39;, &#39;jaeofina-1&#39;, &#39;hjbaimjn-1&#39;, &#39;ibhhmanh-1&#39;, &#39;obnnbpck-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:160: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2139: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
   nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -551,17 +551,17 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_1656048/4287800528.py:14: UserWarning: Some cells have zero counts
+/tmp/ipykernel_182991/4287800528.py:14: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
-/tmp/ipykernel_1656048/4287800528.py:14: UserWarning: Some cells have zero counts
+/tmp/ipykernel_182991/4287800528.py:14: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
-/tmp/ipykernel_1656048/4287800528.py:14: UserWarning: Some cells have zero counts
+/tmp/ipykernel_182991/4287800528.py:14: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scanpy/tools/_umap.py:189: ImplicitModificationWarning: Trying to modify attribute `._uns` of view, initializing view as actual.
   adata.uns[key_uns] = dict(params=dict(a=a, b=b))
@@ -577,15 +577,15 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 </section>
 <section id="Cluster-Connectedness">
 <h2>Cluster Connectedness<a class="headerlink" href="#Cluster-Connectedness" title="Link to this heading">#</a></h2>
-<p>The cluster connectedness (CC) is a measure that looks at the compactness of clusters. To compute it, we use the neighborhood graph we computed with scanpy earlier. The connectedness then iterates over all cells and computes the number of neighbors with the same cluster assignment and divides it by the number of total neighbors.</p>
-<p>By default, we compute this metric for Leiden clustering at resolution 0.2. You can adjust this with the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> parameter.</p>
+<p>Cluster connectedness (CC) measures how well cells with the same cluster assignment are connected in the expression-based neighborhood graph. It computes the fraction of neighbors sharing the same cluster label. In general, the higher this value is, the better.</p>
+<p>By default, we compute this metric using Leiden clustering at resolution 0.2. You can adjust this with the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> parameter. Alternatively, connectedness can be computed using existing cell-type annotations by specifying <code class="docutils literal notranslate"><span class="pre">cell_type_key</span></code>.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ccs</span> <span class="o">=</span> <span class="p">{}</span>
 <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">ccs</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">cluster_connectedness</span><span class="p">(</span><span class="n">leiden_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;flavor&quot;</span><span class="p">:</span> <span class="s2">&quot;igraph&quot;</span><span class="p">})</span>
+    <span class="n">ccs</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">connectedness</span><span class="p">(</span><span class="n">leiden_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;flavor&quot;</span><span class="p">:</span> <span class="s2">&quot;igraph&quot;</span><span class="p">})</span>
 <span class="n">ccs</span>
 </pre></div>
 </div>
@@ -596,17 +596,17 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: 0.9116562113457006,
- &#39;segger&#39;: 0.9671028682221489,
- &#39;xenium&#39;: 0.9196379539064025,
- &#39;proseg2&#39;: 0.9326828940281817}
+{&#39;bidcell&#39;: 0.9747831283931955,
+ &#39;segger&#39;: 0.9079173523451948,
+ &#39;xenium&#39;: 0.9222843180568768,
+ &#39;proseg2&#39;: 0.9320630464896202}
 </pre></div></div>
 </div>
 </section>
 <section id="Silhouette-Score">
 <h2>Silhouette Score<a class="headerlink" href="#Silhouette-Score" title="Link to this heading">#</a></h2>
 <p>A slightly more elaborate metric is the silhouette score. It measures how similar an object is to its own cluster (cohesion) compared to other clusters (separation). Values range from −1 to +1, where a high value indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.</p>
-<p>By default, we compute this metric for Leiden clustering at resolution 0.2. You can adjust this with the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> parameter.</p>
+<p>By default, we compute this metric using Leiden clustering at resolution 0.2. You can adjust this with the <code class="docutils literal notranslate"><span class="pre">resolution</span></code> parameter. As for connectedness, the silhouette score can also be computed using existing cell-type annotations by specifying <code class="docutils literal notranslate"><span class="pre">cell_type_key</span></code>.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
@@ -624,10 +624,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: -0.09256923198699951,
- &#39;segger&#39;: -0.02350618690252304,
- &#39;xenium&#39;: -0.08766178786754608,
- &#39;proseg2&#39;: -0.06827129423618317}
+{&#39;bidcell&#39;: -0.10931064188480377,
+ &#39;segger&#39;: 0.05958401411771774,
+ &#39;xenium&#39;: -0.08852291107177734,
+ &#39;proseg2&#39;: -0.06871508061885834}
 </pre></div></div>
 </div>
 </section>
@@ -655,10 +655,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: 0.8725030270253926,
- &#39;segger&#39;: 0.9562380332853181,
- &#39;xenium&#39;: 0.9320592718360332,
- &#39;proseg2&#39;: 0.9272736909012094}
+{&#39;bidcell&#39;: 0.8860854806570154,
+ &#39;segger&#39;: 0.9573111723394222,
+ &#39;xenium&#39;: 0.9138666233610309,
+ &#39;proseg2&#39;: 0.9149728839036125}
 </pre></div></div>
 </div>
 </section>
@@ -682,10 +682,10 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;bidcell&#39;: 0.5790290125445222,
- &#39;segger&#39;: 0.7932566261373275,
- &#39;xenium&#39;: 0.8003118701749855,
- &#39;proseg2&#39;: 0.7991498631810159}
+{&#39;bidcell&#39;: 0.6351438532687562,
+ &#39;segger&#39;: 0.7973927932620155,
+ &#39;xenium&#39;: 0.7486167404769389,
+ &#39;proseg2&#39;: 0.7940773354007}
 </pre></div></div>
 </div>
 <p>At the end, all of our metrics are stored in the <code class="docutils literal notranslate"><span class="pre">spatialdata</span></code> object.</p>
@@ -705,7 +705,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7fff31891350&gt;: None
 <div class="highlight"><pre>
 AnnData object with n_obs × n_vars = 17885 × 5094
     obs: &#39;cell&#39;, &#39;original_cell_id&#39;, &#39;centroid_x&#39;, &#39;centroid_y&#39;, &#39;centroid_z&#39;, &#39;fov&#39;, &#39;cluster&#39;, &#39;volume&#39;, &#39;scale&#39;, &#39;population&#39;, &#39;region&#39;, &#39;cell_area&#39;, &#39;leiden_subset_cells16914_res0.2_seed42&#39;, &#39;leiden_subset_cells10655_res0.2_seed0&#39;, &#39;leiden_subset_cells10655_res0.2_seed1&#39;, &#39;leiden_subset_cells10655_res0.2_seed2&#39;, &#39;leiden_subset_cells10655_res0.2_seed3&#39;, &#39;leiden_subset_cells10655_res0.2_seed4&#39;
-    uns: &#39;spatialdata_attrs&#39;, &#39;cluster_connectedness&#39;, &#39;silhouette_score&#39;, &#39;mean_purity&#39;, &#39;mean_ari&#39;
+    uns: &#39;spatialdata_attrs&#39;, &#39;connectedness_leiden&#39;, &#39;silhouette_score_leiden&#39;, &#39;mean_purity_leiden&#39;, &#39;mean_ari_leiden&#39;
 </pre></div></div>
 </div>
 </section>
@@ -778,48 +778,26 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 </div>
 </div>
 </section>
-<section id="Supervised-cluster-stability">
-<h2>Supervised cluster stability<a class="headerlink" href="#Supervised-cluster-stability" title="Link to this heading">#</a></h2>
-<p>If you already have labels for your cells, e. g. from performing label transfer on your data, you might want to check how compact those clusters are. Here, we assess Cluster Connectedness and Silhouette score on clusters obtained via label transfer. We do this by simply specifying a <code class="docutils literal notranslate"><span class="pre">label_key</span></code> in the respective functions.</p>
+<section id="Clustering-quality-using-transferred-cell-type-labels">
+<h2>Clustering quality using transferred cell-type labels<a class="headerlink" href="#Clustering-quality-using-transferred-cell-type-labels" title="Link to this heading">#</a></h2>
+<p>Besides Leiden clusters, connectedness and silhouette score can also be computed using cell-type annotations. This allows us to assess how well biologically defined cell types are separated in expression space.</p>
+<p>Here, we first perform label transfer from an scRNA-seq reference dataset and then compute both metrics using the transferred cell-type labels.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Running label transfer from an scRNA-seq dataset</span>
-<span class="n">scRNAseq_data_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
-<span class="n">adata_ref</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="n">scRNAseq_data_path</span><span class="p">)</span>
-<span class="n">st</span> <span class="o">=</span> <span class="n">segtraq</span><span class="o">.</span><span class="n">SegTraQ</span><span class="p">(</span>
-    <span class="n">sd</span><span class="o">.</span><span class="n">read_zarr</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/proseg2.zarr&quot;</span><span class="p">),</span>
-    <span class="n">images_key</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
-    <span class="n">points_cell_id_key</span><span class="o">=</span><span class="s2">&quot;assignment&quot;</span><span class="p">,</span>
-    <span class="n">points_background_id</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">points_gene_key</span><span class="o">=</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span>
-    <span class="n">tables_area_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">tables_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
-    <span class="n">shapes_cell_id_key</span><span class="o">=</span><span class="s2">&quot;cell&quot;</span><span class="p">,</span>
-    <span class="n">tables_centroid_x_key</span><span class="o">=</span><span class="s2">&quot;centroid_x&quot;</span><span class="p">,</span>
-    <span class="n">tables_centroid_y_key</span><span class="o">=</span><span class="s2">&quot;centroid_y&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span><span class="n">adata_ref</span><span class="p">,</span> <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span> <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">pca</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">])</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">])</span>
+<span class="n">adata_ref</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s2">&quot;../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad&quot;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">st</span><span class="o">.</span><span class="n">run_label_transfer</span><span class="p">(</span>
+        <span class="n">adata_ref</span><span class="p">,</span>
+        <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
+        <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+        <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:155: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
-  validate_spatialdata(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/utils.py:2136: UserWarning: Duplicate IDs detected in index &#39;cell_id&#39; for shapes &#39;nucleus_boundaries&#39;. Resetting and renaming index to `segtraq_id` to ensure uniqueness.
-  nucleus_shapes = _ensure_index(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
-  sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:183: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 971 occur only in the table (e.g. [np.int64(16386), np.int64(16390), np.int64(14347), np.int64(10253), np.int64(10254)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
-  sdata_new = _filter_control_and_low_quality_transcripts(
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -827,30 +805,38 @@ AnnData object with n_obs × n_vars = 17885 × 5094
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 WARNING: adata.X seems to be already log-transformed.
+WARNING: adata.X seems to be already log-transformed.
+WARNING: adata.X seems to be already log-transformed.
+WARNING: adata.X seems to be already log-transformed.
 </pre></div></div>
 </div>
-<div class="nbinput docutils container">
+<p>We can now compute connectedness and silhouette score using the transferred cell-type annotations instead of Leiden clusters by specifying <code class="docutils literal notranslate"><span class="pre">cell_type_key</span></code>.</p>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">cluster_connectedness</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ccs_labels</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">silhouette_scores_labels</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">ccs_labels</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">connectedness</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
+    <span class="n">silhouette_scores_labels</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-0.7034691510006315
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results_labels_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;Method&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ccs_labels</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+        <span class="s2">&quot;Connectedness&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ccs_labels</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="s2">&quot;Silhouette Score&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">silhouette_scores_labels</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">results_labels_df</span>
 </pre></div>
 </div>
 </div>
@@ -858,10 +844,58 @@ WARNING: adata.X seems to be already log-transformed.
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-0.0012040954316034913
-</pre></div></div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Method</th>
+      <th>Connectedness</th>
+      <th>Silhouette Score</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>bidcell</td>
+      <td>0.577303</td>
+      <td>-0.004466</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>segger</td>
+      <td>0.460573</td>
+      <td>-0.028275</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>xenium</td>
+      <td>0.623533</td>
+      <td>0.006978</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>proseg2</td>
+      <td>0.703557</td>
+      <td>0.001204</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 </section>
 <section id="Session-Info">
@@ -940,7 +974,7 @@ WARNING: adata.X seems to be already log-transformed.
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Purity">Purity</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Adjusted-Rand-Index-(ARI)">Adjusted Rand Index (ARI)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Visualization">Visualization</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Supervised-cluster-stability">Supervised cluster stability</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Clustering-quality-using-transferred-cell-type-labels">Clustering quality using transferred cell-type labels</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Session-Info">Session Info</a></li>
 </ul>
   </nav></div>

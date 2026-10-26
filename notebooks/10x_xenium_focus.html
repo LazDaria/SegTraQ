@@ -42,6 +42,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/10x_xenium_focus';</script>
@@ -489,8 +490,8 @@ wget<span class="w"> </span>-O<span class="w"> </span>Cell_Barcode_Type_Matrices
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee1dba3c0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee23bdbd0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff33cd63c0&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7fff33f41a90&gt;: None
 </pre></div></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">SpatialData</span></code> objects can be subset via <code class="docutils literal notranslate"><span class="pre">spatialdata.query.bounding_box()</span></code>.</p>
@@ -524,7 +525,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee23bdbd0&gt;: None
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;matplotlib.patches.Rectangle at 0x7ffe96df5a90&gt;
+&lt;matplotlib.patches.Rectangle at 0x7ffef8345bd0&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -598,15 +599,15 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee23bdbd0&gt;: None
   nucleus_shapes = _ensure_index(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;PAX8&#39;, &#39;PON1&#39;, &#39;TINAG&#39;, &#39;GNAI1&#39;, &#39;CD5L&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 455 occur only in the table (e.g. [&#39;PKNOX2&#39;, &#39;PRKD1&#39;, &#39;CNMD&#39;, &#39;FZD10&#39;, &#39;RXFP2&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;apnfcbpf-1&#39;, &#39;icealcci-1&#39;, &#39;oemhhohn-1&#39;, &#39;aphffbmb-1&#39;, &#39;iceeeemj-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;icealcci-1&#39;, &#39;oemhhohn-1&#39;, &#39;apnfcbpf-1&#39;, &#39;iceeeemj-1&#39;, &#39;aphffbmb-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:160: RuntimeWarning: No area column specified for tables. Area will be automatically computed from shapes.
   validate_spatialdata(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 438 occur only in the table (e.g. [&#39;PAX8&#39;, &#39;PON1&#39;, &#39;TINAG&#39;, &#39;GNAI1&#39;, &#39;CD5L&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 438 occur only in the table (e.g. [&#39;PKNOX2&#39;, &#39;PRKD1&#39;, &#39;CNMD&#39;, &#39;FZD10&#39;, &#39;RXFP2&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 18 occur only in the table (e.g. [np.int32(14112), np.int32(15585), np.int32(14626), np.int32(13762), np.int32(15971)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
@@ -618,7 +619,7 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee23bdbd0&gt;: None
   nucleus_shapes = _ensure_index(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: UserWarning: Filtering control probes matching prefixes (&#39;NegControlProbe_&#39;, &#39;antisense_&#39;, &#39;NegControlCodeword&#39;, &#39;BLANK_&#39;, &#39;Blank-&#39;, &#39;NegPrb&#39;, &#39;DeprecatedCodeword_&#39;, &#39;UnassignedCodeword_&#39;, &#39;Intergenic_Region_&#39;) and transcripts with qv &lt; 20 from transcript points in-place; control probes are also removed from the expression table if present. Configure `min_qv`, `control_prefixes`, and `inplace` via `filter_kwargs`.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 447 occur only in the table (e.g. [&#39;PAX8&#39;, &#39;PON1&#39;, &#39;TINAG&#39;, &#39;GNAI1&#39;, &#39;CD5L&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 447 occur only in the table (e.g. [&#39;PKNOX2&#39;, &#39;PRKD1&#39;, &#39;CNMD&#39;, &#39;FZD10&#39;, &#39;RXFP2&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 14 cells occur only in points (e.g. [np.int64(12228), np.int64(1094), np.int64(7463), np.int64(426), np.int64(5402)]), and 47 occur only in the table (e.g. [np.int64(16007), np.int64(12296), np.int64(12948), np.int64(7957), np.int64(5272)]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
@@ -710,11 +711,11 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_178643/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
-/tmp/ipykernel_473227/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_178643/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
-/tmp/ipykernel_473227/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_178643/1864087363.py:4: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
 </pre></div></div>
 </div>
@@ -863,7 +864,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/990135166.py:24: UserWarning: Tight layout not applied. The left and right margins cannot be made large enough to accommodate all Axes decorations.
+/tmp/ipykernel_178643/990135166.py:24: UserWarning: Tight layout not applied. The left and right margins cannot be made large enough to accommodate all Axes decorations.
   fig.tight_layout()
 </pre></div></div>
 </div>
@@ -1105,9 +1106,9 @@ elongation in the results, highlighting the strong influence of the prior on the
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/3127299547.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+/tmp/ipykernel_178643/3127299547.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
   medians = df.groupby(&#34;transferred_cell_type&#34;).median()
-/tmp/ipykernel_473227/3127299547.py:8: FutureWarning:
+/tmp/ipykernel_178643/3127299547.py:8: FutureWarning:
 
 Passing `palette` without assigning `hue` is deprecated and will be removed in v0.14.0. Assign the `x` variable to `hue` and set `legend=False` for the same effect.
 
@@ -1156,9 +1157,9 @@ correctly assign transcripts. Therefore, it is essential to evaluate not only th
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/2145051797.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+/tmp/ipykernel_178643/2145051797.py:3: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
   medians = df.groupby(&#34;transferred_cell_type&#34;).median()
-/tmp/ipykernel_473227/2145051797.py:8: FutureWarning:
+/tmp/ipykernel_178643/2145051797.py:8: FutureWarning:
 
 Passing `palette` without assigning `hue` is deprecated and will be removed in v0.14.0. Assign the `x` variable to `hue` and set `legend=False` for the same effect.
 
@@ -1175,7 +1176,7 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </section>
 <section id="Clustering-stability-module">
 <h3>Clustering stability module<a class="headerlink" href="#Clustering-stability-module" title="Link to this heading">#</a></h3>
-<p>The clustering stability (<code class="docutils literal notranslate"><span class="pre">cs</span></code>) module provides metrics for assessing the stability of clustering results across different resolutions and random subsets of genes.</p>
+<p>The clustering stability (<code class="docutils literal notranslate"><span class="pre">cs</span></code>) module provides metrics for assessing clustering quality and stability. Connectedness and silhouette score assess how well the transferred cell types are separated in expression space, while purity and ARI assess Leiden clustering stability across random subsets of cells.</p>
 <p>Let`s first perform Leiden clustering and visualize the clusters in the UMAP space.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
@@ -1214,9 +1215,9 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/1436914766.py:8: UserWarning: Some cells have zero counts
+/tmp/ipykernel_178643/1436914766.py:8: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
-/tmp/ipykernel_473227/1436914766.py:8: UserWarning: Some cells have zero counts
+/tmp/ipykernel_178643/1436914766.py:8: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
   self._set_arrayXarray(i, j, x)
@@ -1229,7 +1230,7 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 <img alt="../_images/notebooks_10x_xenium_focus_53_1.png" src="../_images/notebooks_10x_xenium_focus_53_1.png" />
 </div>
 </div>
-<p>Next, we compute clustering stability metrics and plot these.</p>
+<p>Next, we compute clustering stability metrics and plot these. Connectedness and silhouette score are computed using the transferred cell-type annotations, while purity and ARI are computed using Leiden clustering on random subsets of cells.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
 </pre></div>
@@ -1240,8 +1241,8 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 <span class="n">aris</span> <span class="o">=</span> <span class="p">{}</span>
 
 <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">ccds</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">cluster_connectedness</span><span class="p">()</span>
-    <span class="n">silhouette_scores</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">()</span>
+    <span class="n">ccds</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">connectedness</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
+    <span class="n">silhouette_scores</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
     <span class="n">purities</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">purity</span><span class="p">()</span>
     <span class="n">aris</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">adjusted_rand_index</span><span class="p">()</span>
 </pre></div>
@@ -1252,24 +1253,6 @@ Passing `palette` without assigning `hue` is deprecated and will be removed in v
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
-In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
-  sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
-In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
-  sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
-In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
-  sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
-In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
-  sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
-In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
-  sc.tl.leiden(
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
-In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
-  sc.tl.leiden(
 /g/huber/users/lazic/src/SegTraQ/src/segtraq/cs/utils.py:236: FutureWarning: The `igraph` implementation of leiden clustering is *orders of magnitude faster*. Set the flavor argument to (and install if needed) &#39;igraph&#39; to use it.
 In the future, the default backend for leiden will be igraph instead of leidenalg. To achieve the future defaults please pass: `flavor=&#39;igraph&#39;` and `n_iterations=2`. `directed` must also be `False` to work with igraph’s implementation.
   sc.tl.leiden(
@@ -1451,8 +1434,8 @@ In the future, the default backend for leiden will be igraph instead of leidenal
 <img alt="../_images/notebooks_10x_xenium_focus_58_0.png" src="../_images/notebooks_10x_xenium_focus_58_0.png" />
 </div>
 </div>
-<p>Proseg achieves the highest adjusted Rand index (ARI) and clustering purity, as well as the lowest mean cosine distance. Together, these results suggest that Proseg retrieves the most internally consistent expression profiles and could indicate less contaminated single cell signatures.</p>
-<p>The silhouette score can also be computed on the transferred labels. We will first visualize transferred labels in the UMAP space.</p>
+<p>Proseg achieves the highest adjusted Rand index (ARI) and clustering purity, indicating more stable Leiden clustering across random subsets of cells. Connectedness and silhouette score additionally assess how well the transferred cell types are separated in expression space. # Proseg achieves the highest silhouette score for the transferred labels, indicating higher intra-cluster coherence and improved inter-cluster separation; this is also visually consistent with the UMAP embedding.</p>
+<p>We can also visualize the transferred cell-type annotations in UMAP space.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
@@ -1491,7 +1474,7 @@ In the future, the default backend for leiden will be igraph instead of leidenal
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/3004694059.py:9: UserWarning: Some cells have zero counts
+/tmp/ipykernel_178643/3004694059.py:9: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 </pre></div></div>
 </div>
@@ -1508,7 +1491,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/3004694059.py:9: UserWarning: Some cells have zero counts
+/tmp/ipykernel_178643/3004694059.py:9: UserWarning: Some cells have zero counts
   sc.pp.normalize_total(adata, inplace=True)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/scipy/sparse/_index.py:210: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil and dok are more efficient.
   self._set_arrayXarray(i, j, x)
@@ -1521,31 +1504,6 @@ WARNING: adata.X seems to be already log-transformed.
 <img alt="../_images/notebooks_10x_xenium_focus_60_3.png" src="../_images/notebooks_10x_xenium_focus_60_3.png" />
 </div>
 </div>
-<p>Proseg achieves the highest silhouette score for the transferred labels, indicating higher intra-cluster coherence and improved inter-cluster separation; this is also visually consistent with the UMAP embedding.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">silhouette_scores_labels</span> <span class="o">=</span> <span class="p">{}</span>
-
-<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">silhouette_scores_labels</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">silhouette_score</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
-
-<span class="n">silhouette_scores_labels</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;xenium&#39;: -0.049018654972314835,
- &#39;bidcell&#39;: -0.029581522569060326,
- &#39;proseg&#39;: -0.03228244557976723}
-</pre></div></div>
-</div>
 </section>
 </section>
 <section id="Region-similarity-module">
@@ -1556,7 +1514,7 @@ neighboring cells.</p>
 <p>Proseg shows the lowest intersection over union (IoU) between the cell and nucleus. It relies on transcript assignment rather than explicit morphology-based segmentation, allowing transcripts that are repositioned outside the cell membrane (e.g. due to transcript diffusion) to be reassigned to the cell of origin. This often results in larger inferred cell areas (or perimeters, as shown above) relative to the nucleus or less aligned cell and nucleus shapes, leading to lower cell–nucleus IoU
 values.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">&quot;default&quot;</span><span class="p">)</span>
@@ -1589,7 +1547,7 @@ values.</p>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1605,15 +1563,15 @@ values.</p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/3618280162.py:9: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+/tmp/ipykernel_178643/3618280162.py:9: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
   sdata_plot.tables[&#34;table&#34;].obs[&#34;region&#34;] = shapes_key
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
-/tmp/ipykernel_473227/3618280162.py:9: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+/tmp/ipykernel_178643/3618280162.py:9: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
   sdata_plot.tables[&#34;table&#34;].obs[&#34;region&#34;] = shapes_key
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
-/tmp/ipykernel_473227/3618280162.py:9: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+/tmp/ipykernel_178643/3618280162.py:9: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
   sdata_plot.tables[&#34;table&#34;].obs[&#34;region&#34;] = shapes_key
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
@@ -1623,13 +1581,13 @@ values.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_67_1.png" src="../_images/notebooks_10x_xenium_focus_67_1.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_65_1.png" src="../_images/notebooks_10x_xenium_focus_65_1.png" />
 </div>
 </div>
 <p><em>Similarity between expression in cell and nucleus</em></p>
 <p>Once, the “best-matching” nucleus is determined for each cell based on IoU, we can compute the similarity between cell and nuclear expression.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1638,7 +1596,7 @@ values.</p>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">histogram_feature</span><span class="p">(</span>
@@ -1706,7 +1664,7 @@ values.</p>
 <p>Among cells with unexpectedly low nucleus–cell similarity (<code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell_p_value</span></code> &lt; 0.05), ProSeg shows more negative residuals (<code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code>) than Xenium and BIDCell, indicating a stronger difference between the nuclear and whole-cell expression profiles than expected. This is partly expected from the different assignment strategies. Xenium and BIDCell assign transcripts to cells based on spatial overlap with the inferred cell boundaries, whereas ProSeg can assign
 transcripts to a cell even when they lie outside its final 2D cell boundary. Because the nuclear expression profile is also defined by spatial overlap with the nuclear boundary, the nucleus and whole-cell profiles are more spatially coupled for Xenium and BIDCell. Accordingly, among these cells, Xenium and BIDCell show less negative residuals than ProSeg. Thus, ProSeg’s lower nucleus–cell similarity may partly reflect its transcript reassignment strategy rather than poorer segmentation.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">histogram_feature</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;similarity_nucleus_cell&quot;</span><span class="p">,</span> <span class="n">significant_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1717,13 +1675,13 @@ transcripts to a cell even when they lie outside its final 2D cell boundary. Bec
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_72_0.png" src="../_images/notebooks_10x_xenium_focus_72_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_70_0.png" src="../_images/notebooks_10x_xenium_focus_70_0.png" />
 </div>
 </div>
 <p>While <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cell</span></code> compares the nuclear transcript profile with the final whole-cell expression profile, <code class="docutils literal notranslate"><span class="pre">similarity_nucleus_cytoplasm</span></code> more directly compares two spatial regions within the cell. It compares the cell’s transcripts regionally overlapping with the nucleus and the non-nuclear region (cytoplasm). It therefore asks whether the transcript composition is consistent across these two regions of the same cell. Here, Proseg again shows the lowest consistency between
 nuclear and cytoplasmic expression profiles.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1732,7 +1690,7 @@ nuclear and cytoplasmic expression profiles.</p>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">histogram_feature</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;similarity_nucleus_cytoplasm&quot;</span><span class="p">)</span>
@@ -1743,7 +1701,7 @@ nuclear and cytoplasmic expression profiles.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_75_0.png" src="../_images/notebooks_10x_xenium_focus_75_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_73_0.png" src="../_images/notebooks_10x_xenium_focus_73_0.png" />
 </div>
 </div>
 <p><em>Admixture (contamination) of the cell border</em></p>
@@ -1752,7 +1710,7 @@ specifically point toward a contribution from neighboring cells.</p>
 <p>Here, Xenium has the largest number of cells with unexpectedly strong border admixture (<code class="docutils literal notranslate"><span class="pre">border_admixture_p_value</span></code> &lt; 0.05), meaning that for more Xenium cells, the border resembles the surrounding neighborhood more than would be expected by chance. Xenium also shows the largest median positive residual among these cells, indicating that the excess neighborhood-like signal at the border tends to be stronger. In contrast, BIDCell and Proseg — both transcript-informed segmentation methods — show
 substantially fewer cells with evidence of unexpected border admixture, and the effect is generally weaker when it occurs.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1761,7 +1719,7 @@ substantially fewer cells with evidence of unexpected border admixture, and the 
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">histogram_feature</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;border_admixture_score&quot;</span><span class="p">)</span>
@@ -1772,7 +1730,7 @@ substantially fewer cells with evidence of unexpected border admixture, and the 
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_78_0.png" src="../_images/notebooks_10x_xenium_focus_78_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_76_0.png" src="../_images/notebooks_10x_xenium_focus_76_0.png" />
 </div>
 </div>
 <p>While it is important to consider metrics that do not depend on the availability of high-quality reference scRNA-seq data—and therefore do not rely on the performance of label transfer—a limitation of the region similarity module is that it cannot distinguish between homogeneous and heterogeneous cellular neighborhoods. In homogeneous neighborhoods, a high <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code> does not necessarily indicate contamination. Nevertheless, when comparing methods globally or on a cell-type
@@ -1780,7 +1738,7 @@ level, this is a useful unsupervised contamination metric that does not rely on 
 <p>When cell type labels are available, the metric can still be compared on a cell-type level. The plot compares <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code> across segmentation methods within each transferred cell type, restricted to cells with unexpectedly strong border admixture (<code class="docutils literal notranslate"><span class="pre">border_admixture_p_value</span></code> &lt; 0.05). The individual points and boxplots show the magnitude of the excess neighborhood-like signal at the border, while the annotated cell counts show how many cells of each cell type are significantly
 affected. This helps reveal whether differences between segmentation methods are driven by particular cell types rather than representing a global effect.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">boxplot_per_celltype_sig</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">significant_only</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -1866,7 +1824,7 @@ affected. This helps reveal whether differences between segmentation methods are
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[44]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype_sig</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;border_admixture_score&quot;</span><span class="p">)</span>
@@ -1877,24 +1835,23 @@ affected. This helps reveal whether differences between segmentation methods are
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_82_0.png" src="../_images/notebooks_10x_xenium_focus_82_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_80_0.png" src="../_images/notebooks_10x_xenium_focus_80_0.png" />
 </div>
 </div>
 <section id="Supervised-module">
 <h3>Supervised module<a class="headerlink" href="#Supervised-module" title="Link to this heading">#</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">sp</span></code> (supervised) module evaluates spatial expression profiles using an annotated single-cell RNA-seq (scRNA-seq) reference. Its metrics assess cell-type consistency and potential contamination, including contributions from neighboring cells.</p>
-<p>Specifically, we quantify:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">sp</span></code> (supervised) module provides metrics to evaluate how well cell profiles in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset with cell type annotations.</p>
+<p>Unlike scRNA-seq, contamination in spatial transcriptomics measurements mostly originates from the local tissue context.</p>
+<p>By comparing spatial expression profiles to a high-quality scRNA-seq reference, the supervised module aims to quantify this mismatch. Specifically, we compute metrics that measure:</p>
 <ul class="simple">
-<li><p><strong>Marker balanced accuracy:</strong> how well each cell expresses its positive markers and avoids neighborhood-relevant negative markers.</p></li>
-<li><p><strong>Contamination strength:</strong> the fraction of transcripts corresponding to negative markers that are positive markers of neighboring cell types, with summaries of potential source–target contributions.</p></li>
-<li><p><strong>Mutually exclusive co-expression:</strong> how frequently marker pairs expected to be mutually exclusive are detected together.</p></li>
-<li><p><strong>RCTD contamination:</strong> the estimated expression contribution outside the dominant reference cell type, without requiring neighborhood information.</p></li>
+<li><p>how well each spatial cell matches its expected cell type,</p></li>
+<li><p>how much its expression resembles other (neighboring) cell types, and</p></li>
+<li><p>if it is possible to predict that a cell of one cell type is adjacent to a different cell type.</p></li>
 </ul>
-<p>Positive and negative cell-type markers can be derived from the annotated reference using <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code>. RCTD instead fits expression mixtures directly using reference cell-type profiles.</p>
-<p>These metrics provide complementary evidence of expression mismatch and mixture; biological variation and reference quality can also affect them.</p>
+<p>To obtain cell-type specific marker genes, we define positive and negative markers in the annotated scRNA-seq via <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code>.</p>
 <p><em>Computing cell-type specific markers</em></p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[45]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[44]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">markers</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1920,7 +1877,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <p>A list of positive and negative markers computed for each cell type is shown below. We will use xenium for demonstration.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[45]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">cell_type</span><span class="p">,</span> <span class="n">sign</span> <span class="ow">in</span> <span class="n">markers</span><span class="p">[</span><span class="s2">&quot;xenium&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1978,7 +1935,7 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 <p>Below, we show the number of negative markers that overlap with the positive markers of each cell type. To reliably estimate contamination, each cell type should share <strong>at least ~5 negative markers</strong> with the positive marker set of every other cell type. If these overlaps are too small, contamination estimates become unstable.</p>
 <p>In such cases, the marker definition can be relaxed by adjusting the thresholds used in <code class="docutils literal notranslate"><span class="pre">markers_from_reference</span></code> above.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[47]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ctypes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">markers</span><span class="p">[</span><span class="s2">&quot;xenium&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
@@ -1995,7 +1952,7 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[47]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -2216,15 +2173,15 @@ tumor  |  negative: ABCA10, ABCA8, ABCC9, ABI3, ABI3BP, AC007906.2, ACSL4, ACVRL
 </table>
 </div></div>
 </div>
-<p><em>Marker balanced accuracy</em></p>
-<p>To quantify how well each segmented cell in the spatial transcriptomics data matches its annotated cell type, we defined a marker-balanced accuracy (<code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code>) score that jointly evaluates the expression of positive (<code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>) and the absence of neighborhood-associated negative markers (<code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>). The method accounts for the spatial context of each cell and is motivated by the assumption that differences between scRNA-seq and spatial
+<p><em>Marker purity</em></p>
+<p>To quantify how well each segmented cell in the spatial transcriptomics data matches its annotated cell type, we defined a marker-based purity (<code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code>) score that jointly evaluates the expression of positive (<code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code>) and the absence of neighborhood-associated negative markers (<code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code>). The method accounts for the spatial context of each cell and is motivated by the assumption that differences between scRNA-seq and spatial
 transcriptomics-derived cell type profiles arise mainly from local contamination by neighboring cells.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[47]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">purity</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">marker_balanced_accuracy</span><span class="p">(</span>
+    <span class="n">purity</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">marker_purity</span><span class="p">(</span>
         <span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
         <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
@@ -2244,8 +2201,8 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1892: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
-  return sp.marker_balanced_accuracy(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1966: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+  return sp.marker_purity(
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -2261,8 +2218,8 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1892: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
-  return sp.marker_balanced_accuracy(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1966: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+  return sp.marker_purity(
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -2278,13 +2235,13 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1892: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
-  return sp.marker_balanced_accuracy(
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1966: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+  return sp.marker_purity(
 </pre></div></div>
 </div>
 <p>Proseg exhibits the highest <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code> across most cell types, with the exception of DCIS1. To better interpret the overall purity scores, it is informative to examine the <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> and <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> scores separately, as they capture distinct aspects of marker specificity.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;marker_balanced_accuracy&quot;</span><span class="p">)</span>
@@ -2295,12 +2252,108 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_93_0.png" src="../_images/notebooks_10x_xenium_focus_93_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_92_0.png" src="../_images/notebooks_10x_xenium_focus_92_0.png" />
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code> score quantifies the extent to which a focal cell expresses positive markers of neighboring cell types, and thus reflects contamination. Overall, contamination levels are low; however, increased contamination is observed for DCIS1.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">box_strip_plot_per_celltype</span><span class="p">(</span>
+    <span class="n">st_dict</span><span class="p">,</span>
+    <span class="n">feature</span><span class="p">,</span>
+    <span class="n">celltype_col</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">,</span>
+    <span class="n">q</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+    <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;Set2&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">dfs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[[</span><span class="n">celltype_col</span><span class="p">,</span> <span class="n">feature</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="n">tmp</span><span class="p">[</span><span class="n">celltype_col</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="n">dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dfs</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">celltype_col</span><span class="p">,</span> <span class="n">feature</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">q</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">df</span><span class="p">[</span><span class="n">feature</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">q</span><span class="p">)]</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+
+    <span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">celltype_col</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
+        <span class="n">showcaps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">showfliers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="n">palette</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">sns</span><span class="o">.</span><span class="n">stripplot</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">celltype_col</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span>
+        <span class="n">dodge</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">jitter</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+        <span class="n">linewidth</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="n">palette</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># avoid duplicate legends</span>
+    <span class="n">handles</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Cell type&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.02</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[50]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">box_strip_plot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;negative_marker_avoidance&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_10x_xenium_focus_95_0.png" src="../_images/notebooks_10x_xenium_focus_95_0.png" />
+</div>
+</div>
+<p>In contrast, the <code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code> score measures how consistently a cell expresses markers expected for its assigned cell type.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;positive_marker_recall&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_10x_xenium_focus_97_0.png" src="../_images/notebooks_10x_xenium_focus_97_0.png" />
 </div>
 </div>
 <p>These metrics are most informative when considered jointly. For example, we plot the mean <code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code> (a supervised measure of both how well positive markers are captured and negative markers are avoided) against the mean <code class="docutils literal notranslate"><span class="pre">border_admixture_score</span></code>, an unsupervised contamination metric. In this combined view, we can see that Proseg shows slighltly better performance than the other two methods.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[50]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[52]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
@@ -2346,23 +2399,190 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_95_0.png" src="../_images/notebooks_10x_xenium_focus_95_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_99_0.png" src="../_images/notebooks_10x_xenium_focus_99_0.png" />
 </div>
 </div>
-<p><em>RCTD contamination</em></p>
-<p>To quantify expression mixture within each segmented cell, we compute <code class="docutils literal notranslate"><span class="pre">rctd_contamination</span></code> using an annotated scRNA-seq reference. RCTD is run in full mode to estimate contributions from all reference cell types. The score is calculated as one minus the largest normalized cell-type weight, representing the estimated expression contribution outside the dominant type. Higher values indicate greater mixture. Unlike the marker-based metrics, this score does not require spatial cell-type labels or
-neighborhood information. Reference similarity and biological variation can also influence the score, so it should not be interpreted as a direct fraction of misassigned transcripts.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+<p><em>Neighborhood contamination</em></p>
+<p>Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify</p>
+<ol class="lowerroman simple">
+<li><p><strong>how many contaminating transcripts</strong> are present per cell and</p></li>
+<li><p><strong>which neighboring cell types</strong> contribute to this signal. We therefore compute neighborhood contamination.</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[53]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">rctd_df</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">rctd_contamination</span><span class="p">(</span>
-        <span class="n">adata_ref</span><span class="o">=</span><span class="n">adata_ref</span><span class="p">,</span>
-        <span class="n">ref_cell_type</span><span class="o">=</span><span class="s2">&quot;celltype_major&quot;</span><span class="p">,</span>
-        <span class="n">ref_raw_counts_layer</span><span class="o">=</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
-        <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">per_cell_df</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">cont_bin</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">neighbor_contamination</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">methods_df</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;contamination_counts&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+    <span class="n">methods_df</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">counts</span><span class="p">)</span>
+
+<span class="n">merged</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">methods_df</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">merged</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>xenium</th>
+      <th>bidcell</th>
+      <th>proseg</th>
+    </tr>
+    <tr>
+      <th>transferred_cell_type</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>T</th>
+      <td>28</td>
+      <td>35</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>DCIS1</th>
+      <td>10</td>
+      <td>7</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <th>B</th>
+      <td>8</td>
+      <td>4</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>DCIS2</th>
+      <td>8</td>
+      <td>4</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <th>macro</th>
+      <td>8</td>
+      <td>13</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>dendritic</th>
+      <td>6</td>
+      <td>5</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>stromal</th>
+      <td>6</td>
+      <td>6</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <th>endo</th>
+      <td>2</td>
+      <td>6</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>mast</th>
+      <td>1</td>
+      <td>1</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <th>myoepi</th>
+      <td>1</td>
+      <td>2</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>perivas</th>
+      <td>1</td>
+      <td>2</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>tumor</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>The spatial plot below shows the number of contaminating transcripts in each cell.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_feature_labels</span><span class="p">(</span><span class="n">sdata</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">feature</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col_celltype</span><span class="p">[</span><span class="n">lab</span><span class="p">]</span> <span class="k">for</span> <span class="n">lab</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
+
+    <span class="n">sdata</span><span class="o">.</span><span class="n">tables</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;region&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;cell_boundaries&quot;</span>
+    <span class="n">sdata</span><span class="o">.</span><span class="n">set_table_annotates_spatialelement</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="s2">&quot;cell_boundaries&quot;</span><span class="p">)</span>
+
+    <span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+        <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="s2">&quot;transferred_celltype_plot&quot;</span><span class="p">,</span>
+        <span class="n">palette</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span>
+        <span class="n">groups</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">:Cell boundaries colored by cell type&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+
+    <span class="n">sdata</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">render_shapes</span><span class="p">(</span>
+        <span class="s2">&quot;cell_boundaries&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">feature</span><span class="p">,</span>
+        <span class="n">outline_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="n">outline_width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">coordinate_systems</span><span class="o">=</span><span class="s2">&quot;global&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[56]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="n">plot_feature_labels</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">sdata</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="s2">&quot;contamination_counts&quot;</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2371,79 +2591,63 @@ neighborhood information. Reference similarity and biological variation can also
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
-  warnings.warn(
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-UMI filter: kept 737/751 pixels (UMI range [10, 20000000])
-Gene lists: bulk=1470, reg=835 (from 5086 common)
-counts_MIN filter: removed 29/737 pixels with &lt;10 counts in bulk gene list
-Fitting bulk platform effects...
-Using 835 DE genes for pixel-level fitting
-Estimating sigma...
-Chosen sigma: 0.72 (18.5s)
-Auto batch size: 200000
-Running in full mode...
-UMI filter: kept 737/766 pixels (UMI range [10, 20000000])
-Gene lists: bulk=1475, reg=842 (from 5084 common)
-counts_MIN filter: removed 40/737 pixels with &lt;10 counts in bulk gene list
-Fitting bulk platform effects...
-Using 842 DE genes for pixel-level fitting
-Estimating sigma...
-Chosen sigma: 0.72 (0.5s)
-Auto batch size: 200000
-Running in full mode...
-UMI filter: kept 661/756 pixels (UMI range [10, 20000000])
-Gene lists: bulk=1483, reg=846 (from 5084 common)
-counts_MIN filter: removed 23/661 pixels with &lt;10 counts in bulk gene list
-Fitting bulk platform effects...
-Using 846 DE genes for pixel-level fitting
-Estimating sigma...
-Chosen sigma: 0.98 (0.4s)
-Auto batch size: 200000
-Running in full mode...
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">164</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
 </pre></div></div>
 </div>
-<p>Comparing <code class="docutils literal notranslate"><span class="pre">rctd_contamination</span></code> across segmentation methods and cell types highlights differences in estimated expression mixture. Lower values indicate that a single reference cell type explains a larger share of the fitted expression.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[52]:
-</pre></div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">boxplot_per_celltype</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;rctd_contamination&quot;</span><span class="p">)</span>
-</pre></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
+</pre></div></div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">177</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
+  convert_region_column_to_categorical(table)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-yellow-fg">WARNING </span> render_shapes: Found <span class="ansi-cyan-intense-fg ansi-bold">231</span> NaN values in color data. These observations will be colored with the <span class="ansi-green-fg">&#39;na_color&#39;</span>.
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_99_0.png" src="../_images/notebooks_10x_xenium_focus_99_0.png" />
-</div>
-</div>
-<p><em>Contamination strength</em></p>
-<p>Marker balanced accuracy summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives. In many cases, we also want to quantify</p>
-<ol class="lowerroman simple">
-<li><p><strong>what fraction of a cell’s transcripts can be attributed to contamination</strong> and</p></li>
-<li><p><strong>which neighboring cell types</strong> contribute to this signal. We therefore compute contamination strength.</p></li>
-</ol>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[53]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">per_cell_df</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">sp</span><span class="o">.</span><span class="n">contamination_strength</span><span class="p">(</span><span class="n">cell_type_key</span><span class="o">=</span><span class="s2">&quot;transferred_cell_type&quot;</span><span class="p">)</span>
-</pre></div>
+<img alt="../_images/notebooks_10x_xenium_focus_106_6.png" src="../_images/notebooks_10x_xenium_focus_106_6.png" />
 </div>
 </div>
 <p>The heatmap below summarizes contamination strength for each source–target cell-type pair. Each entry represents the mean contamination strength across all evaluable target cells of the given target cell type, where the source-specific contamination strength is computed as the fraction of transcripts in the target cell that correspond to contamination-relevant markers of the source cell type.</p>
 <p>The bubble plot illustrates the contamination strength (bubble color) and the number of evaluable target cells (bubble size).</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[57]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
@@ -2532,17 +2736,17 @@ Running in full mode...
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/652078669.py:28: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
+/tmp/ipykernel_178643/652078669.py:28: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
   cont_strength.stack(dropna=False)
-/tmp/ipykernel_473227/652078669.py:34: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
+/tmp/ipykernel_178643/652078669.py:34: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
   plot_df[&#34;n_evaluable&#34;] = cont_n.stack(dropna=False).values
-/tmp/ipykernel_473227/652078669.py:28: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
+/tmp/ipykernel_178643/652078669.py:28: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
   cont_strength.stack(dropna=False)
-/tmp/ipykernel_473227/652078669.py:34: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
+/tmp/ipykernel_178643/652078669.py:34: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
   plot_df[&#34;n_evaluable&#34;] = cont_n.stack(dropna=False).values
-/tmp/ipykernel_473227/652078669.py:28: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
+/tmp/ipykernel_178643/652078669.py:28: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
   cont_strength.stack(dropna=False)
-/tmp/ipykernel_473227/652078669.py:34: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
+/tmp/ipykernel_178643/652078669.py:34: FutureWarning: The previous implementation of stack is deprecated and will be removed in a future version of pandas. See the What&#39;s New notes for pandas 2.1.0 for details. Specify future_stack=True to adopt the new implementation and silence this warning.
   plot_df[&#34;n_evaluable&#34;] = cont_n.stack(dropna=False).values
 </pre></div></div>
 </div>
@@ -2550,7 +2754,7 @@ Running in full mode...
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_103_1.png" src="../_images/notebooks_10x_xenium_focus_103_1.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_108_1.png" src="../_images/notebooks_10x_xenium_focus_108_1.png" />
 </div>
 </div>
 <p><em>Mutually exclusive co-expression rate (MECR)</em></p>
@@ -2572,7 +2776,7 @@ Running in full mode...
 </ul>
 <p>Because this tutorial uses a relatively small spatial subset, many marker pairs are sparse and individual Fisher tests have limited power after multiple-testing correction. After correction for testing many gene pairs, no pair remains significant at the selected FDR threshold.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">summary_rows</span> <span class="o">=</span> <span class="p">[]</span>
@@ -2603,7 +2807,7 @@ Running in full mode...
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -2662,7 +2866,7 @@ transcripts from overlapping cells.</p>
 <p><em>Top-bottom z consistency</em></p>
 <p>To detect potential z-overlap mixing within segmented cells, we compare gene expression profiles between the bottom and top z-regions of each cell. <code class="docutils literal notranslate"><span class="pre">similarity_top_bottom</span></code> reports the observed cosine similarity relative to its permutation-based null expectation, with negative residuals indicating lower consistency across z than expected. In the histogram below, we show these residuals only for cells with unexpectedly low top–bottom similarity (<code class="docutils literal notranslate"><span class="pre">similarity_top_bottom_p_value</span></code> &lt; 0.05).</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[56]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[59]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -2672,7 +2876,7 @@ transcripts from overlapping cells.</p>
 </div>
 <p>Proseg (a quasi-3D method) shows the fewest cells with unexpectedly different expression profiles between the top and bottom of the cell (<code class="docutils literal notranslate"><span class="pre">similarity_top_bottom_p_value</span></code> &lt; 0.05). Moreover, even among these cells, the differences between top and bottom are generally smaller than for Xenium and BIDCell, suggesting more consistent transcript composition across z.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[57]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[60]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">histogram_feature</span><span class="p">(</span><span class="n">st_dict</span><span class="p">,</span> <span class="s2">&quot;similarity_top_bottom&quot;</span><span class="p">)</span>
@@ -2683,7 +2887,7 @@ transcripts from overlapping cells.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_111_0.png" src="../_images/notebooks_10x_xenium_focus_111_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_116_0.png" src="../_images/notebooks_10x_xenium_focus_116_0.png" />
 </div>
 </div>
 <p>In <a class="reference internal" href="volume.html"><span class="doc">volume.ipynb</span></a>, we explore the distribution of transcripts along the z-dimension in more depth and put it into context with <a class="reference external" href="https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full">ovrlpy</a>, a package for detecting 3D overlap in spatial transcriptomics.</p>
@@ -2694,7 +2898,7 @@ transcripts from overlapping cells.</p>
 <p><em>distance to membrane metric</em></p>
 <p>In this metric we compute the distance to the segmented cell membrane of each transcript coordinate and aggregate this metric per transcript id as mean.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[61]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">&quot;dark_background&quot;</span><span class="p">)</span>
@@ -2734,7 +2938,7 @@ transcripts from overlapping cells.</p>
 </div>
 <p>First, we compute both the average distance to the cell membrane across all previously defined negative and positive markers for the cell type “DCIS1”.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[59]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[62]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">border_distance_negative</span> <span class="o">=</span> <span class="p">{}</span>
@@ -2759,7 +2963,7 @@ transcripts from overlapping cells.</p>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[60]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">keys</span> <span class="o">=</span> <span class="p">[]</span>
@@ -2785,7 +2989,7 @@ transcripts from overlapping cells.</p>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[61]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[64]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">result_negative</span><span class="p">,</span> <span class="n">result_positive</span><span class="p">])</span>
@@ -2794,7 +2998,7 @@ transcripts from overlapping cells.</p>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[62]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[65]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
@@ -2822,13 +3026,13 @@ transcripts from overlapping cells.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_119_0.png" src="../_images/notebooks_10x_xenium_focus_119_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_124_0.png" src="../_images/notebooks_10x_xenium_focus_124_0.png" />
 </div>
 </div>
 <p>We can plot now the distance to membrane for the positive and negative markers across the different segmentation algorithms and for the cell type “DCIS1”.</p>
 <p>We can also run the method inplace and plot the results in space</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[66]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">_method</span><span class="p">,</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">st_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -2843,7 +3047,7 @@ transcripts from overlapping cells.</p>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[64]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[67]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -2864,7 +3068,7 @@ transcripts from overlapping cells.</p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/tmp/ipykernel_473227/29340382.py:8: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+/tmp/ipykernel_178643/29340382.py:8: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
   sdata_plot.tables[st.tables_key].obs[&#34;region&#34;] = st.shapes_key
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
@@ -2874,7 +3078,7 @@ transcripts from overlapping cells.</p>
   return dispatch(args[0].__class__)(*args, **kw)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata_plot/pl/render.py:1384: UserWarning: No data for colormapping provided via &#39;c&#39;. Parameters &#39;cmap&#39;, &#39;norm&#39; will be ignored
   cax = ax.scatter(
-/tmp/ipykernel_473227/29340382.py:8: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+/tmp/ipykernel_178643/29340382.py:8: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
   sdata_plot.tables[st.tables_key].obs[&#34;region&#34;] = st.shapes_key
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
@@ -2884,7 +3088,7 @@ transcripts from overlapping cells.</p>
   return dispatch(args[0].__class__)(*args, **kw)
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata_plot/pl/render.py:1384: UserWarning: No data for colormapping provided via &#39;c&#39;. Parameters &#39;cmap&#39;, &#39;norm&#39; will be ignored
   cax = ax.scatter(
-/tmp/ipykernel_473227/29340382.py:8: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+/tmp/ipykernel_178643/29340382.py:8: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
   sdata_plot.tables[st.tables_key].obs[&#34;region&#34;] = st.shapes_key
 /g/huber/users/lazic/src/SegTraQ/.venv/lib/python3.13/site-packages/spatialdata/_core/spatialdata.py:477: UserWarning: Converting `region_key: region` to categorical dtype.
   convert_region_column_to_categorical(table)
@@ -2900,7 +3104,7 @@ transcripts from overlapping cells.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_123_1.png" src="../_images/notebooks_10x_xenium_focus_123_1.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_128_1.png" src="../_images/notebooks_10x_xenium_focus_128_1.png" />
 </div>
 </div>
 <p>We can identify cells in which the distribution of negative markers is clearly more skewed than for thers and that these values differ again greatly between the segmentation algorithms.</p>
@@ -2909,7 +3113,7 @@ transcripts from overlapping cells.</p>
 <h3>Metrics orthogonolisation<a class="headerlink" href="#Metrics-orthogonolisation" title="Link to this heading">#</a></h3>
 <p>In order to look at the co-linearity of the computed metrics, we will compute the correlation matrix (scaled covariance matrix) of all the metrics. Since the directionality (positively or negatively correlated) does not matter, we take the absolute value of the correlation coefficient as our orthogonality metric. Like this, we can visualise which metrics correlate</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[65]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[68]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># code adapted from claude.ai</span>
@@ -2950,21 +3154,21 @@ transcripts from overlapping cells.</p>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_127_0.png" src="../_images/notebooks_10x_xenium_focus_127_0.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_132_0.png" src="../_images/notebooks_10x_xenium_focus_132_0.png" />
 </div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_127_1.png" src="../_images/notebooks_10x_xenium_focus_127_1.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_132_1.png" src="../_images/notebooks_10x_xenium_focus_132_1.png" />
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_10x_xenium_focus_127_2.png" src="../_images/notebooks_10x_xenium_focus_127_2.png" />
+<img alt="../_images/notebooks_10x_xenium_focus_132_2.png" src="../_images/notebooks_10x_xenium_focus_132_2.png" />
 </div>
 </div>
 <p>There are quite some metrics which correlate with the segmented cell area, such as total counts of all transcripts and metrics related to this. We note as well that the correlation of metrics differs between algorithms.</p>
@@ -2973,7 +3177,7 @@ transcripts from overlapping cells.</p>
 <section id="Session-Info">
 <h2>Session Info<a class="headerlink" href="#Session-Info" title="Link to this heading">#</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[66]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[69]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">sd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>  <span class="c1"># spatialdata</span>
