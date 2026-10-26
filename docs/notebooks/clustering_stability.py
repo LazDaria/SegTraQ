@@ -39,7 +39,6 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 
 # %%
 import importlib
-from pathlib import Path
 
 import anndata as ad
 import matplotlib.pyplot as plt
@@ -157,13 +156,15 @@ plt.show()
 # %% [markdown]
 # ## Cluster Connectedness
 #
-# The cluster connectedness (CC) is a measure that looks at the compactness of clusters.
-# To compute it, we use the neighborhood graph we computed with scanpy earlier.
-# The connectedness then iterates over all cells and computes the number of neighbors with the
-# same cluster assignment and divides it by the number of total neighbors.
+# Cluster connectedness (CC) measures how well cells with the same cluster
+# assignment are connected in the expression-based neighborhood graph.
+# It computes the fraction of neighbors sharing the same cluster label.
+# In general, the higher this value is, the better.
 #
-# By default, we compute this metric for Leiden clustering at resolution 0.2.
+# By default, we compute this metric using Leiden clustering at resolution 0.2.
 # You can adjust this with the `resolution` parameter.
+# Alternatively, connectedness can be computed using existing cell-type annotations
+# by specifying `cell_type_key`.
 
 # %%
 ccs = {}
@@ -179,8 +180,10 @@ ccs
 # Values range from −1 to +1, where a high value indicates that the object is well matched to its
 # own cluster and poorly matched to neighboring clusters.
 #
-# By default, we compute this metric for Leiden clustering at resolution 0.2.
+# By default, we compute this metric using Leiden clustering at resolution 0.2.
 # You can adjust this with the `resolution` parameter.
+# As for connectedness, the silhouette score can also be computed using existing
+# cell-type annotations by specifying `cell_type_key`.
 
 # %%
 silhouette_scores = {}
@@ -276,38 +279,49 @@ plt.ylim(0, 1)
 plt.show()
 
 # %% [markdown]
-# ## Supervised cluster stability
+# ## Clustering quality using transferred cell-type labels
 #
-# If you already have labels for your cells, e. g. from performing label transfer on your data,
-# you might want to check how compact those clusters are.
-# Here, we assess Cluster Connectedness and Silhouette score on clusters obtained via label transfer.
-# We do this by simply specifying a `label_key` in the respective functions.
+# Besides Leiden clusters, connectedness and silhouette score can also be
+# computed using cell-type annotations. This allows us to assess how well
+# biologically defined cell types are separated in expression space.
+#
+# Here, we first perform label transfer from an scRNA-seq reference dataset
+# and then compute both metrics using the transferred cell-type labels.
 
 # %%
 # Running label transfer from an scRNA-seq dataset
-scRNAseq_data_path = Path("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
-adata_ref = ad.read_h5ad(scRNAseq_data_path)
-st = segtraq.SegTraQ(
-    sd.read_zarr("../../data/xenium_5K_data/proseg2.zarr"),
-    images_key="image",
-    points_cell_id_key="assignment",
-    points_background_id=2**32 - 1,
-    points_gene_key="gene",
-    tables_area_key=None,
-    tables_cell_id_key="cell",
-    shapes_cell_id_key="cell",
-    tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_y",
+adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
+
+for _method, st in st_dict.items():
+    st.run_label_transfer(
+        adata_ref,
+        ref_cell_type="celltype_major",
+        ref_raw_counts_layer="raw",
+        inplace=True,
+    )
+
+# %% [markdown]
+# We can now compute connectedness and silhouette score using the transferred
+# cell-type annotations instead of Leiden clusters by specifying `cell_type_key`.
+
+# %%
+ccs_labels = {}
+silhouette_scores_labels = {}
+
+for method, st in st_dict.items():
+    ccs_labels[method] = st.cs.connectedness(cell_type_key="transferred_cell_type")
+    silhouette_scores_labels[method] = st.cs.silhouette_score(cell_type_key="transferred_cell_type")
+
+# %%
+results_labels_df = pd.DataFrame(
+    {
+        "Method": list(ccs_labels.keys()),
+        "Connectedness": list(ccs_labels.values()),
+        "Silhouette Score": list(silhouette_scores_labels.values()),
+    }
 )
-st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw")
-sc.pp.pca(st.sdata.tables["table"])
-sc.pp.neighbors(st.sdata.tables["table"])
 
-# %%
-st.cs.connectedness(cell_type_key="transferred_cell_type")
-
-# %%
-st.cs.silhouette_score(cell_type_key="transferred_cell_type")
+results_labels_df
 
 # %% [markdown]
 # ## Session Info

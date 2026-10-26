@@ -27,7 +27,12 @@ UNORDERED_UNS_FRAMES = {"mutually_exclusive_coexpression_rate": ["gene1", "gene2
 # between scipy versions and CPUs, which can move a few borderline cells into another Leiden cluster.
 # exact cluster assignments are therefore not compared, only that the clusterings agree and that the
 # derived stability scores are reproducible within a tolerance.
-CLUSTERING_SCORES = ("connectedness", "silhouette_score", "mean_purity", "mean_ari")
+CLUSTERING_SCORES = (
+    "connectedness_transferred_cell_type",
+    "silhouette_score_transferred_cell_type",
+    "mean_purity_leiden",
+    "mean_ari_leiden",
+)
 CLUSTERING_SCORE_ATOL = 0.02
 
 
@@ -100,6 +105,14 @@ def _assert_table_equal(actual, expected, where):
         f"{where}.obs: columns differ.\n"
         f"Only in result: {sorted(set(actual.obs.columns) - set(expected.obs.columns))}\n"
         f"Only in reference: {sorted(set(expected.obs.columns) - set(actual.obs.columns))}"
+    )
+    cluster_cols = [col for col in expected.obs.columns if col.startswith("leiden_subset_")]
+    other_cols = [col for col in expected.obs.columns if col not in cluster_cols]
+
+    _assert_frame_equal(
+        actual.obs[other_cols],
+        expected.obs[other_cols],
+        f"{where}.obs",
     )
     _assert_frame_equal(actual.var, expected.var, f"{where}.var")
     _assert_array_equal(actual.X, expected.X, f"{where}.X")

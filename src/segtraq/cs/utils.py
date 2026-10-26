@@ -298,12 +298,7 @@ def run_leiden_clustering_on_random_subset(
         leiden_kwargs=leiden_kwargs,
     )
 
-    full_labels = pd.Series(
-        index=adata_full.obs_names,
-        dtype=object,
-    )
-    full_labels.loc[adata_subset.obs_names] = labels.values
-    adata_full.obs[key_added] = full_labels
+    adata_full.obs[key_added] = labels.reindex(adata_full.obs_names).astype("category")
 
     return key_added, labels.values
 
