@@ -449,7 +449,7 @@ class SegTraQ:
         _leave: bool = True,
     ):
         """
-        Run volume-layer (vl) metrics.
+        Run volume (vl) metrics.
 
         Convenience wrapper around segtraq.vl functions via the instance facade `self.vl`.
 
@@ -666,8 +666,15 @@ class SegTraQ:
     def run_clustering_stability(
         self,
         key_prefix: str = "leiden_subset",
+        cell_type_key: str | None = None,
+        adata_ref: AnnData | None = None,
+        ref_cell_type: str | None = None,
+        ref_gene_key: str | None = None,
+        query_gene_key: str | None = None,
+        ref_raw_counts_layer: str | None = None,
         use_hvg: bool | None = None,
         inplace: bool = True,
+        label_transfer_kwargs: dict[str, Any] | None = None,
         connectedness_kwargs: dict | None = None,
         silhouette_kwargs: dict | None = None,
         purity_kwargs: dict | None = None,
@@ -677,26 +684,60 @@ class SegTraQ:
         _leave: bool = True,
     ):
         """
-        Run clustering-stability metrics.
+        Run clustering stability (cs) metrics.
 
-        This method is a convenience wrapper around the clustering-stability (cs)
-        functions. It runs, in order:
+        Convenience wrapper around segtraq.cs functions via the instance facade `self.cs`.
 
-        1) cluster connectedness
-        2) silhouette score
-        3) purity (subset stability)
-        4) ARI (subset stability)
+        If `cell_type_key` is provided, it is used to compute connectedness and silhouette score
+        based on existing cell-type annotations.
 
-        Only parameters shared by all four computations are exposed explicitly.
-        All other parameters are provided via method-specific `*_kwargs` dictionaries.
+        If `cell_type_key` is `None` and `adata_ref` is provided, label transfer is run first
+        via `self.run_label_transfer()` using `adata_ref` and `ref_cell_type`. The resulting
+        labels are stored under `"transferred_cell_type"`.
+
+        If neither `cell_type_key` nor `adata_ref` is provided, connectedness and silhouette score
+        are computed using Leiden clustering.
+        Purity and ARI always assess Leiden clustering stability across random subsets of cells.
+
+        Runs, in order:
+
+        1) label transfer, if needed
+        2) connectedness (cell-type labels or Leiden clustering)
+        3) silhouette score (cell-type labels or Leiden clustering)
+        4) purity (Leiden subset stability)
+        5) ARI (Leiden subset stability)
 
         Progress is reported via tqdm unless disabled through `segtraq.settings.progress`.
+        Only the steps that will actually run are counted.
 
         Parameters
         ----------
         key_prefix : str, default="leiden_subset"
             Prefix for Leiden clustering labels written to `.obs` by the underlying
             methods (where applicable).
+        cell_type_key : str or None, default=None
+            Column in `sdata.tables[tables_key].obs` containing cell-type labels.
+            If provided, connectedness and silhouette score are computed using
+            these labels. If None and `adata_ref` is provided, label transfer
+            is run first and labels are stored under `"transferred_cell_type"`.
+            If neither is provided, Leiden clustering is used.
+            Purity and ARI always use Leiden clustering on random subsets.
+        adata_ref : AnnData or None, default=None
+            Reference AnnData object used for label transfer when
+            `cell_type_key` is None.
+        ref_cell_type : str or None, default=None
+            Column in `adata_ref.obs` containing reference cell-type labels.
+            Required if `cell_type_key=None` and label transfer should be run.
+        ref_gene_key : str or None, default=None
+            Column in `adata_ref.var` containing gene identifiers.
+            If `None`, `adata_ref.var_names` are used.
+        query_gene_key : str or None, default=None
+            Column in `sdata.tables[tables_key].var` containing gene identifiers
+            matching `adata_ref.var[ref_gene_key]`.
+            If `None`, `tables_gene_key` is used.
+        ref_raw_counts_layer : str or None, default=None
+            Layer containing raw counts in `adata_ref`.
+            If `None`, raw counts are expected in `adata_ref.X`.
         use_hvg: bool or None, optional
             If `None`, use 2,000 HVGs for PCA when the panel contains more than
             8,000 genes. If `True`, always use HVGs. If `False`, use all genes
@@ -705,14 +746,17 @@ class SegTraQ:
             If True, metrics are written to `sdata.tables["table"].uns` by the
             underlying methods and this function returns None. If False, the
             computed metrics are returned as a dictionary.
+        label_transfer_kwargs : dict or None, optional
+            Extra keyword arguments forwarded to `self.run_label_transfer()`.
+            Do not include reference parameters, `cell_type_key`, or `inplace`.
         connectedness_kwargs : dict or None, optional
-            Additonal keyword arguments forwarded to :meth:`cs.compute_cluster_connectedness`.
+            Additonal keyword arguments forwarded to :meth:`cs.connectedness`.
         silhouette_kwargs : dict or None, optional
-            Additonal keyword arguments forwarded to :meth:`cs.compute_silhouette_score`.
+            Additonal keyword arguments forwarded to :meth:`cs.silhouette_score`.
         purity_kwargs : dict or None, optional
-            Additonal keyword arguments forwarded to :meth:`cs.compute_purity`.
+            Additonal keyword arguments forwarded to :meth:`cs.purity`.
         ari_kwargs : dict or None, optional
-            Additonal keyword arguments forwarded to :meth:`cs.compute_ari`.
+            Additonal keyword arguments forwarded to :meth:`cs.adjusted_rand_index`.
         leiden_kwargs : dict or None, optional
             Additional keyword arguments forwarded to Leiden clustering in all
             underlying methods that perform clustering.
@@ -727,28 +771,70 @@ class SegTraQ:
         -------
         None or dict
             If `inplace=True`, returns None.
-            If `inplace=False`, returns a dict with keys:
+            If `inplace=False`, returns a dictionary with keys:
 
-            - `"cluster_connectedness"` : float
-            - `"silhouette_score"` : float
-            - `"mean_purity"` : float
-            - `"mean_ari"` : float
+            - `"connectedness_leiden"` or `"connectedness_{cell_type_key}"` : float
+            - `"silhouette_score_leiden"` or `"silhouette_score_{cell_type_key}"` : float
+            - `"mean_purity_leiden"` : float
+            - `"mean_ari_leiden"` : float
+            - `"label_transfer"` : pandas.DataFrame, only if label transfer was performed
         """
+        do_label_transfer = cell_type_key is None and adata_ref is not None
+
+        if do_label_transfer:
+            _require_reference(
+                adata_ref,
+                ref_cell_type,
+                condition="label transfer for clustering stability",
+            )
+
+        label_transfer_kwargs = {} if label_transfer_kwargs is None else dict(label_transfer_kwargs)
         connectedness_kwargs = {} if connectedness_kwargs is None else dict(connectedness_kwargs)
         silhouette_kwargs = {} if silhouette_kwargs is None else dict(silhouette_kwargs)
         purity_kwargs = {} if purity_kwargs is None else dict(purity_kwargs)
         ari_kwargs = {} if ari_kwargs is None else dict(ari_kwargs)
 
-        reserved = {"key_prefix", "use_hvg", "inplace", "leiden_kwargs", "n_threads"}
+        reference_kwargs = dict(
+            adata_ref=adata_ref,
+            ref_cell_type=ref_cell_type,
+            ref_gene_key=ref_gene_key,
+            query_gene_key=query_gene_key,
+            ref_raw_counts_layer=ref_raw_counts_layer,
+        )
+
+        _check_reserved_kwargs(
+            "label_transfer_kwargs",
+            label_transfer_kwargs,
+            reference_kwargs.keys() | {"cell_type_key", "inplace"},
+        )
+        reserved = {"key_prefix", "cell_type_key", "use_hvg", "inplace", "leiden_kwargs", "n_jobs"}
         _check_reserved_kwargs("connectedness_kwargs", connectedness_kwargs, reserved)
         _check_reserved_kwargs("silhouette_kwargs", silhouette_kwargs, reserved)
         _check_reserved_kwargs("purity_kwargs", purity_kwargs, reserved)
         _check_reserved_kwargs("ari_kwargs", ari_kwargs, reserved)
 
-        with _StepProgress(total=4, desc="Clustering stability", leave=_leave) as p:
-            with p.step("cluster connectedness"):
-                cc = self.cs.cluster_connectedness(
+        label_transfer_result = None
+
+        with _StepProgress(
+            total=4 + int(do_label_transfer),
+            desc="Clustering stability",
+            leave=_leave,
+        ) as p:
+            if do_label_transfer:
+                with p.step("label transfer"):
+                    cell_type_key = "transferred_cell_type"
+
+                    label_transfer_result = self.run_label_transfer(
+                        **reference_kwargs,
+                        cell_type_key="transferred_cell_type",
+                        inplace=True,
+                        **label_transfer_kwargs,
+                    )
+
+            with p.step("connectedness"):
+                cc = self.cs.connectedness(
                     key_prefix=key_prefix,
+                    cell_type_key=cell_type_key,
                     use_hvg=use_hvg,
                     inplace=inplace,
                     **connectedness_kwargs,
@@ -759,6 +845,7 @@ class SegTraQ:
             with p.step("silhouette score"):
                 sil = self.cs.silhouette_score(
                     key_prefix=key_prefix,
+                    cell_type_key=cell_type_key,
                     use_hvg=use_hvg,
                     inplace=inplace,
                     **silhouette_kwargs,
@@ -789,12 +876,18 @@ class SegTraQ:
         if inplace:
             return None
 
-        return {
-            "cluster_connectedness": cc,
-            "silhouette_score": sil,
-            "mean_purity": purity,
-            "mean_ari": ari,
+        suffix = "leiden" if cell_type_key is None else cell_type_key
+        result = {
+            f"connectedness_{suffix}": cc,
+            f"silhouette_score_{suffix}": sil,
+            "mean_purity_leiden": purity,
+            "mean_ari_leiden": ari,
         }
+
+        if do_label_transfer:
+            result["label_transfer"] = label_transfer_result
+
+        return result
 
     def run_supervised(
         self,
@@ -956,7 +1049,7 @@ class SegTraQ:
                     )
 
             if do_markers:
-                with p.step("markers"):
+                with p.step("get markers"):
                     if has_stored_markers:
                         markers = _get_segtraq_markers(
                             adata,
@@ -1172,8 +1265,9 @@ class SegTraQ:
             Layer containing raw counts in `adata_ref`. If `None`, raw counts are expected in `adata_ref.X`.
         cell_type_key : str or None, default=None
             Column in `sdata.tables[tables_key].obs` containing cell-type labels, reused by every
-            module that accepts one. If `None` and `adata_ref`/`ref_cell_type` are provided, label
-            transfer is run once upfront and its result is used instead.
+            module that accepts one (including cluster connectedness and silhouette score in
+            `run_clustering_stability`). If `None` and `adata_ref`/`ref_cell_type` are provided,
+            label transfer is run once upfront and its result is used instead.
         markers : dict or None, default=None
             Marker genes forwarded to `run_supervised`, in the form
             `{cell_type: {"positive": list[str], "negative": list[str]}}`.
@@ -1231,7 +1325,7 @@ class SegTraQ:
         _check_reserved_kwargs("baseline_kwargs", baseline_kwargs, {"inplace"})
         _check_reserved_kwargs("region_similarity_kwargs", region_similarity_kwargs, {"inplace"})
         _check_reserved_kwargs("volume_kwargs", volume_kwargs, reference_kwargs.keys() | {"cell_type_key", "inplace"})
-        _check_reserved_kwargs("clustering_stability_kwargs", clustering_stability_kwargs, {"inplace"})
+        _check_reserved_kwargs("clustering_stability_kwargs", clustering_stability_kwargs, {"cell_type_key", "inplace"})
         _check_reserved_kwargs(
             "supervised_kwargs", supervised_kwargs, reference_kwargs.keys() | {"cell_type_key", "markers", "inplace"}
         )
@@ -1255,6 +1349,7 @@ class SegTraQ:
                 **volume_kwargs,
             ),
             "clustering_stability": lambda: self.run_clustering_stability(
+                cell_type_key=cell_type_key,
                 inplace=inplace,
                 _leave=False,
                 **clustering_stability_kwargs,
@@ -2242,7 +2337,7 @@ class _CSFacade:
 
     adjusted_rand_index.__doc__ = cs.adjusted_rand_index.__doc__
 
-    def cluster_connectedness(
+    def connectedness(
         self,
         resolution: float | list[float] = 0.2,
         use_weights: bool = False,
@@ -2258,7 +2353,7 @@ class _CSFacade:
         leiden_kwargs: dict | None = None,
         n_jobs: int | None = None,
     ):
-        return cs.cluster_connectedness(
+        return cs.connectedness(
             sdata=self._p.sdata,
             tables_key=self._p.tables_key,
             tables_gene_key=self._p.tables_gene_key,
@@ -2277,7 +2372,7 @@ class _CSFacade:
             n_jobs=n_jobs,
         )
 
-    cluster_connectedness.__doc__ = cs.cluster_connectedness.__doc__
+    connectedness.__doc__ = cs.connectedness.__doc__
 
 
 class _VLFacade:

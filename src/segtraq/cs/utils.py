@@ -298,12 +298,7 @@ def run_leiden_clustering_on_random_subset(
         leiden_kwargs=leiden_kwargs,
     )
 
-    full_labels = pd.Series(
-        index=adata_full.obs_names,
-        dtype=object,
-    )
-    full_labels.loc[adata_subset.obs_names] = labels.values
-    adata_full.obs[key_added] = full_labels
+    adata_full.obs[key_added] = labels.reindex(adata_full.obs_names).astype("category")
 
     return key_added, labels.values
 
@@ -442,7 +437,7 @@ def purity_mean(purity_matrix: np.ndarray) -> float:
     return np.nanmean(purity_matrix[np.triu_indices(n, k=1)])
 
 
-def _cluster_connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
+def _connectedness(connectivities: sp.spmatrix, labels: np.ndarray, use_weights: bool = False) -> float:
     """
     Compute how well connected a clustering is in a kNN graph.
 

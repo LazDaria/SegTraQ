@@ -139,11 +139,12 @@ st.bl.morphological_features().head()
 # %% [markdown]
 # ## Clustering stability module
 # The clustering stability (`cs`) module provides metrics for assessing the
-# stability of clustering results across different clustering resolutions and random subsets of genes.
+# quality and stability of clustering results across different resolutions and
+# random subsets of cells.
 # The idea is as follows: the better a segmentation method separates cell types,
-# the better it is. We can compute a couple of metrics to investigate this.
+# the more distinct and stable the resulting expression-based clusters should be.
 #
-# Let`s first perform Leiden clustering and visualize the clusters in the UMAP space.
+# Let's first perform Leiden clustering and visualize the clusters in UMAP space.
 
 # %%
 # extracting the anndata object from the spatialdata object and performing appropriate normalization
@@ -159,26 +160,28 @@ sc.tl.leiden(adata, flavor="igraph", n_iterations=2, resolution=0.2)
 sc.pl.umap(adata, color="leiden")
 
 # %% [markdown]
-# We can start by looking at the cluster connectedness. To compute it,
-# we use the neighborhood graph we computed with scanpy earlier.
-# The method then iterates over all cells and computes the number of neighbors
-# with the same cluster assignment and divides it by the number of total neighbors.
-# In general, the higher this value is, the better. By default,
-# this is done at a resolution of 0.2, but you can adjust this with the `resolution` parameter.
+# We can start by looking at cluster connectedness. This metric uses a neighborhood
+# graph to compute the fraction of neighbors sharing the same cluster assignment.
+# In general, the higher this value is, the better.
+# By default, Leiden clustering is performed at a resolution of 0.2, but this
+# can be adjusted with the `resolution` parameter.
+# SegTraQ performs the necessary preprocessing and clustering internally.
 
 # %%
-st.cs.cluster_connectedness()
+st.cs.connectedness()
 
 # %% [markdown]
-# We can do the same with the silhouette score.
+# We can do the same with the silhouette score, which measures how well cells
+# are separated into distinct clusters.
 
 # %%
 st.cs.silhouette_score()
 
 # %% [markdown]
-# Next, we can check how stable the clustering is when we only take a subset (63%)
-# of our genes and run clustering on this. We do this five times, and then assess
-# the quality with the adjusted Rand index (ARI) and the purity.
+# Next, we can check how stable the clustering is when we only take a random
+# subset (63%) of our cells and perform Leiden clustering on it.
+# We repeat this five times and compare the resulting cluster assignments
+# using the adjusted Rand index (ARI) and purity.
 # For more details on these metrics, refer to the section on this module.
 
 # %%
@@ -186,6 +189,11 @@ st.cs.adjusted_rand_index()
 
 # %%
 st.cs.purity()
+
+# %% [markdown]
+# If cell-type annotations are available,
+# connectedness and silhouette score can also be computed using these labels
+# instead of Leiden clusters.
 
 # %% [markdown]
 # ## Region similarity module

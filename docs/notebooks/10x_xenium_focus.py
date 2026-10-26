@@ -540,8 +540,10 @@ plt.show()
 
 # %% [markdown]
 # ### Clustering stability module
-# The clustering stability (`cs`) module provides metrics for assessing the stability
-# of clustering results across different resolutions and random subsets of genes.
+# The clustering stability (`cs`) module provides metrics for assessing clustering
+# quality and stability. Connectedness and silhouette score assess how well
+# the transferred cell types are separated in expression space, while purity
+# and ARI assess Leiden clustering stability across random subsets of cells.
 
 # %% [markdown]
 # Let`s first perform Leiden clustering and visualize the clusters in the UMAP space.
@@ -575,6 +577,9 @@ plt.show()
 
 # %% [markdown]
 # Next, we compute clustering stability metrics and plot these.
+# Connectedness and silhouette score are computed using the transferred
+# cell-type annotations, while purity and ARI are computed using Leiden
+# clustering on random subsets of cells.
 
 # %%
 ccds = {}
@@ -583,8 +588,8 @@ purities = {}
 aris = {}
 
 for method, st in st_dict.items():
-    ccds[method] = st.cs.cluster_connectedness()
-    silhouette_scores[method] = st.cs.silhouette_score()
+    ccds[method] = st.cs.connectedness(cell_type_key="transferred_cell_type")
+    silhouette_scores[method] = st.cs.silhouette_score(cell_type_key="transferred_cell_type")
     purities[method] = st.cs.purity()
     aris[method] = st.cs.adjusted_rand_index()
 
@@ -650,12 +655,14 @@ plt.show()
 
 # %% [markdown]
 # Proseg achieves the highest adjusted Rand index (ARI) and clustering purity,
-# as well as the lowest mean cosine distance. Together,
-# these results suggest that Proseg retrieves the most internally consistent expression
-# profiles and could indicate less contaminated single cell signatures.
+# indicating more stable Leiden clustering across random subsets of cells.
+# Connectedness and silhouette score additionally assess how well the transferred
+# cell types are separated in expression space. # Proseg achieves the highest
+# silhouette score for the transferred labels,
+# indicating higher intra-cluster coherence and improved inter-cluster separation;
+# this is also visually consistent with the UMAP embedding.
 #
-# The silhouette score can also be computed on the transferred labels.
-# We will first visualize transferred labels in the UMAP space.
+# We can also visualize the transferred cell-type annotations in UMAP space.
 
 # %%
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
@@ -685,18 +692,6 @@ for i, (method, st) in enumerate(st_dict.items()):
 plt.tight_layout()
 plt.show()
 
-# %% [markdown]
-# Proseg achieves the highest silhouette score for the transferred labels,
-# indicating higher intra-cluster coherence and improved inter-cluster separation;
-# this is also visually consistent with the UMAP embedding.
-
-# %%
-silhouette_scores_labels = {}
-
-for method, st in st_dict.items():
-    silhouette_scores_labels[method] = st.cs.silhouette_score(cell_type_key="transferred_cell_type")
-
-silhouette_scores_labels
 
 # %% [markdown]
 # ## Region similarity module
