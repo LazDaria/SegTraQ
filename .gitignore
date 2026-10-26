@@ -111,6 +111,7 @@ ENV/
 tests/data*
 tests/data/
 tests/data/scRNAseq_ref_large.h5ad
+**segtraq_test_data_*.tar.gz
 data/
 # required for symlink
 data
@@ -120,4 +121,3 @@ docs/_build/
 docs/notebooks/*.ipynb
 .ipynb_checkpoints/
 /*.tar.gz
-/tests/segtraq_test_data_*.tar.gz
