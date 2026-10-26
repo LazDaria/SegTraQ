@@ -989,23 +989,29 @@ boxplot_per_celltype_sig(st_dict, "border_admixture_score")
 
 # %% [markdown]
 # ### Supervised module
-
-# %% [markdown]
-# The `sp` (supervised) module provides metrics to evaluate how well cell profiles
-# in a spatial transcriptomics dataset agree with a reference single-cell RNA-seq
-# (scRNA-seq) dataset with cell type annotations.
 #
-# Unlike scRNA-seq, contamination in spatial transcriptomics measurements mostly originates
-# from the local tissue context.
+# The `sp` (supervised) module evaluates spatial expression profiles using
+# an annotated single-cell RNA-seq (scRNA-seq) reference. Its metrics assess
+# cell-type consistency and potential contamination, including contributions
+# from neighboring cells.
 #
-# By comparing spatial expression profiles to a high-quality scRNA-seq reference,
-# the supervised module aims to quantify this mismatch. Specifically, we compute metrics that measure:
-# - how well each spatial cell matches its expected cell type,
-# - how much its expression resembles other (neighboring) cell types, and
-# - if it is possible to predict that a cell of one cell type is adjacent to a different cell type.
+# Specifically, we quantify:
+# - **Marker balanced accuracy:** how well each cell expresses its positive
+#   markers and avoids neighborhood-relevant negative markers.
+# - **Contamination strength:** the fraction of transcripts corresponding to
+#   negative markers that are positive markers of neighboring cell types,
+#   with summaries of potential source–target contributions.
+# - **Mutually exclusive co-expression:** how frequently marker pairs expected
+#   to be mutually exclusive are detected together.
+# - **RCTD contamination:** the estimated expression contribution outside the
+#   dominant reference cell type, without requiring neighborhood information.
 #
-# To obtain cell-type specific marker genes, we define positive and negative markers in the
-# annotated scRNA-seq via `markers_from_reference`.
+# Positive and negative cell-type markers can be derived from the annotated
+# reference using `markers_from_reference`. RCTD instead fits expression
+# mixtures directly using reference cell-type profiles.
+#
+# These metrics provide complementary evidence of expression mismatch and
+# mixture; biological variation and reference quality can also affect them.
 
 # %% [markdown]
 # *Computing cell-type specific markers*
@@ -1054,10 +1060,10 @@ for c in ctypes:
 overlap_df
 
 # %% [markdown]
-# *Marker purity*
+# *Marker balanced accuracy*
 #
 # To quantify how well each segmented cell in the spatial transcriptomics data
-# matches its annotated cell type, we defined a marker-based purity (`marker_balanced_accuracy`)
+# matches its annotated cell type, we defined a marker-balanced accuracy (`marker_balanced_accuracy`)
 # score that jointly evaluates the expression of positive (`positive_marker_recall`) and
 # the absence of neighborhood-associated negative markers (`negative_marker_avoidance`).
 # The method accounts for the spatial context of each cell and is motivated by the assumption
@@ -1066,7 +1072,7 @@ overlap_df
 
 # %%
 for _, st in st_dict.items():
-    purity = st.sp.marker_purity(
+    purity = st.sp.marker_balanced_accuracy(
         cell_type_key="transferred_cell_type",
         inplace=True,
     )
@@ -1078,82 +1084,6 @@ for _, st in st_dict.items():
 
 # %%
 boxplot_per_celltype(st_dict, "marker_balanced_accuracy")
-
-# %% [markdown]
-# The `negative_marker_avoidance` score quantifies the extent to which a focal cell expresses positive
-# markers of neighboring cell types, and thus reflects contamination. Overall, contamination levels are low;
-# however, increased contamination is observed for DCIS1.
-
-
-# %%
-def box_strip_plot_per_celltype(
-    st_dict,
-    feature,
-    celltype_col="transferred_cell_type",
-    q=1.0,
-    figsize=(15, 5),
-    palette="Set2",
-):
-    dfs = []
-    for method, st in st_dict.items():
-        obs = st.sdata.tables["table"].obs
-        tmp = obs[[celltype_col, feature]].copy()
-        tmp = tmp[tmp[celltype_col].notna()]
-        tmp["method"] = method
-        dfs.append(tmp)
-
-    df = pd.concat(dfs, ignore_index=True).dropna(subset=[celltype_col, feature])
-
-    if q < 1:
-        df = df[df[feature] <= df[feature].quantile(q)]
-
-    fig, ax = plt.subplots(figsize=figsize)
-
-    sns.boxplot(
-        data=df,
-        x=celltype_col,
-        y=feature,
-        hue="method",
-        showcaps=True,
-        showfliers=False,
-        palette=palette,
-        ax=ax,
-    )
-
-    sns.stripplot(
-        data=df,
-        x=celltype_col,
-        y=feature,
-        hue="method",
-        dodge=True,
-        jitter=0.2,
-        alpha=0.6,
-        linewidth=0,
-        palette=palette,
-        ax=ax,
-    )
-
-    # avoid duplicate legends
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, title="method")
-
-    ax.tick_params(axis="x", rotation=45)
-    ax.set_xlabel("Cell type")
-    ax.set_ylabel(feature)
-    ax.legend(title="method", bbox_to_anchor=(1.02, 1), loc="upper left")
-    fig.tight_layout()
-    plt.show()
-
-
-# %%
-box_strip_plot_per_celltype(st_dict, "negative_marker_avoidance")
-
-# %% [markdown]
-# In contrast, the `positive_marker_recall` score measures how consistently a cell
-# expresses markers expected for its assigned cell type.
-
-# %%
-boxplot_per_celltype(st_dict, "positive_marker_recall")
 
 # %% [markdown]
 # These metrics are most informative when considered jointly. For example, we plot the mean
@@ -1202,66 +1132,47 @@ fig.tight_layout()
 plt.show()
 
 # %% [markdown]
-# *Neighborhood contamination*
+# *RCTD contamination*
 #
-# Marker purity summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives.
-# In many cases, we also want to quantify
-# (i) **how many contaminating transcripts** are present per cell and
-# (ii) **which neighboring cell types** contribute to this signal.
-# We therefore compute neighborhood contamination.
+# To quantify expression mixture within each segmented cell, we compute
+# `rctd_contamination` using an annotated scRNA-seq reference. RCTD is run in
+# full mode to estimate contributions from all reference cell types. The score
+# is calculated as one minus the largest normalized cell-type weight,
+# representing the estimated expression contribution outside the dominant type.
+# Higher values indicate greater mixture. Unlike the marker-based metrics,
+# this score does not require spatial cell-type labels or neighborhood information.
+# Reference similarity and biological variation can also influence the score,
+# so it should not be interpreted as a direct fraction of misassigned transcripts.
 
 # %%
 for _, st in st_dict.items():
-    per_cell_df, _, cont_bin, _ = st.sp.neighbor_contamination(cell_type_key="transferred_cell_type")
+    rctd_df = st.sp.rctd_contamination(
+        adata_ref=adata_ref,
+        ref_cell_type="celltype_major",
+        ref_raw_counts_layer="raw",
+        inplace=True,
+    )
 
 # %% [markdown]
-# Among the evaluated methods, Proseg yields the smallest number of cells showing detectable contamination.
+# Comparing `rctd_contamination` across segmentation methods and cell types
+# highlights differences in estimated expression mixture. Lower values indicate
+# that a single reference cell type explains a larger share of the fitted expression.
 
 # %%
-methods_df = []
-
-for method, st in st_dict.items():
-    obs = st.sdata.tables["table"].obs
-    counts = obs.loc[obs["contamination_counts"] > 0, "transferred_cell_type"].value_counts().rename(method)
-    methods_df.append(counts)
-
-merged = pd.concat(methods_df, axis=1)
-merged
+boxplot_per_celltype(st_dict, "rctd_contamination")
 
 # %% [markdown]
-# The spatial plot below shows the number of contaminating transcripts in each cell.
-
-
-# %%
-def plot_feature_labels(sdata, method, feature, axes, i):
-    labels = sdata.tables["table"].obs["transferred_celltype_plot"].unique().astype(str).tolist()
-    cols = [col_celltype[lab] for lab in labels]
-
-    sdata.tables["table"].obs["region"] = "cell_boundaries"
-    sdata.set_table_annotates_spatialelement("table", region="cell_boundaries")
-
-    sdata.pl.render_shapes(
-        "cell_boundaries",
-        color="transferred_celltype_plot",
-        palette=cols,
-        groups=labels,
-        outline_color="white",
-        outline_width=0.5,
-    ).pl.show(ax=axes[0, i], title=f"{method}:Cell boundaries colored by cell type", coordinate_systems="global")
-
-    sdata.pl.render_shapes(
-        "cell_boundaries",
-        color=feature,
-        outline_color="white",
-        outline_width=0.5,
-    ).pl.show(ax=axes[1, i], title=f"{method}: {feature}", coordinate_systems="global")
-
+# *Contamination strength*
+#
+# Marker balanced accuracy summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives.
+# In many cases, we also want to quantify
+# (i) **what fraction of a cell's transcripts can be attributed to contamination** and
+# (ii) **which neighboring cell types** contribute to this signal.
+# We therefore compute contamination strength.
 
 # %%
-fig, axes = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
-axes = np.atleast_2d(axes)
-for i, (method, st) in enumerate(st_dict.items()):
-    plot_feature_labels(st.sdata, method, "contamination_counts", axes, i)
+for _, st in st_dict.items():
+    per_cell_df, _, _ = st.sp.contamination_strength(cell_type_key="transferred_cell_type")
 
 # %% [markdown]
 # The heatmap below summarizes contamination strength for each source–target cell-type pair.

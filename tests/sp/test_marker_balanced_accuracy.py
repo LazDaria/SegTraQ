@@ -3,8 +3,8 @@ import pandas as pd
 import segtraq as st
 
 
-def test_marker_purity_values_are_in_unit_interval(sdata_labeled, markers):
-    df = st.sp.marker_purity(
+def test_marker_balanced_accuracy_values_are_in_unit_interval(sdata_labeled, markers):
+    df = st.sp.marker_balanced_accuracy(
         sdata=sdata_labeled,
         cell_type_key="transferred_cell_type",
         markers=markers,
@@ -13,8 +13,6 @@ def test_marker_purity_values_are_in_unit_interval(sdata_labeled, markers):
     )
 
     metric_cols = [
-        "positive_marker_recall",
-        "negative_marker_avoidance",
         "marker_balanced_accuracy",
     ]
 
@@ -23,8 +21,8 @@ def test_marker_purity_values_are_in_unit_interval(sdata_labeled, markers):
         assert ((vals >= 0) & (vals <= 1)).all()
 
 
-def test_marker_purity_realdata_inplace_writes_obs(sdata_labeled, markers):
-    df = st.sp.marker_purity(
+def test_marker_balanced_accuracy_realdata_inplace_writes_obs(sdata_labeled, markers):
+    df = st.sp.marker_balanced_accuracy(
         sdata=sdata_labeled,
         cell_type_key="transferred_cell_type",
         markers=markers,
@@ -35,8 +33,6 @@ def test_marker_purity_realdata_inplace_writes_obs(sdata_labeled, markers):
     assert isinstance(df, pd.DataFrame)
 
     expected_cols = {
-        "positive_marker_recall",
-        "negative_marker_avoidance",
         "marker_balanced_accuracy",
         "n_evaluated_positive_markers",
         "n_evaluated_negative_markers",

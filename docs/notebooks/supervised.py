@@ -1,33 +1,35 @@
 # ---
 # jupyter:
 #   jupytext:
+#     cell_metadata_filter: -all
+#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: segtraq_26
+#     display_name: allen (3.13.5)
 #     language: python
 #     name: python3
 # ---
 
 # %% [markdown]
 # # Module: Supervised Metrics
-#
+# 
 # Unlike scRNA-seq, spatial transcriptomics measurements are affected by the local tissue context.
 # Transcripts can be captured outside their cell of origin due to transcript diffusion, 3D overlap,
 # or segmentation inaccuracies, leading to mixed or contaminated expression profiles.
 # As a result, spatial cells may partially resemble their neighbors.
-#
+# 
 # <center>
 #  <img src='../_static/img/docs/supervised.png' width='90%' />
 # </center>
-#
+# 
 # The `supervised` (`sp`) module provides metrics to evaluate how well cell profiles in a spatial
 # transcriptomics dataset agree with a reference single-cell RNA-seq (scRNA-seq) dataset
 # with cell type annotations.
-#
+# 
 # By comparing spatial expression profiles to a high-quality scRNA-seq reference,
 # the supervised module aims to quantify this mismatch. Specifically,
 # we use the scRNA-seq dataset as a clean reference, transfer cell type labels to the spatial data,
@@ -35,7 +37,7 @@
 # - how well each spatial cell matches its expected cell type,
 # - how much its expression resembles other (neighboring) cell types, and
 # - if it is possible to predict that a cell of one cell type is adjacent to a different cell type.
-#
+# 
 # To follow along with this tutorial, you can download the data from [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
 
 # %%
@@ -62,20 +64,20 @@ segtraq.settings.n_jobs = 8  # Use 8 CPU cores (-1 for all available cores)
 
 # %% [markdown]
 # #### Transfer labels from scRNA-seq to spatial transcriptomics
-#
+# 
 # We first load a spatial transcriptomics dataset (stored as a `SpatialData` object)
 # and an annotated scRNA-seq reference dataset (stored as an `AnnData` object).
 # For demonstration purposes, we subset the spatial dataset to a smaller region to reduce runtime.
-#
+# 
 # Next, we initialize a `SegTraQ` object from the SpatialData. During initialization,
 # the `validate_spatialdata()` method is automatically run to ensure that all required attributes
 # (e.g. `images_key`, `tables_key`) are correctly specified.
-#
+# 
 # We then transfer cell type labels from the scRNA-seq reference to the spatial dataset
 # using `run_label_transfer()`. This method computes cell type–specific mean expression
 # profiles in the reference and assigns each spatial cell to the cell type with the highest
 # Pearson correlation to its expression profile.
-#
+# 
 # Finally, we define a color scheme for visualizing the transferred cell type labels.
 
 # %%
@@ -124,10 +126,10 @@ col_celltype = {
 # %% [markdown]
 # The transferred labels are stored in `sdata.tables[tables_key].obs["transferred_cell_type"]`.
 # The column name can be changed via the `cell_type_key` argument.
-#
+# 
 # By default, cells with **≤ 10 or ≥ 2000 transcripts** and **≤ 5 detected genes** are filtered out.
 # These thresholds can be adjusted using `tx_min`, `tx_max`, `gn_min`, and `gn_max`.
-#
+# 
 # Ensure that gene identifiers match between `adata_ref.var_names` and
 # `sdata.tables[tables_key].var_names`. If they differ, specify the corresponding
 # identifier columns using `ref_ensemble_key` and `query_ensemble_key`.
@@ -184,7 +186,7 @@ st.sdata.pl.render_shapes(
 # **pairwise comparisons between all cell types** in the reference dataset.
 # Marker detection can be performed using either differential expression (`mode="de"`) or
 # AUC-based scoring (`mode="auc"`).
-#
+# 
 # For each cell type, genes are selected by a voting scheme: a gene must be identified as
 # upregulated in at least a fraction of pairwise contrasts (`vote_fraction_pos`, default = 0.5).
 # To ensure that positive markers are representative of the cell type rather than driven
@@ -193,7 +195,7 @@ st.sdata.pl.render_shapes(
 # we require that a positive marker is not shared by more than `t_pos × n_celltypes` cell types.
 # This yields markers that are both upregulated and cell-type–specific,
 # without bias from cell type composition in the reference data.
-#
+# 
 # **Negative markers** are derived from the same pairwise contrasts but are defined as genes that
 # are effectively off in a focal cell type while being upregulated elsewhere. For each ordered pair of
 # cell types `(a, b)`, genes that are upregulated in `a` relative to `b` are considered negative-marker
@@ -201,12 +203,12 @@ st.sdata.pl.render_shapes(
 # of cells of type b. To avoid ambiguous genes with inconsistent directionality,
 # we further require that a negative marker of `b` is not identified as upregulated in `b` relative
 # to any other cell type across all ordered contrasts.
-#
+# 
 # When using `mode="auc"`, the minimum required AUC can be set via `auc_pos_thresh` (default = 0.9).
 # When using `mode="de"`, the differential expression method can be selected via `method`
 # (`"wilcoxon"`, `"t-test"`, or `"logreg"`), with thresholds defined by `logFC_pos_thresh`
 # (default = 1.0) and `pval_adj_thresh` (default = 0.05).
-#
+# 
 # All computations can be parallelized by specifying the number of jobs via `n_jobs`.
 # By default, `markers_from_reference()` stores the identified positive and negative markers in
 # `sdata.tables["table"].uns["segtraq_markers"]`. Markers are stored as gene indices to minimize
@@ -242,7 +244,7 @@ for cell_type, sign in markers.items():
 # To reliably estimate contamination, each cell type should share **at least ~5 negative markers**
 # with the positive marker set of every other cell type. If these overlaps are too small,
 # contamination estimates become unstable.
-#
+# 
 # In such cases, the marker definition can be relaxed by adjusting the thresholds used in
 # `markers_from_reference` above.
 
@@ -259,57 +261,59 @@ for c in ctypes:
 overlap_df
 
 # %% [markdown]
-# #### Compute marker purity
+# #### Compute marker balanced accuracy
 
 # %% [markdown]
-# We quantify how pure each spatial cell’s expression profile is with respect to its assigned
-# cell type using positive and negative marker genes.
-#
-# We assume that differences between scRNA-seq and spatial transcriptomics profiles arise
-# primarily from local contamination by neighboring cells (e.g. diffusion or segmentation spillover).
+# We quantify how well each spatial cell’s expression profile matches its assigned
+# cell type using `marker_balanced_accuracy()`, which combines positive-marker
+# detection with the absence of neighborhood-relevant negative markers.
+# 
+# Local contamination by neighboring cells (e.g. diffusion or segmentation spillover)
+# can contribute to differences between reference and spatial expression profiles.
 # This motivates evaluating negative markers in a neighborhood-aware manner.
-#
-# **Identity evaluation**
-#
+# 
+# **Positive-marker detection**
+# 
 # For each cell of type `c`, we compute the fraction of positive marker genes
 # (`markers[c]["positive"]`) that are expressed in the cell (`> 0`).
-# This quantity, `positive_marker_recall`, measures how consistently the cell expresses
-# markers expected for its assigned type and is computed independently of the neighborhood.
-#
-# **Contamination (neighborhood-aware)**
-#
+# This measures how consistently the cell expresses markers expected for its
+# assigned type and is computed independently of the neighborhood.
+# 
+# **Negative-marker avoidance (neighborhood-aware)**
+# 
 # For a focal cell, we identify the cell types present in its spatial neighborhood and
-# intersect the focal cell type’s negative markers with the positive markers of neighboring cell types.
-# Optionally, these markers can be further restricted to genes that are expressed in at least one
+# intersect the focal cell type’s negative markers with the positive markers of neighboring types.
+# Optionally, these markers can be further restricted to genes expressed in at least one
 # neighboring cell of the corresponding source type (`require_neighbor_expression=True`).
-# These relevant negative markers represent genes that should be absent from the focal cell
-# but present in nearby cells. The metric `negative_marker_avoidance` is defined as
-# the fraction of these markers that are not expressed in the focal cell.
-#
+# We then compute the fraction of these relevant negative markers that are not
+# expressed in the focal cell.
+# 
 # If no neighborhood graph is present (`neighbors_key not in sdata.tables[tables_key].obsp`),
 # it is automatically computed from cell centroids using a Delaunay graph.
-#
-# **Overall purity**
-#
-# Identity and contamination are combined using:
-#
-# `marker_balanced_accuracy = 0.5 * (positive_marker_recall + negative_marker_avoidance)`
-#
-# This corresponds to balanced accuracy, i.e. the mean of sensitivity (positive marker recall)
-# and specificity (negative marker avoidance). High values indicate strong expression of
-# expected markers together with minimal expression of markers attributable to neighboring cell types.
+# 
+# **Marker balanced accuracy**
+# 
+# The two fractions are averaged:
+# 
+# `marker_balanced_accuracy = 0.5 * (positive-marker detection + negative-marker avoidance)`
+# 
+# This corresponds to the mean of sensitivity and specificity. High values indicate
+# consistent detection of expected markers together with little expression of
+# neighborhood-relevant negative markers.
+# 
+# The two components are calculated internally but are not returned separately.
+# The output contains `marker_balanced_accuracy`, `n_evaluated_positive_markers`,
+# and `n_evaluated_negative_markers`, together with the cell identifiers.
 
 # %%
-purity = st.sp.marker_purity(
+purity = st.sp.marker_balanced_accuracy(
     cell_type_key="transferred_cell_type",
     require_neighbor_expression=True,
     neighbors_key="spatial_connectivities",
 )
 
-
 # %% [markdown]
 # ##### `negative_marker_avoidance`
-
 
 # %%
 def boxplot_per_celltype(
@@ -371,127 +375,55 @@ def boxplot_per_celltype(
     fig.tight_layout()
     plt.show()
 
-
-# %% [markdown]
-# The `negative_marker_avoidance` score indicates that cells of type DCIS1 are the most contaminated.
-
-# %%
-boxplot_per_celltype(st.sdata, feature="negative_marker_avoidance", palette=col_celltype, ascending=False)
-
-# %% [markdown]
-# This can also be visualized spatially. The `negative_marker_avoidance` score is only computed
-# for cells which have a neigbhor of a different type. This clearly shows the DCIS1 cells with
-# low `negative_marker_avoidance` score, i.e. contamination.
-
-# %%
-axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
-
-st.sdata.pl.render_shapes(
-    "cell_boundaries",
-    color="transferred_cell_type_plot",
-    palette=cols,
-    groups=labels,
-    outline_color="white",
-    outline_width=0.5,
-).pl.show(ax=axes[0], title="Cell boundaries colored by cell type", coordinate_systems="global")
-
-st.sdata.pl.render_shapes(
-    "cell_boundaries",
-    color="negative_marker_avoidance",
-    outline_color="white",
-    outline_width=0.5,
-).pl.show(ax=axes[1], title="Cell boundaries colored by negative_marker_avoidance", coordinate_systems="global")
-
-# %% [markdown]
-# ##### `positive_marker_recall`
-
-# %% [markdown]
-# Cells annotated as mast and DCIS2 show the highest `positive_marker_recall` scores,
-# suggesting that their cell identity is captured most consistently by positive markers.
-
-# %%
-boxplot_per_celltype(st.sdata, feature="positive_marker_recall", palette=col_celltype)
-
-# %% [markdown]
-# The `positive_marker_recall`score is computed globally, i.e. irrespective of the cell neighborhood,
-# so there are fewer missing values than for `negative_marker_avoidance`.
-# The spatial plot below is in line with the boxplot above, showing that cells of type DCIS2
-# and mast show the highest `positive_marker_recall`.
-
-# %%
-axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
-
-st.sdata.pl.render_shapes(
-    "cell_boundaries",
-    color="transferred_cell_type_plot",
-    palette=cols,
-    groups=labels,
-    outline_color="white",
-    outline_width=0.5,
-).pl.show(ax=axes[0], title="Cell boundaries colored by cell type", coordinate_systems="global")
-
-st.sdata.pl.render_shapes(
-    "cell_boundaries",
-    color="positive_marker_recall",
-    outline_color="white",
-    outline_width=0.5,
-).pl.show(ax=axes[1], title="Cell boundaries colored by positive_marker_recall", coordinate_systems="global")
-
 # %% [markdown]
 # ##### `marker_balanced_accuracy`
 
 # %% [markdown]
-# Cells of type **DCIS1** (which have high transcript counts) show the highest
-# `negative_marker_avoidance` and the third-highest `positive_marker_recall`.
-# This is expected: cells with higher transcript counts tend to capture more positive markers,
-# but also have a higher risk of capturing negative markers. As a result,
-# the combined metric `marker_balanced_accuracy`, which balances `positive_marker_recall`
-# and `negative_marker_avoidance`, provides a more representative measure of purity.
-# Accordingly, **DCIS1** ranks among the cell types with the lowest purity,
-# while **DCIS2** and **mast** cells show the highest purity.
+# **DCIS1** ranks among the cell types with the lowest marker balanced accuracy,
+# while **DCIS2** and **mast** cells show the highest marker balanced accuracy.
 
 # %%
 boxplot_per_celltype(st.sdata, feature="marker_balanced_accuracy", palette=col_celltype)
 
 # %% [markdown]
-# #### Neighborhood contamination
+# #### Contamination strength
 
 # %% [markdown]
-# Marker purity summarizes how well a cell matches its own markers and avoids
-# neighborhood-relevant negatives. In many cases, we also want to quantify
-# (i) **how many contaminating transcripts** are present per cell and
+# Marker balanced accuracy summarizes how well a cell matches its own markers and avoids
+# neighborhood-relevant negatives. 
+# In many cases, we also want to quantify
+# (i) **what fraction of a cell's transcripts can be attributed to contamination** and
 # (ii) **which neighboring cell types** contribute to this signal.
-# We therefore compute neighborhood contamination.
-#
-# We treat a gene as contamination-relevant for a target cell type `c_tgt` if it is
+# We use `contamination_strength()` to quantify potential local contamination.
+# 
+# A gene is contamination-relevant for a target cell of type `c_tgt` if it is:
 # (i) a **negative marker of `c_tgt`**,
-# (ii) simultaneously a **positive marker of a neighboring source type `c_src`**, and
-# (iii) actually **expressed (>0) in at least one of the neighboring cells of the source type**
-# (`require_neighbor_expression` , default=True).
-#
-# This yields two levels of output:
-#
-# **Per-cell metrics.**
-# For each cell, we compute
-# - `contamination_counts`: the total number of transcripts for contamination-relevant genes, and
-# - `contamination_strength`: the fraction of transcripts assigned to the cell that
-# correspond to contamination-relevant genes, computed as `contamination_counts` / `total_transcript_counts`.
-#
-# **Directed cell-type contamination (stored in `.uns`):**
-# Across all cells, we additionally summarize contamination between source and target cell types:
-# - `contamination_matrix`: the fraction of target cells of type `c_tgt` that contain at
-# least one contamination-relevant transcript originating from source cell type `c_src`, and
-# - `contamination_strength_matrix`: the mean contamination strength of target
-# cells of type `c_tgt` attributable to source cell type `c_src`, computed by
-# averaging the source-specific contamination strength across all evaluable target cells.
-# - `contamination_evaluable_cells_matrix` : Directed source-to-target matrix.
-# Entry (c_src, c_tgt) is the number of target cells for which contamination from source type c_src could be evaluated.
-#
+# (ii) a **positive marker of a neighboring source type `c_src`**, and
+# (iii) **expressed (>0) in at least one neighboring cell of that source type**
+# when `require_neighbor_expression=True` (the default).
+# 
+# The function returns three outputs:
+# 
+# **Per-cell contamination strength**
+# `contamination_strength` is the fraction of transcripts assigned to a cell
+# that correspond to contamination-relevant genes. 
+# With `inplace=True`, the score is stored in `.obs`.
+# 
+# **Directed cell-type contamination matrices**
+# Rows represent source cell types and columns represent target cell types:
+# - `contamination_strength_matrix`: the mean source-specific contamination
+#   strength across evaluable target cells with nonzero total counts,
+#   including cells with zero contamination-relevant transcripts.
+# - `contamination_evaluable_cells_matrix`: the number of target cells for
+#   which contamination from each source type could be evaluated.
+# 
+# With `inplace=True`, both matrices are stored in `.uns`.
+# 
 # If no neighborhood graph is present (`neighbors_key not in sdata.tables[tables_key].obsp`),
 # it is automatically computed from cell centroids using a Delaunay graph.
 
 # %%
-_, _, _, _ = st.sp.neighbor_contamination(
+_, _, _ = st.sp.contamination_strength(
     cell_type_key="transferred_cell_type",
     require_neighbor_expression=True,
     neighbors_key="spatial_connectivities",
@@ -499,37 +431,10 @@ _, _, _, _ = st.sp.neighbor_contamination(
 )
 
 # %% [markdown]
-# ##### `contamination_counts`
-
-# %% [markdown]
-# The spatial plot below shows, for each target cell, the number of contaminating transcripts.
-# If desired, this quantity can be normalized by the total number of transcripts per cell.
-# As expected, the plot correlates with the `negative_marker_avoidance`score from above.
-
-# %%
-axes = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)[1].flatten()
-
-st.sdata.pl.render_shapes(
-    "cell_boundaries",
-    color="transferred_cell_type_plot",
-    palette=cols,
-    groups=labels,
-    outline_color="white",
-    outline_width=0.5,
-).pl.show(ax=axes[0], title="Cell boundaries colored by cell type", coordinate_systems="global")
-
-st.sdata.pl.render_shapes(
-    "cell_boundaries",
-    color="contamination_counts",
-    outline_color="white",
-    outline_width=0.5,
-).pl.show(ax=axes[1], title="Cell boundaries colored by #contamination transcripts", coordinate_systems="global")
-
-# %% [markdown]
 # ##### `contamination_strength`
 
 # %% [markdown]
-# In addition, we can visualize `contamination_strength`, the fraction of transcripts
+# We can visualize `contamination_strength`, the fraction of transcripts
 # assigned to a cell that correspond to locally relevant contamination marker genes.
 # A value of contamination_strength = 0 indicates that no contamination-relevant
 # transcripts were detected, whereas larger values indicate that a greater proportion of
@@ -555,64 +460,6 @@ st.sdata.pl.render_shapes(
 ).pl.show(ax=axes[1], title="Cell boundaries colored by contamination strength", coordinate_systems="global")
 
 # %% [markdown]
-# ##### `.uns["contamination_matrix"]`
-
-# %% [markdown]
-# The heatmap below shows, for each source–target cell-type pair, the
-# **fraction of all target cells** contaminated by transcripts from a neighboring source cell type.
-#
-# Percentages within a column may sum to more than 100% because a single target cell
-# can be contaminated by **multiple** neighboring source cell types and is therefore counted for each of them.
-#
-# The bubble plot illustrates why both the contamination frequency (bubble color) and the number
-# of evaluable target cells (bubble size) should be considered when interpreting directed contamination.
-# For example, approximately 20% of evaluable T cells are contaminated by stromal cells,
-# providing evidence for a common contamination pattern across many cells.
-# In contrast, although 100% of evaluable T cells are contaminated by DCIS2 cells,
-# this result is based on only a small number of evaluable T cells because few T cells have
-# neighboring DCIS2 cells with relevant marker genes. Consequently,
-# high contamination frequencies based on very few evaluable cells should be interpreted with caution.
-
-# %%
-cont_mat = st.sdata.tables[st.tables_key].uns["contamination_matrix"]
-cont_n = st.sdata.tables[st.tables_key].uns["contamination_evaluable_cells_matrix"]
-
-plot_df = (
-    cont_mat.stack(dropna=False)
-    .rename("contamination")
-    .reset_index()
-    .rename(columns={"level_0": "source", "level_1": "target"})
-)
-
-plot_df["n_evaluable"] = cont_n.stack(dropna=False).values
-
-plt.figure(figsize=(9, 7))
-
-ax = sns.scatterplot(
-    data=plot_df,
-    x="target",
-    y="source",
-    size="n_evaluable",
-    hue="contamination",
-    sizes=(20, 600),
-    palette="Reds",
-    edgecolor="black",
-)
-
-ax.legend(
-    bbox_to_anchor=(1.02, 1),
-    loc="upper left",
-    borderaxespad=0,
-)
-
-plt.title("Directed Cell-Type Contamination")
-plt.xlabel("Target Cell Type")
-plt.ylabel("Source Cell Type")
-plt.xticks(rotation=45, ha="right")
-plt.tight_layout()
-plt.show()
-
-# %% [markdown]
 # ##### `.uns["contamination_strength_matrix"]`
 
 # %% [markdown]
@@ -620,7 +467,7 @@ plt.show()
 # Each entry represents the mean contamination strength across all evaluable target cells of the
 # given target cell type, where the source-specific contamination strength is computed as the
 # fraction of transcripts in the target cell that correspond to contamination-relevant markers of the source cell type.
-#
+# 
 # The bubble plot of the `contamination_strength_matrix` provides complementary information by quantifying
 # how large the contamination signal is when it occurs. For example, although myoepithelial and DCIS2 cells
 # are frequently neighbors, contamination from DCIS2 into myoepithelial cells is negligible.
@@ -628,14 +475,15 @@ plt.show()
 # proximity because the two cell types share only a small number of mutually exclusive markers
 # (four in this example; see `overlap_df`), and these markers may not be expressed in the
 # neighboring DCIS2 cells in every local neighborhood.
-#
+# 
 # This can have both technical and biological causes. For example, when two cell types have similar
 # expression profiles, contamination between them is less consequential because the
 # contaminating transcripts largely match the expected expression of the target cell.
-#
+# 
 
 # %%
 cont_strength_mat = st.sdata.tables[st.tables_key].uns["contamination_strength_matrix"]
+cont_n = st.sdata.tables[st.tables_key].uns["contamination_evaluable_cells_matrix"]
 
 plot_df = (
     cont_strength_mat.stack(dropna=False)
@@ -675,7 +523,7 @@ plt.show()
 # %% [markdown]
 # #### **! Important**
 # The observed contamination between two cell types is influenced by three main factors:
-#
+# 
 # 1) **True contamination**, i.e. transcript spillover or transcript misassignment between neighboring cells.
 # 2) **Spatial proximity**, i.e. how frequently the two cell types occur as neighbors.
 # The more often they are adjacent, the greater the opportunity for contamination.
@@ -686,21 +534,82 @@ plt.show()
 # and fewer informative genes are available for quantifying contamination.
 
 # %% [markdown]
+# #### Compute RCTD contamination
+
+# %% [markdown]
+# We estimate expression mixture within each spatial cell using
+# `rctd_contamination()` and an annotated scRNA-seq reference.
+# Unlike the marker-based metrics, this approach does not require assigned
+# spatial cell-type labels, predefined marker sets, or neighborhood information.
+# 
+# **Reference-based expression decomposition**
+# 
+# RCTD is run in full mode to estimate contributions from all retained reference
+# cell types to each spatial cell's expression profile. Query and reference
+# expression matrices must contain raw counts.
+# 
+# **RCTD contamination**
+# 
+# For each spatial cell, the fitted cell-type weights are normalized to sum to one.
+# The score is then calculated as:
+# 
+# `rctd_contamination = 1 - max(normalized_weights)`
+# 
+# This represents the estimated expression contribution outside the dominant
+# reference cell type. For example, normalized weights of 0.8 and 0.2 yield
+# a score of 0.2, regardless of the spatial cell's assigned label.
+# 
+# Lower values indicate that a single reference type dominates the fitted
+# expression profile; higher values indicate a greater mixture.
+# With K retained reference types, the maximum possible score is `1 - 1 / K`.
+# 
+# The score measures reference-dependent expression mixture rather than directly
+# identifying incorrectly assigned transcripts. 
+# 
+# The output contains cell identifiers and `rctd_contamination`.
+# Cells excluded by RCTD's filters, non-converged fits, and invalid fits receive NaN.
+# With `inplace=True` (the default), the score is also stored in `.obs`.
+# 
+# RCTD was developed by [Cable et al. (2022)](https://doi.org/10.1038/s41587-021-00830-w).
+# SegTraQ uses [rctd-py](https://github.com/p-gueguen/rctd-py), the Python
+# implementation.
+
+# %%
+rctd_df = st.sp.rctd_contamination(
+    adata_ref=adata_ref,
+    ref_cell_type="celltype_major",
+    ref_raw_counts_layer="raw",
+    inplace=True,
+)
+
+# %% [markdown]
+# ##### `rctd_contamination`
+# 
+# Comparing score distributions across cell types highlights differences in
+# estimated expression mixture. Interpret these alongside marker balanced
+# accuracy and contamination strength to assess whether mixture is accompanied
+# by marker mismatch and evidence of local contamination.
+
+# %%
+boxplot_per_celltype(st.sdata, feature="rctd_contamination", palette=col_celltype)
+
+# %% [markdown]
 # #### Compute mutually exclusive co-expression rate (MECR)
-#
+# 
 # The `mutually_exclusive_coexpression_rate` function identifies marker-gene
 # pairs that are expected to be mutually exclusive based on a reference dataset.
 # Candidate pairs are derived from reciprocal positive/negative marker
 # relationships and are retained only if their observed co-expression in the
 # reference is sufficiently below that expected under independence.
-#
+# 
 # For these reference-defined mutually exclusive pairs, co-expression in the
 # spatial data is evaluated using Fisher's exact test on binary gene detection
 # (expression > 0). A one-sided test with `alternative="greater"` asks whether
 # the two genes are positively associated in the spatial data.
-#
+# 
 # Thus, an odds ratio > 1 indicates increased co-expression of a marker pair
 # that is expected to be mutually exclusive based on the reference.
+
 # %%
 mecr = st.sp.mutually_exclusive_coexpression_rate(
     adata_ref=adata_ref,
@@ -728,3 +637,5 @@ mecr_plot
 # %%
 print(sd.__version__)  # spatialdata
 print(spatialdata_plot.__version__)
+
+

@@ -235,21 +235,28 @@ st.rs.border_admixture_score().head()
 # %% [markdown]
 # ## Supervised module
 #
-# The `sp` (supervised) module provides metrics to evaluate how well cell
-# profiles in a spatial transcriptomics dataset agree with a reference single-cell
-# RNA-seq (scRNA-seq) dataset with cell type annotations.
+# The `sp` (supervised) module evaluates spatial expression profiles using
+# an annotated single-cell RNA-seq (scRNA-seq) reference. Its metrics assess
+# cell-type consistency and potential contamination, including contributions
+# from neighboring cells.
 #
-# Unlike scRNA-seq, contamination in spatial transcriptomics measurements
-# mostly originates from the local tissue context.
+# Specifically, we quantify:
+# - **Marker balanced accuracy:** how well each cell expresses its positive
+#   markers and avoids neighborhood-relevant negative markers.
+# - **Contamination strength:** the fraction of transcripts corresponding to
+#   negative markers that are positive markers of neighboring cell types,
+#   with summaries of potential source–target contributions.
+# - **Mutually exclusive co-expression:** how frequently marker pairs expected
+#   to be mutually exclusive are detected together.
+# - **RCTD contamination:** the estimated expression contribution outside the
+#   dominant reference cell type, without requiring neighborhood information.
 #
-# By comparing spatial expression profiles to a high-quality scRNA-seq reference,
-# the supervised module aims to quantify this mismatch. Specifically, we compute metrics that measure:
-# - how well each spatial cell matches its expected cell type,
-# - how much its expression resembles other (neighboring) cell types, and
-# - if it is possible to predict that a cell of one cell type is adjacent to a different cell type.
+# Positive and negative cell-type markers can be derived from the annotated
+# reference using `markers_from_reference`. RCTD instead fits expression
+# mixtures directly using reference cell-type profiles.
 #
-# To obtain cell-type specific marker genes, we define positive and negative markers
-# in the annotated scRNA-seq via `markers_from_reference`.
+# These metrics provide complementary evidence of expression mismatch and
+# mixture; biological variation and reference quality can also affect them.
 
 # %%
 adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
@@ -319,10 +326,10 @@ st.sdata.set_table_annotates_spatialelement("table", region="cell_boundaries")
 st.sdata.pl.render_shapes("cell_boundaries", color="transferred_celltype_plot").pl.show(coordinate_systems="global")
 
 # %% [markdown]
-# ### Marker purity
+# ### Marker balanced accuracy
 #
 # To quantify how well each segmented cell in the spatial transcriptomics
-# data matches its annotated cell type, we defined a marker-based purity
+# data matches its annotated cell type, we defined a marker-balanced accuracy
 # (`marker_balanced_accuracy`) score that jointly evaluates the expression of
 # positive (`positive_marker_recall`) and the absence of neighborhood-associated
 # negative markers (`negative_marker_avoidance`).
@@ -331,23 +338,23 @@ st.sdata.pl.render_shapes("cell_boundaries", color="transferred_celltype_plot").
 # transcriptomics-derived cell type profiles arise mainly from local contamination by neighboring cells.
 
 # %%
-st.sp.marker_purity(cell_type_key="transferred_cell_type", markers=markers).head()
+st.sp.marker_balanced_accuracy(cell_type_key="transferred_cell_type", markers=markers).head()
 
 # %% [markdown]
 # These metrics are most informative when considered jointly. For an example,
 # please refer to the [Xenium Focus](10x_xenium_focus.ipynb).
 
 # %% [markdown]
-# ### Neighborhood contamination
+# ### Contamination strength
 #
-# Marker purity summarizes how well a cell matches its own markers and avoids
+# Marker balanced accuracy summarizes how well a cell matches its own markers and avoids
 # neighborhood-relevant negatives. In many cases, we also want to quantify
-# (i) **how many contaminating transcripts** are present per cell and
+# (i) **what fraction of a cell's transcripts can be attributed to contamination** and
 # (ii) **which neighboring cell types** contribute to this signal.
-# We therefore compute neighborhood contamination.
+# We therefore compute contamination strength.
 
 # %%
-per_cell_df, _, _, _ = st.sp.neighbor_contamination(cell_type_key="transferred_cell_type", markers=markers)
+per_cell_df, _, _ = st.sp.contamination_strength(cell_type_key="transferred_cell_type", markers=markers)
 per_cell_df.head()
 
 # %% [markdown]
@@ -403,6 +410,25 @@ plt.ylabel("Source Cell Type")
 plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.show()
+
+# %% [markdown]
+# ### RCTD contamination
+#
+# RCTD contamination estimates how much of a cell's expression is explained by
+# reference cell types other than its dominant type. RCTD is run in full mode,
+# and the score is computed as **one minus the largest normalized cell-type weight**.
+# Higher values indicate a greater mixture of reference cell-type expression profiles.
+# Unlike contamination strength, this metric does not use neighboring cells or
+# predefined marker sets. It measures expression mixture rather than directly
+# identifying incorrectly assigned transcripts.
+
+# %%
+rctd_df = st.sp.rctd_contamination(
+    adata_ref=adata_ref,
+    ref_cell_type="celltype_major",
+    ref_raw_counts_layer="raw",
+)
+rctd_df.head()
 
 # %% [markdown]
 # #### Mutually exclusive co-expression rate (MECR)
