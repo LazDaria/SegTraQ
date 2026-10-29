@@ -11,10 +11,10 @@ from statsmodels.stats.multitest import multipletests
 
 from ..utils import (
     _align_query_reference_genes,
-    _make_ref_genes_unique,
     _get_count_matrix,
     _get_genes,
     _get_segtraq_markers,
+    _make_ref_genes_unique,
     merge_into_obs,
     merge_into_uns,
 )
@@ -864,8 +864,8 @@ def rctd_contamination(
         if exc.name != "rctd":
             raise
         raise ImportError(
-            'RCTD contamination requires the optional dependency '
-            '\'rctd-py\'. Install it with: pip install "segtraq[rctd]"'
+            "RCTD contamination requires the optional dependency "
+            "'rctd-py'. Install it with: pip install \"segtraq[rctd]\""
         ) from exc
 
     # Prepare the spatial table and annotated reference cells.

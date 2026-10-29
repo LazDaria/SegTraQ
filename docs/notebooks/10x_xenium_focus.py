@@ -1159,7 +1159,8 @@ boxplot_per_celltype(st_dict, "rctd_contamination")
 # %% [markdown]
 # *Contamination strength*
 #
-# Marker balanced accuracy summarizes how well a cell matches its own markers and avoids neighborhood-relevant negatives.
+# Marker balanced accuracy summarizes how well a cell matches its own markers and avoids
+# neighborhood-relevant negatives.
 # In many cases, we also want to quantify
 # (i) **what fraction of a cell's transcripts can be attributed to contamination** and
 # (ii) **which neighboring cell types** contribute to this signal.
