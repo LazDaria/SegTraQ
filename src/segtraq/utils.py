@@ -1892,23 +1892,47 @@ def validate_spatialdata(
                 f"Please ensure that cell IDs are all strings or all numeric."
             )
 
+        ids = points_df[points_cell_id_key]
+        counts = ids.value_counts(dropna=False)
+        most_common_points_id = counts.index[0]
+        most_common_count = counts.iloc[0]
+        most_common_is_na = pd.isna(most_common_points_id)
+        n_missing = int(ids.isna().sum())
+
         # if the user provided a background ID, we want to ensure that it actually occurs
         if points_background_id is not None:
-            most_common_points_id = points_df[points_cell_id_key].mode().iloc[0]
-            assert points_background_id in transcript_ids, (
-                f"points_background_id '{points_background_id}' not found among point cell IDs. "
-                f"You can set this with the 'points_background_id' argument. "
-                f"The most common cell ID among points is '{most_common_points_id}'. "
-                f"If you do not have a background ID, set this parameter to None."
-            )
+            if points_background_id not in transcript_ids:
+                if most_common_is_na:
+                    hint = (
+                        "The most common cell ID among points is a missing value "
+                        f"({most_common_points_id!r}), so your "
+                        "background points are probably unlabeled. "
+                        "Set 'points_background_id=None' instead."
+                    )
+                else:
+                    hint = (
+                        f"The most common cell ID among points is {most_common_points_id!r} "
+                        f"({most_common_count} points). You can set this with the "
+                        "'points_background_id' argument. "
+                        "If you do not have a background ID, set this parameter to None."
+                    )
+                raise ValueError(
+                    f"points_background_id {points_background_id!r} not found among point cell IDs. " + hint
+                )
 
             # as a more stringent check, we also raise a warning if the background ID is not the most common one
             if most_common_points_id != points_background_id:
+                if most_common_is_na:
+                    suggestion = "Consider setting 'points_background_id=None'. "
+                else:
+                    suggestion = ""
                 warnings.warn(
-                    f"points_background_id '{points_background_id}' is not the most common cell ID "
-                    f"among points (most common is '{most_common_points_id}'). "
+                    f"points_background_id {points_background_id!r} is not the most common cell ID "
+                    f"among points (most common is {most_common_points_id!r} with "
+                    f"{most_common_count} points). "
                     "This may indicate that your background ID is not correctly set. "
-                    "If you are sure that 'points_background_id' is correct, you can ignore this warning.",
+                    + suggestion
+                    + "If you are sure that 'points_background_id' is correct, you can ignore this warning.",
                     UserWarning,
                     stacklevel=2,
                 )
@@ -1916,30 +1940,29 @@ def validate_spatialdata(
             # points_background_id=None is treated as matching None, np.nan, and pd.NA.
             # Ensure there actually are missing values among the point cell IDs -- otherwise
             # this silently means "no background filtering happens at all".
-            has_missing_id = points_df[points_cell_id_key].isna().any()
-            most_common_points_id = points_df[points_cell_id_key].mode(dropna=False).iloc[0]
-            if not has_missing_id:
+            if n_missing == 0:
                 warnings.warn(
                     "points_background_id is None, but no missing values (None/np.nan/pd.NA) were "
                     "found among point cell IDs. "
                     "If your background points are denoted with an explicit value (e.g. 0, -1, 'background'), "
-                    "pass that value as 'points_background_id' instead."
-                    f"The most common cell ID among points is '{most_common_points_id}'. ",
+                    "pass that value as 'points_background_id' instead. "
+                    f"The most common cell ID among points is {most_common_points_id!r} "
+                    f"({most_common_count} points).",
                     UserWarning,
                     stacklevel=2,
                 )
-            else:
-                # as a more stringent check, warn if missing values are not the most common cell ID
-                if pd.notna(most_common_points_id):
-                    warnings.warn(
-                        "points_background_id is None, but the most common cell ID among points is "
-                        f"'{most_common_points_id}', not a missing value. "
-                        "This may indicate that 'points_background_id' "
-                        "should be set explicitly rather than left as None. "
-                        "If you are sure that 'points_background_id=None' is correct, you can ignore this warning.",
-                        UserWarning,
-                        stacklevel=2,
-                    )
+            # as a more stringent check, warn if some real ID strictly outnumbers the missing values
+            elif most_common_count > n_missing:
+                warnings.warn(
+                    "points_background_id is None, but the most common cell ID among points is "
+                    f"{most_common_points_id!r} ({most_common_count} points), not a missing value "
+                    f"({n_missing} missing points). "
+                    "This may indicate that 'points_background_id' "
+                    "should be set explicitly rather than left as None. "
+                    "If you are sure that 'points_background_id=None' is correct, you can ignore this warning.",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
         # missing_in_polygons = { #TODO - after querying sdata objects, this breaks
         #     x
@@ -2672,20 +2695,26 @@ def _filter_control_and_low_quality_transcripts(
     cells_only_table = table_cells - point_cells
 
     if cells_only_points or cells_only_table:
-        warnings.warn(
-            "Cell IDs differ between assigned transcript points and the expression table. "
-            f"{len(cells_only_points)} cells occur only in points "
-            f"(e.g. {list(cells_only_points)[:5]}), and "
-            f"{len(cells_only_table)} occur only in the table "
-            f"(e.g. {list(cells_only_table)[:5]}). "
-            "Cells only occuring in the table can reflect zero-count cells,"
-            " but differences may also be due to the filtering used to generate the "
+        parts = ["Cell IDs differ between assigned transcript points and the expression table."]
+        if cells_only_points:
+            parts.append(
+                f"{len(cells_only_points)} cells occur only in points "
+                f"(e.g. {list(cells_only_points)[:5]})."
+            )
+        if cells_only_table:
+            parts.append(
+                f"{len(cells_only_table)} cells occur only in the table "
+                f"(e.g. {list(cells_only_table)[:5]}). "
+                "Cells only occurring in the table can reflect zero-count cells."
+            )
+        also = " also" if cells_only_table else ""
+        parts.append(
+            f"Differences may{also} be due to the filtering used to generate the "
             "transcript data and expression matrix. Please check that `filter_kwargs`, "
             "particularly `min_qv` and `control_prefixes`, are consistent "
-            "with the filtering used to generate the expression table.",
-            RuntimeWarning,
-            stacklevel=2,
+            "with the filtering used to generate the expression table."
         )
+        warnings.warn(" ".join(parts), RuntimeWarning, stacklevel=2)
 
     return sdata
 
