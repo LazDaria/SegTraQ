@@ -2695,20 +2695,26 @@ def _filter_control_and_low_quality_transcripts(
     cells_only_table = table_cells - point_cells
 
     if cells_only_points or cells_only_table:
-        warnings.warn(
-            "Cell IDs differ between assigned transcript points and the expression table. "
-            f"{len(cells_only_points)} cells occur only in points "
-            f"(e.g. {list(cells_only_points)[:5]}), and "
-            f"{len(cells_only_table)} occur only in the table "
-            f"(e.g. {list(cells_only_table)[:5]}). "
-            "Cells only occuring in the table can reflect zero-count cells,"
-            " but differences may also be due to the filtering used to generate the "
+        parts = ["Cell IDs differ between assigned transcript points and the expression table."]
+        if cells_only_points:
+            parts.append(
+                f"{len(cells_only_points)} cells occur only in points "
+                f"(e.g. {list(cells_only_points)[:5]})."
+            )
+        if cells_only_table:
+            parts.append(
+                f"{len(cells_only_table)} cells occur only in the table "
+                f"(e.g. {list(cells_only_table)[:5]}). "
+                "Cells only occurring in the table can reflect zero-count cells."
+            )
+        also = " also" if cells_only_table else ""
+        parts.append(
+            f"Differences may{also} be due to the filtering used to generate the "
             "transcript data and expression matrix. Please check that `filter_kwargs`, "
             "particularly `min_qv` and `control_prefixes`, are consistent "
-            "with the filtering used to generate the expression table.",
-            RuntimeWarning,
-            stacklevel=2,
+            "with the filtering used to generate the expression table."
         )
+        warnings.warn(" ".join(parts), RuntimeWarning, stacklevel=2)
 
     return sdata
 
