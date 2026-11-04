@@ -3,6 +3,7 @@ import pandas as pd
 import spatialdata as sd
 from joblib import delayed
 from pandas import DataFrame
+from scipy.sparse import csr_matrix
 
 from .._settings import settings
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
@@ -163,7 +164,6 @@ def similarity_nucleus_cell(
     points_gene_key: str = "feature_name",
     points_x_key: str = "x",
     points_y_key: str = "y",
-    tables_raw_counts_layer: str | None = None,
     exclude_gene_prefixes: str | list[str] | tuple[str, ...] | None = DEFAULT_EXCLUDE_GENE_PREFIXES,
     min_transcripts: int = 10,
     min_genes: int = 5,
@@ -212,10 +212,6 @@ def similarity_nucleus_cell(
         Column for the x-coordinate of each transcript/spot.
     points_y_key : str, default="y"
         Column for the y-coordinate of each transcript/spot.
-    tables_raw_counts_layer : str | None, optional
-        Layer containing count data. If `None`, `adata.X` is used if it looks
-        like counts. If a layer is specified, it must exist and contain
-        count-like values.
     exclude_gene_prefixes : str, list of str, tuple of str, or None, optional
         Gene prefixes excluded. By default (``("MT-", "RPL", "RPS")``), mitochondrial
         and ribosomal genes are excluded. Set to None to use all genes.
@@ -294,8 +290,6 @@ def similarity_nucleus_cell(
         # need to rename the column to the id_key used in shapes for the join later
         match_df = match_df.rename(columns={tables_cell_id_key: shapes_cell_id_key})
 
-    counts = _get_count_matrix(adata, layer=tables_raw_counts_layer)
-
     all_count_genes = _get_genes(
         adata=adata,
         gene_key=tables_gene_key,
@@ -343,6 +337,14 @@ def similarity_nucleus_cell(
     tx_nuc["in_intersection"] = tx_nuc["region_id"].eq(tx_nuc["nucleus_id"])
 
     all_cells = pd.Index(sdata.tables[tables_key].obs[tables_cell_id_key])
+
+    cell_counts = (
+        tx_nuc.groupby([points_cell_id_key, points_gene_key], observed=True)
+        .size()
+        .unstack(fill_value=0)
+        .reindex(index=all_cells, columns=common_genes, fill_value=0)
+    )
+    counts = csr_matrix(cell_counts.to_numpy())
 
     counts_intersection = (
         tx_nuc[tx_nuc["in_intersection"]]
