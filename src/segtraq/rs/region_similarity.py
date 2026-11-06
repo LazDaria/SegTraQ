@@ -9,7 +9,6 @@ from .._settings import settings
 from ..constants import DEFAULT_EXCLUDE_GENE_PREFIXES
 from ..utils import (
     _exclude_genes_by_prefix,
-    _get_count_matrix,
     _get_genes,
     _Parallel,
     _same_xy_transformations,
@@ -326,7 +325,6 @@ def similarity_nucleus_cell(
     # Keep the cell count matrix sparse and materialize only the genes used in the
     # nucleus comparison for one cell at a time.
     common_genes = expr_nucleus.columns.intersection(count_genes)
-    gene_positions = all_count_genes.get_indexer(common_genes)
     expr_nucleus = expr_nucleus[common_genes]
 
     # Identify transcripts that are both assigned to the focal cell and located
@@ -364,7 +362,7 @@ def similarity_nucleus_cell(
     seeds = _cell_seeds(len(match_df), random_state)
 
     def _cell_count_vector(cid) -> np.ndarray:
-        row = counts[cell_positions.loc[cid], gene_positions]
+        row = counts[cell_positions.loc[cid]]
         if hasattr(row, "toarray"):
             row = row.toarray()
         return np.asarray(row).ravel()
