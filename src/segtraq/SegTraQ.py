@@ -1826,7 +1826,6 @@ class _RSFacade:
             tables_key=self._p.tables_key,
             tables_cell_id_key=self._p.tables_cell_id_key,
             tables_gene_key=self._p.tables_gene_key,
-            tables_raw_counts_layer=self._p.tables_raw_counts_layer,
             shapes_key=self._p.shapes_key,
             nucleus_shapes_key=self._p.nucleus_shapes_key,
             points_key=self._p.points_key,
