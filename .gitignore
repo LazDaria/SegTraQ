@@ -111,7 +111,7 @@ ENV/
 tests/data*
 tests/data/
 tests/data/scRNAseq_ref_large.h5ad
-**segtraq_test_data_*.tar.gz
+segtraq_test_data_*.tar.gz
 data/
 # required for symlink
 data
