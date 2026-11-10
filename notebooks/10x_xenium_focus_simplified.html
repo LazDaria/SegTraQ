@@ -42,6 +42,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'notebooks/10x_xenium_focus_simplified';</script>
@@ -437,7 +438,7 @@ document.write(`
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;dask.config.set at 0x7ffee3f13b10&gt;
+&lt;dask.config.set at 0x7ffee21ffc50&gt;
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -453,8 +454,8 @@ document.write(`
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3ba02f0&gt;: None
-no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3a06350&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee1d98590&gt;: None
+no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee1da2710&gt;: None
 </pre></div></div>
 </div>
 <p>Let’s have a quick look at the data.</p>
@@ -496,9 +497,9 @@ no parent found for &lt;ome_zarr.reader.Label object at 0x7ffee3a06350&gt;: None
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;F2&#39;, &#39;HPV18-E6&#39;, &#39;CYP2A6&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Gene sets differ between assigned transcript points and the expression table. 0 genes occur only in points (e.g. []), and 6 occur only in the table (e.g. [&#39;Human_FGFR3_R248H_ALT:A&#39;, &#39;Human_PTEN_G129E_WT:A&#39;, &#39;CYP2A6&#39;, &#39;Human_CTNNB1_S33C_ALT:G&#39;, &#39;HPV18-E6&#39;]). Genes only occuring in the table can be introduced by cropping (`SpatialData`), but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 50 cells occur only in the table (e.g. [&#39;oenebphn-1&#39;, &#39;obnpmdml-1&#39;, &#39;ocnkohki-1&#39;, &#39;icdfihnh-1&#39;, &#39;objbcpof-1&#39;]). Cells only occurring in the table can reflect zero-count cells. Differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:188: RuntimeWarning: Cell IDs differ between assigned transcript points and the expression table. 0 cells occur only in points (e.g. []), and 50 occur only in the table (e.g. [&#39;obgmpkbi-1&#39;, &#39;icceofcb-1&#39;, &#39;obnnbpck-1&#39;, &#39;ipkhceld-1&#39;, &#39;ocodkfdf-1&#39;]). Cells only occuring in the table can reflect zero-count cells, but differences may also be due to the filtering used to generate the transcript data and expression matrix. Please check that `filter_kwargs`, particularly `min_qv` and `control_prefixes`, are consistent with the filtering used to generate the expression table.
   sdata_new = _filter_control_and_low_quality_transcripts(
 </pre></div></div>
 </div>
@@ -1641,7 +1642,7 @@ WARNING: adata.X seems to be already log-transformed.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/scratch/jobs/63890425/ipykernel_3208943/3630248555.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
+/tmp/ipykernel_924229/3630248555.py:3: DeprecationWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, pd.CategoricalDtype) instead
   if pd.api.types.is_categorical_dtype(s):
 </pre></div></div>
 </div>
@@ -1686,7 +1687,7 @@ transcriptomics-derived cell type profiles arise mainly from local contamination
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/src/segtraq/SegTraQ.py:1987: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
+/g/huber/users/lazic/src/SegTraQ/src/segtraq/SegTraQ.py:1986: RuntimeWarning: neighbors_key=&#39;spatial_connectivities&#39; not found in adata.obsp. A neighborhood graph based on Delaunay will be computed.
   return sp.marker_balanced_accuracy(
 </pre></div></div>
 </div>
@@ -1921,34 +1922,9 @@ counts_MIN filter: removed 1336/17365 pixels with &lt;10 counts in bulk gene lis
 Fitting bulk platform effects...
 Using 898 DE genes for pixel-level fitting
 Estimating sigma...
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/rctd/_irwls.py:603: RuntimeWarning: torch.compile failed for box-QP solver (InductorError); results are unaffected, falling back to eager mode. Use RCTDConfig(compile=False) to suppress.
-  x = _solve_box_qp_batch_fixed(D, d, lower_bound, n_sweeps)
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Chosen sigma: 0.76 (129.0s)
-Auto batch size: 10000
+Chosen sigma: 0.76 (169.8s)
+Auto batch size: 200000
 Running in full mode...
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-/g/huber/users/meyerben/notebooks/spatial_transcriptomics/SegTraQ/.venv/lib/python3.13/site-packages/rctd/_irwls.py:845: RuntimeWarning: torch.compile failed for likelihood computation (missing CUDA headers or Triton); falling back to eager mode. Use RCTDConfig(compile=False) to suppress.
-  _, d1_flat, d2_flat = _q_fn(
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
