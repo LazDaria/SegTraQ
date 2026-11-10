@@ -1904,14 +1904,15 @@ def validate_spatialdata(
             if points_background_id not in transcript_ids:
                 if most_common_is_na:
                     hint = (
-                        "The most common cell ID among points is a missing value "
-                        f"({most_common_points_id!r}), so your "
-                        "background points are probably unlabeled. "
+                        "You set `points_background_id={points_background_id!r}`, but "
+                        "the most common cell ID among points is a missing value "
+                        f"({most_common_points_id!r}). "
                         "Set 'points_background_id=None' instead."
                     )
                 else:
                     hint = (
-                        f"The most common cell ID among points is {most_common_points_id!r} "
+                        f"You set `points_background_id={points_background_id!r}`, but "
+                        f"the most common cell ID among points is {most_common_points_id!r} "
                         f"({most_common_count} points). You can set this with the "
                         "'points_background_id' argument. "
                         "If you do not have a background ID, set this parameter to None."
@@ -1942,7 +1943,7 @@ def validate_spatialdata(
             # this silently means "no background filtering happens at all".
             if n_missing == 0:
                 warnings.warn(
-                    "points_background_id is None, but no missing values (None/np.nan/pd.NA) were "
+                    "You set `points_background_id=None`, but no missing values (None/np.nan/pd.NA) were "
                     "found among point cell IDs. "
                     "If your background points are denoted with an explicit value (e.g. 0, -1, 'background'), "
                     "pass that value as 'points_background_id' instead. "
@@ -1954,7 +1955,7 @@ def validate_spatialdata(
             # as a more stringent check, warn if some real ID strictly outnumbers the missing values
             elif most_common_count > n_missing:
                 warnings.warn(
-                    "points_background_id is None, but the most common cell ID among points is "
+                    "You set `points_background_id=None`, but the most common cell ID among points is "
                     f"{most_common_points_id!r} ({most_common_count} points), not a missing value "
                     f"({n_missing} missing points). "
                     "This may indicate that 'points_background_id' "
@@ -2697,16 +2698,9 @@ def _filter_control_and_low_quality_transcripts(
     if cells_only_points or cells_only_table:
         parts = ["Cell IDs differ between assigned transcript points and the expression table."]
         if cells_only_points:
-            parts.append(
-                f"{len(cells_only_points)} cells occur only in points "
-                f"(e.g. {list(cells_only_points)[:5]})."
-            )
+            parts.append(f"{len(cells_only_points)} cells occur only in points (e.g. {list(cells_only_points)[:5]}).")
         if cells_only_table:
-            parts.append(
-                f"{len(cells_only_table)} cells occur only in the table "
-                f"(e.g. {list(cells_only_table)[:5]}). "
-                "Cells only occurring in the table can reflect zero-count cells."
-            )
+            parts.append(f"{len(cells_only_table)} cells occur only in the table (e.g. {list(cells_only_table)[:5]}). ")
         also = " also" if cells_only_table else ""
         parts.append(
             f"Differences may{also} be due to the filtering used to generate the "

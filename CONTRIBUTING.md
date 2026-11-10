@@ -59,7 +59,7 @@ Ready to contribute? Here's how to set up `segtraq` for local development.
    mkdir -p tests/data
    curl -L --fail --retry 3 \
           -o test_data.tar.gz \
-          "https://zenodo.org/records/23671354/files/segtraq_test_data_v13.tar.gz?download=1"
+          "https://zenodo.org/records/24011320/files/segtraq_test_data_v14.tar.gz?download=1"
    tar -xzf test_data.tar.gz -C tests
 ```
    Test data is not bundled with the repository. This step is required before running the test suite locally.
@@ -129,7 +129,7 @@ A reminder for the devs on how to update test data.
 To recompute the data for the snapshot tests,
 run `python tests/generate_run_all_reference.py --output tests/data/proseg2_run_all.zarr`. 
 Turn the data folder into a `.tar.gz` archive (`tar -czvf segtraq_test_data_vX.tar.gz data`),
-and upload it to [Zenodo](https://zenodo.org/records/23558385).
+and upload it to [Zenodo](https://zenodo.org/records/24011320).
 Finally, update the download path in the contributing guide, in the GitHub workflows, 
 and in test_data_version.txt.
 
