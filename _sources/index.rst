@@ -3,10 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SegTraQ documentation
-=====================
+SegTraQ
+=======
 
-`SegTraQ` is a tool for the assessment of segmentation quality in spatial transcriptomics data.
+SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python toolkit for quantitative and visual quality assessment of segmentation and transcript assignment in spatial omics data.
+
+⚠️ Note: SegTraQ is under active development. Features, interfaces, and functionality may change in upcoming releases.
+
+.. image:: _static/img/segtraq.png
+   :width: 100%
+   :align: center
+   :alt: SegTraQ provides quality metrics for segmentation of spatial transcriptomics data.
 
 .. toctree::
    :maxdepth: 1
@@ -14,10 +21,11 @@ SegTraQ documentation
 
    modules/baseline
    modules/clustering_stability
-   modules/region_correlation
+   modules/region_similarity
    modules/supervised
    modules/point_statistics
    modules/volume
+   modules/plotting
    modules/segtraq_class
    modules/utils
 
@@ -25,12 +33,14 @@ SegTraQ documentation
    :maxdepth: 1
    :caption: Tutorials:
    
-   notebooks/10x_xenium_focus
-   notebooks/vizgen_merscope_focus
+   notebooks/quickstart
    notebooks/io
    notebooks/baseline
    notebooks/clustering_stability
-   notebooks/region_correlation
+   notebooks/region_similarity
    notebooks/volume
    notebooks/supervised
    notebooks/point_statistics
+   notebooks/plotting
+   notebooks/10x_xenium_focus_simplified
+   notebooks/10x_xenium_focus
