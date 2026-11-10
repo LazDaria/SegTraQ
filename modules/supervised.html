@@ -16,68 +16,60 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-
-  
-  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=4418a689" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
 
     <script src="../_static/documentation_options.js?v=c73c0f3e"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'modules/supervised';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/icon.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="The point statistics (ps) accessor" href="point_statistics.html" />
-    <link rel="prev" title="The region similarity (rs) accessor" href="region_similarity.html" />
+    <link rel="prev" title="The region correlation (rc) accessor" href="region_correlation.html" />
     <link href="../_static/style.css" rel="stylesheet" type="text/css">
 
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -85,7 +77,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -93,15 +84,59 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
     </header>
   
 
@@ -110,7 +145,8 @@
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -140,51 +176,29 @@
     
     
     <img src="../_static/logo_light.png" class="logo__image only-light" alt="SegTraQ - Home"/>
-    <script>document.write(`<img src="../_static/logo_dark.png" class="logo__image only-dark" alt="SegTraQ - Home"/>`);</script>
+    <img src="../_static/logo_dark.png" class="logo__image only-dark pst-js-only" alt="SegTraQ - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="baseline.html">The baseline (<code class="code docutils literal notranslate"><span class="pre">bl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clustering_stability.html">The clustering stability (<code class="code docutils literal notranslate"><span class="pre">cs</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="region_similarity.html">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="region_correlation.html">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="point_statistics.html">The point statistics (<code class="code docutils literal notranslate"><span class="pre">ps</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="volume.html">The volume (<code class="code docutils literal notranslate"><span class="pre">vl</span></code>) accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="plotting.html">The plotting (<code class="code docutils literal notranslate"><span class="pre">pl</span></code>) accessor</a></li>
 <li class="toctree-l1"><a class="reference internal" href="segtraq_class.html">The SegTraQ (<code class="code docutils literal notranslate"><span class="pre">SegTraQ</span></code>) class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utility functions</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
-<ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/quickstart.html">Quickstart</a></li>
-
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/io.html">Data Preparation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/baseline.html">Module: Baseline Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/clustering_stability.html">Module: Clustering Stability</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/region_similarity.html">Module: Region Similarity</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/volume.html">Module: Volume (3D)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/supervised.html">Module: Supervised Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/point_statistics.html">Module: Point Statistics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/plotting.html">Module: Plotting</a></li>
-
-
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus_simplified.html">Technology Focus: 10x Genomics Xenium (Simplified)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../notebooks/10x_xenium_focus.html">Technology Focus: 10x Genomics Xenium</a></li>
 </ul>
 
     </div>
@@ -193,9 +207,14 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -278,7 +297,7 @@
 
 
 <button onclick="toggleFullScreen()"
-  class="btn btn-sm btn-fullscreen-button"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
   title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
@@ -292,25 +311,24 @@
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
-<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
 </div></div>
@@ -332,10 +350,14 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.marker_purity"><code class="docutils literal notranslate"><span class="pre">marker_purity()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate"><code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">neighbor_contamination()</span></code></a></li>
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.supervised">Supervised metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_contamination()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
+</ul>
+</li>
 </ul>
             </nav>
         </div>
@@ -350,220 +372,167 @@ document.write(`
   <section id="the-supervised-sp-accessor">
 <h1>The supervised (<code class="code docutils literal notranslate"><span class="pre">sp</span></code>) accessor<a class="headerlink" href="#the-supervised-sp-accessor" title="Link to this heading">#</a></h1>
 <p>The supervised metrics accessor provides metrics to compare the spatial single cell expression profiles to those from a single-cell RNA sequencing dataset.</p>
-<dl class="py function" id="module-segtraq.sp.supervised">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.marker_purity">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">marker_purity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.marker_purity" title="Link to this definition">#</a></dt>
-<dd><p>Compute per-cell marker purity using balanced accuracy.</p>
-<dl class="simple">
-<dt>For each cell of type c:</dt><dd><ul class="simple">
-<li><p>positive markers of c are expected to be expressed</p></li>
-<li><p>relevant negative markers are negative markers of c that are also
-positive markers of neighboring cell types</p></li>
-</ul>
-</dd>
-<dt>The score combines:</dt><dd><ul class="simple">
-<li><p>positive_marker_recall: fraction of expected positive markers expressed
-(analogous to recall/sensitivity at the marker-level)</p></li>
-<li><p>negative_marker_avoidance: fraction of relevant negative markers avoided
-(analogous to specificity at the marker-level)</p></li>
-<li><p>marker_balanced_accuracy: mean of sensitivity and specificity</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">SpatialData-like</span></code>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
-<li><p><strong>cell_type_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Mapping of cell types to positive and negative markers:
-{cell_type: {“positive”: list[str], “negative”: list[str]}}.
-If None, markers are loaded from <cite>adata.uns[“segtraq_markers”]</cite>.</p></li>
-<li><p><strong>tables_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;table&quot;</span></code>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_raw_counts_layer</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span></code>, <em>optional</em>) – Layer containing count data. If <cite>None</cite>, <cite>adata.X</cite> is used if it looks
-like counts.
-If a layer is specified, it must exist and contain count-like values.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
-<li><p><strong>tables_centroid_x_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;x_centroid&quot;</span></code>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_centroid_y_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;y_centroid&quot;</span></code>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_gene_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers.
-If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
-<li><p><strong>require_neighbor_expression</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>optional</em>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#True" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – If True, contamination is only counted when the relevant gene is
-expressed in at least one neighboring cell of the source type.</p></li>
-<li><p><strong>neighbors_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;spatial_connectivities&quot;</span></code>) – Key in <cite>adata.obsp</cite> containing a cell x cell adjacency / connectivity
-matrix that defines the spatial neighborhood.</p></li>
-<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>optional</em>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#True" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – If True, store marker purity results in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Columns:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">positive_marker_recall</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">negative_marker_avoidance</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">marker_balanced_accuracy</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">n_evaluated_positive_markers</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">n_evaluated_negative_markers</span></code></p></li>
-</ul>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
+<section id="module-segtraq.sp.supervised">
+<span id="supervised-metrics"></span><h2>Supervised metrics<a class="headerlink" href="#module-segtraq.sp.supervised" title="Link to this heading">#</a></h2>
 <dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.mutually_exclusive_coexpression_rate">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">mutually_exclusive_coexpression_rate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adata_ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_cell_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_gene_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_gene_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_raw_counts_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_pos_frac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_ref_coexpression_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.75</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate" title="Link to this definition">#</a></dt>
-<dd><p>Assess unexpected co-expression of reference-defined mutually exclusive markers.</p>
-<p>Candidate gene pairs are derived from reciprocal positive/negative marker
-relationships between pairs of reference cell types. Positive markers must
-be detected in at least <cite>min_pos_frac</cite> of cells of their corresponding
-reference cell type. Pairs that are positive markers of the same cell type
-are excluded.</p>
-<p>Candidate pairs are retained as mutually exclusive if their observed
-co-expression in the reference is at most <cite>max_ref_coexpression_ratio</cite>
-times the co-expression expected under independence.</p>
-<p>For each retained pair, co-expression in the spatial data is summarized
-using a 2x2 detection table. A one-sided Fisher’s exact test evaluates
-whether the genes are positively associated in the spatial data
-(odds ratio &gt; 1). P-values are corrected across all tested pairs using
-the Benjamini-Hochberg procedure.</p>
+<dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_contamination">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_neighs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_cells</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_contamination" title="Link to this definition">#</a></dt>
+<dd><p># Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
+<p>Compute directional contamination (“leakage”) between cell types from spatial neighbors using
+ct-specific positive markers: for each ct cell and neighbor ct2, measure the fraction of ct-marker
+signal in ct2 neighbors relative to the ct neighborhood total, then average over interactions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">SpatialData-like</span></code>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression data.</p></li>
-<li><p><strong>adata_ref</strong> (<a class="reference external" href="https://anndata.readthedocs.io/en/stable/generated/anndata.AnnData.html#anndata.AnnData" title="(in anndata v0.13.3.post0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code></a>) – Reference AnnData object containing annotated cells.</p></li>
-<li><p><strong>ref_cell_type</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Column in <cite>adata_ref.obs</cite> containing reference cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Mapping of cell types to positive and negative markers:
-<cite>{cell_type: {“positive”: list[str], “negative”: list[str]}}</cite>.
-If None, markers are loaded from
-<cite>sdata.tables[tables_key].uns[“segtraq_markers”]</cite>.</p></li>
-<li><p><strong>tables_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;table&quot;</span></code>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_gene_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Column in <cite>sdata.tables[tables_key].var</cite> containing the canonical gene
-identifiers used by SegTraQ. If None, <cite>var_names</cite> are used.</p></li>
-<li><p><strong>query_gene_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Alternative column in <cite>sdata.tables[tables_key].var</cite> containing gene
-identifiers matching <cite>adata_ref.var[ref_gene_key]</cite>. If None,
-<cite>tables_gene_key</cite> is used.</p></li>
-<li><p><strong>tables_raw_counts_layer</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Layer containing raw spatial counts. If None, <cite>.X</cite> is used.</p></li>
-<li><p><strong>ref_gene_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Column in <cite>adata_ref.var</cite> containing gene identifiers matching the
-query gene identifiers. If None, <cite>adata_ref.var_names</cite> are used.</p></li>
-<li><p><strong>ref_raw_counts_layer</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Layer containing raw reference counts. If None, <cite>.X</cite> is used.</p></li>
-<li><p><strong>min_pos_frac</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">0.25</span></code>) – Minimum fraction of cells of the corresponding reference cell type
-in which a positive marker must be detected.</p></li>
-<li><p><strong>max_ref_coexpression_ratio</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">0.75</span></code>) – Maximum ratio of observed to expected co-expression in the reference
-for a candidate pair to be considered mutually exclusive.</p></li>
-<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#True" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – If True, store the result in
-<cite>sdata.tables[tables_key].uns[“mutually_exclusive_coexpression_rate”]</cite>.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>One row per reference-defined mutually exclusive marker pair with
-columns <cite>gene1</cite>, <cite>gene2</cite>, <cite>odds_ratio</cite>, <cite>pvalue</cite>, <cite>pvalue_adj</cite>,
-<cite>a</cite>, <cite>b</cite>, <cite>c</cite>, <cite>d</cite> and <cite>coexpression_fraction</cite>.</p>
-<p><cite>a</cite> is the number of cells detecting both genes, <cite>b</cite> gene1 only,
-<cite>c</cite> gene2 only, and <cite>d</cite> neither. Odds ratios greater than 1 indicate
-positive association in the spatial data. <cite>pvalue</cite> is the one-sided
-Fisher exact p-value and <cite>pvalue_adj</cite> its Benjamini-Hochberg-adjusted
-value. <cite>coexpression_fraction</cite> is the fraction of cells expressing both genes.</p>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="segtraq.sp.supervised.neighbor_contamination">
-<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">neighbor_contamination</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_raw_counts_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_x_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_centroid_y_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'y_centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_gene_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_neighbor_expression</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighbors_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spatial_connectivities'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#segtraq.sp.supervised.neighbor_contamination" title="Link to this definition">#</a></dt>
-<dd><p>Compute local negative-marker contamination per cell and per source-target
-cell-type pair.</p>
-<p>A gene is considered a locally relevant contamination marker for a target
-cell if it is:
-1. a negative marker of the target cell type, and
-2. a positive marker of at least one neighboring source cell type.</p>
-<p>If <cite>require_neighbor_expression=True</cite>, the gene must additionally be detected
-in at least one neighboring cell of the corresponding source cell type.</p>
-<dl class="simple">
-<dt>Per-cell outputs (written to <cite>adata.obs</cite>):</dt><dd><ul class="simple">
-<li><dl class="simple">
-<dt>contamination_counts:</dt><dd><p>Total counts of locally relevant negative-marker genes in the focal cell.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>contamination_strength:</dt><dd><p>contamination_counts divided by the total transcript counts of the focal cell.
-This estimates the fraction of assigned transcripts that correspond to
-plausible local contamination.</p>
-</dd>
-</dl>
-</li>
-</ul>
-</dd>
-<dt>Source-target summaries (written to <cite>adata.uns</cite>):</dt><dd><ul class="simple">
-<li><dl class="simple">
-<dt>contamination_matrix:</dt><dd><p>Directed source-to-target matrix. Entry (c_src, c_tgt) is the fraction
-of evaluable target cells of type c_tgt that contain at least one locally
-relevant negative marker associated with source type c_src.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>contamination_strength_matrix:</dt><dd><p>Directed source-to-target matrix. Entry (c_src, c_tgt) is the mean
-source-specific contamination strength across evaluable target cells
-of type c_tgt with nonzero total counts.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>contamination_evaluable_cells_matrix:</dt><dd><p>Directed source-to-target matrix. Entry (c_src, c_tgt) is the number
-of target cells for which contamination from source type c_src could
-be evaluated.</p>
-</dd>
-</dl>
-</li>
-</ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sdata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">SpatialData-like</span></code>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
-<li><p><strong>cell_type_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
-<li><p><strong>markers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Mapping of cell types to positive and negative markers:
-{cell_type: {“positive”: list[str], “negative”: list[str]}}.
-If None, markers are loaded from <cite>adata.uns[“segtraq_markers”]</cite>.</p></li>
-<li><p><strong>tables_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;table&quot;</span></code>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
-<li><p><strong>tables_raw_counts_layer</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span></code>, <em>optional</em>) – Layer containing count data. If <cite>None</cite>, <cite>adata.X</cite> is used if it looks
-like counts.
-If a layer is specified, it must exist and contain count-like values.</p></li>
-<li><p><strong>tables_cell_id_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;cell_id&quot;</span></code>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
-<li><p><strong>tables_centroid_x_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;x_centroid&quot;</span></code>) – Column in the cell table with the x-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_centroid_y_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;y_centroid&quot;</span></code>) – Column in the cell table with the y-coordinate of the cell centroid.</p></li>
-<li><p><strong>tables_gene_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> or <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>) – Column in <cite>sdata.tables[tables_key].var</cite> containing gene identifiers.
-If <cite>None</cite>, <cite>sdata.tables[tables_key].var_names</cite> are used.</p></li>
-<li><p><strong>require_neighbor_expression</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>optional</em>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#True" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – If True, contamination is only counted when the relevant gene is
-expressed in at least one neighboring cell of the source type.</p></li>
-<li><p><strong>neighbors_key</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;spatial_connectivities&quot;</span></code>) – Key in <cite>adata.obsp</cite> containing a cell x cell adjacency / connectivity
-matrix that defines the spatial neighborhood.</p></li>
-<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>optional</em>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#True" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – If True, store marker purity results in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
+<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as AnnData with expression and coordinates.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str] (optional)}}, using only “positive”.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>radius</strong> (<em>float</em><em>, </em><em>optional</em>) – Radius for spatial neighbor construction.</p></li>
+<li><p><strong>n_neighs</strong> (<em>int</em><em>, </em><em>optional</em>) – Max number of neighbors per cell (used with <cite>radius</cite>).</p></li>
+<li><p><strong>num_cells</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of cells to sample (speed/precision trade-off).</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – RNG seed for reproducible sampling.</p></li>
+<li><p><strong>cell_centroid_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – <cite>.obs</cite> key for x-coordinates (used to build <cite>.obsm[“spatial”]</cite> if needed).</p></li>
+<li><p><strong>cell_centroid_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – <cite>.obs</cite> key for y-coordinates (used to build <cite>.obsm[“spatial”]</cite> if needed).</p></li>
+<li><p><strong>weight_edges</strong> (<em>bool</em><em>, </em><em>optional</em>) – Weight neighbor contributions by graph edge weights if True.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store contamination matrix in <cite>sdata.tables[‘table’].uns[‘contamination’]</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><strong>per_cell_df</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>) – Per-cell contamination counts and contamination strength.</p></li>
-<li><p><strong>contamination_matrix_df</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>) – Source-target matrix with the fraction of evaluable target cells contaminated
-by each source cell type.</p></li>
-<li><p><strong>contamination_strength_matrix_df</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>) – Source-target matrix with mean source-specific contamination strength.</p></li>
-<li><p><strong>contamination_evaluable_cells_matrix_df</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a>) – Source-target matrix with the number of evaluable target cells per pair.</p></li>
+<li><p><strong>out</strong> (<em>pandas.DataFrame</em>) – Rows = source types (ct), columns = target types (ct2); entry is the mean fraction of
+ct-specific marker counts found in ct2 neighbors relative to ct neighborhood totals (directional).</p></li>
+<li><p><strong>records_df</strong> (<em>pandas.DataFrame</em>) – Pandas dataframe with per-cell cell_id (ct), cell_type (ct), neighbor_id (ct2), neigbhor_type (ct2) and ratio
+(ct-specific markers counts found in ct2 neighbors relative to ct neighborhood total counts).</p></li>
 </ul>
 </p>
 </dd>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_diff_abundance">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_diff_abundance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lfc_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pval_thresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_n_cells</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_n_transcripts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_x_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_centroid_y_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_centroid_y'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_diff_abundance" title="Link to this definition">#</a></dt>
+<dd><p>Calculate differential transcript abundance between bordering and non-bordering cells
+for every ordered pair of cell types using a spatial graph (Delaunay triangulation).
+This function builds a spatial neighbor graph from the provided AnnData table, classifies
+cells of each source cell type (ct1) into two groups depending on whether they border
+cells of a target cell type (ct2), and performs a differential abundance test (Scanpy’s
+rank_genes_groups with Wilcoxon test) between the “bordering” and “non_bordering” groups.
+Results are filtered by transcript counts and by provided marker lists so that only genes
+likely to originate from spillover (positive markers of the source cell type ct2 and
+not negative markers of the receiver ct1) are retained. A summary table of significant
+genes per (ct1, ct2) pair is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>object</em>) – Object containing AnnData tables, expected to expose a mapping-like attribute
+<cite>tables</cite> such that <cite>sdata.tables[tables_key]</cite> is an AnnData instance. The function
+creates a local copy of that AnnData and operates on it.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column name in adata.obs that contains cell type labels.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em><em>]</em>) – Marker specification mapping cell type -&gt; {“positive”: […], “negative”: […]}
+- markers[ct][‘positive’] should list genes expected to be present in source cells (ct2).
+- markers[ct][‘negative’] should list genes expected to be absent in receiver cells (ct1).</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key to select the AnnData table from sdata.tables (default: “table”).</p></li>
+<li><p><strong>min_n_cells</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum number of cells required in each group (bordering or non_bordering)
+for a (ct1, ct2) pair to be tested (default: 20).</p></li>
+<li><p><strong>min_n_transcripts</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum total transcript counts (sum across both groups) required for a gene
+to be kept in the results (default: 20).</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Random seed for reproducible subsampling (default: 0).</p></li>
+<li><p><strong>cell_centroid_x_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in adata.obs that contain the X and Y cell centroids used to
+construct the spatial graph (default: “cell_centroid_x”, “cell_centroid_y”).</p></li>
+<li><p><strong>cell_centroid_y_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column names in adata.obs that contain the X and Y cell centroids used to
+construct the spatial graph (default: “cell_centroid_x”, “cell_centroid_y”).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store differential abundance results in <cite>sdata.tables[tables_key].uns[‘diff_abundance’]</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>de_results</strong> (<em>pandas.DataFrame</em>) – Concatenated differential abundance results for all tested (ct1, ct2) pairs.
+Columns include:
+- gene: gene name (string)
+- log2FC: reported log fold-change from rank_genes_groups
+- pval: p-value from the differential test
+- ct1: receiver cell type (string)
+- ct2: source cell type (string)
+- group1_size: number of ct1 cells bordering ct2 (int)
+- group2_size: number of ct1 cells not bordering ct2 (int)
+- transcript_counts_group1: total counts of the gene across group1 (int)
+- transcript_counts_group2: total counts of the gene across group2 (int)
+- transcript_counts_in_both_groups: sum of the two previous columns (int)</p></li>
+<li><p><strong>summary</strong> (<em>pandas.DataFrame</em>) – A matrix (DataFrame) where rows are receiver cell types (ct1) and columns are
+source cell types (ct2). Each cell contains the number of genes passing the
+significance criteria for that ordered pair. Note: significance filtering uses
+the thresholds lfc_thresh and pval_thresh from the calling/global scope
+(see Notes).</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If no differential expression results are produced (e.g., because no
+    (ct1, ct2) pairs passed the min_n_cells / marker / transcript filters).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.calculate_marker_purity">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">calculate_marker_purity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_quantiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_cell_id_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cell_id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="headerlink" href="#segtraq.sp.supervised.calculate_marker_purity" title="Link to this definition">#</a></dt>
+<dd><p># Translated and modified from <a class="github reference external" href="https://github.com/SydneyBioX/CellSPA">SydneyBioX/CellSPA</a></p>
+<p>Compute per-cell marker purity: for each cell’s annotated type, evaluate Precision/Recall/F1
+using its positive and negative marker lists, then summarize into an overall <cite>F1_purity</cite>
+that rewards high positive-F1 and low negative-F1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Must contain <cite>tables[tables_key]</cite> as an AnnData with expression and <cite>.obs</cite> metadata.</p></li>
+<li><p><strong>cell_type_key</strong> (<em>str</em>) – Column in the AnnData <cite>.obs</cite> with cell-type labels.</p></li>
+<li><p><strong>markers</strong> (<em>dict</em>) – {cell_type: {“positive”: list[str], “negative”: list[str]}}; both lists are required.</p></li>
+<li><p><strong>use_quantiles</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, define predictions by the top-<a href="#id1"><span class="problematic" id="id2">|markers|</span></a> fraction per cell (rank-based);
+if False, use direct expression-based criteria (e.g., &gt;0).</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>tables_cell_id_key</strong> (<em>str</em><em>, </em><em>optional</em>) – Column in the AnnData <cite>.obs</cite> with unique cell IDs.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store marker purity results in <cite>sdata.tables[tables_key].obs</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Columns: [‘positive_precision’,’positive_recall’,’positive_F1’,</dt><dd><p>’negative_precision’,’negative_recall’,’negative_F1’,
+‘F1_purity’,’cell_type’] indexed by cell.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="segtraq.sp.supervised.compute_MECR">
+<span class="sig-prename descclassname"><span class="pre">segtraq.sp.supervised.</span></span><span class="sig-name descname"><span class="pre">compute_MECR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sdata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tables_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'table'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#segtraq.sp.supervised.compute_MECR" title="Link to this definition">#</a></dt>
+<dd><p>Modified from <a class="github reference external" href="https://github.com/dpeerlab/segger-analysis">dpeerlab/segger-analysis</a></p>
+<p>Compute Mutually Exclusive Co-expression Rate (MECR) per gene pair.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sdata</strong> (<em>SpatialData-like</em>) – Container with <cite>.tables[tables_key]</cite> as AnnData.</p></li>
+<li><p><strong>gene_pairs</strong> (<em>list</em><em> of </em><em>tuple</em>) – Collection of (gene1, gene2) pairs computed via <cite>segtraq.get_mut_excl_markers</cite>.</p></li>
+<li><p><strong>tables_key</strong> (<em>str</em>) – Key of the AnnData table in <cite>sdata.tables</cite>.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, store MECR results in <cite>sdata.tables[‘table’].uns[‘MECR’]</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping {(gene1, gene2): MECR}, where MECR = P(both&gt;0) / P(at least one&gt;0).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 </section>
 
 
@@ -578,12 +547,12 @@ by each source cell type.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="region_similarity.html"
+       href="region_correlation.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">The region similarity (<code class="code docutils literal notranslate"><span class="pre">rs</span></code>) accessor</p>
+        <p class="prev-next-title">The region correlation (<code class="code docutils literal notranslate"><span class="pre">rc</span></code>) accessor</p>
       </div>
     </a>
     <a class="right-next"
@@ -602,18 +571,24 @@ by each source cell type.</p></li>
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
-  <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
     <i class="fa-solid fa-list"></i> Contents
   </div>
-  <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.marker_purity"><code class="docutils literal notranslate"><span class="pre">marker_purity()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.mutually_exclusive_coexpression_rate"><code class="docutils literal notranslate"><span class="pre">mutually_exclusive_coexpression_rate()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.neighbor_contamination"><code class="docutils literal notranslate"><span class="pre">neighbor_contamination()</span></code></a></li>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-segtraq.sp.supervised">Supervised metrics</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_contamination"><code class="docutils literal notranslate"><span class="pre">calculate_contamination()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_diff_abundance"><code class="docutils literal notranslate"><span class="pre">calculate_diff_abundance()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.calculate_marker_purity"><code class="docutils literal notranslate"><span class="pre">calculate_marker_purity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#segtraq.sp.supervised.compute_MECR"><code class="docutils literal notranslate"><span class="pre">compute_MECR()</span></code></a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
@@ -662,8 +637,8 @@ By Daria Lazic, Matthias Meyer-Bender, Martin Emons
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
 
   <footer class="bd-footer">
   </footer>
