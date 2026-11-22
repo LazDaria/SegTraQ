@@ -484,6 +484,15 @@ def transcript_density(
     return df[[tables_cell_id_key, "transcript_density"]].dropna()
 
 
+def _safe_divide(numerator, denominator):
+    """Element-wise division that returns NaN where the denominator is zero."""
+    numerator = np.asarray(numerator, dtype=float)
+    denominator = np.asarray(denominator, dtype=float)
+    out = np.full(np.broadcast(numerator, denominator).shape, np.nan, dtype=float)
+    np.divide(numerator, denominator, out=out, where=denominator != 0)
+    return out
+
+
 def morphological_features(
     sdata: sd.SpatialData,
     tables_cell_id_key: str = "cell_id",
@@ -494,7 +503,6 @@ def morphological_features(
     n_jobs: int | None = None,  # number of parallel jobs, -1 uses all CPUs
     parallel_backend: str = "threading",
     tables_key: str = "table",
-    eps: float = 1e-6,
     inplace: bool = True,
 ):
     """
@@ -523,8 +531,6 @@ def morphological_features(
         Parallelization backend to use with joblib. Default is "threading".
     tables_key : str, optional
         The key to access the AnnData table from `sdata.tables`. Default is "table".
-    eps : float, optional
-        Small constant to avoid division by zero in feature calculations. Default is 1e-6.
     inplace : bool, optional
         If True, modifies the SpatialData object in place. Default is True.
 
@@ -544,6 +550,8 @@ def morphological_features(
     - For multi-part geometries (MultiPolygon), "solidity", "convexity", "elongation", and
       "eccentricity" are computed on the convex hull of the *entire* geometry.
     - Invalid or null geometries are filtered out before computation.
+    - Ratio features ("circularity", "solidity", "convexity", "compactness") are set to NaN
+      for cells where the denominator is zero (e.g. zero perimeter, area, or convex hull area).
     """
     if n_jobs is None:
         n_jobs = settings.n_jobs
@@ -623,7 +631,7 @@ def morphological_features(
             areas = geom.area.values
         if perimeters is None:
             perimeters = geom.length.values
-        features["circularity"] = 4 * np.pi * areas / (perimeters**2 + eps)
+        features["circularity"] = _safe_divide(4 * np.pi * areas, perimeters**2)
 
     # convex hull is shared across solidity, convexity, elongation, and eccentricity,
     # so it's computed once here if any of those features are requested
@@ -636,12 +644,12 @@ def morphological_features(
             convex_areas = convex_hull.area.values
             if areas is None:
                 areas = geom.area.values
-            features["solidity"] = areas / (convex_areas + eps)
+            features["solidity"] = _safe_divide(areas, convex_areas)
         if "convexity" in features_to_compute:
             convex_perimeters = convex_hull.length
             if perimeters is None:
                 perimeters = geom.length.values
-            features["convexity"] = (convex_perimeters / (perimeters + eps)).values
+            features["convexity"] = _safe_divide(convex_perimeters.values, perimeters)
 
     # Parallelized elongation and eccentricity calculation, based on the convex hull of the
     # (possibly multi-part) geometry, so fragmented cells aren't reduced to a single sub-polygon
@@ -685,7 +693,7 @@ def morphological_features(
             perimeters = geom.length.values
         if areas is None:
             areas = geom.area.values
-        features["compactness"] = (perimeters**2) / (areas + eps)
+        features["compactness"] = _safe_divide(perimeters**2, areas)
 
     if inplace:
         merge_into_obs(
