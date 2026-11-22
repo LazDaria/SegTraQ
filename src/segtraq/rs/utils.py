@@ -613,42 +613,29 @@ def _cosine_similarity_rows(
     scale: float,
     n_features_total: int,
 ) -> np.ndarray:
-    """Compute PFlog1pPF cosine similarity row-wise for active genes.
+    """Row-wise Pearson correlation of log1p(scale * x / sum(x)) over all genes.
 
-    `x_a` and `x_b` contain only genes with non-zero pooled counts. The contribution
-    of genes that are zero in both profiles is included analytically so the result is
-    identical to transforming and comparing the complete feature vectors.
+    This equals the cosine similarity of the transformed profiles after centering
+    each one over genes (a shifted centered log-ratio transform).
+
+    `x_a` and `x_b` contain only genes with non-zero pooled counts. Genes that are
+    zero in both profiles transform to 0, so they add nothing to the sums of
+    products below and enter only through the mean, i.e. via `n_features_total`.
+    The result is identical to correlating the complete feature vectors.
     """
-    x_a = np.asarray(x_a, dtype=float)
-    x_b = np.asarray(x_b, dtype=float)
+    log_a = np.log1p(scale * x_a / x_a.sum(axis=1, keepdims=True))
+    log_b = np.log1p(scale * x_b / x_b.sum(axis=1, keepdims=True))
 
-    total_a = x_a.sum(axis=1, keepdims=True)
-    total_b = x_b.sum(axis=1, keepdims=True)
+    sum_a = log_a.sum(axis=1)
+    sum_b = log_b.sum(axis=1)
 
-    log_a = np.log1p(scale * x_a / total_a)
-    log_b = np.log1p(scale * x_b / total_b)
+    # Centered sums of products over all `n_features_total` genes.
+    dot = np.einsum("ij,ij->i", log_a, log_b) - sum_a * sum_b / n_features_total
+    norm_a_sq = np.einsum("ij,ij->i", log_a, log_a) - sum_a**2 / n_features_total
+    norm_b_sq = np.einsum("ij,ij->i", log_b, log_b) - sum_b**2 / n_features_total
 
-    # PFlog1pPF centers across the complete feature panel, including common zeros.
-    mean_a = log_a.sum(axis=1, keepdims=True) / n_features_total
-    mean_b = log_b.sum(axis=1, keepdims=True) / n_features_total
-
-    centered_a = log_a - mean_a
-    centered_b = log_b - mean_b
-
-    n_common_zero = n_features_total - x_a.shape[1]
-
-    dot = np.sum(centered_a * centered_b, axis=1)
-    norm_a_sq = np.sum(centered_a**2, axis=1)
-    norm_b_sq = np.sum(centered_b**2, axis=1)
-
-    if n_common_zero:
-        mean_a = mean_a[:, 0]
-        mean_b = mean_b[:, 0]
-        dot += n_common_zero * mean_a * mean_b
-        norm_a_sq += n_common_zero * mean_a**2
-        norm_b_sq += n_common_zero * mean_b**2
-
-    denom = np.sqrt(norm_a_sq * norm_b_sq)
+    # Clip rounding noise for (near-)constant profiles before taking the root.
+    denom = np.sqrt(np.maximum(norm_a_sq, 0.0) * np.maximum(norm_b_sq, 0.0))
     return np.divide(
         dot,
         denom,
@@ -693,7 +680,7 @@ def _two_profile_similarity_metrics(
 
     # Use expressed genes only for QC. Permutations are also restricted to these
     # active genes for speed, while common-zero genes are retained analytically in
-    # the PFlog1pPF cosine calculation below.
+    # the correlation computed by `_cosine_similarity_rows`.
     mask = (x_a + x_b) > 0
 
     n_a = int(x_a.sum())
@@ -778,7 +765,10 @@ def _two_profile_similarity_metrics(
 
     similarity_residual = similarity_observed - similarity_null.mean()
 
-    similarity_p_value = (1 + np.count_nonzero(similarity_null <= similarity_observed)) / (len(similarity_null) + 1)
+    # Permutations that only relabel genes reproduce the observed correlation up to
+    # floating-point rounding; count them as ties instead of leaving it to noise.
+    n_as_extreme = np.count_nonzero(similarity_null <= similarity_observed + 1e-12)
+    similarity_p_value = (1 + n_as_extreme) / (len(similarity_null) + 1)
 
     return {
         "similarity": float(similarity_residual),
