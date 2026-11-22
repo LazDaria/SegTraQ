@@ -8,7 +8,7 @@ from joblib import delayed
 
 from .._settings import settings
 from ..utils import _get_genes, _is_background, _Parallel, merge_into_obs, merge_into_uns, merge_into_var
-from .utils import count_polygons
+from .utils import _safe_divide, count_polygons
 
 
 def num_cells(sdata: sd.SpatialData, tables_key: str = "table", inplace: bool = True) -> int:
@@ -482,15 +482,6 @@ def transcript_density(
         )
 
     return df[[tables_cell_id_key, "transcript_density"]].dropna()
-
-
-def _safe_divide(numerator, denominator):
-    """Element-wise division that returns NaN where the denominator is zero."""
-    numerator = np.asarray(numerator, dtype=float)
-    denominator = np.asarray(denominator, dtype=float)
-    out = np.full(np.broadcast(numerator, denominator).shape, np.nan, dtype=float)
-    np.divide(numerator, denominator, out=out, where=denominator != 0)
-    return out
 
 
 def morphological_features(
