@@ -606,6 +606,35 @@ def _get_center_border_counts(
     return expr_center, expr_border
 
 
+# Absolute tolerance for treating a null statistic as tied with the observed one.
+# Mathematically identical statistics can differ by a few ULPs depending on array
+# shape, memory alignment and the CPU's SIMD code path, which would otherwise make
+# permutation p-values flip by one count between runs or machines.
+_PERMUTATION_TIE_ATOL = 1e-10
+
+
+def _permutation_p_value(null: np.ndarray, observed: float, *, tail: str) -> float:
+    """Permutation p-value with ties (within floating-point noise) counted as extreme.
+
+    Parameters
+    ----------
+    null : np.ndarray
+        Finite null statistics.
+    observed : float
+        Observed statistic.
+    tail : {"lower", "upper"}
+        "lower" counts null values <= observed, "upper" counts null values >= observed.
+    """
+    null = np.asarray(null, dtype=float)
+    if tail == "lower":
+        n_extreme = np.count_nonzero(null <= observed + _PERMUTATION_TIE_ATOL)
+    elif tail == "upper":
+        n_extreme = np.count_nonzero(null >= observed - _PERMUTATION_TIE_ATOL)
+    else:
+        raise ValueError("`tail` must be 'lower' or 'upper'.")
+    return (1 + n_extreme) / (len(null) + 1)
+
+
 def _cosine_similarity_rows(
     x_a: np.ndarray,
     x_b: np.ndarray,
@@ -778,7 +807,7 @@ def _two_profile_similarity_metrics(
 
     similarity_residual = similarity_observed - similarity_null.mean()
 
-    similarity_p_value = (1 + np.count_nonzero(similarity_null <= similarity_observed)) / (len(similarity_null) + 1)
+    similarity_p_value = _permutation_p_value(similarity_null, similarity_observed, tail="lower")
 
     return {
         "similarity": float(similarity_residual),
@@ -1217,7 +1246,7 @@ def _border_admixture_permutation_metrics(
         return empty
 
     residual = observed - float(null_scores.mean())
-    p_value = (1 + np.count_nonzero(null_scores >= observed)) / (len(null_scores) + 1)
+    p_value = _permutation_p_value(null_scores, observed, tail="upper")
     return {
         "border_admixture_score": float(residual),
         "border_admixture_p_value": float(p_value),
