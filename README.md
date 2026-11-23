@@ -44,12 +44,19 @@ st.settings.n_jobs -1  # Use all available CPU cores
 ### Software Requirements
 `SegTraQ` depends on the following packages:
 ```
-scanpy
 spatialdata
+spatialdata-plot
+anndata
+scanpy
+squidpy
+ovrlpy
+ome_zarr
 geopandas
 rtree
 rasterio
-squidpy
-anndata
-ovrlpy
+tqdm
+typer
+joblib
+ipywidgets
+rctd-py (optional)
 ```

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "segtraq"
-version = "0.0.7"
+version = "0.0.8"
 description = "SegTraQ - A Python toolkit for quantitative and visual quality assessment of segmentation and transcript assignment in spatial omics data."
 readme = "README.md"
 authors = [
@@ -35,7 +35,6 @@ dependencies = [
   "anndata>=0.12", # to support zarr v3
   "ovrlpy>=1.2.0",
   "ome_zarr>=0.13.0",
-
   "ipywidgets",  # required for nicer progress bars in notebooks
 ]
 requires-python = ">= 3.12"
