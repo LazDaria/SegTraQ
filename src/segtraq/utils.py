@@ -1893,71 +1893,75 @@ def validate_spatialdata(
             )
 
         ids = points_df[points_cell_id_key]
-        counts = ids.value_counts(dropna=False)
-        most_common_points_id = counts.index[0]
-        most_common_count = counts.iloc[0]
-        most_common_is_na = pd.isna(most_common_points_id)
-        n_missing = int(ids.isna().sum())
 
-        # if the user provided a background ID, we want to ensure that it actually occurs
+        if points_background_id is None:
+            # points_background_id=None is treated as matching None, np.nan, and pd.NA.
+            is_background = ids.isna()
+        else:
+            # fillna is needed for nullable dtypes, where .eq() returns pd.NA for missing values
+            is_background = ids.eq(points_background_id).fillna(False).astype(bool)
+
+        n_background = int(is_background.sum())
+
+        # Most common ID among the non-background points. With an explicit background ID,
+        # this can be a missing value.
+        counts = ids[~is_background].value_counts(dropna=False)
+        if counts.empty:
+            most_common_points_id, most_common_count, most_common_is_na = None, 0, False
+        else:
+            most_common_points_id = counts.index[0]
+            most_common_count = int(counts.iloc[0])
+            most_common_is_na = bool(pd.isna(most_common_points_id))
+
+        most_common_msg = (
+            f"The most common cell ID among points is {most_common_points_id!r} ({most_common_count} points). "
+            if most_common_count
+            else ""
+        )
+
         if points_background_id is not None:
-            if points_background_id not in transcript_ids:
-                if most_common_is_na:
-                    hint = (
-                        "You set `points_background_id={points_background_id!r}`, but "
-                        "the most common cell ID among points is a missing value "
-                        f"({most_common_points_id!r}). "
-                        "Set 'points_background_id=None' instead."
-                    )
-                else:
-                    hint = (
-                        f"You set `points_background_id={points_background_id!r}`, but "
-                        f"the most common cell ID among points is {most_common_points_id!r} "
-                        f"({most_common_count} points). You can set this with the "
-                        "'points_background_id' argument. "
-                        "If you do not have a background ID, set this parameter to None."
-                    )
-                raise ValueError(
-                    f"points_background_id {points_background_id!r} not found among point cell IDs. " + hint
-                )
+            na_suggestion = "Consider setting 'points_background_id=None'. " if most_common_is_na else ""
 
-            # as a more stringent check, we also raise a warning if the background ID is not the most common one
-            if most_common_points_id != points_background_id:
-                if most_common_is_na:
-                    suggestion = "Consider setting 'points_background_id=None'. "
-                else:
-                    suggestion = ""
+            if n_background == 0:
                 warnings.warn(
-                    f"points_background_id {points_background_id!r} is not the most common cell ID "
-                    f"among points (most common is {most_common_points_id!r} with "
-                    f"{most_common_count} points). "
+                    f"points_background_id={points_background_id!r} matches no point cell IDs. "
+                    + most_common_msg
+                    + na_suggestion
+                    + "If your dataset has background points, check how their cell IDs are encoded.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            # as a more stringent check, warn if another ID strictly outnumbers the background ID
+            elif most_common_count > n_background:
+                warnings.warn(
+                    f"points_background_id={points_background_id!r} matches {n_background} points, "
+                    f"but cell ID {most_common_points_id!r} occurs more often "
+                    f"({most_common_count} points). "
                     "This may indicate that your background ID is not correctly set. "
-                    + suggestion
+                    + na_suggestion
                     + "If you are sure that 'points_background_id' is correct, you can ignore this warning.",
                     UserWarning,
                     stacklevel=2,
                 )
         else:
-            # points_background_id=None is treated as matching None, np.nan, and pd.NA.
             # Ensure there actually are missing values among the point cell IDs -- otherwise
             # this silently means "no background filtering happens at all".
-            if n_missing == 0:
+            if n_background == 0:
                 warnings.warn(
                     "You set `points_background_id=None`, but no missing values (None/np.nan/pd.NA) were "
                     "found among point cell IDs. "
-                    "If your background points are denoted with an explicit value (e.g. 0, -1, 'background'), "
-                    "pass that value as 'points_background_id' instead. "
-                    f"The most common cell ID among points is {most_common_points_id!r} "
-                    f"({most_common_count} points).",
+                    + most_common_msg
+                    + "If your background points are denoted with an explicit value (e.g. 0, -1, 'background'), "
+                    "pass that value as 'points_background_id' instead.",
                     UserWarning,
                     stacklevel=2,
                 )
             # as a more stringent check, warn if some real ID strictly outnumbers the missing values
-            elif most_common_count > n_missing:
+            elif most_common_count > n_background:
                 warnings.warn(
                     "You set `points_background_id=None`, but the most common cell ID among points is "
                     f"{most_common_points_id!r} ({most_common_count} points), not a missing value "
-                    f"({n_missing} missing points). "
+                    f"({n_background} missing points). "
                     "This may indicate that 'points_background_id' "
                     "should be set explicitly rather than left as None. "
                     "If you are sure that 'points_background_id=None' is correct, you can ignore this warning.",
