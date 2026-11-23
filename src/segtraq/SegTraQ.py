@@ -1740,7 +1740,6 @@ class _BLFacade:
         features_to_compute: list | None = None,
         n_jobs: int | None = None,
         parallel_backend: str = "threading",
-        eps: float = 1e-6,
         inplace: bool = True,
     ):
         return bl.morphological_features(
@@ -1753,7 +1752,6 @@ class _BLFacade:
             n_jobs=n_jobs,
             parallel_backend=parallel_backend,
             tables_key=self._p.tables_key,
-            eps=eps,
             inplace=inplace,
         )
 
