@@ -1,695 +1,161 @@
 # ---
 # jupyter:
 #   jupytext:
-#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.19.5
 #   kernelspec:
-#     display_name: segtraq_26 (3.11.13)
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
 # %% [markdown]
-# # Module: Volume (3D)
+# # Module: volume
 #
-# Spatial transcriptomics tissue sections are not truly 2D: they typically have a physical
-# thickness of ~4–10 µm. Even for a relatively thin 5 µm section,
-# cells can partially overlap along the z-dimension,
-# depending on tissue orientation and how the sample is cut.
-# As a result, methods that treat the data as purely 2D will often introduce neighborhood contamination,
-# because transcripts from overlapping cells may be assigned to the same segmentation mask.
+# Tissue sections are about 5-10 µm thick, so cells can lie on top of each other. A 2D segmentation
+# then assigns the transcripts of two stacked cells to one cell. The volume module (`vl`) uses the z
+# positions of the transcripts to detect such cells.
 #
-# <center>f
+# <center>
 #  <img src='../_static/img/docs/volume.png' width='90%' />
 # </center>
 #
-# To assess how well a segmentation method resolves cell overlaps in 3D, we provide a set of metrics in the
-# `volume` (`vl`) accessor.
-#
-# In this module, we introduce metrics to quantify how strongly a method is affected by 3D overlap,
-# and how well it can separate overlapping cells across z (e.g. quasi-3D approaches such as Proseg),
-# or in other words, how well it can disentangle transcripts from overlapping cells.
-#
-# To follow along with this tutorial, you can download the data from
-# [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
+# We compare two segmentations of the same crop of a Xenium human breast cancer sample: the default
+# Xenium segmentation (2D) and Proseg, which models cells in 3D and stores one set of cell
+# boundaries per z layer. Both objects contain the measured z positions.
 
 # %%
-# %load_ext autoreload
-# %autoreload 2
+import warnings
 
-# %% [markdown]
-# ## Load data into SegTraQ and run label transfer
-
-# %%
-
-import anndata as ad
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import spatialdata as sd
-import spatialdata_plot  # noqa
 
 import segtraq
 
-segtraq.settings.n_jobs = 8  # Use 8 CPU cores (-1 for all available cores)
-
-# %% [markdown]
-# We load [previously built](./io.ipynb) `SpatialData` objects from 10x Genomics Xenium
-# data segmented with Xenium's multimodal cell segmentation (`sdata_xenium`),
-# with Proseg v2.0.5 (`sdata_proseg2`) and Proseg v3.1.0 (`sdata_proseg3`).
-
-# %%
-sdata_xenium = sd.read_zarr("../../data/xenium_v1_data/sdata_xenium_crop.zarr")
-sdata_proseg2 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")
-sdata_proseg3 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v3_crop.zarr/")
-
-# %% [markdown]
-# Next, we initialize `SegTraQ` objects.
-
-# %%
-st_xenium = segtraq.SegTraQ(
-    sdata_xenium,
-    tables_centroid_x_key=None,
-    tables_centroid_y_key=None,
-    points_background_id=-1,  # "UNASSIGNED" for Xenium prime
-)
-
-st_proseg2 = segtraq.SegTraQ(
-    sdata_proseg2,
-    points_cell_id_key="assignment",
-    points_background_id=2**32 - 1,
-    points_gene_key="gene",
-    tables_area_key=None,
-    tables_cell_id_key="cell",
-    shapes_cell_id_key="cell",
-    tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_y",
-)
-
-st_proseg3 = segtraq.SegTraQ(
-    sdata_proseg3,
-    points_cell_id_key="assignment",
-    points_background_id=None,
-    points_gene_key="gene",
-    tables_area_key=None,
-    tables_cell_id_key="cell",
-    shapes_cell_id_key="cell",
-    tables_centroid_x_key="centroid_x",
-    tables_centroid_y_key="centroid_y",
-    filter_kwargs={"min_qv": None},
-)
-
-# %% [markdown]
-# For easier access, we store the `SpatialData` object into a dictionary.
-
-# %%
-st_dict = {"xenium": st_xenium, "proseg2": st_proseg2, "proseg3": st_proseg3}
-
-# %% [markdown]
-# We can then transfer labels from a reference scRNA-seq dataset.
-
-# %%
-adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
-
-for _method, st in st_dict.items():
-    st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw", inplace=True)
-
-
-# %% [markdown]
-# ## Inspect z distribution of transcripts
-
-# %% [markdown]
-# We will first examine the z-distribution of transcripts in Xenium data.
-# Z-drift can occur when the slide
-# is not perfectly flat—for example due to tissue cutting and mounting—or due to
-# imaging-related effects (e.g. microscope settings or slight unevenness of the
-# slide and imaging surface).
-
-
-# %%
-def plot_transcripts_across_z_bins(sdata, method, n_z_bins, xy_bin_size=5.0):
-    df = sdata["transcripts"].compute()
-
-    df["z_bin"] = pd.cut(df["z"], n_z_bins, labels=False)
-
-    df["x_bin"] = (df["x"] / xy_bin_size).astype(int)
-    df["y_bin"] = (df["y"] / xy_bin_size).astype(int)
-
-    x_minb, x_maxb = df["x_bin"].min(), df["x_bin"].max()
-    y_minb, y_maxb = df["y_bin"].min(), df["y_bin"].max()
-    nx = x_maxb - x_minb + 1
-    ny = y_maxb - y_minb + 1
-
-    fig, axes = plt.subplots(
-        1,
-        n_z_bins,
-        figsize=(2.2 * n_z_bins, 4),
-        sharex=True,
-        sharey=True,
-        constrained_layout=True,
-    )
-    axes = np.atleast_1d(axes)
-
-    for i in range(n_z_bins):
-        ax = axes[i]
-
-        plane = df[df["z_bin"] == i]
-        counts = (
-            plane.groupby(["y_bin", "x_bin"])
-            .size()
-            .reindex(
-                pd.MultiIndex.from_product(
-                    [range(y_minb, y_maxb + 1), range(x_minb, x_maxb + 1)], names=["y_bin", "x_bin"]
-                ),
-                fill_value=0,
-            )
-            .values.reshape(ny, nx)
-        )
-
-        im = ax.imshow(
-            counts,
-            origin="lower",
-            aspect="equal",
-            extent=[
-                x_minb * xy_bin_size,
-                (x_maxb + 1) * xy_bin_size,
-                y_minb * xy_bin_size,
-                (y_maxb + 1) * xy_bin_size,
-            ],
-        )
-        ax.set_title(f"Z plane {i + 1}")
-        ax.set_xlabel("x")
-        if i == 0:
-            ax.set_ylabel("y")
-
-    cbar = fig.colorbar(im, ax=axes.ravel().tolist(), location="right", shrink=0.9)
-    cbar.set_label(f"#transcripts per {xy_bin_size}x{xy_bin_size} bin")
-
-    fig.suptitle(f"{method}: #transcripts per {xy_bin_size}x{xy_bin_size} bin", fontsize=14)
-    plt.show()
-
-
-# %% [markdown]
-# In the raw Xenium data, we can still observe a pronounced z-drift across the tissue.
-# In lower z-planes (e.g. Z plane 3), transcripts are more densely detected on the left
-# side of the field of view, whereas in higher z-planes the transcript density shifts towards the right.
-#
-# Proseg v3 explicitly corrects for this type of depth-related variation and produces
-# normalized z values, as can be seen
-# [here](https://github.com/dcjones/proseg/blob/main/src/sampler/transcripts.rs#L162)
-# (TODO - Check newest proseg version for raw z-coordinates. If still missing, copy them
-# from Xenium as was done for proseg v2 in io.ipynb).
-
-# %%
-for method, st in st_dict.items():
-    plot_transcripts_across_z_bins(st.sdata, method, 10)
-
-# %% [markdown]
-# ## Top–bottom z consistency
-#
-# To identify cells that may contain transcripts from overlapping cells across the z-axis, we compare
-# the transcript composition at the top and bottom of each cell. A single, correctly segmented cell is
-# expected to have broadly consistent expression across depth, whereas overlapping or incorrectly merged
-# cells may contain different expression profiles at different z positions.
-#
-# For each cell, transcripts are taken from the bottom and top fractions of its z-range (default: 30% each).
-# Their gene-expression profiles are transformed with PFlog1pPF and compared using cosine similarity.
-# Because profiles with fewer transcripts tend to appear less similar due to finite-count sampling, the
-# observed similarity is compared with a permutation-based expectation. The reported
-# `similarity_top_bottom` is the residual from this expectation: values around zero indicate the expected
-# similarity, while negative values indicate that the top and bottom are less similar than expected.
-# The accompanying lower-tail p-value identifies cells with evidence for unusually low similarity.
-#
-# By default, global z-drift is corrected before defining the top and bottom regions
-# (`correct_z_drift=True`). Cells without sufficient transcripts or detected genes in both regions are
-# not evaluated.
-
-# %%
-for method, st in st_dict.items():
-    if method == "proseg3":
-        _cos_sim = st.vl.similarity_top_bottom(
-            correct_z_drift=False
-        )  # correct for z drift already done internally in proseg
-    else:
-        _cos_sim = st.vl.similarity_top_bottom()
-
-
-# %% [markdown]
-# Below, we compare the top–bottom similarity residual only among cells with a significant
-# lower-tail permutation p-value (`similarity_top_bottom_p_value < 0.05`). These cells have
-# top and bottom profiles that are less similar than expected under the conditional null.
-
-
-# %%
-def histogram_feature(
-    sdata_dict,
-    feature,
-    figsize=(5, 3),
-    significant_only=True,
-    bins=60,
-):
-    all_feats = []
-
-    for method, st in sdata_dict.items():
-        obs = st.sdata[st.tables_key].obs
-
-        if (feature == "similarity_top_bottom") and significant_only:
-            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05]
-
-        feat = obs[feature].to_frame(feature)
-        feat["method"] = method
-        all_feats.append(feat)
-
-    df = pd.concat(all_feats, ignore_index=True)
-    df["method"] = df["method"].astype(str)
-
-    methods = list(sdata_dict.keys())
-    palette = dict(zip(methods, sns.color_palette("Set2", len(methods)), strict=False))
-
-    fig, ax = plt.subplots(figsize=figsize)
-
-    sns.histplot(
-        data=df,
-        x=feature,
-        hue="method",
-        bins=bins,
-        stat="count",
-        element="step",
-        fill=False,
-        palette=palette,
-        ax=ax,
-        kde=True,
-    )
-
-    # Median for each method
-    for method in methods:
-        median = df.loc[df["method"] == method, feature].median()
-
-        ax.axvline(
-            median,
-            color=palette[method],
-            linestyle="--",
-            linewidth=2,
-        )
-
-    ax.set_ylabel("Number of cells")
-    plt.tight_layout()
-
-
-# %% [markdown]
-# Although the median residual among significant cells is similar across methods, Xenium has more cells that deviate
-# significantly from the null expectation, suggesting that these deviations occur more frequently rather than being
-# stronger in magnitude.
-
-# %%
-histogram_feature(
-    st_dict,
-    feature="similarity_top_bottom",
-    significant_only=True,
-)
-
-# %% [markdown]
-# We next compare top–bottom similarity residuals across transferred cell types, considering only cells with a
-# significant lower-tail p-value to reduce variation related to cell-type-specific composition.
-
-
-# %%
-def boxplot_per_celltype(st_dict, feature, q=1, significant_only=True):
-    dfs = []
-    for method, st in st_dict.items():
-        obs = st.sdata[st.tables_key].obs[st.sdata[st.tables_key].obs["transferred_cell_type"].notna()].copy()
-
-        if (feature == "similarity_top_bottom") and significant_only:
-            obs = obs.loc[obs["similarity_top_bottom_p_value"] < 0.05].copy()
-
-        obs["transferred_cell_type"] = obs["transferred_cell_type"].cat.remove_unused_categories()
-
-        tmp = obs[["transferred_cell_type", feature]].copy()
-        tmp["method"] = method
-        dfs.append(tmp)
-
-    df = pd.concat(dfs, ignore_index=True)
-    df = df[df[feature] <= df[feature].quantile(q)]
-
-    fig, ax = plt.subplots(figsize=(15, 5))
-
-    sns.boxplot(
-        data=df,
-        x="transferred_cell_type",
-        y=feature,
-        hue="method",
-        showcaps=True,
-        showfliers=False,
-        palette="Set2",
-        boxprops={"alpha": 0.5},
-        ax=ax,
-    )
-
-    sns.stripplot(
-        data=df,
-        x="transferred_cell_type",
-        y=feature,
-        hue="method",
-        dodge=True,
-        jitter=True,
-        palette="Set2",
-        alpha=1,
-        size=3,
-        legend=False,
-        ax=ax,
-    )
-
-    celltypes = df["transferred_cell_type"].unique()
-    methods = list(st_dict.keys())
-
-    n_methods = len(methods)
-    box_width = 0.8
-    offsets = np.linspace(
-        -box_width / 2 + box_width / (2 * n_methods),
-        box_width / 2 - box_width / (2 * n_methods),
-        n_methods,
-    )
-
-    # Position labels slightly above the data
-    ymin, ymax = ax.get_ylim()
-    y_text = ymax + 0.02 * (ymax - ymin)
-
-    for i, celltype in enumerate(celltypes):
-        for j, method in enumerate(methods):
-            n = len(df.loc[(df["transferred_cell_type"] == celltype) & (df["method"] == method)])
-
-            ax.text(
-                i + offsets[j],
-                y_text,
-                f"n={n}",
-                ha="center",
-                va="bottom",
-                fontsize=8,
-                rotation=90,
-            )
-
-    # Make room for annotations
-    ax.set_ylim(ymin, ymax + 0.12 * (ymax - ymin))
-
-    fig.tight_layout()
-    plt.show()
-
-
-# %% [markdown]
-# `similarity_top_bottom` differs between cell types, with B cells accounting for much of the difference in the number
-# of significant cells across methods (312 in Xenium, 142 in Proseg v2, and 109 in Proseg v3).
-
-# %%
-boxplot_per_celltype(st_dict, "similarity_top_bottom")
-
-# %% [markdown]
-# ## Heterotypic overlap area/fraction (detecting 3D overlaps)
-#
-# This metric is designed to quantify where a quasi-3D method detects overlaps across z.
-# It can only be computed for methods that output per-z-layer cell polygons (e.g. Proseg),
-# because it explicitly compares cell boundaries between different z layers.
-#
-# Because each cell has can have polygons across more than one z layer (`cell_boundaries_z0`, …),
-# we first pick a single representative polygon per cell: the polygon with the largest area across z.
-# We then compare this representative polygon to polygons from other z layers,
-# excluding polygons from the same cell and restricting to different cell types
-# (based on `transferred_cell_type`).
-# Cells for which no label could be assigned (`transferred_cell_type` is NaN)
-# can either be treated as a separate category (default: `treat_as_label`) or excluded from the analysis.
-#
-# For each cell we report:
-#
-# `heterotypic_overlap_area`: total area where the representative polygon overlaps with polygons of
-# other cell types in different z layers
-#
-# `heterotypic_overlap_fraction`: the same overlap area normalized by the cell’s polygon area
-#
-# This metric is not intended as a standalone quality score, but is most informative
-# when interpreted alongside other measures (see next chapter).
-
-# %%
-proseg_dict = st_dict.copy()
-proseg_dict.pop("xenium", None)
-
-# %%
-for _method, st in proseg_dict.items():
-    if "proseg" in method:
-        shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
-        st.vl.fraction_heterotypic_overlap(unknown_policy="exclude", shapes_key_list=shapes_key_list)
-
-
-# %% [markdown]
-# Below we can see the distribution of the `heterotypic_overlap_area` and
-# `heterotypic_overlap_fraction` in proseg v2 and v3. Some cells have heterotypic overlap fractions > 50%.
-
-
-# %%
-def density_plot_feature(sdata_dict, feature, figsize=(5, 3)):
-    all_feats = []
-    for method, st in sdata_dict.items():
-        obs = st.sdata[st.tables_key].obs
-        feat = obs[feature].to_frame(feature)
-        feat["method"] = method
-        all_feats.append(feat)
-
-    df = pd.concat(all_feats, ignore_index=True)
-    df["method"] = df["method"].astype(str)
-
-    plt.figure(figsize=figsize)
-    sns.kdeplot(data=df, x=feature, hue="method", common_norm=False, palette="Set2", fill=False)
-    plt.tight_layout()
-
-
-# %%
-density_plot_feature(proseg_dict, "heterotypic_overlap_area")
-
-# %%
-density_plot_feature(proseg_dict, "heterotypic_overlap_fraction")
-
-# %% [markdown]
-# Spatially, it is often more informative to visualize cells with high `heterotypic_overlap_area`
-# rather than high heterotypic_overlap_fraction. The fraction normalizes by cell size,
-# so very small cells (often partial cells near the top or bottom z-planes due to tissue cutting)
-# can show high values (often close to 1) even when the absolute overlap is negligible.
-# In contrast, the overlap area highlights regions where a substantial amount of tissue
-# is involved in cross-type overlap.
-#
-# Let's have a look at a cell with a high `heterotypic_overlap_area` in proseg2.
-# It is a stromal cell that overlaps a dendritic cell (black cross marks cell centroid).
-
-# %%
-# Identify cell with high heterotypic_overlap_area
-tbl = st_proseg3.sdata.tables[st_proseg3.tables_key]
-rank = 2
-idx = tbl.obs["heterotypic_overlap_area"].nlargest(rank).index[rank - 1]
-x0, y0 = (
-    tbl.obs.loc[idx, st_proseg3.tables_centroid_x_key] / 0.2125,
-    tbl.obs.loc[idx, st_proseg3.tables_centroid_y_key] / 0.2125,
-)
-
-# Define color palette for plotting
-col_celltype = {
-    "T": "#fb8072",
-    "B": "#bc80bd",
-    "macro": "#910290",
-    "dendritic": "#fdb462",
-    "mast": "#959059",
-    "perivas": "#fed9a6",
-    "endo": "#a6cee3",
-    "myoepi": "#2782bb",
-    "DCIS1": "#3c7761",
-    "DCIS2": "#66a61e",
-    "tumor": "#66c2a5",
-    "stromal": "#d45943",
-    "Unknown": "#808080",
+warnings.filterwarnings("ignore")
+segtraq.settings.n_jobs = 8  # number of CPU cores
+
+st = {
+    "Xenium": segtraq.SegTraQ(segtraq.datasets.xenium_breast()),
+    "Proseg": segtraq.SegTraQ(
+        segtraq.datasets.proseg_breast(),
+        tables_cell_id_key="cell",
+        tables_area_key=None,
+        tables_centroid_x_key="centroid_x",
+        tables_centroid_y_key="centroid_y",
+        points_cell_id_key="assignment",
+        points_gene_key="gene",
+        points_background_id=None,
+        shapes_cell_id_key="cell",
+        nucleus_shapes_cell_id_key="cell_id",
+    ),
 }
-
-axes = plt.subplots(1, 3, figsize=(21, 7), constrained_layout=True)[1].flatten()
-
-s = st_proseg3.sdata.tables[st_proseg3.tables_key].obs["transferred_cell_type"]
-if pd.api.types.is_categorical_dtype(s):
-    s = s.cat.add_categories(["Unknown"])
-
-st_proseg3.sdata.tables[st_proseg3.tables_key].obs["transferred_celltype_plot"] = s.fillna("Unknown")
-
-labels = st_proseg3.sdata.tables[st_proseg3.tables_key].obs["transferred_celltype_plot"].unique().astype(str).tolist()
-cols = [col_celltype[lab] for lab in labels]
-
-# Bottom plane
-st_proseg3.sdata.tables[st_proseg3.tables_key].obs["region"] = "cell_boundaries_z0"
-st_proseg3.sdata.set_table_annotates_spatialelement(st_proseg3.tables_key, region="cell_boundaries_z0")
-
-st_proseg3.sdata.pl.render_shapes(
-    "cell_boundaries_z0", color="transferred_celltype_plot", palette=cols, groups=labels
-).pl.show(ax=axes[0], title="Bottom: Cell masks colored by transferred cell type", coordinate_systems="global")
-
-# Top plane
-st_proseg3.sdata.tables[st_proseg3.tables_key].obs["region"] = "cell_boundaries_z1"
-st_proseg3.sdata.set_table_annotates_spatialelement(st_proseg3.tables_key, region="cell_boundaries_z1")
-
-st_proseg3.sdata.pl.render_shapes(
-    "cell_boundaries_z1", color="transferred_celltype_plot", palette=cols, groups=labels
-).pl.show(ax=axes[1], title="Top: Cell masks colored by transferred cell type", coordinate_systems="global")
-
-st_proseg3.sdata.pl.render_shapes("cell_boundaries_z1", color="heterotypic_overlap_area").pl.show(
-    ax=axes[2], title="Bottom: Cell masks colored by heterotypic_overlap_area", coordinate_systems="global"
-)
-
-# Add landmark at centroid of cell with high heterotypic overlap area
-for ax in axes:
-    ax.scatter([x0], [y0], marker="+", s=400, c="black", linewidths=2, zorder=10)
+adata_ref = segtraq.datasets.reference("breast")
+for s in st.values():
+    s.run_label_transfer(adata_ref, ref_cell_type="celltype_major")
 
 # %% [markdown]
-# ## Mean VSI per cell (ovrlpy-based vertical signal integrity)
-# [Ovrlpy](https://www.biorxiv.org/content/10.1101/2025.01.13.632601v2.full) is a package
-# for detecting 3D overlap in spatial transcriptomics by using transcript coordinates.
-# It computes a Vertical Signal Integrity (VSI) map that highlights regions where the
-# transcriptome signal is consistent across depth versus regions that likely contain vertical mixing
-# (e.g. overlapping cells or tissue folds). Conceptually, VSI compares local gene expression
-# between a virtual top and virtual bottom subslice of the tissue: high VSI indicates strong agreement,
-# while low VSI suggests potential 3D overlap or other depth-related artifacts.
+# ## Top-bottom similarity
 #
-# To connect this pixel-level map to our 3D metrics, we compute mean VSI per
-# cell by sampling the VSI value at each transcript’s (x,y)
-# position and averaging these values across all transcripts assigned to the same cell.
-
-# %% [markdown]
-# We can run the compute the VSI map and extract the mean VSI per cell.
-
-# %%
-n_celltypes = st_xenium.sdata.tables[st_xenium.tables_key].obs["transferred_cell_type"].nunique()
-
-for _method, st in st_dict.items():
-    _mean_vsi = st.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_celltypes})
-
-# %% [markdown]
-# We compare `similarity_top_bottom` with vertical signal integrity.
-# VSI is an independent spatial measure of vertical mixing, so their
-# association can indicate whether expression-level depth inconsistency coincides with
-# transcript-level vertical signal disruption.
+# A single cell should have a similar expression at its top and at its bottom. Two stacked cells of
+# different types do not. `similarity_top_bottom` takes the transcripts in the lowest and highest
+# 30 % of each cell's z range and compares their expression (cosine similarity). As in the
+# [region similarity module](region_similarity.ipynb), the score is the difference to the similarity
+# expected by chance: negative values mean that top and bottom are less similar than expected, and
+# the p-value points to cells with an unusually low similarity.
+#
+# The tissue is often not perfectly flat. By default, this global z drift is removed first
+# (`correct_z_drift=True`).
 
 # %%
-n = len(st_dict)
-fig, axes = plt.subplots(1, n, figsize=(5 * n, 4), sharey=True)
-axes = np.atleast_1d(axes)
+for method, s in st.items():
+    s.vl.similarity_top_bottom()
+    obs = s.sdata.tables["table"].obs
+    significant = (obs["similarity_top_bottom_p_value"] < 0.05).sum()
+    print(f"{method}: {obs['similarity_top_bottom'].notna().sum()} cells evaluated, {significant} with p < 0.05")
 
-for ax, (method, st) in zip(axes, st_dict.items(), strict=False):
-    df = (
-        st.sdata.tables[st.tables_key]
-        .obs[
-            [
-                "vertical_signal_integrity",
-                "similarity_top_bottom",
-                "similarity_top_bottom_p_value",
-                "transcript_count",
-            ]
-        ]
-        .dropna()
-    )
-
-    r = np.corrcoef(df["vertical_signal_integrity"], df["similarity_top_bottom"])[0, 1]
-    r2 = r**2
-
-    sns.regplot(
-        data=df,
-        x="vertical_signal_integrity",
-        y="similarity_top_bottom",
-        scatter_kws={"alpha": 0.6},
-        line_kws={"color": "red"},
-        # lowess=True,
-        ci=95,
-        ax=ax,
-    )
-
-    ax.set_title(f"{method} (R² = {r2:.3f})")
-    ax.set_xlabel("vertical_signal_integrity")
-    ax.set_ylabel("similarity_top_bottom")
-
-fig.tight_layout()
+# %%
+fig, ax = plt.subplots(figsize=(5, 3))
+for method, s in st.items():
+    ax.hist(s.sdata.tables["table"].obs["similarity_top_bottom"].dropna(), bins=50, alpha=0.6, label=method)
+ax.axvline(0, color="black", ls="--", lw=1)
+ax.set(xlabel="Top-bottom similarity", ylabel="Cells")
+ax.legend(frameon=False)
+ax.spines[["top", "right"]].set_visible(False)
 plt.show()
 
 # %% [markdown]
-# In addition, proseg v2 and v3 shows large `heterotypic_overlap_fraction` values at low `mean_vsi`,
-# this supports the idea that Proseg is successfully detecting substantial cross-type overlap
-# in regions with poor vertical signal integrity. In other words, low-VSI regions
-# (where the raw transcript field appears vertically inconsistent and prone to 3D mixing)
-# coincide with locations where Proseg identifies strong heterotypic overlap across z-layers.
-# This suggests that the overlap signal captured by ovrlpy (low VSI) corresponds to biologically
-# and geometrically meaningful overlap events that Proseg can partially represent in its quasi-3D segmentation output.
+# ## Heterotypic overlap
 #
-# We evaluate this relation in cell types individually to reduce confounding from large cell-type–specific differences
-# in transcript abundance.
+# Proseg stores cell boundaries per z layer (`cell_boundaries_z0`, `cell_boundaries_z1`, ...).
+# `fraction_heterotypic_overlap` takes the largest boundary of each cell and measures how much of it
+# overlaps with cells of another type in other z layers:
+#
+# - `heterotypic_overlap_area`: the overlapping area,
+# - `heterotypic_overlap_fraction`: the same area divided by the cell area.
+#
+# This shows where Proseg places cells of different types on top of each other. It cannot be computed
+# for 2D segmentations such as Xenium.
 
 # %%
-n = len(proseg_dict)
-fig, axes = plt.subplots(1, n, figsize=(4 * n, 3), sharex=False, sharey=False)
-axes = np.atleast_1d(axes)
+proseg = st["Proseg"]
+layers = sorted(k for k in proseg.sdata.shapes if k.startswith("cell_boundaries_z"))
+print(layers)
+proseg.vl.fraction_heterotypic_overlap(shapes_key_list=layers)
+proseg.sdata.tables["table"].obs[["heterotypic_overlap_area", "heterotypic_overlap_fraction"]].describe().round(2)
 
-for j, (method, st) in enumerate(proseg_dict.items()):
-    obs = st.sdata.tables[st.tables_key].obs
+# %% [markdown]
+# Very small cells can have a high fraction even if the overlap is small, so the area is often more
+# informative.
+#
+# ## Vertical signal integrity
+#
+# [ovrlpy](https://doi.org/10.1101/2025.01.13.632601) compares the expression of a virtual top and
+# bottom slice of the tissue at every position. The resulting vertical signal integrity (VSI) is
+# high where top and bottom agree and low where cells overlap. It is computed from the transcripts
+# alone, independent of the segmentation. `vertical_signal_integrity_per_cell` averages the VSI over
+# the transcripts of each cell. We set the number of expression components to the number of cell
+# types.
 
-    df = obs.loc[
-        obs["transferred_cell_type"] == "DCIS2", ["vertical_signal_integrity", "heterotypic_overlap_fraction"]
-    ].dropna()
+# %%
+n_cell_types = st["Xenium"].sdata.tables["table"].obs["transferred_cell_type"].nunique()
+for s in st.values():
+    s.vl.vertical_signal_integrity_per_cell(ovrlpy_init_kwargs={"n_components": n_cell_types})
 
-    ax = axes[j]
-    r = np.corrcoef(df["vertical_signal_integrity"], df["heterotypic_overlap_fraction"])[0, 1]
-
-    sns.regplot(
-        data=df,
-        x="vertical_signal_integrity",
-        y="heterotypic_overlap_fraction",
-        scatter_kws={"alpha": 0.6},
-        line_kws={"color": "red"},
-        ci=95,
-        ax=ax,
-    )
-
-    ax.set_title(f"{method} (R={r:.3f})")
-    ax.set_xlabel("vertical_signal_integrity")
-    ax.set_ylabel("heterotypic_overlap_fraction")
-
-fig.tight_layout()
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.5), sharey=True)
+for ax, (method, s) in zip(axes, st.items(), strict=True):
+    obs = s.sdata.tables["table"].obs
+    ax.scatter(obs["vertical_signal_integrity"], obs["similarity_top_bottom"], s=3, alpha=0.5, color="#49566d")
+    ax.set(title=method, xlabel="Mean VSI per cell")
+    ax.spines[["top", "right"]].set_visible(False)
+axes[0].set_ylabel("Top-bottom similarity")
+plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Wrapper to run all metrics (including label transfer).
-# By default, this does not run `ovrlpy` to reduce runtime, but it can be enabled with `run_ovrlpy=True`.
+# ## Run the whole module
+#
+# `run_volume` computes the top-bottom similarity and, if cell types and per-layer boundaries are
+# available, the heterotypic overlap. ovrlpy is slow and runs only with `run_ovrlpy=True`.
 
 # %%
-sdata_proseg2 = sd.read_zarr("../../data/xenium_v1_data/sdata_proseg_v2_crop.zarr/")
-
-st_proseg2 = segtraq.SegTraQ(
-    sdata_proseg2,
-    points_cell_id_key="assignment",
-    points_background_id=2**32 - 1,
-    points_gene_key="gene",
-    tables_area_key=None,
+st_proseg = segtraq.SegTraQ(
+    segtraq.datasets.proseg_breast(),
     tables_cell_id_key="cell",
-    shapes_cell_id_key="cell",
+    tables_area_key=None,
     tables_centroid_x_key="centroid_x",
     tables_centroid_y_key="centroid_y",
+    points_cell_id_key="assignment",
+    points_gene_key="gene",
+    points_background_id=None,
+    shapes_cell_id_key="cell",
+    nucleus_shapes_cell_id_key="cell_id",
 )
-
-shapes_key_list = ["cell_boundaries_z0", "cell_boundaries_z1", "cell_boundaries_z2", "cell_boundaries_z3"]
-
-st_proseg2.run_volume(
+st_proseg.run_volume(
     adata_ref=adata_ref,
     ref_cell_type="celltype_major",
-    ref_raw_counts_layer="raw",
-    heterotypic_overlap_kwargs={"shapes_key_list": shapes_key_list},
+    heterotypic_overlap_kwargs={"shapes_key_list": layers},
 )
-
-st_proseg2.sdata.tables[st_proseg2.tables_key].obs.columns
-
-# %% [markdown]
-# ## Session Info
-
-# %%
-print(sd.__version__)  # spatialdata
-print(spatialdata_plot.__version__)
+st_proseg.sdata.tables["table"].obs.filter(regex="top_bottom|heterotypic").head()

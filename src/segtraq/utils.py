@@ -34,7 +34,7 @@ from spatialdata.transformations import (
 
 from ._settings import settings
 from .bl import baseline as bl
-from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, NORM_LOG_LAYER, SEGTRAQ_CELL_ID_KEY
+from .constants import DEFAULT_CONTROL_PREFIXES, DEFAULT_EXCLUDE_GENE_PREFIXES, NORM_LOG_LAYER, SEGTRAQ_CELL_ID_KEY
 
 
 def xy_scale(T):  # TODO - extract Translation, Scale, Sequence
@@ -2520,20 +2520,76 @@ def filter_cells(adata, col: str, func: Callable):
     return adata[mask]
 
 
+def sample_anomaly_scores(
+    metrics: pd.DataFrame,
+    directions: dict[str, int],
+    n_seeds: int = 200,
+    n_trees: int = 300,
+    clip_good: float | None = 0.0,
+) -> tuple[pd.DataFrame, pd.Series]:
+    """
+    Rank samples by how much their summary metrics deviate towards poor quality.
+
+    Each metric is converted to a robust z-score, (x - median) / MAD across samples, with the MAD
+    scaled to the standard deviation of a normal distribution, and multiplied by its direction, so
+    that positive values are better than the median. Missing values are set to 0 (the median). Values
+    above ``clip_good`` are set to ``clip_good``, so that only poor quality counts. An isolation
+    forest then scores how isolated each sample is; scores are averaged over ``n_seeds`` forests.
+
+    The isolation forest assumes that most samples are typical. Use it on many samples (tens or
+    more), after removing samples that fail a basic filter such as too few transcripts per cell.
+
+    Parameters
+    ----------
+    metrics : pandas.DataFrame
+        One row per sample, one column per summary metric (e.g. sample-level values from
+        ``table.uns`` or medians of per-cell values from ``table.obs``).
+    directions : dict of str to int
+        Metrics to use (columns of ``metrics``) and their direction: +1 if higher is better, -1 if
+        lower is better.
+    n_seeds : int, optional, default=200
+        Number of isolation forests with different random seeds.
+    n_trees : int, optional, default=300
+        Number of trees per forest.
+    clip_good : float or None, optional, default=0.0
+        Upper limit of the z-scores passed to the isolation forest. None keeps deviations in both
+        directions.
+
+    Returns
+    -------
+    z : pandas.DataFrame
+        Direction-corrected z-scores (samples x metrics), before clipping and filling.
+    anomaly_score : pandas.Series
+        Mean anomaly score per sample; higher is more anomalous (about 0.5 is typical).
+    """
+    from scipy.stats import median_abs_deviation
+    from sklearn.ensemble import IsolationForest
+
+    missing = [m for m in directions if m not in metrics.columns]
+    if missing:
+        raise KeyError(f"Metrics not in the table: {missing}")
+    bad = {m: d for m, d in directions.items() if d not in (1, -1)}
+    if bad:
+        raise ValueError(f"Directions must be +1 or -1, got {bad}")
+
+    X = metrics[list(directions)].apply(pd.to_numeric, errors="coerce")
+    mad = X.apply(median_abs_deviation, scale="normal", nan_policy="omit")
+    z = (X - X.median()) / mad.replace(0, np.nan) * pd.Series(directions)
+
+    features = z.fillna(0)
+    if clip_good is not None:
+        features = features.clip(upper=clip_good)
+    scores = np.zeros(len(features))
+    for seed in range(n_seeds):
+        forest = IsolationForest(n_estimators=n_trees, random_state=seed, n_jobs=settings.n_jobs)
+        scores -= forest.fit(features).score_samples(features)
+    return z, pd.Series(scores / n_seeds, index=metrics.index, name="anomaly_score")
+
+
 def _filter_control_and_low_quality_transcripts(
     sdata,
     min_qv: float | None = 20.0,
-    control_prefixes: tuple | list | None = (
-        "NegControlProbe_",
-        "antisense_",
-        "NegControlCodeword",
-        "BLANK_",
-        "Blank-",
-        "NegPrb",
-        "DeprecatedCodeword_",
-        "UnassignedCodeword_",
-        "Intergenic_Region_",
-    ),
+    control_prefixes: tuple | list | None = DEFAULT_CONTROL_PREFIXES,
     points_key: str = "transcripts",
     points_gene_key: str = "feature_name",
     points_cell_id_key: str = "cell_id",
@@ -2564,8 +2620,9 @@ def _filter_control_and_low_quality_transcripts(
     min_qv : float | None, default=20.0
         Minimum quality value (qv) threshold for transcripts to be retained.
         If None, no filtering is applied based on quality.
-    control_prefixes : tuple | list | None
-        Gene-name prefixes identifying control probes to remove.
+    control_prefixes : tuple | list | None, default=DEFAULT_CONTROL_PREFIXES
+        Gene-name prefixes identifying control probes to remove. The default covers the control
+        probes of Xenium, CosMx and MERSCOPE and the deprecated probes of Visium HD (``DEPRECATED_``).
     points_key : str, default="transcripts"
         Key containing transcript-level data.
     points_gene_key : str, default="feature_name"

@@ -9,7 +9,12 @@ from anndata import AnnData
 
 from . import bl, cs, pl, ps, rs, sp, vl
 from ._progress import _StepProgress
-from .constants import DEFAULT_EXCLUDE_GENE_PREFIXES, DEFAULT_FILTER_KWARGS, SEGTRAQ_CELL_ID_KEY
+from .constants import (
+    DEFAULT_CONTROL_PREFIXES,
+    DEFAULT_EXCLUDE_GENE_PREFIXES,
+    DEFAULT_FILTER_KWARGS,
+    SEGTRAQ_CELL_ID_KEY,
+)
 from .utils import (
     _check_reserved_kwargs,
     _filter_control_and_low_quality_transcripts,
@@ -1579,17 +1584,7 @@ class SegTraQ:
     def filter_control_and_low_quality_transcripts(
         self,
         min_qv: float = 20.0,
-        control_prefixes: tuple | list | None = (
-            "NegControlProbe_",
-            "antisense_",
-            "NegControlCodeword",
-            "BLANK_",
-            "Blank-",
-            "NegPrb",
-            "DeprecatedCodeword_",
-            "UnassignedCodeword_",
-            "Intergenic_Region_",
-        ),
+        control_prefixes: tuple | list | None = DEFAULT_CONTROL_PREFIXES,
         inplace: bool = True,
     ):
         """

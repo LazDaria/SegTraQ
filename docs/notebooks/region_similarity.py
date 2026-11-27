@@ -1,721 +1,167 @@
 # ---
 # jupyter:
 #   jupytext:
-#     cell_metadata_filter: -all
-#     custom_cell_magics: kql
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.19.5
 #   kernelspec:
-#     display_name: allen (3.13.5)
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
 # %% [markdown]
-# # Module: Region Similarity
+# # Module: region similarity
 #
-# Assuming that transcripts are homogeneously distributed throughout the cell,
-# we expect there to be similar expression of genes in the nucleus and in the rest of the cell.
-# If this is not the case, it can be indicative of transcript spillover from adjacent cells.
+# If transcripts are spread evenly within a cell, different parts of the cell should have a similar
+# gene expression. If they do not, transcripts of neighbouring cells may have been assigned to the
+# cell. The region similarity module (`rs`) compares the transcripts of different parts of each cell.
 #
 # <center>
 #  <img src='../_static/img/docs/region_similarity.png' width='90%' />
 # </center>
 #
-# The `region similarity` (`rs`) module compares transcript composition between different
-# subcellular regions to identify cells with unexpected spatial differences in expression.
+# Small profiles look less similar by chance. SegTraQ therefore compares each observed similarity
+# with the similarity expected from random permutations of the transcripts. Scores around 0 mean
+# "as expected"; the p-values point to cells with an unusual score.
 #
-# Because profiles with fewer transcripts are inherently more variable and therefore tend to appear
-# less similar even when sampled from the same underlying expression profile, SegTraQ accounts for
-# this finite-count effect using a permutation-based expectation. The reported scores measure
-# similarity relative to this expectation: values around zero indicate the expected level of similarity,
-# negative values indicate lower similarity than expected, and positive values indicate higher
-# similarity than expected. The accompanying p-value identifies cells with unusually low similarity.
-#
-# To follow along with this tutorial, you can download the data from
-# [here](https://oc.embl.de/index.php/s/YSvZTt8AArh4c5a).
+# We use a crop of a Xenium human breast cancer sample. Most metrics need nucleus boundaries.
 
 # %%
-# %load_ext autoreload
-# %autoreload 2
+import warnings
 
-# %%
-import anndata as ad
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
-import spatialdata as sd
-import spatialdata_plot  # noqa
-from scipy.stats import linregress
+import spatialdata_plot  # noqa: F401  (adds the .pl accessor to SpatialData)
 
 import segtraq
 
-segtraq.settings.n_jobs = 8  # Use 8 CPU cores (-1 for all available cores)
+warnings.filterwarnings("ignore")
+segtraq.settings.n_jobs = 8  # number of CPU cores
+
+sdata = segtraq.datasets.xenium_breast()
+st = segtraq.SegTraQ(sdata)
 
 # %% [markdown]
-# #### Helpers
-
+# We plot the results in a 150 µm window. The coordinate system is in DAPI pixels.
 
 # %%
-# helper functions for plotting
-def plot_histogram(
-    df,
-    column,
-    bins=30,
-    figsize=(6, 5),
-    color="steelblue",
-    edgecolor="black",
-    show_median=True,
-    median_kwargs=None,
-    median_color="red",
-    title=None,
-    xlabel=None,
-    ylabel="Count",
-    ax=None,
-):
-    values = df[column].dropna()
-    median_value = np.median(values)
-
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-
-    ax.hist(values, bins=bins, color=color, edgecolor=edgecolor)
-
-    if show_median:
-        median_kwargs = median_kwargs or {}
-        ax.axvline(
-            median_value,
-            linestyle="--",
-            linewidth=2,
-            color=median_color,
-            label=f"Median = {median_value:.2f}",
-            **median_kwargs,
-        )
-        ax.legend()
-
-    ax.set_title(title or f"Distribution of {column}")
-    ax.set_xlabel(xlabel or column)
-    ax.set_ylabel(ylabel)
-
-    plt.show()
+PX_PER_UM = 1 / 0.2125
+x0, y0, size = 2330.125 * PX_PER_UM, 1755.0625 * PX_PER_UM, 150 * PX_PER_UM
 
 
-def plot_regression(
-    df,
-    x,
-    y,
-    figsize=(6, 6),
-    dropna=True,
-    ci=95,
-    scatter_kws=None,
-    line_kws=None,
-    title=None,
-    xlabel=None,
-    ylabel=None,
-    r2_loc=(0.05, 0.95),
-    r2_fmt="{:.3f}",
-    ax=None,
-):
-    data = df[[x, y]]
-    if dropna:
-        data = data.dropna()
-
-    # Regression stats
-    slope, intercept, r_value, p_value, std_err = linregress(data[x], data[y])
-    r_squared = r_value**2
-
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-
-    scatter_kws = scatter_kws or {"alpha": 0.6}
-    line_kws = line_kws or {"color": "red"}
-
-    sns.regplot(
-        data=data,
-        x=x,
-        y=y,
-        ci=ci,
-        scatter_kws=scatter_kws,
-        line_kws=line_kws,
-        ax=ax,
+def plot_cells(columns, titles, cmap="viridis", centred=False):
+    window = st.sdata.query.bounding_box(
+        axes=("x", "y"),
+        min_coordinate=[x0, y0],
+        max_coordinate=[x0 + size, y0 + size],
+        target_coordinate_system="global",
     )
-
-    # R² annotation
-    ax.text(
-        r2_loc[0],
-        r2_loc[1],
-        rf"$R^2 = {r2_fmt.format(r_squared)}$",
-        transform=ax.transAxes,
-        verticalalignment="top",
-        fontsize=12,
-        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
-    )
-
-    ax.set_xlabel(xlabel or x)
-    ax.set_ylabel(ylabel or y)
-    ax.set_title(title or f"{y} vs. {x}")
-    ax.grid(True)
-
+    fig, axes = plt.subplots(1, len(columns), figsize=(4.5 * len(columns), 4))
+    for ax, column, title in zip(axes, columns, titles, strict=True):
+        norm = None
+        if centred:  # symmetric colour scale around 0
+            limit = np.nanpercentile(np.abs(window.tables["table"].obs[column].astype(float)), 99)
+            norm = mpl.colors.Normalize(-limit, limit)
+        window.pl.render_shapes(
+            "cell_boundaries", color=column, cmap=cmap, norm=norm, outline_alpha=1, outline_width=0.3
+        ).pl.show(ax=ax, title=title, colorbar_params={"label": ""})
+        ax.set(xlim=(x0, x0 + size), ylim=(y0 + size, y0), xticks=[], yticks=[], xlabel="", ylabel="")
+    plt.tight_layout()
     plt.show()
 
 
 # %% [markdown]
-# We start out by loading the data into a `SegTraQ` object.
-
-# %%
-sdata = sd.read_zarr("../../data/xenium_v1_data/sdata_xenium_crop.zarr/")
-st = segtraq.SegTraQ(
-    sdata,
-    tables_centroid_x_key=None,
-    tables_centroid_y_key=None,
-    points_background_id=-1,  # "UNASSIGNED" for Xenium prime
-)
-
-st.sdata
-
-# %% [markdown]
-# We can optionally transfer cell-type labels from a scRNA-seq reference. These labels are not required to compute the
-# `region_similarity` metrics, but help interpret them—for example, by assessing whether low similarity is more common
-# at boundaries between different cell types.
-
-# %%
-adata_ref = ad.read_h5ad("../../data/xenium_5K_data/BC_scRNAseq_Janesick.h5ad")
-
-st.run_label_transfer(adata_ref, ref_cell_type="celltype_major", ref_raw_counts_layer="raw", inplace=True)
-
-# %% [markdown]
-# As you can see, the `spatialdata`dataset contains cell and nuclear masks as `shapes`.
-# It is important that you have a nuclear segmentation in your object,
-# otherwise you will not be able to compute the metrics below.
-
-# %% [markdown]
-# ## Intersection over Union between cell and nucleus masks
-
-# %% [markdown]
-# First, we match each cell to its most overlapping nucleus using `match_nuclei_to_cells()` and quantify
-# the overlap using the Intersection over Union (`iou`) and `nucleus_fraction`, the fraction of the nucleus
-# area covered by the cell. These measures can highlight poor morphological segmentation: oversegmented
-# cells may cover only part of a nucleus, resulting in a low `nucleus_fraction`, whereas undersegmented
-# cells may extend far beyond the nucleus, resulting in a low `iou`.
-
-# %%
-results_df = st.rs.match_nuclei_to_cells()
-results_df.head()
-
-# %% [markdown]
-# For each `cell_id`, we count the number of nuclei and obtain the ID (`nucleus_id`)
-# of the nucleus mask with the highest `nucleus_fraction`.
-# If a cell does not overlap with any nucleus, the function returns a missing value for `nucleus_id`.
-# If the nucleus has an invalid geometry, `iou` and `nucleus_fraction` are reported as `NA`.
-
-# %% [markdown]
-# Let's see what this looks like when we plot `num_nuclei`, `iou` and `nucleus_fraction` spatially.
-
-# %%
-# link annotations with cell boundaries
-st.sdata.tables[st.tables_key].obs["region"] = st.shapes_key
-st.sdata.set_table_annotates_spatialelement(st.tables_key, region=st.shapes_key)
-
-fig, axes = plt.subplots(1, 3, figsize=(22, 6), constrained_layout=True)
-
-# IoU
-st.sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="iou",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element=st.nucleus_shapes_key,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.show(
-    ax=axes[0],
-    title="Intersection over Union (IoU)",
-    colorbar=True,
-)
-
-# Nucleus fraction
-st.sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="nucleus_fraction",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element=st.nucleus_shapes_key,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.show(
-    ax=axes[1],
-    title="Nucleus fraction",
-    colorbar=True,
-)
-
-# Number of nuclei
-st.sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="num_nuclei",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element=st.nucleus_shapes_key,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.show(
-    ax=axes[2],
-    title="Number of nuclei",
-    colorbar=True,
-)
-
-plt.show()
-
-# %% [markdown]
-# Since the legacy Xenium segmentation algorithm generates cell masks by expanding nuclear boundaries, most cells have a
-# `nucleus_fraction` close to 1.
-
-# %% [markdown]
-# We can now investigate what the distribution of IoUs looks like.
-
-# %%
-plot_histogram(
-    df=sdata[st.tables_key].obs,
-    column="iou",
-    xlabel="Intersection over Union (IoU)",
-)
-
-# %% [markdown]
-# ## Expression similarity between cell and nucleus
-
-# %% [markdown]
-# While IoU and `nucleus_fraction` assess whether the cell and nucleus are morphologically well matched,
-# `similarity_nucleus_cell()` asks whether they are also molecularly consistent. It compares the transcript
-# composition of the whole cell with that of its matched nucleus and determines whether they are less similar
-# than expected given their transcript counts and overlap. For transcript-informed segmentation methods the whole cell
-# may also include transcripts beyond morphological boundaries.
+# ## Overlap of cell and nucleus
 #
-# A negative residual indicates unexpectedly different transcript compositions, which can arise, for example, when
-# transcripts from neighboring cells are incorrectly assigned to the cell or when transcripts from the cell are
-# incorrectly excluded, even if the cell and nucleus boundaries appear well matched.
-
-# %%
-nucleus_cell_df = st.rs.similarity_nucleus_cell()
-
-# %%
-plot_histogram(
-    df=sdata[st.tables_key].obs,
-    column="similarity_nucleus_cell",
-    title="Residual similarity between cell and nucleus",
-    xlabel="Cell–nucleus similarity residual",
-)
-
-# %% [markdown]
-# We can visualize the similarity residual spatially to identify cells whose nucleus and whole-cell
-# transcript profiles are less similar than expected. The residual indicates the magnitude of this
-# difference, while the p-value indicates how strongly the data support it. Cells with both a negative
-# residual and a low p-value therefore provide the strongest evidence for unexpectedly different
-# nucleus–cell transcript composition.
-
-# %%
-obs = sdata.tables[st.tables_key].obs
-
-# Get significant cell IDs
-significant_ids = obs.loc[
-    obs["similarity_nucleus_cell_p_value"] < 0.05,
-    st.tables_cell_id_key,
-]
-
-# Create a temporary shapes element containing only significant cells
-sdata.shapes["significant_cells"] = (
-    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_ids)].copy()
-)
-
-# plot
-fig, ax = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
-
-# IoU
-sdata.pl.render_shapes(
-    element=st.nucleus_shapes_key,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element=st.shapes_key,
-    color="iou",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.show(
-    ax=ax[0],
-    title="Nuclei and cell masks colored by IoU",
-    colorbar=True,
-)
-
-# Cell–nucleus similarity residual
-sdata.pl.render_shapes(
-    element=st.nucleus_shapes_key,
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element=st.shapes_key,
-    color="similarity_nucleus_cell",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element="significant_cells",
-    fill_alpha=0.0,
-    outline_alpha=1.0,
-    outline_width=2.0,
-    outline_color="red",
-).pl.show(
-    ax=ax[1],
-    title="Cell–nucleus similarity residual (red: p < 0.05)",
-    colorbar=True,
-)
-
-# Transferred cell type
-sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="transferred_cell_type",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-    na_color="gray",
-).pl.show(
-    ax=ax[2],
-    title="Transferred cell type",
-    colorbar=False,
-)
-
-plt.show()
-
-# %% [markdown]
-# ## Similarity between nucleus and cytoplasm
+# `match_nuclei_to_cells` matches each cell to the nucleus it overlaps most and measures the overlap:
 #
-# Because nuclear transcripts are part of the whole-cell profile, nucleus–cell similarity is partly driven by
-# transcripts shared between the two profiles. We therefore also compare the nucleus with the remaining non-nuclear part
-# of the cell (referred to here as the cytoplasm).
+# - `nucleus_fraction`: the fraction of the nucleus covered by the cell. A low value means that the
+#   cell covers only part of a nucleus (oversegmentation).
+# - `iou`: intersection over union of cell and nucleus. A low value means that the cell extends far
+#   beyond the nucleus.
+# - `num_nuclei`: the number of nuclei the cell overlaps.
+
+# %%
+st.rs.match_nuclei_to_cells()
+st.sdata.tables["table"].obs[["num_nuclei", "iou", "nucleus_fraction"]].describe().round(2)
+
+# %%
+plot_cells(["iou", "nucleus_fraction"], ["IoU", "Nucleus fraction"])
+
+# %% [markdown]
+# Xenium grows cells from the nuclei, so the nucleus fraction is close to 1 for most cells.
 #
-# While `similarity_nucleus_cell` evaluates whether the final cell-level expression profile is molecularly consistent
-# with its matched nucleus, `similarity_nucleus_cytoplasm` provides a more direct comparison of transcript composition
-# between the two compartments. Low residual values may indicate transcript misassignment or contamination, but can also
-# reflect genuine subcellular RNA localization.
-
-# %%
-nuc_cyto_df = st.rs.similarity_nucleus_cytoplasm()
-nuc_cyto_df.head()
-
-# %% [markdown]
-# The histogram below shows the distribution of nucleus–cytoplasm similarity residuals. For most cells, the observed
-# similarity is close to that expected under the null model.
-
-# %%
-plot_histogram(
-    df=sdata[st.tables_key].obs,
-    column="similarity_nucleus_cytoplasm",
-    xlabel="Nucleus–cytoplasm similarity residual",
-)
-
-# %% [markdown]
-# We can look at the correlation between the `similarity_nucleus_cell` and `similarity_nucleus_cytoplasm`. As expected,
-# `similarity_nucleus_cell` and `similarity_nucleus_cytoplasm` are strongly correlated, as both capture molecular
-# differences between the nucleus and the rest of the cell. They can diverge when the nucleus contributes strongly to
-# the whole-cell profile: even if nucleus and cytoplasm differ substantially, the whole-cell profile may remain similar
-# to the nucleus because it contains the nuclear transcripts themselves.
-
-# %%
-plot_regression(
-    df=sdata[st.tables_key].obs,
-    x="similarity_nucleus_cell",
-    y="similarity_nucleus_cytoplasm",
-    title="Nucleus–cytoplasm similarity residual vs. Nucleus–cell similarity residual",
-    ylabel="Nucleus–cytoplasm similarity residual",
-)
-
-# %% [markdown]
-# Let's visualize this in a spatial plot.
-
-# %%
-obs = sdata.tables[st.tables_key].obs
-
-# Get significant cell IDs for each similarity metric
-significant_nucleus_cell_ids = obs.loc[
-    obs["similarity_nucleus_cell_p_value"] < 0.05,
-    st.tables_cell_id_key,
-]
-
-significant_nucleus_cytoplasm_ids = obs.loc[
-    obs["similarity_nucleus_cytoplasm_p_value"] < 0.05,
-    st.tables_cell_id_key,
-]
-
-# Create temporary shapes elements containing only significant cells
-sdata.shapes["significant_nucleus_cell"] = (
-    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cell_ids)].copy()
-)
-
-sdata.shapes["significant_nucleus_cytoplasm"] = (
-    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cytoplasm_ids)].copy()
-)
-
-
-# Plot
-fig, ax = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
-
-# Cell–nucleus similarity residual
-sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="similarity_nucleus_cell",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element="significant_nucleus_cell",
-    fill_alpha=0.0,
-    outline_alpha=1.0,
-    outline_width=2.0,
-    outline_color="red",
-).pl.show(
-    ax=ax[0],
-    title="Nucleus–cell similarity residual (red: p < 0.05)",
-    colorbar=True,
-)
-
-# Nucleus–cytoplasm similarity residual
-sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="similarity_nucleus_cytoplasm",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element="significant_nucleus_cytoplasm",
-    fill_alpha=0.0,
-    outline_alpha=1.0,
-    outline_width=2.0,
-    outline_color="red",
-).pl.show(
-    ax=ax[1],
-    title="Nucleus–cytoplasm similarity residual (red: p < 0.05)",
-    colorbar=True,
-)
-
-# Transferred cell type
-sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="transferred_cell_type",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-    na_color="gray",
-).pl.show(
-    ax=ax[2],
-    title="Transferred cell type",
-    colorbar=False,
-)
-
-plt.show()
-
-# %% [markdown]
-# We observe more cells with significantly reduced `similarity_nucleus_cytoplasm` than `similarity_nucleus_cell`,
-# particularly in regions with heterogeneous cell-type composition.
-
-# %% [markdown]
-# ## Border admixture score
+# ## Nucleus and cell
 #
-# A cell's border can differ from its center for many reasons, including genuine intracellular RNA localization.
-# Therefore, low center–border similarity alone does not show that neighboring cells contributed to that difference.
+# `similarity_nucleus_cell` compares the transcripts of the whole cell with those in its nucleus. A
+# negative score means that the two are less similar than expected, for example because transcripts
+# of a neighbouring cell were assigned to the cell.
+
+# %%
+_ = st.rs.similarity_nucleus_cell()
+
+# %% [markdown]
+# ## Nucleus and cytoplasm
 #
-# The `border_admixture_score()` tests this more directly by asking whether the border is better explained as a mixture
-# of the cell center and its neighborhood:
+# The whole cell contains the nucleus, so the nucleus-cell similarity is partly driven by the shared
+# transcripts. `similarity_nucleus_cytoplasm` compares the nucleus with the rest of the cell
+# directly. Low values can point to wrongly assigned transcripts, but also to genuine differences
+# between nucleus and cytoplasm.
+
+# %%
+_ = st.rs.similarity_nucleus_cytoplasm()
+
+# %% [markdown]
+# ## Border admixture
+#
+# A cell border can differ from the cell centre for many reasons. `border_admixture_score` asks
+# whether the border is better explained as a mixture of the cell centre and the cells around it:
 #
 # $$
-# p_{\text{border}} \approx (1 - \alpha)\,p_{\text{center}}
-# + \alpha\,p_{\text{neighborhood}}
+# p_{\text{border}} \approx (1 - \alpha)\,p_{\text{centre}} + \alpha\,p_{\text{neighbourhood}}
 # $$
 #
-# The observed admixture score measures how much better this mixture explains the border compared with
-# the center alone. Because some apparent admixture can arise simply from finite transcript sampling,
-# SegTraQ subtracts the mean score expected under a permutation null. The reported
-# `border_admixture_score` therefore reflects **excess neighborhood-like admixture beyond
-# what is expected by chance**.
-#
-# Values around zero are close to the null expectation, while positive residuals indicate stronger
-# neighborhood contribution than expected. The accompanying upper-tail p-value identifies cells with
-# unusually strong admixture.
+# The score is the improvement of this mixture over the centre alone, minus the improvement expected
+# by chance. Positive values mean that the border looks more like the neighbourhood than expected.
+# This metric does not need nucleus boundaries.
 
 # %%
-st.rs.border_admixture_score()
-
-# %% [markdown]
-# The histogram below shows the distribution of the border_admixture_score.
+scores = st.rs.border_admixture_score()
+scores.dropna().head()
 
 # %%
-plot_histogram(
-    df=sdata[st.tables_key].obs,
-    column="border_admixture_score",
-    xlabel="Border admixture score (residual)",
-)
-
-# %%
-obs = sdata.tables[st.tables_key].obs
-
-# Get significant cell IDs for nucleus-cell similarity
-significant_nucleus_cell_ids = obs.loc[
-    obs["similarity_nucleus_cell_p_value"] < 0.05,
-    st.tables_cell_id_key,
-]
-
-# Get significant cell IDs for border admixture
-significant_border_admixture_ids = obs.loc[
-    obs["border_admixture_p_value"] < 0.05,
-    st.tables_cell_id_key,
-]
-
-# Create temporary shapes elements containing significant cells
-sdata.shapes["significant_nucleus_cell"] = (
-    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_nucleus_cell_ids)].copy()
-)
-
-sdata.shapes["significant_border_admixture"] = (
-    sdata.shapes[st.shapes_key].loc[sdata.shapes[st.shapes_key].index.isin(significant_border_admixture_ids)].copy()
-)
-
-# Link annotations with cell boundaries
-obs["region"] = st.shapes_key
-sdata.set_table_annotates_spatialelement(
-    st.tables_key,
-    region=st.shapes_key,
-)
-
-# Plot
-fig, axes = plt.subplots(
-    1,
-    3,
-    figsize=(18, 6),
-    constrained_layout=True,
-)
-
-# 1. Nucleus-cell similarity residual
-sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="similarity_nucleus_cell",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element="significant_nucleus_cell",
-    fill_alpha=0.0,
-    outline_alpha=1.0,
-    outline_width=2.0,
-    outline_color="red",
-).pl.show(
-    ax=axes[0],
-    title="Nucleus–cell similarity residual (red: p < 0.05)",
-    colorbar=True,
-)
-
-# 2. Border admixture residual
-sdata.pl.render_shapes(
-    element="cell_centers",
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element="cell_borders",
-    fill_alpha=0.2,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element=st.shapes_key,
-    color="border_admixture_score",
-    cmap="viridis",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-).pl.render_shapes(
-    element="significant_border_admixture",
-    fill_alpha=0.0,
-    outline_alpha=1.0,
-    outline_width=2.0,
-    outline_color="red",
-).pl.show(
-    ax=axes[1],
-    title="Border admixture residual (red: p < 0.05)",
-    colorbar=True,
-)
-
-# 3. Transferred cell type
-sdata.pl.render_shapes(
-    element=st.shapes_key,
-    color="transferred_cell_type",
-    fill_alpha=0.5,
-    outline_alpha=1.0,
-    outline_width=0.5,
-    outline_color="black",
-    na_color="gray",
-).pl.show(
-    ax=axes[2],
-    title="Transferred cell type",
-    colorbar=False,
-)
-
+residuals = {
+    "similarity_nucleus_cell": "Nucleus-cell similarity",
+    "similarity_nucleus_cytoplasm": "Nucleus-cytoplasm similarity",
+    "border_admixture_score": "Border admixture",
+}
+obs = st.sdata.tables["table"].obs
+fig, axes = plt.subplots(1, 3, figsize=(12, 3))
+for ax, (column, label) in zip(axes, residuals.items(), strict=True):
+    ax.hist(obs[column].dropna(), bins=50, color="#99a3b5")
+    ax.axvline(0, color="black", ls="--", lw=1)
+    ax.set(xlabel=label, ylabel="Cells")
+    ax.spines[["top", "right"]].set_visible(False)
+plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# For convenience, `SegTraQ` also provides a wrapper to run all `region_similarity` metrics.
+# In the window below, grey cells are not evaluated, for example because they have too few
+# transcripts or no nucleus.
 
 # %%
-sdata = sd.read_zarr("../../data/xenium_v1_data/sdata_xenium_crop.zarr/")
-st = segtraq.SegTraQ(
-    sdata,
-    tables_centroid_x_key=None,
-    tables_centroid_y_key=None,
-    points_background_id=-1,  # "UNASSIGNED" for Xenium prime
-)
+plot_cells(list(residuals), list(residuals.values()), cmap="coolwarm", centred=True)
 
+# %% [markdown]
+# ## Run the whole module
+#
+# `run_region_similarity` computes all of the above in one call.
+
+# %%
+st = segtraq.SegTraQ(segtraq.datasets.xenium_breast())
 st.run_region_similarity()
-
-st.sdata.tables[st.tables_key].obs.columns
-
-# %% [markdown]
-# ## Session Info
-
-# %%
-print(sd.__version__)  # spatialdata
-print(spatialdata_plot.__version__)
+st.sdata.tables["table"].obs.filter(regex="iou|nucleus_fraction|similarity|admixture").head()

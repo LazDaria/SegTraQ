@@ -169,3 +169,43 @@ def test_filter_control_and_low_quality_transcripts_min_qv_none(sdata_new):
 
     # With both filters disabled, all points should remain.
     assert len(sdata.points["transcripts"]) == len(sdata_new.points["transcripts"])
+
+
+def test_default_control_prefixes_remove_deprecated_visium_probes(sdata_new):
+    """Visium HD probes marked DEPRECATED_ are removed by the default prefixes."""
+    import copy
+
+    import dask.dataframe as dd
+    from spatialdata.models import PointsModel
+    from spatialdata.transformations import get_transformation
+
+    from segtraq.constants import DEFAULT_CONTROL_PREFIXES, DEFAULT_FILTER_KWARGS
+    from segtraq.utils import _get_genes
+
+    assert "DEPRECATED_" in DEFAULT_CONTROL_PREFIXES
+    assert DEFAULT_FILTER_KWARGS["control_prefixes"] == DEFAULT_CONTROL_PREFIXES
+
+    # Rename one gene that occurs in both points and table to a deprecated Visium HD probe.
+    sdata = copy.deepcopy(sdata_new)
+    points = sdata.points["transcripts"].compute()
+    table = sdata.tables["table"]
+    gene = next(g for g in points["feature_name"].astype(str).unique() if g in set(_get_genes(table)))
+    renamed = f"DEPRECATED_{gene}"
+    points["feature_name"] = points["feature_name"].astype(str).replace(gene, renamed)
+    transformations = get_transformation(sdata_new.points["transcripts"], get_all=True)
+    sdata.points["transcripts"] = PointsModel.parse(
+        dd.from_pandas(points, npartitions=1), transformations=transformations
+    )
+    table.var_names = [renamed if g == gene else g for g in table.var_names.astype(str)]
+
+    filtered = _filter_control_and_low_quality_transcripts(
+        sdata,
+        min_qv=None,
+        points_key="transcripts",
+        tables_key="table",
+        points_gene_key="feature_name",
+        inplace=False,
+    )
+
+    assert renamed not in set(filtered.points["transcripts"].compute()["feature_name"].astype(str))
+    assert renamed not in set(filtered.tables["table"].var_names.astype(str))

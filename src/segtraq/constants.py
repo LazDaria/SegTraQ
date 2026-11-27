@@ -22,19 +22,22 @@ DISTANCES_KEY = f"{NEIGHBORS_KEY}_distances"
 SEGTRAQ_CELL_ID_KEY = "segtraq_id"
 
 # ── Control probes and low quality transcripts ────────────────────────────────
+DEFAULT_CONTROL_PREFIXES = (
+    "NegControlProbe_",
+    "antisense_",
+    "NegControlCodeword",
+    "BLANK_",
+    "Blank-",
+    "NegPrb",
+    "DeprecatedCodeword_",
+    "UnassignedCodeword_",
+    "Intergenic_Region_",
+    "DEPRECATED_",  # 10x Visium HD probes deprecated in the probe set
+)
+
 DEFAULT_FILTER_KWARGS = {
     "min_qv": 20,
-    "control_prefixes": (
-        "NegControlProbe_",
-        "antisense_",
-        "NegControlCodeword",
-        "BLANK_",
-        "Blank-",
-        "NegPrb",
-        "DeprecatedCodeword_",
-        "UnassignedCodeword_",
-        "Intergenic_Region_",
-    ),
+    "control_prefixes": DEFAULT_CONTROL_PREFIXES,
     "inplace": True,
 }
 

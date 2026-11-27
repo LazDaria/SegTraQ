@@ -17,7 +17,34 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
 
 .. toctree::
    :maxdepth: 1
-   :caption: Contents:
+   :caption: Getting started
+
+   notebooks/quickstart
+   notebooks/io
+   notebooks/io_extended
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Applications
+
+   notebooks/segmentation_comparison
+   notebooks/multi_sample
+   notebooks/visium_hd
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Modules
+
+   notebooks/baseline
+   notebooks/region_similarity
+   notebooks/supervised
+   notebooks/clustering_stability
+   notebooks/volume
+   notebooks/point_statistics
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API reference
 
    modules/baseline
    modules/clustering_stability
@@ -28,19 +55,4 @@ SegTraQ (Segmentation and Transcript Assignment Quality Control) is a Python too
    modules/plotting
    modules/segtraq_class
    modules/utils
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tutorials:
-   
-   notebooks/quickstart
-   notebooks/io
-   notebooks/baseline
-   notebooks/clustering_stability
-   notebooks/region_similarity
-   notebooks/volume
-   notebooks/supervised
-   notebooks/point_statistics
-   notebooks/plotting
-   notebooks/10x_xenium_focus_simplified
-   notebooks/10x_xenium_focus
+   modules/datasets

@@ -220,6 +220,7 @@ def umap(
     return umap_df
 
 
+# Currently not used in the tutorials (docs/notebooks); keep or remove is still to be decided.
 def boxplot_combined(
     method_to_segtraq: dict[str, object],
     celltype_col: str,
@@ -415,6 +416,7 @@ def boxplot(
     return box_df
 
 
+# Currently not used in the tutorials (docs/notebooks); keep or remove is still to be decided.
 def transcript_distribution_across_space(
     sdata: sd.SpatialData,
     axes: str | tuple[str] | list[str] = ("x", "y"),
@@ -490,6 +492,7 @@ def transcript_distribution_across_space(
     return ax_list[0] if single else list(ax_list)
 
 
+# Currently not used in the tutorials (docs/notebooks); keep or remove is still to be decided.
 def feature_distribution_across_space(
     sdata: sd.SpatialData,
     features: str | tuple[str] | list[str],
